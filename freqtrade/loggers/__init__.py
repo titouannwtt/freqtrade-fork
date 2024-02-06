@@ -3,11 +3,13 @@ from logging import Formatter
 from logging.handlers import RotatingFileHandler, SysLogHandler
 from pathlib import Path
 
+from rich.console import Console
+from rich.logging import RichHandler
+
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.loggers.buffering_handler import FTBufferingHandler
 from freqtrade.loggers.set_log_levels import set_loggers
-from freqtrade.loggers.std_err_stream_handler import FTStdErrStreamHandler
 
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,8 @@ LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 # Initialize bufferhandler - will be used for /log endpoints
 bufferHandler = FTBufferingHandler(1000)
 bufferHandler.setFormatter(Formatter(LOGFORMAT))
+
+error_console = Console(stderr=True)
 
 
 def get_existing_handlers(handlertype):
@@ -33,8 +37,13 @@ def setup_logging_pre() -> None:
     logging handlers after the real initialization, because we don't know which
     ones the user desires beforehand.
     """
+    rh = RichHandler(console=error_console)
+    rh.setFormatter(Formatter("%(message)s"))
     logging.basicConfig(
-        level=logging.INFO, format=LOGFORMAT, handlers=[FTStdErrStreamHandler(), bufferHandler]
+        level=logging.INFO,
+        format=LOGFORMAT,
+        # handlers=[FTStdErrStreamHandler(), bufferHandler]
+        handlers=[rh, bufferHandler],
     )
 
 
