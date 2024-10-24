@@ -579,7 +579,7 @@ def validate_backtest_data(
     return found_missing
 
 
-def download_data_main(config: Config) -> None:
+def download_data_main(config: Config, exchange: Exchange) -> None:
     timerange = TimeRange()
     if "days" in config:
         time_since = (datetime.now() - timedelta(days=config["days"])).strftime("%Y%m%d")
@@ -593,10 +593,6 @@ def download_data_main(config: Config) -> None:
 
     pairs_not_available: list[str] = []
 
-    # Init exchange
-    from freqtrade.resolvers.exchange_resolver import ExchangeResolver
-
-    exchange = ExchangeResolver.load_exchange(config, validate=False)
     available_pairs = [
         p
         for p in exchange.get_markets(

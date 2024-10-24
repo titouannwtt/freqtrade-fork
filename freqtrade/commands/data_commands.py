@@ -32,13 +32,16 @@ def start_download_data(args: dict[str, Any]) -> None:
     """
     from freqtrade.configuration import setup_utils_configuration
     from freqtrade.data.history import download_data_main
+    from freqtrade.resolvers.exchange_resolver import ExchangeResolver
 
     config = setup_utils_configuration(args, RunMode.UTIL_EXCHANGE)
 
     _check_data_config_download_sanity(config)
 
+    exchange = ExchangeResolver.load_exchange(config, validate=False)
+
     try:
-        download_data_main(config)
+        download_data_main(config, exchange)
 
     except KeyboardInterrupt:
         sys.exit("SIGINT received, aborting ...")
