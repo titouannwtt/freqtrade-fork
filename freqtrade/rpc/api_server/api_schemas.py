@@ -1,9 +1,15 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, RootModel, SerializeAsAny
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    RootModel,
+    SerializeAsAny,
+    model_validator,
+)
 
-from freqtrade.constants import IntOrInf
+from freqtrade.constants import DL_DATA_TIMEFRAMES, IntOrInf
 from freqtrade.enums import MarginMode, OrderTypeValues, SignalDirection, TradingMode
 from freqtrade.ft_types import ValidExchangesType
 
@@ -480,6 +486,21 @@ class PairListsPayload(ExchangeModePayloadMixin, BaseModel):
     pairlists: list[dict[str, Any]]
     blacklist: list[str]
     stake_currency: str
+
+
+class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
+    pairs: list[str]
+    stake_currency: str
+    timeframes: Optional[list[str]] = DL_DATA_TIMEFRAMES
+    days: Optional[int] = None
+    timerange: Optional[str] = None
+
+    @model_validator(mode="before")
+    def check_mutually_exclusive(cls, values):
+        timeframes, days = values.get("timerange"), values.get("days")
+        if timeframes and days:
+            raise ValueError("Only one of timeframes or days can be provided, not both.")
+        return values
 
 
 class FreqAIModelListResponse(BaseModel):
