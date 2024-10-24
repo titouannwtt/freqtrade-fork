@@ -5,7 +5,7 @@ from freqtrade.exchange.exchange import Exchange
 
 
 class JobsContainer(TypedDict):
-    category: Literal["pairlist"]
+    category: Literal["pairlist", "download_data"]
     is_running: bool
     status: str
     progress: float | None
@@ -32,6 +32,7 @@ class ApiBG:
     jobs: dict[str, JobsContainer] = {}
     # Pairlist evaluate things
     pairlist_running: bool = False
+    download_data_running: bool = False
 
     @staticmethod
     def get_job_id() -> str:
