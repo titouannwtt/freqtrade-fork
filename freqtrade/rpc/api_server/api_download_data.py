@@ -24,39 +24,16 @@ def __run_download(job_id: str, config_loc: Config):
     try:
         ApiBG.jobs[job_id]["is_running"] = True
         from freqtrade.data.history.history_utils import (
-            refresh_backtest_ohlcv_data,
+            download_data_main,
         )
-        from freqtrade.plugins.pairlist.pairlist_helpers import dynamic_expand_pairlist
 
         with FtNoDBContext():
             exchange = get_exchange(config_loc)
-            available_pairs = [
-                p
-                for p in exchange.get_markets(
-                    tradable_only=True, active_only=not config_loc.get("include_inactive")
-                ).keys()
-            ]
 
-            expanded_pairs = dynamic_expand_pairlist(config_loc, available_pairs)
-            print(expanded_pairs)
-            timerange = TimeRange()
-            timerange = TimeRange.parse_timerange(config_loc.get("timerange"))
+            download_data_main(config_loc, exchange)
+            # ApiBG.jobs[job_id]["result"] = {
 
-            pairs_not_available = refresh_backtest_ohlcv_data(
-                exchange,
-                pairs=expanded_pairs,
-                timeframes=config_loc["timeframes"],
-                datadir=config_loc["datadir"],
-                timerange=timerange,
-                new_pairs_days=config_loc["new_pairs_days"],
-                erase=bool(config_loc.get("erase")),
-                data_format=config_loc["dataformat_ohlcv"],
-                trading_mode=config_loc.get("trading_mode", "spot"),
-                prepend=config_loc.get("prepend_data", False),
-            )
-            ApiBG.jobs[job_id]["result"] = {
-                "pairs_not_available": pairs_not_available,
-            }
+            # }
             ApiBG.jobs[job_id]["status"] = "success"
     except (OperationalException, Exception) as e:
         logger.exception(e)
