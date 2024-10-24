@@ -4,7 +4,6 @@ from copy import deepcopy
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.exceptions import HTTPException
 
-from freqtrade.configuration.timerange import TimeRange
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.persistence import FtNoDBContext
@@ -23,14 +22,12 @@ router = APIRouter(tags=["download-data", "webserver"])
 def __run_download(job_id: str, config_loc: Config):
     try:
         ApiBG.jobs[job_id]["is_running"] = True
-        from freqtrade.data.history.history_utils import (
-            download_data_main,
-        )
+        from freqtrade.data.history.history_utils import download_data
 
         with FtNoDBContext():
             exchange = get_exchange(config_loc)
 
-            download_data_main(config_loc, exchange)
+            download_data(config_loc, exchange)
             # ApiBG.jobs[job_id]["result"] = {
 
             # }

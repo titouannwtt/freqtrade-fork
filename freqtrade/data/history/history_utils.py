@@ -18,8 +18,9 @@ from freqtrade.enums import CandleType, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.plugins.pairlist.pairlist_helpers import dynamic_expand_pairlist
-from freqtrade.util import dt_now, dt_ts, format_ms_time, get_progress_tracker
+from freqtrade.util import dt_now, dt_ts, format_ms_time
 from freqtrade.util.migrations import migrate_data
+from freqtrade.util.progress_tracker import ProgressLike, retrieve_progress_tracker
 
 
 logger = logging.getLogger(__name__)
@@ -327,16 +328,19 @@ def refresh_backtest_ohlcv_data(
     erase: bool = False,
     data_format: str | None = None,
     prepend: bool = False,
+    progress_tracker: Optional[ProgressLike] = None,
 ) -> list[str]:
     """
     Refresh stored ohlcv data for backtesting and hyperopt operations.
     Used by freqtrade download-data subcommand.
     :return: List of pairs that are not available.
     """
+    progress_tracker = retrieve_progress_tracker(progress_tracker)
+
     pairs_not_available = []
     data_handler = get_datahandler(datadir, data_format)
     candle_type = CandleType.get_default(trading_mode)
-    with get_progress_tracker() as progress:
+    with progress_tracker as progress:
         tf_length = len(timeframes) if trading_mode != "futures" else len(timeframes) + 2
         timeframe_task = progress.add_task("Timeframe", total=tf_length)
         pair_task = progress.add_task("Downloading data...", total=len(pairs))
@@ -491,15 +495,17 @@ def refresh_backtest_trades_data(
     new_pairs_days: int = 30,
     erase: bool = False,
     data_format: str = "feather",
+    progress_tracker: Optional[ProgressLike] = None,
 ) -> list[str]:
     """
     Refresh stored trades data for backtesting and hyperopt operations.
     Used by freqtrade download-data subcommand.
     :return: List of pairs that are not available.
     """
+    progress_tracker = retrieve_progress_tracker(progress_tracker)
     pairs_not_available = []
     data_handler = get_datahandler(datadir, data_format=data_format)
-    with get_progress_tracker() as progress:
+    with progress_tracker as progress:
         pair_task = progress.add_task("Downloading data...", total=len(pairs))
         for pair in pairs:
             progress.update(pair_task, description=f"Downloading trades [{pair}]")
@@ -587,7 +593,12 @@ def download_data_main(config: Config) -> None:
     download_data(config, exchange)
 
 
-def download_data(config: Config, exchange: Exchange) -> None:
+def download_data(
+    config: Config,
+    exchange: Exchange,
+    *,
+    progress_tracker: Optional[ProgressLike] = None,
+) -> None:
     """
     Download data function. Used from both cli and API.
     """
@@ -648,6 +659,7 @@ def download_data(config: Config, exchange: Exchange) -> None:
                 erase=bool(config.get("erase")),
                 data_format=config["dataformat_trades"],
                 trading_mode=config.get("trading_mode", TradingMode.SPOT),
+                progress_tracker=progress_tracker,
             )
 
             if config.get("convert_trades") or not exchange.get_option("ohlcv_has_history", True):
@@ -683,6 +695,7 @@ def download_data(config: Config, exchange: Exchange) -> None:
                 data_format=config["dataformat_ohlcv"],
                 trading_mode=config.get("trading_mode", "spot"),
                 prepend=config.get("prepend_data", False),
+                progress_tracker=progress_tracker,
             )
     finally:
         if pairs_not_available:
