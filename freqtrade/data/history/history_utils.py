@@ -579,7 +579,18 @@ def validate_backtest_data(
     return found_missing
 
 
-def download_data_main(config: Config, exchange: Exchange) -> None:
+def download_data_main(config: Config) -> None:
+    from freqtrade.resolvers.exchange_resolver import ExchangeResolver
+
+    exchange = ExchangeResolver.load_exchange(config, validate=False)
+
+    download_data(config, exchange)
+
+
+def download_data(config: Config, exchange: Exchange) -> None:
+    """
+    Download data function. Used from both cli and API.
+    """
     timerange = TimeRange()
     if "days" in config:
         time_since = (datetime.now() - timedelta(days=config["days"])).strftime("%Y%m%d")
