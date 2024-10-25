@@ -144,6 +144,7 @@ class Exchange:
         "trades_pagination": "time",  # Possible are "time" or "id"
         "trades_pagination_arg": "since",
         "trades_has_history": False,
+        "create_order_has_all_data": True,  # Set to False if create_order doesn't return all data
         "l2_limit_range": None,
         "l2_limit_range_required": True,  # Allow Empty L2 limit (kucoin)
         "mark_ohlcv_price": "mark",
@@ -1274,6 +1275,8 @@ class Exchange:
                 rate_for_order,
                 params,
             )
+            if not self._ft_has.get("create_order_has_all_data"):
+                order = self._api.fetch_order(order['id'], pair)
             if order.get("status") is None:
                 # Map empty status to open.
                 order["status"] = "open"
