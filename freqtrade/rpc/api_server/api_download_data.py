@@ -11,6 +11,7 @@ from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import BgJobStarted, DownloadDataPayload
 from freqtrade.rpc.api_server.deps import get_config, get_exchange
 from freqtrade.rpc.api_server.webserver_bgwork import ApiBG
+from freqtrade.util.progress_tracker import get_progress_tracker
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,12 @@ def __run_download(job_id: str, config_loc: Config):
         with FtNoDBContext():
             exchange = get_exchange(config_loc)
 
-            download_data(config_loc, exchange)
+            def ft_callback(task) -> None:
+                print(task)
+
+            pt = get_progress_tracker(ft_callback=ft_callback)
+
+            download_data(config_loc, exchange, progress_tracker=pt)
             # ApiBG.jobs[job_id]["result"] = {
 
             # }
