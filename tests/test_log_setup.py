@@ -121,9 +121,8 @@ def test_set_loggers_Filehandler_without_permission(tmp_path):
     }
 
     setup_logging_pre()
-    with pytest.raises(SystemExit) as excinfo:
+    with pytest.raises(OperationalException):
         setup_logging(config)
-    assert excinfo.value.code == 1
 
     logger.handlers = orig_handlers
 

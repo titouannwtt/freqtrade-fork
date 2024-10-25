@@ -1,5 +1,4 @@
 import logging
-import sys
 from logging import Formatter
 from logging.handlers import RotatingFileHandler, SysLogHandler
 from pathlib import Path
@@ -97,7 +96,7 @@ def setup_logging(config: Config) -> None:
                     backupCount=10,
                 )
             except PermissionError:
-                logger.error(
+                raise OperationalException(
                     f'Failed to create or access log file "{logfile_path.absolute()}". '
                     "Please make sure you have the write permission to the log file or its parent "
                     "directories. If you're running freqtrade using docker, you see this error "
@@ -105,7 +104,6 @@ def setup_logging(config: Config) -> None:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
-                sys.exit(1)
             handler_rf.setFormatter(Formatter(LOGFORMAT))
             logging.root.addHandler(handler_rf)
 
