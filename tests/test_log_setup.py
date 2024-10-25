@@ -113,18 +113,21 @@ def test_set_loggers_Filehandler_without_permission(tmp_path):
     orig_handlers = logger.handlers
     logger.handlers = []
 
-    tmp_path.chmod(0o400)
-    logfile = tmp_path / "logs/ft_logfile.log"
-    config = {
-        "verbosity": 2,
-        "logfile": str(logfile),
-    }
+    try:
+        tmp_path.chmod(0o400)
+        logfile = tmp_path / "logs/ft_logfile.log"
+        config = {
+            "verbosity": 2,
+            "logfile": str(logfile),
+        }
 
-    setup_logging_pre()
-    with pytest.raises(OperationalException):
-        setup_logging(config)
+        setup_logging_pre()
+        with pytest.raises(OperationalException):
+            setup_logging(config)
 
-    logger.handlers = orig_handlers
+        logger.handlers = orig_handlers
+    finally:
+        tmp_path.chmod(0o700)
 
 
 @pytest.mark.skip(reason="systemd is not installed on every system, so we're not testing this.")
