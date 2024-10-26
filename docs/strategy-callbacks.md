@@ -975,7 +975,7 @@ class AwesomeStrategy(IStrategy):
             pair == "BTC/USDT" 
             and entry_tag == "long_sma200" 
             and side == "long" 
-            and (current_time - timedelta(minutes=10)) > trade.open_date_utc
+            and (current_time - timedelta(minutes=10)) <= trade.open_date_utc
         ):
             # just cancel the order if it has been filled more than half of the amount
             if order.filled > order.remaining:
