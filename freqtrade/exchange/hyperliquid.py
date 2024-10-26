@@ -79,8 +79,7 @@ class Hyperliquid(Exchange):
         stake_amount: float,
         leverage: float,
         wallet_balance: float,  # Or margin balance
-        mm_ex_1: float = 0.0,  # (Binance) Cross only
-        upnl_ex_1: float = 0.0,  # (Binance) Cross only
+        open_trades: list,
     ) -> Optional[float]:
         """
         Optimized
@@ -155,7 +154,7 @@ class Hyperliquid(Exchange):
         :return: funding fee since open_date
         :raises: ExchangeError if something goes wrong.
         """
-        # Bybit does not provide "applied" funding fees per position.
+        # Hyperliquid does not have fetchFundingHistory
         if self.trading_mode == TradingMode.FUTURES:
             try:
                 return self._fetch_and_calculate_funding_fees(pair, amount, is_short, open_date)
