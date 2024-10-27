@@ -117,7 +117,7 @@ class Bybit(Exchange):
     def ohlcv_candle_limit(
         self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
     ) -> int:
-        if candle_type in (CandleType.FUNDING_RATE):
+        if candle_type == CandleType.FUNDING_RATE:
             return 200
 
         return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
