@@ -995,6 +995,13 @@ CONF_SCHEMA = {
                     "type": "string",
                     "default": "example",
                 },
+                "wait_for_training_iteration_on_reload": {
+                    "description": (
+                        "Wait for the next training iteration to complete after /reload or ctrl+c."
+                    ),
+                    "type": "boolean",
+                    "default": True,
+                },
                 "feature_parameters": {
                     "description": "The parameters used to engineer the feature set",
                     "type": "object",
