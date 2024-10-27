@@ -57,7 +57,7 @@ class Hyperliquid(Exchange):
         self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
     ) -> int:
         # Funding rate candles have a different limit
-        if candle_type in CandleType.FUNDING_RATE:
+        if candle_type == CandleType.FUNDING_RATE:
             return 500
 
         return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
