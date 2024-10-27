@@ -1230,10 +1230,10 @@ class Exchange:
             params.update({"reduceOnly": True})
         return params
 
-    def _order_needs_price(self, ordertype: str) -> bool:
+    def _order_needs_price(self, side: BuySell, ordertype: str) -> bool:
         return (
             ordertype != "market"
-            or self._api.options.get("createMarketBuyOrderRequiresPrice", False)
+            or (side == "buy" and self._api.options.get("createMarketBuyOrderRequiresPrice", False))
             or self._ft_has.get("marketOrderRequiresPrice", False)
         )
 
@@ -1260,7 +1260,7 @@ class Exchange:
         try:
             # Set the precision for amount and price(rate) as accepted by the exchange
             amount = self.amount_to_precision(pair, self._amount_to_contracts(pair, amount))
-            needs_price = self._order_needs_price(ordertype)
+            needs_price = self._order_needs_price(side, ordertype)
             rate_for_order = self.price_to_precision(pair, rate) if needs_price else None
 
             if not reduceOnly:
