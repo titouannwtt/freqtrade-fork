@@ -1276,7 +1276,7 @@ class Exchange:
                 params,
             )
             if not self._ft_has.get("create_order_has_all_data"):
-                order = self._api.fetch_order(order['id'], pair)
+                order = self._api.fetch_order(order["id"], pair)
             if order.get("status") is None:
                 # Map empty status to open.
                 order["status"] = "open"

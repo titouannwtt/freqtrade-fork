@@ -1,14 +1,14 @@
 """Hyperliquid exchange subclass"""
 
 import logging
+from datetime import datetime
 from typing import Optional
 
-from freqtrade.exchange import Exchange
-from typing import List, Tuple, Dict
-from freqtrade.enums import MarginMode, TradingMode, CandleType
-from freqtrade.exceptions import OperationalException, ExchangeError
 from freqtrade.constants import BuySell
-from datetime import datetime
+from freqtrade.enums import CandleType, MarginMode, TradingMode
+from freqtrade.exceptions import ExchangeError, OperationalException
+from freqtrade.exchange import Exchange
+from freqtrade.exchange.exchange_types import FtHas
 
 
 logger = logging.getLogger(__name__)
@@ -19,10 +19,9 @@ class Hyperliquid(Exchange):
     Contains adjustments needed for Freqtrade to work with this exchange.
     """
 
-    _ft_has: Dict = {
+    _ft_has: FtHas = {
         "ohlcv_has_history": False,
         "ohlcv_candle_limit": 5000,
-        "orderbook_max_entries": 20,
         "l2_limit_range": [20],
         "trades_has_history": False,
         "tickers_have_bid_ask": False,
@@ -30,15 +29,15 @@ class Hyperliquid(Exchange):
         "exchange_has_overrides": {"fetchTrades": False},
         "stoploss_order_types": {"limit": "limit"},
         "funding_fee_timeframe": "1h",
-        "create_order_has_all_data": False
+        "create_order_has_all_data": False,
     }
 
-    _supported_trading_mode_margin_pairs: List[Tuple[TradingMode, MarginMode]] = [
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
         (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
 
     @property
-    def _ccxt_config(self) -> Dict:
+    def _ccxt_config(self) -> dict:
         # ccxt Hyperliquid defaults to swap
         config = {}
         if self.trading_mode == TradingMode.SPOT:
@@ -49,7 +48,7 @@ class Hyperliquid(Exchange):
     def get_max_leverage(self, pair: str, stake_amount: Optional[float]) -> float:
         # There are no leverage tiers
         if self.trading_mode == TradingMode.FUTURES:
-            return self.markets[pair]['limits']['leverage']['max']
+            return self.markets[pair]["limits"]["leverage"]["max"]
         else:
             return 1.0
 
@@ -103,7 +102,7 @@ class Hyperliquid(Exchange):
         position_size = amount
         price = open_rate
         position_value = price * position_size
-        max_leverage = self.markets[pair]['limits']['leverage']['max']
+        max_leverage = self.markets[pair]["limits"]["leverage"]["max"]
 
         # Docs: The maintenance margin is half of the initial margin at max leverage,
         #       which varies from 3-50x. In other words, the maintenance margin is between 1%
