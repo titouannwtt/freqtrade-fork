@@ -111,7 +111,7 @@ class Hyperliquid(Exchange):
         # The key thing here is 'Half of the initial margin at max leverage'.
         # A bit ambiguous, but this interpretation leads to accurate results:
         #       1. Start from the position value
-        #       2. Assume max leverage, calculate the initial margin by deviding the position value
+        #       2. Assume max leverage, calculate the initial margin by dividing the position value
         #          by the max leverage
         #       3. Divide this by 2
         maintenance_margin_required = position_value / max_leverage / 2
