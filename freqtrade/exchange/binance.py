@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Optional
 
 import ccxt
+from pandas import DataFrame
 
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import FtHas, OHLCVResponse, Tickers
+from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.misc import deep_merge_dicts, json_load
 
 
@@ -98,23 +99,24 @@ class Binance(Exchange):
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    async def _async_get_historic_ohlcv(
+    def get_historic_ohlcv(
         self,
         pair: str,
         timeframe: str,
         since_ms: int,
         candle_type: CandleType,
         is_new_pair: bool = False,
-        raise_: bool = False,
         until_ms: Optional[int] = None,
-    ) -> OHLCVResponse:
+    ) -> DataFrame:
         """
         Overwrite to introduce "fast new pair" functionality by detecting the pair's listing date
         Does not work for other exchanges, which don't return the earliest data when called with "0"
         :param candle_type: Any of the enum CandleType (must match trading mode!)
         """
         if is_new_pair:
-            x = await self._async_get_candle_history(pair, timeframe, candle_type, 0)
+            x = self.loop.run_until_complete(
+                self._async_get_candle_history(pair, timeframe, candle_type, 0)
+            )
             if x and x[3] and x[3][0] and x[3][0][0] > since_ms:
                 # Set starting date to first available candle.
                 since_ms = x[3][0][0]
@@ -122,14 +124,12 @@ class Binance(Exchange):
                     f"Candle-data for {pair} available starting with "
                     f"{datetime.fromtimestamp(since_ms // 1000, tz=timezone.utc).isoformat()}."
                 )
-
-        return await super()._async_get_historic_ohlcv(
+        return super().get_historic_ohlcv(
             pair=pair,
             timeframe=timeframe,
             since_ms=since_ms,
-            is_new_pair=is_new_pair,
-            raise_=raise_,
             candle_type=candle_type,
+            is_new_pair=is_new_pair,
             until_ms=until_ms,
         )
 
