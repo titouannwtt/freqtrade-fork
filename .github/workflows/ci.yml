@@ -420,7 +420,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: test-${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: test-linux-online-pip
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
