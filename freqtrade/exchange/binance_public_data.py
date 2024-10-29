@@ -27,12 +27,18 @@ class BadHttpStatus(Exception):
 
 
 async def fetch_ohlcv(
-    candle_type: CandleType, pair: str, timeframe: str, since_ms: int, until_ms: int | None
+    candle_type: CandleType,
+    pair: str,
+    timeframe: str,
+    since_ms: int,
+    until_ms: int | None,
+    stop_on_404: bool = False,
 ) -> DataFrame:
     """
     Fetch OHLCV data from https://data.binance.vision/
     :candle_type: Currently only spot and futures are supported
     :param until_ms: `None` indicates the timestamp of the latest available data
+    :param stop_on_404: Stop to download the following data when a 404 returned
     :return: None if no data available in the time range
     """
     if candle_type == CandleType.SPOT:
@@ -51,7 +57,7 @@ async def fetch_ohlcv(
     end = min(end, last_available_date)
     if start >= end:
         return DataFrame()
-    return await _fetch_ohlcv(asset_type, symbol, timeframe, start, end)
+    return await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
 
 
 def symbol_ccxt_to_binance(symbol: str) -> str:
@@ -60,7 +66,7 @@ def symbol_ccxt_to_binance(symbol: str) -> str:
     e.g. BTC/USDT -> BTCUSDT, BTC/USDT:USDT -> BTCUSDT
     """
     if ":" in symbol:
-        parts = symbol.split()
+        parts = symbol.split(":")
         if len(parts) != 2:
             raise ValueError(f"Cannot recognize symbol: {symbol}")
         return parts[0].replace("/", "")
@@ -75,7 +81,14 @@ def concat(dfs) -> DataFrame:
         return pd.concat(dfs)
 
 
-async def _fetch_ohlcv(asset_type, symbol, timeframe, start, end) -> DataFrame:
+async def _fetch_ohlcv(
+    asset_type: str,
+    symbol: str,
+    timeframe: str,
+    start: datetime.date,
+    end: datetime.date,
+    stop_on_404: bool,
+) -> DataFrame:
     dfs: list[DataFrame | None] = []
 
     connector = aiohttp.TCPConnector(limit=100)
@@ -92,6 +105,9 @@ async def _fetch_ohlcv(asset_type, symbol, timeframe, start, end) -> DataFrame:
                     logger.warning(f"An exception raised: : {result}")
                     # Directly return the existing data, do not allow the gap
                     # between the data
+                    return concat(dfs)
+                elif result is None and stop_on_404:
+                    logger.debug("Abort downloading from data.binance.vision due to 404")
                     return concat(dfs)
                 else:
                     dfs.append(result)
@@ -175,12 +191,12 @@ async def get_daily_ohlcv(
                             df["date"] = pd.to_datetime(df["date"], unit="ms", utc=True)
                             return df
                 elif resp.status == 404:
-                    logger.warning(f"No data available for {symbol} in {format_date(date)}")
+                    logger.debug(f"No data available for {symbol} in {format_date(date)}")
                     return None
                 else:
                     raise BadHttpStatus(f"{resp.status} - {resp.reason}")
         except Exception as e:
             retry += 1
             if retry >= retry_count:
-                logger.warning(f"Failed to get data from {url}: {e}")
+                logger.debug(f"Failed to get data from {url}: {e}")
                 raise

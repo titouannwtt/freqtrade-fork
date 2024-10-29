@@ -93,48 +93,61 @@ def make_response_from_url(start_date, end_date):
 
 
 @pytest.mark.parametrize(
-    "since,until,first_date,last_date",
+    "since,until,first_date,last_date,stop_on_404",
     [
-        (dt_utc(2020, 1, 1), dt_utc(2020, 1, 2), dt_utc(2020, 1, 1), dt_utc(2020, 1, 2, 23)),
+        (dt_utc(2020, 1, 1), dt_utc(2020, 1, 2), dt_utc(2020, 1, 1), dt_utc(2020, 1, 2, 23), False),
         (
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 1, 23, 59, 59),
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 1, 23),
+            False,
         ),
         (
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 3, 23),
+            False,
         ),
         (
             dt_utc(2019, 1, 1),
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 3, 23),
+            False,
         ),
         (
             dt_utc(2019, 1, 1),
             dt_utc(2019, 1, 5),
             None,
             None,
+            False,
         ),
         (
             dt_utc(2021, 1, 1),
             dt_utc(2021, 1, 5),
             None,
             None,
+            False,
         ),
         (
             dt_utc(2020, 1, 2),
             None,
             dt_utc(2020, 1, 2),
             dt_utc(2020, 1, 3, 23),
+            False,
+        ),
+        (
+            dt_utc(2019, 1, 1),
+            dt_utc(2020, 1, 5),
+            None,
+            None,
+            True,
         ),
     ],
 )
-async def test_fetch_ohlcv(mocker, since, until, first_date, last_date):
+async def test_fetch_ohlcv(mocker, since, until, first_date, last_date, stop_on_404):
     history_start = dt_utc(2020, 1, 1).date()
     history_end = dt_utc(2020, 1, 3).date()
     candle_type = CandleType.SPOT
@@ -147,7 +160,7 @@ async def test_fetch_ohlcv(mocker, since, until, first_date, last_date):
     mocker.patch(
         "aiohttp.ClientSession.get", side_effect=make_response_from_url(history_start, history_end)
     )
-    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms)
+    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, stop_on_404)
 
     if df.empty:
         assert first_date is None and last_date is None
