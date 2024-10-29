@@ -113,6 +113,19 @@ def zip_name(symbol: str, timeframe: str, date: datetime.date) -> str:
     return f"{symbol}-{timeframe}-{format_date(date)}.zip"
 
 
+def zip_url(asset_type: str, symbol: str, timeframe: str, date: datetime.date) -> str:
+    """
+    example urls:
+    https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2023-10-27.zip
+    https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2023-10-27.zip
+    """
+    url = (
+        f"https://data.binance.vision/data/{asset_type}/daily/klines/{symbol}/{timeframe}/"
+        f"{zip_name(symbol, timeframe, date)}"
+    )
+    return url
+
+
 async def get_daily_ohlcv(
     asset_type: str,
     symbol: str,
@@ -126,13 +139,7 @@ async def get_daily_ohlcv(
     See https://github.com/binance/binance-public-data
     """
 
-    # example urls:
-    # https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2023-10-27.zip
-    # https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2023-10-27.zip
-    url = (
-        f"https://data.binance.vision/data/{asset_type}/daily/klines/{symbol}/{timeframe}/"
-        f"{zip_name(symbol, timeframe, date)}"
-    )
+    url = zip_url(asset_type, symbol, timeframe, date)
 
     logger.debug(f"download data from binance: {url}")
 
