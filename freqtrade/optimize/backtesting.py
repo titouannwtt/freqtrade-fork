@@ -732,7 +732,6 @@ class Backtesting:
                 trade.close_date = current_time
                 trade.close(order.ft_price, show_msg=False)
 
-                # logger.debug(f"{pair} - Backtesting exit {trade}")
                 LocalTrade.close_bt_trade(trade)
             self.wallets.update()
             self.run_protections(pair, current_time, trade.trade_direction)
@@ -1103,6 +1102,7 @@ class Backtesting:
                     fee_close=self.fee,
                     is_open=True,
                     enter_tag=entry_tag,
+                    timeframe=self.timeframe_min,
                     exchange=self._exchange_name,
                     is_short=is_short,
                     trading_mode=self.trading_mode,
@@ -1358,7 +1358,7 @@ class Backtesting:
             and (self._position_stacking or len(LocalTrade.bt_trades_open_pp[pair]) == 0)
             and not PairLocks.is_pair_locked(pair, row[DATE_IDX], trade_dir)
         ):
-            if self.trade_slot_available(LocalTrade.bt_open_open_trade_count):
+            if self.trade_slot_available(LocalTrade.bt_open_open_trade_count_candle):
                 trade = self._enter_trade(pair, row, trade_dir)
                 if trade:
                     self.wallets.update()
@@ -1432,6 +1432,10 @@ class Backtesting:
         ):
             if is_first_call:
                 self.check_abort()
+                # Reset open trade count for this candle
+                # Critical to avoid exceeding max_open_trades in backtesting
+                # when timeframe-detail is used and trades close within the opening candle.
+                LocalTrade.bt_open_open_trade_count_candle = LocalTrade.bt_open_open_trade_count
                 strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
                     current_time=current_time
                 )

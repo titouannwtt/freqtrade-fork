@@ -2144,6 +2144,7 @@ def test_Trade_object_idem():
         "bt_trades_open",
         "bt_trades_open_pp",
         "bt_open_open_trade_count",
+        "bt_open_open_trade_count_candle",
         "bt_total_profit",
         "from_json",
     )

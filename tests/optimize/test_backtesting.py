@@ -1682,6 +1682,131 @@ def test_backtest_multi_pair_detail(
 
 
 @pytest.mark.parametrize("use_detail", [True, False])
+@pytest.mark.parametrize("pair", ["ADA/USDT", "LTC/USDT"])
+@pytest.mark.parametrize("tres", [0, 20, 30])
+def test_backtest_multi_pair_detail_simplified(
+    default_conf_usdt,
+    fee,
+    mocker,
+    tres,
+    pair,
+    use_detail,
+):
+    """
+    literally the same as test_backtest_multi_pair_detail
+    but with an "always enter" strategy, exiting after about half of the candle duration.
+    """
+
+    def _always_buy(dataframe, metadata):
+        """
+        Buy every xth candle - sell every other xth -2 (hold on to pairs a bit)
+        """
+        dataframe["enter_long"] = 1
+        dataframe["enter_short"] = 0
+        dataframe["exit_short"] = 0
+        return dataframe
+
+    def custom_exit(
+        trade: Trade,
+        current_time: datetime,
+        **kwargs,
+    ) -> str | bool | None:
+        # Exit within the same candle.
+        if (trade.open_date_utc + timedelta(minutes=20)) < current_time:
+            return "exit after 20 minutes"
+
+    default_conf_usdt.update(
+        {
+            "runmode": "backtest",
+            "stoploss": -1.0,
+            "minimal_roi": {"0": 100},
+        }
+    )
+
+    if use_detail:
+        default_conf_usdt["timeframe_detail"] = "5m"
+
+    mocker.patch(f"{EXMS}.get_min_pair_stake_amount", return_value=0.00001)
+    mocker.patch(f"{EXMS}.get_max_pair_stake_amount", return_value=float("inf"))
+    mocker.patch(f"{EXMS}.get_fee", fee)
+    patch_exchange(mocker)
+
+    raw_candles_5m = generate_test_data("5m", 1000, "2022-01-03 12:00:00+00:00")
+    raw_candles = ohlcv_fill_up_missing_data(raw_candles_5m, "1h", "dummy")
+
+    pairs = ["ADA/USDT", "DASH/USDT", "ETH/USDT", "LTC/USDT", "NXT/USDT"]
+    data = {pair: raw_candles for pair in pairs}
+    detail_data = {pair: raw_candles_5m for pair in pairs}
+
+    # Only use 500 lines to increase performance
+    data = trim_dictlist(data, -200)
+
+    # Remove data for one pair from the beginning of the data
+    if tres > 0:
+        data[pair] = data[pair][tres:].reset_index()
+    default_conf_usdt["timeframe"] = "1h"
+    default_conf_usdt["max_open_trades"] = 3
+
+    backtesting = Backtesting(default_conf_usdt)
+    vr_spy = mocker.spy(backtesting, "validate_row")
+    bl_spy = mocker.spy(backtesting, "backtest_loop")
+    backtesting.detail_data = detail_data
+    backtesting._set_strategy(backtesting.strategylist[0])
+    backtesting.strategy.bot_loop_start = MagicMock()
+    backtesting.strategy.advise_entry = _always_buy  # Override
+    backtesting.strategy.advise_exit = _always_buy  # Override
+    backtesting.strategy.custom_exit = custom_exit  # Override
+
+    processed = backtesting.strategy.advise_all_indicators(data)
+    min_date, max_date = get_timerange(processed)
+
+    backtest_conf = {
+        "processed": deepcopy(processed),
+        "start_date": min_date,
+        "end_date": max_date,
+    }
+
+    results = backtesting.backtest(**backtest_conf)
+
+    # bot_loop_start is called once per candle.
+    # assert backtesting.strategy.bot_loop_start.call_count == 83
+    # Validated row once per candle and pair
+    assert vr_spy.call_count == 415
+
+    if use_detail:
+        # Backtest loop is called once per candle per pair
+        # Exact numbers depend on trade state - but should be around 3_800
+        assert bl_spy.call_count > 3_350
+        assert bl_spy.call_count < 3_800
+    else:
+        assert bl_spy.call_count < 995
+
+    # Make sure we have parallel trades
+    assert len(evaluate_result_multi(results["results"], "1h", 2)) > 0
+    # make sure we don't have trades with more than configured max_open_trades
+    assert len(evaluate_result_multi(results["results"], "1h", 3)) == 0
+
+    # # Cached data correctly removed amounts
+    offset = 1 if tres == 0 else 0
+    removed_candles = len(data[pair]) - offset
+    assert len(backtesting.dataprovider.get_analyzed_dataframe(pair, "1h")[0]) == removed_candles
+    assert (
+        len(backtesting.dataprovider.get_analyzed_dataframe("NXT/USDT", "1h")[0])
+        == len(data["NXT/USDT"]) - 1
+    )
+
+    backtesting.strategy.max_open_trades = 1
+    backtesting.config.update({"max_open_trades": 1})
+    backtest_conf = {
+        "processed": deepcopy(processed),
+        "start_date": min_date,
+        "end_date": max_date,
+    }
+    results = backtesting.backtest(**backtest_conf)
+    assert len(evaluate_result_multi(results["results"], "1h", 1)) == 0
+
+
+@pytest.mark.parametrize("use_detail", [True, False])
 def test_backtest_multi_pair_long_short_switch(
     default_conf_usdt,
     fee,
