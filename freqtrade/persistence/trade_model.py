@@ -379,6 +379,7 @@ class LocalTrade:
     # Copy of trades_open - but indexed by pair
     bt_trades_open_pp: dict[str, list["LocalTrade"]] = defaultdict(list)
     bt_open_open_trade_count: int = 0
+    bt_open_open_trade_count_candle: int = 0
     bt_total_profit: float = 0
     realized_profit: float = 0
 
@@ -747,6 +748,7 @@ class LocalTrade:
         LocalTrade.bt_trades_open = []
         LocalTrade.bt_trades_open_pp = defaultdict(list)
         LocalTrade.bt_open_open_trade_count = 0
+        LocalTrade.bt_open_open_trade_count_candle = 0
         LocalTrade.bt_total_profit = 0
 
     def adjust_min_max_rates(self, current_price: float, current_price_low: float) -> None:
@@ -1442,6 +1444,11 @@ class LocalTrade:
         LocalTrade.bt_trades_open.remove(trade)
         LocalTrade.bt_trades_open_pp[trade.pair].remove(trade)
         LocalTrade.bt_open_open_trade_count -= 1
+        if (trade.close_date_utc - trade.open_date_utc) > timedelta(minutes=trade.timeframe):
+            # Only subtract trades that are open for more than 1 candle
+            # To avoid exceeding max_open_trades.
+            # Must be reset at the start of every candle during backesting.
+            LocalTrade.bt_open_open_trade_count_candle -= 1
         LocalTrade.bt_trades.append(trade)
         LocalTrade.bt_total_profit += trade.close_profit_abs
 
@@ -1451,6 +1458,7 @@ class LocalTrade:
             LocalTrade.bt_trades_open.append(trade)
             LocalTrade.bt_trades_open_pp[trade.pair].append(trade)
             LocalTrade.bt_open_open_trade_count += 1
+            LocalTrade.bt_open_open_trade_count_candle += 1
         else:
             LocalTrade.bt_trades.append(trade)
 
@@ -1459,6 +1467,9 @@ class LocalTrade:
         LocalTrade.bt_trades_open.remove(trade)
         LocalTrade.bt_trades_open_pp[trade.pair].remove(trade)
         LocalTrade.bt_open_open_trade_count -= 1
+        # TODO: The below may have odd behavior in case of canceled entries
+        # It might need to be removed so the trade "counts" as open for this candle.
+        LocalTrade.bt_open_open_trade_count_candle -= 1
 
     @staticmethod
     def get_open_trades() -> list[Any]:
