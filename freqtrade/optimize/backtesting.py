@@ -732,7 +732,6 @@ class Backtesting:
                 trade.close_date = current_time
                 trade.close(order.ft_price, show_msg=False)
 
-                # logger.debug(f"{pair} - Backtesting exit {trade}")
                 LocalTrade.close_bt_trade(trade)
             self.wallets.update()
             self.run_protections(pair, current_time, trade.trade_direction)
