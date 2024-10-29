@@ -6,14 +6,17 @@ from pathlib import Path
 from typing import Optional
 
 import ccxt
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
+from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
-from freqtrade.exchange import Exchange
+from freqtrade.exchange import Exchange, binance_public_data
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import FtHas, Tickers
+from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
 from freqtrade.misc import deep_merge_dicts, json_load
+from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts
 
 
 logger = logging.getLogger(__name__)
@@ -124,6 +127,41 @@ class Binance(Exchange):
                     f"Candle-data for {pair} available starting with "
                     f"{datetime.fromtimestamp(since_ms // 1000, tz=timezone.utc).isoformat()}."
                 )
+                if until_ms and since_ms >= until_ms:
+                    logger.warning(
+                        f"No available candle-data for {pair} before"
+                        f"{dt_from_ts(until_ms).isoformat()}"
+                    )
+                    return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
+
+        if timeframe in ["1m", "5m"] and candle_type in [CandleType.SPOT, CandleType.FUTURES]:
+            df = self.loop.run_until_complete(
+                binance_public_data.fetch_ohlcv(
+                    candle_type=candle_type,
+                    pair=pair,
+                    timeframe=timeframe,
+                    since_ms=since_ms,
+                    until_ms=until_ms,
+                )
+            )
+            if df.empty:
+                rest_since_ms = since_ms
+            else:
+                rest_since_ms = dt_ts(df.iloc[-1].date) + timeframe_to_msecs(timeframe)
+
+            if until_ms and rest_since_ms > until_ms:
+                rest_df = DataFrame()
+            else:
+                rest_df = super().get_historic_ohlcv(
+                    pair=pair,
+                    timeframe=timeframe,
+                    since_ms=rest_since_ms,
+                    candle_type=candle_type,
+                    is_new_pair=is_new_pair,
+                    until_ms=until_ms,
+                )
+            all_df = concat([df, rest_df])
+            return all_df
         return super().get_historic_ohlcv(
             pair=pair,
             timeframe=timeframe,

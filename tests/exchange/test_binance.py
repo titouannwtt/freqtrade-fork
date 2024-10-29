@@ -1,13 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from random import randint
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import ccxt
+import pandas as pd
 import pytest
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import DependencyException, InvalidOrderException, OperationalException
 from freqtrade.persistence import Trade
+from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts, dt_utc
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange, log_has_re
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
@@ -729,6 +731,234 @@ def test__set_leverage_binance(mocker, default_conf):
         pair="XRP/USDT",
         leverage=5.0,
     )
+
+
+def make_storage(start: datetime, end: datetime, timeframe: str = "1min"):
+    date = pd.date_range(start, end, freq=timeframe)
+    df = pd.DataFrame(
+        data=dict(date=date, open=1.0, high=1.0, low=1.0, close=1.0),
+    )
+    return df
+
+
+def patch_ohlcv(mocker, start, archive_end, api_end):
+    archive_storage = make_storage(start, archive_end)
+    api_storage = make_storage(start, api_end)
+
+    ohlcv = [[dt_ts(start), 1, 1, 1, 1]]
+    # (pair, timeframe, candle_type, ohlcv, True)
+    candle_history = [None, None, None, ohlcv, None]
+
+    def get_historic_ohlcv(
+        # self,
+        pair: str,
+        timeframe: str,
+        since_ms: int,
+        candle_type: CandleType,
+        is_new_pair: bool = False,
+        until_ms: int | None = None,
+    ):
+        since = dt_from_ts(since_ms)
+        until = dt_from_ts(until_ms) if until_ms else api_end + timedelta(seconds=1)
+        return api_storage.loc[(api_storage["date"] >= since) & (api_storage["date"] < until)]
+
+    def fetch_ohlcv(
+        candle_type,
+        pair,
+        timeframe,
+        since_ms,
+        until_ms,
+    ):
+        since = dt_from_ts(since_ms)
+        until = dt_from_ts(until_ms) if until_ms else archive_end + timedelta(seconds=1)
+        if since < start:
+            pass
+        return archive_storage.loc[
+            (archive_storage["date"] >= since) & (archive_storage["date"] < until)
+        ]
+
+    candle_mock = mocker.patch(
+        "freqtrade.exchange.Exchange._async_get_candle_history", return_value=candle_history
+    )
+    api_mock = mocker.patch(
+        "freqtrade.exchange.Exchange.get_historic_ohlcv", MagicMock(wraps=get_historic_ohlcv)
+    )
+    archive_mock = mocker.patch(
+        "freqtrade.exchange.binance_public_data.fetch_ohlcv", AsyncMock(wraps=fetch_ohlcv)
+    )
+    return candle_mock, api_mock, archive_mock
+
+
+@pytest.mark.parametrize(
+    "timeframe,is_new_pair,since,until,first_date,last_date,candle_called,archive_called,"
+    "api_called",
+    [
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            True,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 3),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2, 23, 59),
+            True,
+            True,
+            True,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 2, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 2, 0, 59),
+            True,
+            False,
+            True,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            False,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2019, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            True,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2019, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            False,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2019, 1, 1),
+            dt_utc(2019, 1, 2),
+            None,
+            None,
+            False,
+            True,
+            True,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2019, 1, 1),
+            dt_utc(2019, 1, 2),
+            None,
+            None,
+            True,
+            False,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2021, 1, 1),
+            dt_utc(2021, 1, 2),
+            None,
+            None,
+            False,
+            False,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2021, 1, 1),
+            dt_utc(2021, 1, 2),
+            None,
+            None,
+            True,
+            False,
+            False,
+        ),
+        (
+            "1h",
+            False,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            False,
+            False,
+            True,
+        ),
+    ],
+)
+def test_get_historic_ohlcv_binance(
+    mocker,
+    default_conf,
+    timeframe,
+    is_new_pair,
+    since,
+    until,
+    first_date,
+    last_date,
+    candle_called,
+    archive_called,
+    api_called,
+):
+    exchange = get_patched_exchange(mocker, default_conf, exchange="binance")
+
+    start = dt_utc(2020, 1, 1)
+    archive_end = dt_utc(2020, 1, 2)
+    api_end = dt_utc(2020, 1, 3)
+    candle_mock, api_mock, archive_mock = patch_ohlcv(
+        mocker, start=start, archive_end=archive_end, api_end=api_end
+    )
+
+    candle_type = CandleType.SPOT
+    pair = "BTC/USDT"
+
+    since_ms = dt_ts(since)
+    until_ms = dt_ts(until)
+
+    df = exchange.get_historic_ohlcv(pair, timeframe, since_ms, candle_type, is_new_pair, until_ms)
+
+    if df.empty:
+        assert first_date is None
+        assert last_date is None
+    else:
+        assert df["date"].iloc[0] == first_date
+        assert df["date"].iloc[-1] == last_date
+
+    if candle_called:
+        candle_mock.assert_called_once()
+    if archive_called:
+        archive_mock.assert_called_once()
+    if api_called:
+        api_mock.assert_called_once()
 
 
 @pytest.mark.xfail(reason="Need refactor")
