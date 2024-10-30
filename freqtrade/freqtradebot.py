@@ -1760,7 +1760,7 @@ class FreqtradeBot(LoggingMixin):
                 open_order_side = oo.side
                 open_order_amount = oo.amount
 
-                if (side == open_order_side) & (amount == open_order_amount):
+                if (side == open_order_side) and (amount == open_order_amount):
                     return True
                 else:
                     # cancel open order of this trade if order is different
