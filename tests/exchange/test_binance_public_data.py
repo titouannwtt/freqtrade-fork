@@ -16,7 +16,13 @@ from freqtrade.exchange.binance_public_data import (
     symbol_ccxt_to_binance,
     zip_name,
 )
+from freqtrade.system.asyncio_config import asyncio_setup
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
+
+
+@pytest.fixture(autouse=True, scope="module")
+def setup_windows_asyncio_loop():
+    asyncio_setup()
 
 
 # spot klines archive csv file format, the futures/um klines don't have the header line
