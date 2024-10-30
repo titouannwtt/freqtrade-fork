@@ -923,7 +923,7 @@ class FreqtradeBot(LoggingMixin):
             logger.info(f"User denied entry for {pair}.")
             return False
 
-        if trade and self.handle_similar_open_order(trade, side, amount):
+        if trade and self.handle_similar_open_order(trade, enter_limit_requested, amount, side):
             logger.info(f"A similar open order was found for {pair}.")
             return False
 
@@ -1749,7 +1749,9 @@ class FreqtradeBot(LoggingMixin):
 
         Trade.commit()
 
-    def handle_similar_open_order(self, trade: Trade, side: str, amount: float) -> bool:
+    def handle_similar_open_order(
+        self, trade: Trade, price: float, amount: float, side: str
+    ) -> bool:
         """
         Keep existing open order if same amount and side, otherwise cancel
         :return: True if an existing similar order was found
@@ -1757,10 +1759,7 @@ class FreqtradeBot(LoggingMixin):
         if trade.has_open_orders:
             oo = trade.select_order(side, True)
             if oo is not None:
-                open_order_side = oo.side
-                open_order_amount = oo.amount
-
-                if (side == open_order_side) and (amount == open_order_amount):
+                if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
                     return True
                 else:
                     # cancel open order of this trade if order is different
