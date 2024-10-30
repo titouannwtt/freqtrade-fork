@@ -5,7 +5,6 @@ Fetch daily-archived OHLCV data from https://data.binance.vision/
 import asyncio
 import datetime
 import io
-import itertools
 import logging
 import zipfile
 
@@ -14,6 +13,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from freqtrade.enums import CandleType
+from freqtrade.misc import chunks
 from freqtrade.util.datetime_helpers import dt_from_ts, dt_now
 
 
@@ -106,7 +106,7 @@ async def _fetch_ohlcv(
             for date in date_range(start, end)
         ]
         # the HTTP connections has been throttled by TCPConnector
-        for batch in itertools.batched(coroutines, 1000):
+        for batch in chunks(coroutines, 1000):
             results = await asyncio.gather(*batch)
             for result in results:
                 if isinstance(result, BaseException):
