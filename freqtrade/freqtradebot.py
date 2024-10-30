@@ -1756,7 +1756,11 @@ class FreqtradeBot(LoggingMixin):
         self, trade: Trade, price: float, amount: float, side: str
     ) -> bool:
         """
-        Keep existing open order if same amount and side, otherwise cancel
+        Keep existing open order if same amount and side otherwise cancel
+        :param trade: Trade object of the trade we're analyzing
+        :param price: Limit price of the potential new order
+        :param amount: Quantity of assets of the potential new order
+        :param side: Side of the potential new order
         :return: True if an existing similar order was found
         """
         if trade.has_open_orders:
