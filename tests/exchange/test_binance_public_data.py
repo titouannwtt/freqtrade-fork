@@ -1,6 +1,8 @@
+import asyncio
 import datetime
 import io
 import re
+import sys
 import zipfile
 from datetime import timedelta
 
@@ -16,13 +18,15 @@ from freqtrade.exchange.binance_public_data import (
     symbol_ccxt_to_binance,
     zip_name,
 )
-from freqtrade.system.asyncio_config import asyncio_setup
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
 
 
-@pytest.fixture(autouse=True, scope="module")
-def setup_windows_asyncio_loop():
-    asyncio_setup()
+@pytest.fixture(scope="module")
+def event_loop_policy(request):
+    if sys.platform == "win32":
+        return asyncio.WindowsSelectorEventLoopPolicy()
+    else:
+        return asyncio.DefaultEventLoopPolicy()
 
 
 # spot klines archive csv file format, the futures/um klines don't have the header line
