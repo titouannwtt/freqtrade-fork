@@ -483,8 +483,8 @@ def test_dca_order_adjust(default_conf_usdt, ticker_usdt, leverage, fee, mocker)
     freqtrade.process()
     trade = Trade.get_trades().first()
 
-    assert trade.orders[-2].status == "canceled"
-    assert len(trade.orders) == 6
+    assert trade.orders[-2].status == "closed"
+    assert len(trade.orders) == 5
     assert trade.orders[-1].side == trade.exit_side
     assert trade.orders[-1].status == "open"
     assert trade.orders[-1].price == 2.02
