@@ -2124,7 +2124,7 @@ def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_
     assert exchange._async_get_candle_history.call_count == 2
     # Returns twice the above OHLCV data after truncating the open candle.
     assert len(ret) == 2
-    assert log_has_re(r"Downloaded data for .* with length .*\.", caplog)
+    assert log_has_re(r"Downloaded data for .* from ccxt with length .*\.", caplog)
 
     caplog.clear()
 

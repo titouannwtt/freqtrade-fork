@@ -142,14 +142,13 @@ class Binance(Exchange):
                     timeframe=timeframe,
                     since_ms=since_ms,
                     until_ms=until_ms,
-                    stop_on_404=True,
+                    stop_on_404=False,
                 )
             )
             if df.empty:
                 rest_since_ms = since_ms
             else:
                 rest_since_ms = dt_ts(df.iloc[-1].date) + timeframe_to_msecs(timeframe)
-
             if until_ms and rest_since_ms > until_ms:
                 rest_df = DataFrame()
             else:

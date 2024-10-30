@@ -1,10 +1,23 @@
 """
 Check if the earliest klines from rest API have its counterpart on https://data.binance.vision
+Not expected to run in CI, manually run from shell:
 
-Not expected to run in CI
+    TEST_BINANCE_COMPARE_OHLCV=1 pytest tests/exchange_online/test_binance_compare_ohlcv.py
 
-Manually run from shell:
-TEST_BINANCE_COMPARE_OHLCV=1 pytest tests/exchange_online/test_binance_compare_ohlcv.py
+Until 2024-10-30, there are three usdt-m futures symbols "lack" data
+All SPOT symbols are good.
+
+BTCUSDT-1m                                          113 days
+ARCHIVE: 2019-12-31 00:00:00 │ 2024-10-30 02:51:00 │ 2541772
+API:     2019-09-08 17:57:00 │ 2024-10-30 03:11:00 │ 2704874
+
+ETHUSDT                                              34 days
+ARCHIVE: 2019-12-31 00:00:00 │ 2020-02-29 23:59:00 │   87840
+API:     2019-11-27 07:45:00 │ 2020-03-01 11:03:00 │  136999
+
+BCHUSDT                                              12 days
+ARCHIVE: 2019-12-31 00:00:00 │ 2020-02-29 23:59:00 │   87840
+API:     2019-12-19 08:57:00 │ 2020-03-01 06:55:00 │  104999
 """
 
 import asyncio

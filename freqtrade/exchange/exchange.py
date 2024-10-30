@@ -2246,7 +2246,7 @@ class Exchange:
                 candle_type=candle_type,
             )
         )
-        logger.info(f"Downloaded data for {pair} with length {len(data)}.")
+        logger.info(f"Downloaded data for {pair} from ccxt with length {len(data)}.")
         return ohlcv_to_dataframe(data, timeframe, pair, fill_missing=False, drop_incomplete=True)
 
     async def _async_get_historic_ohlcv(

@@ -39,7 +39,8 @@ async def fetch_ohlcv(
     :candle_type: Currently only spot and futures are supported
     :param until_ms: `None` indicates the timestamp of the latest available data
     :param stop_on_404: Stop to download the following data when a 404 returned
-    :return: None if no data available in the time range
+    :return: the date range is between [since_ms, until_ms),
+        return None if no data available in the time range
     """
     if candle_type == CandleType.SPOT:
         asset_type = "spot"
@@ -57,7 +58,14 @@ async def fetch_ohlcv(
     end = min(end, last_available_date)
     if start >= end:
         return DataFrame()
-    return await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
+    df = await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
+    logger.info(
+        f"Downloaded data for {pair} from https://data.binance.vision/ with length {len(df)}."
+    )
+    if not df.empty:
+        return df.loc[(df["date"] >= start) & (df["date"] < end)]
+    else:
+        return df
 
 
 def symbol_ccxt_to_binance(symbol: str) -> str:
@@ -149,7 +157,7 @@ async def get_daily_ohlcv(
     date: datetime.date,
     session: aiohttp.ClientSession,
     retry_count: int = 3,
-) -> DataFrame | None:
+) -> DataFrame | None | Exception:
     """
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
@@ -199,4 +207,4 @@ async def get_daily_ohlcv(
             retry += 1
             if retry >= retry_count:
                 logger.debug(f"Failed to get data from {url}: {e}")
-                raise
+                return e
