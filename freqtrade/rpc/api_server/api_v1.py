@@ -1,6 +1,6 @@
 import logging
 from copy import deepcopy
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.exceptions import HTTPException
@@ -27,6 +27,7 @@ from freqtrade.rpc.api_server.api_schemas import (
     ForceExitPayload,
     FreqAIModelListResponse,
     Health,
+    HyperoptLossListResponse,
     Locks,
     LocksPayload,
     Logs,
@@ -82,7 +83,8 @@ logger = logging.getLogger(__name__)
 # 2.33: Additional weekly/monthly metrics
 # 2.34: new entries/exits/mix_tags endpoints
 # 2.35: pair_candles and pair_history endpoints as Post variant
-API_VERSION = 2.35
+# 2.40: Add hyperopt-loss endpoint
+API_VERSION = 2.40
 
 # Public API, requires no auth.
 router_public = APIRouter()
@@ -116,22 +118,22 @@ def count(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_count()
 
 
-@router.get("/entries", response_model=List[Entry], tags=["info"])
+@router.get("/entries", response_model=list[Entry], tags=["info"])
 def entries(pair: Optional[str] = None, rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_enter_tag_performance(pair)
 
 
-@router.get("/exits", response_model=List[Exit], tags=["info"])
+@router.get("/exits", response_model=list[Exit], tags=["info"])
 def exits(pair: Optional[str] = None, rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_exit_reason_performance(pair)
 
 
-@router.get("/mix_tags", response_model=List[MixTag], tags=["info"])
+@router.get("/mix_tags", response_model=list[MixTag], tags=["info"])
 def mix_tags(pair: Optional[str] = None, rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_mix_tag_performance(pair)
 
 
-@router.get("/performance", response_model=List[PerformanceEntry], tags=["info"])
+@router.get("/performance", response_model=list[PerformanceEntry], tags=["info"])
 def performance(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_performance()
 
@@ -167,7 +169,7 @@ def monthly(timescale: int = 3, rpc: RPC = Depends(get_rpc), config=Depends(get_
     )
 
 
-@router.get("/status", response_model=List[OpenTradeSchema], tags=["info"])
+@router.get("/status", response_model=list[OpenTradeSchema], tags=["info"])
 def status(rpc: RPC = Depends(get_rpc)):
     try:
         return rpc._rpc_trade_status()
@@ -268,7 +270,7 @@ def blacklist_post(payload: BlacklistPayload, rpc: RPC = Depends(get_rpc)):
 
 
 @router.delete("/blacklist", response_model=BlacklistResponse, tags=["info", "pairlist"])
-def blacklist_delete(pairs_to_delete: List[str] = Query([]), rpc: RPC = Depends(get_rpc)):
+def blacklist_delete(pairs_to_delete: list[str] = Query([]), rpc: RPC = Depends(get_rpc)):
     """Provide a list of pairs to delete from the blacklist"""
 
     return rpc._rpc_blacklist_delete(pairs_to_delete)
@@ -295,7 +297,7 @@ def delete_lock_pair(payload: DeleteLockRequest, rpc: RPC = Depends(get_rpc)):
 
 
 @router.post("/locks", response_model=Locks, tags=["info", "locks"])
-def add_locks(payload: List[LocksPayload], rpc: RPC = Depends(get_rpc)):
+def add_locks(payload: list[LocksPayload], rpc: RPC = Depends(get_rpc)):
     for lock in payload:
         rpc._rpc_add_lock(lock.pair, lock.until, lock.reason, lock.side)
     return rpc._rpc_locks()
@@ -453,6 +455,30 @@ def list_exchanges(config=Depends(get_config)):
     exchanges = list_available_exchanges(config)
     return {
         "exchanges": exchanges,
+    }
+
+
+@router.get(
+    "/hyperoptloss", response_model=HyperoptLossListResponse, tags=["hyperopt", "webserver"]
+)
+def list_hyperoptloss(
+    config=Depends(get_config),
+):
+    import textwrap
+
+    from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
+
+    loss_functions = HyperOptLossResolver.search_all_objects(config, False)
+    loss_functions = sorted(loss_functions, key=lambda x: x["name"])
+
+    return {
+        "loss_functions": [
+            {
+                "name": x["name"],
+                "description": textwrap.dedent((x["class"].__doc__ or "").strip()),
+            }
+            for x in loss_functions
+        ]
     }
 
 

@@ -11,6 +11,7 @@ import pytest
 from freqtrade.commands import (
     start_backtesting_show,
     start_convert_data,
+    start_convert_db,
     start_convert_trades,
     start_create_userdir,
     start_download_data,
@@ -19,6 +20,8 @@ from freqtrade.commands import (
     start_install_ui,
     start_list_data,
     start_list_exchanges,
+    start_list_freqAI_models,
+    start_list_hyperopt_loss_functions,
     start_list_markets,
     start_list_strategies,
     start_list_timeframes,
@@ -30,14 +33,12 @@ from freqtrade.commands import (
     start_trading,
     start_webserver,
 )
-from freqtrade.commands.db_commands import start_convert_db
-from freqtrade.commands.deploy_commands import (
+from freqtrade.commands.deploy_ui import (
     clean_ui_subdir,
     download_and_install_ui,
     get_ui_download_url,
     read_ui_version,
 )
-from freqtrade.commands.list_commands import start_list_freqAI_models
 from freqtrade.configuration import setup_utils_configuration
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
@@ -571,8 +572,12 @@ def test_create_datadir_failed(caplog):
 
 
 def test_create_datadir(caplog, mocker):
-    cud = mocker.patch("freqtrade.commands.deploy_commands.create_userdata_dir", MagicMock())
-    csf = mocker.patch("freqtrade.commands.deploy_commands.copy_sample_files", MagicMock())
+    cud = mocker.patch(
+        "freqtrade.configuration.directory_operations.create_userdata_dir", MagicMock()
+    )
+    csf = mocker.patch(
+        "freqtrade.configuration.directory_operations.copy_sample_files", MagicMock()
+    )
     args = ["create-userdir", "--userdir", "/temp/freqtrade/test"]
     start_create_userdir(get_args(args))
 
@@ -591,7 +596,7 @@ def test_start_new_strategy(mocker, caplog):
     assert "CoolNewStrategy" in wt_mock.call_args_list[0][0][0]
     assert log_has_re("Writing strategy to .*", caplog)
 
-    mocker.patch("freqtrade.commands.deploy_commands.setup_utils_configuration")
+    mocker.patch("freqtrade.configuration.setup_utils_configuration")
     mocker.patch.object(Path, "exists", MagicMock(return_value=True))
     with pytest.raises(
         OperationalException, match=r".* already exists. Please choose another Strategy Name\."
@@ -608,13 +613,13 @@ def test_start_new_strategy_no_arg(mocker, caplog):
 
 
 def test_start_install_ui(mocker):
-    clean_mock = mocker.patch("freqtrade.commands.deploy_commands.clean_ui_subdir")
+    clean_mock = mocker.patch("freqtrade.commands.deploy_ui.clean_ui_subdir")
     get_url_mock = mocker.patch(
-        "freqtrade.commands.deploy_commands.get_ui_download_url",
+        "freqtrade.commands.deploy_ui.get_ui_download_url",
         return_value=("https://example.com/whatever", "0.0.1"),
     )
-    download_mock = mocker.patch("freqtrade.commands.deploy_commands.download_and_install_ui")
-    mocker.patch("freqtrade.commands.deploy_commands.read_ui_version", return_value=None)
+    download_mock = mocker.patch("freqtrade.commands.deploy_ui.download_and_install_ui")
+    mocker.patch("freqtrade.commands.deploy_ui.read_ui_version", return_value=None)
     args = [
         "install-ui",
     ]
@@ -638,13 +643,13 @@ def test_start_install_ui(mocker):
 
 
 def test_clean_ui_subdir(mocker, tmp_path, caplog):
-    mocker.patch("freqtrade.commands.deploy_commands.Path.is_dir", side_effect=[True, True])
-    mocker.patch("freqtrade.commands.deploy_commands.Path.is_file", side_effect=[False, True])
-    rd_mock = mocker.patch("freqtrade.commands.deploy_commands.Path.rmdir")
-    ul_mock = mocker.patch("freqtrade.commands.deploy_commands.Path.unlink")
+    mocker.patch("freqtrade.commands.deploy_ui.Path.is_dir", side_effect=[True, True])
+    mocker.patch("freqtrade.commands.deploy_ui.Path.is_file", side_effect=[False, True])
+    rd_mock = mocker.patch("freqtrade.commands.deploy_ui.Path.rmdir")
+    ul_mock = mocker.patch("freqtrade.commands.deploy_ui.Path.unlink")
 
     mocker.patch(
-        "freqtrade.commands.deploy_commands.Path.glob",
+        "freqtrade.commands.deploy_ui.Path.glob",
         return_value=[Path("test1"), Path("test2"), Path(".gitkeep")],
     )
     folder = tmp_path / "uitests"
@@ -664,10 +669,10 @@ def test_download_and_install_ui(mocker, tmp_path):
     file_like_object.seek(0)
     requests_mock.content = file_like_object.read()
 
-    mocker.patch("freqtrade.commands.deploy_commands.requests.get", return_value=requests_mock)
+    mocker.patch("freqtrade.commands.deploy_ui.requests.get", return_value=requests_mock)
 
-    mocker.patch("freqtrade.commands.deploy_commands.Path.is_dir", side_effect=[True, False])
-    wb_mock = mocker.patch("freqtrade.commands.deploy_commands.Path.write_bytes")
+    mocker.patch("freqtrade.commands.deploy_ui.Path.is_dir", side_effect=[True, False])
+    wb_mock = mocker.patch("freqtrade.commands.deploy_ui.Path.write_bytes")
 
     folder = tmp_path / "uitests_dl"
     folder.mkdir(exist_ok=True)
@@ -689,9 +694,7 @@ def test_get_ui_download_url(mocker):
             [{"browser_download_url": "http://download.zip"}],
         ]
     )
-    get_mock = mocker.patch(
-        "freqtrade.commands.deploy_commands.requests.get", return_value=response
-    )
+    get_mock = mocker.patch("freqtrade.commands.deploy_ui.requests.get", return_value=response)
     x, last_version = get_ui_download_url()
     assert get_mock.call_count == 2
     assert last_version == "0.0.1"
@@ -714,9 +717,7 @@ def test_get_ui_download_url_direct(mocker):
             },
         ]
     )
-    get_mock = mocker.patch(
-        "freqtrade.commands.deploy_commands.requests.get", return_value=response
-    )
+    get_mock = mocker.patch("freqtrade.commands.deploy_ui.requests.get", return_value=response)
     x, last_version = get_ui_download_url()
     assert get_mock.call_count == 1
     assert last_version == "0.0.2"
@@ -734,7 +735,7 @@ def test_get_ui_download_url_direct(mocker):
 
 def test_download_data_keyboardInterrupt(mocker, markets):
     dl_mock = mocker.patch(
-        "freqtrade.commands.data_commands.download_data_main",
+        "freqtrade.data.history.download_data_main",
         MagicMock(side_effect=KeyboardInterrupt),
     )
     patch_exchange(mocker)
@@ -972,7 +973,7 @@ def test_download_data_data_invalid(mocker):
 
 def test_start_convert_trades(mocker):
     convert_mock = mocker.patch(
-        "freqtrade.commands.data_commands.convert_trades_to_ohlcv", MagicMock(return_value=[])
+        "freqtrade.data.converter.convert_trades_to_ohlcv", MagicMock(return_value=[])
     )
     patch_exchange(mocker)
     mocker.patch(f"{EXMS}.get_markets")
@@ -1053,6 +1054,28 @@ def test_start_list_strategies(capsys):
     assert "StrategyTestV2" in captured.out
     assert "TestStrategyNoImplements" in captured.out
     assert str(Path("broken_strats/broken_futures_strategies.py")) in captured.out
+
+
+def test_start_list_hyperopt_loss_functions(capsys):
+    args = ["list-hyperoptloss", "-1"]
+    pargs = get_args(args)
+    pargs["config"] = None
+    start_list_hyperopt_loss_functions(pargs)
+    captured = capsys.readouterr()
+    assert "CalmarHyperOptLoss" in captured.out
+    assert "MaxDrawDownHyperOptLoss" in captured.out
+    assert "SortinoHyperOptLossDaily" in captured.out
+    assert "<builtin>/hyperopt_loss_sortino_daily.py" not in captured.out
+
+    args = ["list-hyperoptloss"]
+    pargs = get_args(args)
+    pargs["config"] = None
+    start_list_hyperopt_loss_functions(pargs)
+    captured = capsys.readouterr()
+    assert "CalmarHyperOptLoss" in captured.out
+    assert "MaxDrawDownHyperOptLoss" in captured.out
+    assert "SortinoHyperOptLossDaily" in captured.out
+    assert "<builtin>/hyperopt_loss_sortino_daily.py" in captured.out
 
 
 def test_start_list_freqAI_models(capsys):
@@ -1522,7 +1545,7 @@ def test_hyperopt_show(mocker, capsys):
     mocker.patch(
         "freqtrade.optimize.hyperopt_tools.HyperoptTools._read_results", side_effect=fake_iterator
     )
-    mocker.patch("freqtrade.commands.hyperopt_commands.show_backtest_result")
+    mocker.patch("freqtrade.optimize.optimize_reports.show_backtest_result")
 
     args = [
         "hyperopt-show",
@@ -1579,8 +1602,8 @@ def test_hyperopt_show(mocker, capsys):
 
 
 def test_convert_data(mocker, testdatadir):
-    ohlcv_mock = mocker.patch("freqtrade.commands.data_commands.convert_ohlcv_format")
-    trades_mock = mocker.patch("freqtrade.commands.data_commands.convert_trades_format")
+    ohlcv_mock = mocker.patch("freqtrade.data.converter.convert_ohlcv_format")
+    trades_mock = mocker.patch("freqtrade.data.converter.convert_trades_format")
     args = [
         "convert-data",
         "--format-from",
@@ -1601,8 +1624,8 @@ def test_convert_data(mocker, testdatadir):
 
 
 def test_convert_data_trades(mocker, testdatadir):
-    ohlcv_mock = mocker.patch("freqtrade.commands.data_commands.convert_ohlcv_format")
-    trades_mock = mocker.patch("freqtrade.commands.data_commands.convert_trades_format")
+    ohlcv_mock = mocker.patch("freqtrade.data.converter.convert_ohlcv_format")
+    trades_mock = mocker.patch("freqtrade.data.converter.convert_trades_format")
     args = [
         "convert-trade-data",
         "--format-from",

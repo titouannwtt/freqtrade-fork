@@ -5,7 +5,7 @@ This module contains the argument manager class
 from argparse import ArgumentParser, Namespace, _ArgumentGroup
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from freqtrade.commands.cli_options import AVAILABLE_CLI_OPTIONS
 from freqtrade.constants import DEFAULT_CONFIG
@@ -23,7 +23,7 @@ ARGS_STRATEGY = [
 
 ARGS_TRADE = ["db_url", "sd_notify", "dry_run", "dry_run_wallet", "fee"]
 
-ARGS_WEBSERVER: List[str] = []
+ARGS_WEBSERVER: list[str] = []
 
 ARGS_COMMON_OPTIMIZE = [
     "timeframe",
@@ -258,6 +258,7 @@ NO_CONF_REQURIED = [
     "list-pairs",
     "list-strategies",
     "list-freqaimodels",
+    "list-hyperoptloss",
     "list-data",
     "hyperopt-list",
     "hyperopt-show",
@@ -277,11 +278,11 @@ class Arguments:
     Arguments Class. Manage the arguments received by the cli
     """
 
-    def __init__(self, args: Optional[List[str]]) -> None:
+    def __init__(self, args: Optional[list[str]]) -> None:
         self.args = args
         self._parsed_arg: Optional[Namespace] = None
 
-    def get_parsed_arg(self) -> Dict[str, Any]:
+    def get_parsed_arg(self) -> dict[str, Any]:
         """
         Return the list of arguments
         :return: List[str] List of arguments
@@ -322,7 +323,7 @@ class Arguments:
         return parsed_arg
 
     def _build_args(
-        self, optionlist: List[str], parser: Union[ArgumentParser, _ArgumentGroup]
+        self, optionlist: list[str], parser: Union[ArgumentParser, _ArgumentGroup]
     ) -> None:
         for val in optionlist:
             opt = AVAILABLE_CLI_OPTIONS[val]
@@ -365,6 +366,7 @@ class Arguments:
             start_list_data,
             start_list_exchanges,
             start_list_freqAI_models,
+            start_list_hyperopt_loss_functions,
             start_list_markets,
             start_list_strategies,
             start_list_timeframes,
@@ -565,6 +567,15 @@ class Arguments:
         )
         list_strategies_cmd.set_defaults(func=start_list_strategies)
         self._build_args(optionlist=ARGS_LIST_STRATEGIES, parser=list_strategies_cmd)
+
+        # Add list-Hyperopt loss subcommand
+        list_hyperopt_loss_cmd = subparsers.add_parser(
+            "list-hyperoptloss",
+            help="Print available hyperopt loss functions.",
+            parents=[_common_parser],
+        )
+        list_hyperopt_loss_cmd.set_defaults(func=start_list_hyperopt_loss_functions)
+        self._build_args(optionlist=ARGS_LIST_HYPEROPTS, parser=list_hyperopt_loss_cmd)
 
         # Add list-freqAI Models subcommand
         list_freqaimodels_cmd = subparsers.add_parser(

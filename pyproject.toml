@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "freqtrade"
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version"]
 
 authors = [
   {name = "Freqtrade Team"},
@@ -13,14 +13,12 @@ authors = [
 
 description = "Freqtrade - Crypto Trading Bot"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "GPLv3"}
-# license = "GPLv3"
 classifiers = [
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -29,6 +27,111 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 
+dependencies = [
+  # from requirements.txt
+  "ccxt>=4.3.24",
+  "SQLAlchemy>=2.0.6",
+  "python-telegram-bot>=20.1",
+  "humanize>=4.0.0",
+  "cachetools",
+  "requests",
+  "httpx>=0.24.1",
+  "urllib3",
+  "jsonschema",
+  "numpy<2.0",
+  "pandas>=2.2.0,<3.0",
+  "TA-Lib",
+  "pandas-ta",
+  "technical",
+  "tabulate",
+  "pycoingecko",
+  "py_find_1st",
+  "python-rapidjson",
+  "orjson",
+  "jinja2",
+  "questionary",
+  "prompt-toolkit",
+  "joblib>=1.2.0",
+  "rich",
+  'pyarrow; platform_machine != "armv7l"',
+  "fastapi",
+  "pydantic>=2.2.0",
+  "pyjwt",
+  "websockets",
+  "uvicorn",
+  "psutil",
+  "schedule",
+  "janus",
+  "ast-comments",
+  "aiofiles",
+  "aiohttp",
+  "cryptography",
+  "sdnotify",
+  "python-dateutil",
+  "pytz",
+  "packaging",
+  "freqtrade-client",
+]
+
+[project.optional-dependencies]
+# Requirements used for submodules
+plot = ["plotly>=4.0"]
+hyperopt = [
+  "scipy",
+  "scikit-learn",
+  "ft-scikit-optimize>=0.9.2",
+  "filelock",
+]
+freqai = [
+  "scikit-learn",
+  "joblib",
+  'catboost; platform_machine != "aarch64"',
+  "lightgbm",
+  "xgboost",
+  "tensorboard",
+  "datasieve>=0.1.5",
+]
+freqai_rl = [
+  "torch",
+  "gymnasium",
+  "stable-baselines3",
+  "sb3-contrib",
+  "tqdm",
+]
+hdf5 = [
+  "tables",
+  "blosc",
+]
+develop = [
+  "coveralls",
+  "isort",
+  "mypy",
+  "pre-commit",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-random-order",
+  "pytest",
+  "ruff",
+  "time-machine",
+  "types-cachetools",
+  "types-filelock",
+  "types-python-dateutil",
+  "types-requests",
+  "types-tabulate",
+]
+jupyter = [
+  "jupyter",
+  "nbstripout",
+  "ipykernel",
+  "nbconvert",
+]
+all = [
+  "freqtrade[plot,hyperopt,freqai,freqai_rl,hdf5,jupyter]",
+]
+dev = [
+  "freqtrade[all,develop]",
+]
 
 [project.urls]
 Homepage = "https://github.com/freqtrade/freqtrade"
@@ -105,27 +208,47 @@ plugins = [
 module = "tests.*"
 ignore_errors = true
 
-[[tool.mypy.overrides]]
-# Telegram does not use implicit_optional = false in the current version.
-module = "telegram.*"
-implicit_optional = true
-
 [tool.pyright]
-include = ["freqtrade"]
+include = ["freqtrade", "ft_client"]
 exclude = [
   "**/__pycache__",
   "build_helpers/*.py",
+  "ft_client/build/*",
+  "build/*",
+  "tests/*",
 ]
 ignore = ["freqtrade/vendor/**"]
+pythonPlatform = "All"
+pythonVersion = "3.9"
+
+typeCheckingMode = "off"
+# analyzeUnannotatedFunctions = false
+
+reportArgumentType = false  # 155
+reportAssignmentType = false  # 12
+reportAttributeAccessIssue = false  # 255
+reportCallIssue = false  # 23
+reportGeneralTypeIssues = false  # 48
+reportIncompatibleMethodOverride = false  # 15
+reportIncompatibleVariableOverride = false  # 5
+reportIndexIssue = false  # 22
+reportMissingImports = false  # 5
+reportOperatorIssue = false  # 7
+reportOptionalMemberAccess = false  # 35
+reportOptionalOperand = false  # 7
+reportPossiblyUnboundVariable = false  # 36
+reportPrivateImportUsage = false  # 5
+reportRedeclaration = false  # 1
+reportReturnType = false  # 28
+reportTypedDictNotRequiredAccess = false  # 27
 
 
 [tool.ruff]
 line-length = 100
 extend-exclude = [".env", ".venv"]
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
-# Exclude UP036 as it's causing the "exit if < 3.9" to fail.
 extend-select = [
   "C90",    # mccabe
   "B",      # bugbear

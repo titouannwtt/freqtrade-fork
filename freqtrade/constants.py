@@ -4,7 +4,7 @@
 bot constants
 """
 
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal, Optional
 
 from freqtrade.enums import CandleType, PriceType
 
@@ -57,7 +57,6 @@ AVAILABLE_PAIRLISTS = [
     "SpreadFilter",
     "VolatilityFilter",
 ]
-AVAILABLE_PROTECTIONS = ["CooldownPeriod", "LowProfitPairs", "MaxDrawdown", "StoplossGuard"]
 AVAILABLE_DATAHANDLERS = ["json", "jsongz", "hdf5", "feather", "parquet"]
 BACKTEST_BREAKDOWNS = ["day", "week", "month"]
 BACKTEST_CACHE_AGE = ["none", "day", "week", "month"]
@@ -188,14 +187,14 @@ CANCEL_REASON = {
 }
 
 # List of pairs with their timeframes
-PairWithTimeframe = Tuple[str, str, CandleType]
-ListPairsWithTimeframes = List[PairWithTimeframe]
+PairWithTimeframe = tuple[str, str, CandleType]
+ListPairsWithTimeframes = list[PairWithTimeframe]
 
 # Type for trades list
-TradeList = List[List]
+TradeList = list[list]
 # ticks, pair, timeframe, CandleType
-TickWithTimeframe = Tuple[str, str, CandleType, Optional[int], Optional[int]]
-ListTicksWithTimeframes = List[TickWithTimeframe]
+TickWithTimeframe = tuple[str, str, CandleType, Optional[int], Optional[int]]
+ListTicksWithTimeframes = list[TickWithTimeframe]
 
 LongShort = Literal["long", "short"]
 EntryExit = Literal["entry", "exit"]
@@ -204,9 +203,9 @@ MakerTaker = Literal["maker", "taker"]
 BidAsk = Literal["bid", "ask"]
 OBLiteral = Literal["asks", "bids"]
 
-Config = Dict[str, Any]
+Config = dict[str, Any]
 # Exchange part of the configuration.
-ExchangeConfig = Dict[str, Any]
+ExchangeConfig = dict[str, Any]
 IntOrInf = float
 
 

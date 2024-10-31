@@ -185,7 +185,7 @@ def test_api_ui_fallback(botclient, mocker):
 def test_api_ui_version(botclient, mocker):
     _ftbot, client = botclient
 
-    mocker.patch("freqtrade.commands.deploy_commands.read_ui_version", return_value="0.1.2")
+    mocker.patch("freqtrade.commands.deploy_ui.read_ui_version", return_value="0.1.2")
     rc = client_get(client, "/ui_version")
     assert rc.status_code == 200
     assert rc.json()["version"] == "0.1.2"
@@ -1269,7 +1269,7 @@ def test_api_mix_tag(botclient, fee):
 
 @pytest.mark.parametrize(
     "is_short,current_rate,open_trade_value",
-    [(True, 1.098e-05, 15.0911775), (False, 1.099e-05, 15.1668225)],
+    [(True, 1.098e-05, 6.134625), (False, 1.099e-05, 6.165375)],
 )
 def test_api_status(
     botclient, mocker, ticker, fee, markets, is_short, current_rate, open_trade_value
@@ -1294,7 +1294,7 @@ def test_api_status(
     assert_response(rc)
     assert len(rc.json()) == 4
     assert rc.json()[0] == {
-        "amount": 123.0,
+        "amount": 50.0,
         "amount_requested": 123.0,
         "close_date": None,
         "close_timestamp": None,
@@ -2189,6 +2189,22 @@ def test_api_exchanges(botclient):
     }
 
 
+def test_list_hyperoptloss(botclient, tmp_path):
+    ftbot, client = botclient
+    ftbot.config["user_data_dir"] = tmp_path
+
+    rc = client_get(client, f"{BASE_URI}/hyperoptloss")
+    assert_response(rc)
+    response = rc.json()
+    assert isinstance(response["loss_functions"], list)
+    assert len(response["loss_functions"]) > 0
+
+    sharpeloss = [r for r in response["loss_functions"] if r["name"] == "SharpeHyperOptLoss"]
+    assert len(sharpeloss) == 1
+    assert "Sharpe Ratio calculation" in sharpeloss[0]["description"]
+    assert len([r for r in response["loss_functions"] if r["name"] == "SortinoHyperOptLoss"]) == 1
+
+
 def test_api_freqaimodels(botclient, tmp_path, mocker):
     ftbot, client = botclient
     ftbot.config["user_data_dir"] = tmp_path
@@ -2339,9 +2355,7 @@ def test_api_pairlists_evaluate(botclient, tmp_path, mocker):
     ]
     assert response["result"]["length"] == 2
     # Patch __run_pairlists
-    plm = mocker.patch(
-        "freqtrade.rpc.api_server.api_background_tasks.__run_pairlist", return_value=None
-    )
+    plm = mocker.patch("freqtrade.rpc.api_server.api_pairlists.__run_pairlist", return_value=None)
     body = {
         "pairlists": [
             {
@@ -2598,6 +2612,8 @@ def test_api_delete_backtest_history_entry(botclient, tmp_path: Path):
     file_path.touch()
     meta_path = file_path.with_suffix(".meta.json")
     meta_path.touch()
+    market_change_path = file_path.with_name(file_path.stem + "_market_change.feather")
+    market_change_path.touch()
 
     rc = client_delete(client, f"{BASE_URI}/backtest/history/randomFile.json")
     assert_response(rc, 503)
@@ -2614,6 +2630,7 @@ def test_api_delete_backtest_history_entry(botclient, tmp_path: Path):
 
     assert not file_path.exists()
     assert not meta_path.exists()
+    assert not market_change_path.exists()
 
 
 def test_api_patch_backtest_history_entry(botclient, tmp_path: Path):
