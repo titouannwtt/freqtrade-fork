@@ -66,7 +66,7 @@ class Hyperliquid(Exchange):
             # Hyperliquid expects leverage to be an int
             leverage = int(leverage)
             # Hyperliquid needs the parameter leverage.
-            # Don't use set_leverage(), as this sets margin back to cross
+            # Don't use _set_leverage(), as this sets margin back to cross
             self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
 
     def dry_run_liquidation_price(
@@ -98,7 +98,7 @@ class Hyperliquid(Exchange):
                    'SOL/USDC:USDC': 43}}
         """
         # Defining/renaming variables to match the documentation
-        isolated_margin = stake_amount
+        isolated_margin = wallet_balance
         position_size = amount
         price = open_rate
         position_value = price * position_size
