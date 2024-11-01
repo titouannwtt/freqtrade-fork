@@ -42,26 +42,31 @@ async def fetch_ohlcv(
     :return: the date range is between [since_ms, until_ms),
         return and empty DataFrame if no data available in the time range
     """
-    if candle_type == CandleType.SPOT:
-        asset_type = "spot"
-    elif candle_type == CandleType.FUTURES:
-        asset_type = "futures/um"
-    else:
-        raise ValueError(f"Unsupported CandleType: {candle_type}")
-    symbol = symbol_ccxt_to_binance(pair)
-    start = dt_from_ts(since_ms)
-    end = dt_from_ts(until_ms) if until_ms else dt_now()
+    try:
+        if candle_type == CandleType.SPOT:
+            asset_type = "spot"
+        elif candle_type == CandleType.FUTURES:
+            asset_type = "futures/um"
+        else:
+            raise ValueError(f"Unsupported CandleType: {candle_type}")
+        symbol = symbol_ccxt_to_binance(pair)
+        start = dt_from_ts(since_ms)
+        end = dt_from_ts(until_ms) if until_ms else dt_now()
 
-    # We use two days ago as the last available day because the daily archives are daily uploaded
-    # and have several hours delay
-    last_available_date = dt_now() - datetime.timedelta(days=2)
-    end = min(end, last_available_date)
-    if start >= end:
-        return DataFrame()
-    df = await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
-    logger.info(
-        f"Downloaded data for {pair} from https://data.binance.vision/ with length {len(df)}."
-    )
+        # We use two days ago as the last available day because the daily archives are daily
+        # uploaded and have several hours delay
+        last_available_date = dt_now() - datetime.timedelta(days=2)
+        end = min(end, last_available_date)
+        if start >= end:
+            return DataFrame()
+        df = await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
+        logger.info(
+            f"Downloaded data for {pair} from https://data.binance.vision/ with length {len(df)}."
+        )
+    except Exception as e:
+        logger.debug("An exception occurred", exc_info=e)
+        df = DataFrame()
+
     if not df.empty:
         return df.loc[(df["date"] >= start) & (df["date"] < end)]
     else:

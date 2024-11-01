@@ -209,17 +209,14 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
         "aiohttp.ClientSession.get", side_effect=make_response_from_url(history_start, history_end)
     )
 
-    if candle_type in [CandleType.SPOT, CandleType.FUTURES]:
-        df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, stop_on_404)
+    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, stop_on_404)
 
-        if df.empty:
-            assert first_date is None and last_date is None
-        else:
-            assert df["date"].iloc[0] == first_date
-            assert df["date"].iloc[-1] == last_date
+    if df.empty:
+        assert first_date is None and last_date is None
     else:
-        with pytest.raises(ValueError):
-            await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, stop_on_404)
+        assert candle_type in [CandleType.SPOT, CandleType.FUTURES]
+        assert df["date"].iloc[0] == first_date
+        assert df["date"].iloc[-1] == last_date
 
 
 async def test_fetch_ohlcv_exc(mocker):
