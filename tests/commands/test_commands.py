@@ -44,7 +44,7 @@ from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.persistence.models import init_db
 from freqtrade.persistence.pairlock_middleware import PairLocks
-from freqtrade.util import dt_floor_day, dt_now, dt_utc
+from freqtrade.util import dt_utc
 from tests.conftest import (
     CURRENT_TEST_STRATEGY,
     EXMS,
@@ -757,7 +757,13 @@ def test_download_data_keyboardInterrupt(mocker, markets):
     assert dl_mock.call_count == 1
 
 
-def test_download_data_timerange(mocker, markets):
+@pytest.mark.parametrize("time", ["00:00", "00:03", "00:30", "23:56"])
+@pytest.mark.parametrize(
+    "tzoffset",
+    ["00:00", "+01:00", "-01:00", "+05:00", "-05:00"],
+)
+def test_download_data_timerange(mocker, markets, time_machine, time, tzoffset):
+    time_machine.move_to(f"2024-11-01 {time}:00 {tzoffset}")
     dl_mock = mocker.patch(
         "freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data",
         MagicMock(return_value=["ETH/BTC", "XRP/BTC"]),
@@ -797,8 +803,9 @@ def test_download_data_timerange(mocker, markets):
     start_download_data(pargs)
     assert dl_mock.call_count == 1
     # 20days ago
-    days_ago = dt_floor_day(dt_now() - timedelta(days=20)).timestamp()
-    assert dl_mock.call_args_list[0][1]["timerange"].startts == days_ago
+    days_ago = datetime.now() - timedelta(days=20)
+    days_ago = dt_utc(days_ago.year, days_ago.month, days_ago.day)
+    assert dl_mock.call_args_list[0][1]["timerange"].startts == days_ago.timestamp()
 
     dl_mock.reset_mock()
     args = [
