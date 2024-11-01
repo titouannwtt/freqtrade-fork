@@ -60,8 +60,8 @@ async def fetch_ohlcv(
         if start >= end:
             return DataFrame()
         df = await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
-        logger.info(
-            f"Downloaded data for {pair} from https://data.binance.vision/ with length {len(df)}."
+        logger.debug(
+            f"Downloaded data for {pair} from https://data.binance.vision with length {len(df)}."
         )
     except Exception as e:
         logger.debug("An exception occurred", exc_info=e)

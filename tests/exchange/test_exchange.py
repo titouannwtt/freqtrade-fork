@@ -2092,6 +2092,7 @@ def test___now_is_time_to_refresh(default_conf, mocker, exchange_name, time_mach
 @pytest.mark.parametrize("candle_type", ["mark", ""])
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_type):
+    caplog.set_level(logging.DEBUG)
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
     pair = "ETH/BTC"
     calls = 0
