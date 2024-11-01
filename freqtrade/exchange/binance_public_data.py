@@ -101,13 +101,11 @@ async def _fetch_ohlcv(
 
     connector = aiohttp.TCPConnector(limit=100)
     async with aiohttp.ClientSession(connector=connector) as session:
-        coroutines = [
-            get_daily_ohlcv(asset_type, symbol, timeframe, date, session)
-            for date in date_range(start, end)
-        ]
         # the HTTP connections has been throttled by TCPConnector
-        for batch in chunks(coroutines, 1000):
-            results = await asyncio.gather(*batch)
+        for dates in chunks(list(date_range(start, end)), 1000):
+            results = await asyncio.gather(
+                *(get_daily_ohlcv(asset_type, symbol, timeframe, date, session) for date in dates)
+            )
             for result in results:
                 if isinstance(result, BaseException):
                     logger.warning(f"An exception raised: : {result}")
