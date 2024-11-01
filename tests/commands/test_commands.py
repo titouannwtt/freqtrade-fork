@@ -757,7 +757,13 @@ def test_download_data_keyboardInterrupt(mocker, markets):
     assert dl_mock.call_count == 1
 
 
-def test_download_data_timerange(mocker, markets):
+@pytest.mark.parametrize("time", ["00:00", "00:03", "00:30", "23:56"])
+@pytest.mark.parametrize(
+    "tzoffset",
+    ["00:00", "+01:00", "-01:00", "+05:00", "-05:00"],
+)
+def test_download_data_timerange(mocker, markets, time_machine, time, tzoffset):
+    time_machine.move_to(f"2024-11-01 {time}:00 {tzoffset}")
     dl_mock = mocker.patch(
         "freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data",
         MagicMock(return_value=["ETH/BTC", "XRP/BTC"]),
