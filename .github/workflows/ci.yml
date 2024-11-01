@@ -46,7 +46,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: test-${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.python-version }}-ubuntu
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
@@ -167,7 +167,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/Library/Caches/pip
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.os }}-${{ matrix.python-version }}
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
@@ -280,7 +280,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~\AppData\Local\pip\Cache
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-${{ matrix.os }}-${{ matrix.python-version }}
 
     - name: Installation
       run: |
@@ -420,7 +420,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: test-${{ matrix.os }}-${{ matrix.python-version }}-pip
+        key: pip-3.12-ubuntu
 
     - name: TA binary *nix
       if: steps.cache.outputs.cache-hit != 'true'
