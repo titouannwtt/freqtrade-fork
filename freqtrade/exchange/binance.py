@@ -134,7 +134,9 @@ class Binance(Exchange):
                     )
                     return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
 
-        if timeframe in ["1s", "1m", "5m"] and candle_type in [CandleType.SPOT, CandleType.FUTURES]:
+        if (candle_type == CandleType.SPOT and timeframe in ["1s", "1m", "3m", "5m"]) or (
+            candle_type == CandleType.FUTURES and timeframe in ["1m", "3m", "5m", "15m", "30m"]
+        ):
             df = self.loop.run_until_complete(
                 binance_public_data.fetch_ohlcv(
                     candle_type=candle_type,

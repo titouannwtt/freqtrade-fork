@@ -40,7 +40,7 @@ async def fetch_ohlcv(
     :param until_ms: `None` indicates the timestamp of the latest available data
     :param stop_on_404: Stop to download the following data when a 404 returned
     :return: the date range is between [since_ms, until_ms),
-        return None if no data available in the time range
+        return and empty DataFrame if no data available in the time range
     """
     if candle_type == CandleType.SPOT:
         asset_type = "spot"
@@ -159,6 +159,9 @@ async def get_daily_ohlcv(
     """
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
+
+    :return: None indicates a 404 when trying to download the daily archive file
+        This function won't raise any exception, but catch and return it
     """
 
     url = zip_url(asset_type, symbol, timeframe, date)
