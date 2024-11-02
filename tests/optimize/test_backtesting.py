@@ -189,7 +189,6 @@ def test_setup_bt_configuration_with_arguments(mocker, default_conf, caplog) -> 
         "--timeframe",
         "1m",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--timerange",
         ":100",
         "--export-filename",
@@ -213,10 +212,6 @@ def test_setup_bt_configuration_with_arguments(mocker, default_conf, caplog) -> 
 
     assert "position_stacking" in config
     assert log_has("Parameter --enable-position-stacking detected ...", caplog)
-
-    assert "use_max_market_positions" in config
-    assert log_has("Parameter --disable-max-market-positions detected ...", caplog)
-    assert log_has("max_open_trades set to unlimited ...", caplog)
 
     assert "timerange" in config
     assert log_has("Parameter --timerange detected: {} ...".format(config["timerange"]), caplog)
@@ -1936,14 +1931,12 @@ def test_backtest_start_timerange(default_conf, mocker, caplog, testdatadir):
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
     ]
     args = get_args(args)
     start_backtesting(args)
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -2017,7 +2010,6 @@ def test_backtest_start_multi_strat(default_conf, mocker, caplog, testdatadir):
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--strategy-list",
         CURRENT_TEST_STRATEGY,
         "StrategyTestV2",
@@ -2034,7 +2026,6 @@ def test_backtest_start_multi_strat(default_conf, mocker, caplog, testdatadir):
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -2155,7 +2146,6 @@ def test_backtest_start_multi_strat_nomock(default_conf, mocker, caplog, testdat
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--breakdown",
         "day",
         "--strategy-list",
@@ -2168,7 +2158,6 @@ def test_backtest_start_multi_strat_nomock(default_conf, mocker, caplog, testdat
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -2593,7 +2582,6 @@ def test_backtest_start_multi_strat_caching(
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--cache",
         cache,
         "--strategy-list",
@@ -2620,7 +2608,6 @@ def test_backtest_start_multi_strat_caching(
         exists = [
             "Running backtesting for Strategy StrategyTestV2",
             "Running backtesting for Strategy StrategyTestV3",
-            "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
             "Backtesting with data from 2017-11-14 21:17:00 up to 2017-11-14 22:59:00 (0 days).",
         ]
     elif run_id == "2" and min_backtest_date < start_time:
@@ -2633,7 +2620,6 @@ def test_backtest_start_multi_strat_caching(
         exists = [
             "Reusing result of previous backtest for StrategyTestV2",
             "Running backtesting for Strategy StrategyTestV3",
-            "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
             "Backtesting with data from 2017-11-14 21:17:00 up to 2017-11-14 22:59:00 (0 days).",
         ]
         assert backtestmock.call_count == 1
