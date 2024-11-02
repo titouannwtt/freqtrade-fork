@@ -127,12 +127,6 @@ class Hyperopt:
         self.num_epochs_saved = 0
         self.current_best_epoch: Optional[dict[str, Any]] = None
 
-        # Use max_open_trades for hyperopt as well, except --disable-max-market-positions is set
-        if not self.config.get("use_max_market_positions", True):
-            logger.debug("Ignoring max_open_trades (--disable-max-market-positions was used) ...")
-            self.backtesting.strategy.max_open_trades = float("inf")
-            config.update({"max_open_trades": self.backtesting.strategy.max_open_trades})
-
         if HyperoptTools.has_space(self.config, "sell"):
             # Make sure use_exit_signal is enabled
             self.config["use_exit_signal"] = True

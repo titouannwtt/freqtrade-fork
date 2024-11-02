@@ -1552,12 +1552,6 @@ class Backtesting:
         backtest_start_time = datetime.now(timezone.utc)
         self._set_strategy(strat)
 
-        # Use max_open_trades in backtesting, except --disable-max-market-positions is set
-        if not self.config.get("use_max_market_positions", True):
-            logger.info("Ignoring max_open_trades (--disable-max-market-positions was used) ...")
-            self.strategy.max_open_trades = float("inf")
-            self.config.update({"max_open_trades": self.strategy.max_open_trades})
-
         # need to reprocess data every time to populate signals
         preprocessed = self.strategy.advise_all_indicators(data)
 

@@ -37,7 +37,6 @@ ARGS_COMMON_OPTIMIZE = [
 
 ARGS_BACKTEST = ARGS_COMMON_OPTIMIZE + [
     "position_stacking",
-    "use_max_market_positions",
     "enable_protections",
     "dry_run_wallet",
     "timeframe_detail",
@@ -53,7 +52,6 @@ ARGS_HYPEROPT = ARGS_COMMON_OPTIMIZE + [
     "hyperopt",
     "hyperopt_path",
     "position_stacking",
-    "use_max_market_positions",
     "enable_protections",
     "dry_run_wallet",
     "timeframe_detail",
@@ -242,8 +240,7 @@ ARGS_STRATEGY_UPDATER = ["strategy_list", "strategy_path", "recursive_strategy_s
 ARGS_LOOKAHEAD_ANALYSIS = [
     a
     for a in ARGS_BACKTEST
-    if a
-    not in ("position_stacking", "use_max_market_positions", "backtest_cache", "backtest_breakdown")
+    if a not in ("position_stacking", "backtest_cache", "backtest_breakdown")
 ] + ["minimum_trade_amount", "targeted_trade_amount", "lookahead_analysis_exportfilename"]
 
 ARGS_RECURSIVE_ANALYSIS = ["timeframe", "timerange", "dataformat_ohlcv", "pairs", "startup_candle"]
