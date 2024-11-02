@@ -215,10 +215,10 @@ trades.groupby("pair")["exit_reason"].value_counts()
 ```
 
 ## Analyze the loaded trades for trade parallelism
-This can be useful to find the best `max_open_trades` parameter, when used with backtesting in conjunction with `--disable-max-market-positions`.
+
+This can be useful to find the best `max_open_trades` parameter, when used with backtesting in conjunction with a very high max_open_trades value.
 
 `analyze_trade_parallelism()` returns a timeseries dataframe with an "open_trades" column, specifying the number of open trades for each candle.
-
 
 ```python
 from freqtrade.data.btanalysis import analyze_trade_parallelism
