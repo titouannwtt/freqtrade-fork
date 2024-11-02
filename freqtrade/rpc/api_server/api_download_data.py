@@ -54,7 +54,7 @@ def pairlists_evaluate(
     if ApiBG.download_data_running:
         raise HTTPException(status_code=400, detail="Pairlist evaluation is already running.")
     config_loc = deepcopy(config)
-    config_loc["stake_currency"] = payload.stake_currency
+    config_loc["stake_currency"] = ""
     config_loc["pairs"] = payload.pairs
     config_loc["timeframes"] = payload.timeframes
     handleExchangePayload(payload, config_loc)

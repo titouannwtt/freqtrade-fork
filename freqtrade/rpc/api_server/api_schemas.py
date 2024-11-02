@@ -490,7 +490,6 @@ class PairListsPayload(ExchangeModePayloadMixin, BaseModel):
 
 class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
     pairs: list[str]
-    stake_currency: str
     timeframes: Optional[list[str]] = DL_DATA_TIMEFRAMES
     days: Optional[int] = None
     timerange: Optional[str] = None
