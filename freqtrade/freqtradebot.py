@@ -579,7 +579,7 @@ class FreqtradeBot(LoggingMixin):
                         logger.warning(
                             f"{trade} has a total of {trade.amount} {trade.base_currency}, "
                             f"but the Wallet shows a total of {total} {trade.base_currency}. "
-                            f"Adjusting trade amount to {total}."
+                            f"Adjusting trade amount to {total}. "
                             "This may however lead to further issues."
                         )
                         trade.amount = total
@@ -587,7 +587,7 @@ class FreqtradeBot(LoggingMixin):
                         logger.warning(
                             f"{trade} has a total of {trade.amount} {trade.base_currency}, "
                             f"but the Wallet shows a total of {total} {trade.base_currency}. "
-                            "Refusing to adjust as the difference is too large."
+                            "Refusing to adjust as the difference is too large. "
                             "This may however lead to further issues."
                         )
                 if prev_trade_amount != trade.amount:
