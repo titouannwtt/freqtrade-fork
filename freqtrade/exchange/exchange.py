@@ -588,7 +588,7 @@ class Exchange:
                     trade["amount"] = trade["amount"] * contract_size
         return trades
 
-    def _order_contracts_to_amount(self, order: dict) -> dict:
+    def _order_contracts_to_amount(self, order: CcxtOrder) -> CcxtOrder:
         if "symbol" in order and order["symbol"] is not None:
             contract_size = self.get_contract_size(order["symbol"])
             if contract_size != 1:
@@ -998,7 +998,7 @@ class Exchange:
         self,
         pair: str,
         ordertype: str,
-        side: str,
+        side: BuySell,
         amount: float,
         rate: float,
         leverage: float,
@@ -1249,7 +1249,7 @@ class Exchange:
         leverage: float,
         reduceOnly: bool = False,
         time_in_force: str = "GTC",
-    ) -> dict:
+    ) -> CcxtOrder:
         if self._config["dry_run"]:
             dry_order = self.create_dry_run_order(
                 pair, ordertype, side, amount, self.price_to_precision(pair, rate), leverage
@@ -1307,7 +1307,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def stoploss_adjust(self, stop_loss: float, order: dict, side: str) -> bool:
+    def stoploss_adjust(self, stop_loss: float, order: CcxtOrder, side: str) -> bool:
         """
         Verify stop_loss against stoploss-order value (limit or price)
         Returns True if adjustment is necessary.
@@ -1368,7 +1368,7 @@ class Exchange:
         order_types: dict,
         side: BuySell,
         leverage: float,
-    ) -> dict:
+    ) -> CcxtOrder:
         """
         creates a stoploss order.
         requires `_ft_has['stoploss_order_types']` to be set as a dict mapping limit and market
@@ -1543,7 +1543,7 @@ class Exchange:
             return self.fetch_stoploss_order(order_id, pair)
         return self.fetch_order(order_id, pair)
 
-    def check_order_canceled_empty(self, order: dict) -> bool:
+    def check_order_canceled_empty(self, order: CcxtOrder) -> bool:
         """
         Verify if an order has been cancelled without being partially filled
         :param order: Order dict as returned from fetch_order()
@@ -1623,7 +1623,9 @@ class Exchange:
 
         return order
 
-    def cancel_stoploss_order_with_result(self, order_id: str, pair: str, amount: float) -> dict:
+    def cancel_stoploss_order_with_result(
+        self, order_id: str, pair: str, amount: float
+    ) -> CcxtOrder:
         """
         Cancel stoploss order returning a result.
         Creates a fake result if cancel order returns a non-usable result
@@ -1717,7 +1719,9 @@ class Exchange:
                 if not params:
                     params = {}
                 try:
-                    orders: list[dict] = self._api.fetch_orders(pair, since=since_ms, params=params)
+                    orders: list[CcxtOrder] = self._api.fetch_orders(
+                        pair, since=since_ms, params=params
+                    )
                 except ccxt.NotSupported:
                     # Some exchanges don't support fetchOrders
                     # attempt to fetch open and closed orders separately
@@ -2095,7 +2099,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def get_order_id_conditional(self, order: dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         return order["id"]
 
     @retrier
@@ -2144,7 +2148,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @staticmethod
-    def order_has_fee(order: dict) -> bool:
+    def order_has_fee(order: CcxtOrder) -> bool:
         """
         Verifies if the passed in order dict has the needed keys to extract fees,
         and that these keys (currency, cost) are not empty.

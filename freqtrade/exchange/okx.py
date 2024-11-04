@@ -191,7 +191,7 @@ class Okx(Exchange):
             params["posSide"] = self._get_posSide(side, True)
         return params
 
-    def _convert_stop_order(self, pair: str, order_id: str, order: dict) -> dict:
+    def _convert_stop_order(self, pair: str, order_id: str, order: CcxtOrder) -> CcxtOrder:
         if (
             order.get("status", "open") == "closed"
             and (real_order_id := order.get("info", {}).get("ordId")) is not None
@@ -258,14 +258,14 @@ class Okx(Exchange):
                 raise OperationalException(e) from e
         raise RetryableOrderError(f"StoplossOrder not found (pair: {pair} id: {order_id}).")
 
-    def get_order_id_conditional(self, order: dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         if order.get("type", "") == "stop":
             return safe_value_fallback2(order, order, "id_stop", "id")
         return order["id"]
 
     def cancel_stoploss_order(
         self, order_id: str, pair: str, params: Optional[dict] = None
-    ) -> CcxtOrder:
+    ) -> dict:
         params1 = {"stop": True}
         # 'ordType': 'conditional'
         #

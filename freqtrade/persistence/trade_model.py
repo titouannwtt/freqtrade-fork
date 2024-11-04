@@ -43,6 +43,7 @@ from freqtrade.exchange import (
     amount_to_contract_precision,
     price_to_precision,
 )
+from freqtrade.exchange.exchange_types import CcxtOrder
 from freqtrade.leverage import interest
 from freqtrade.misc import safe_value_fallback
 from freqtrade.persistence.base import ModelBase, SessionType
@@ -309,7 +310,7 @@ class Order(ModelBase):
             trade.adjust_stop_loss(trade.open_rate, trade.stop_loss_pct)
 
     @staticmethod
-    def update_orders(orders: list["Order"], order: dict[str, Any]):
+    def update_orders(orders: list["Order"], order: CcxtOrder):
         """
         Get all non-closed orders - useful when trying to batch-update orders
         """
@@ -328,7 +329,7 @@ class Order(ModelBase):
     @classmethod
     def parse_from_ccxt_object(
         cls,
-        order: dict[str, Any],
+        order: CcxtOrder,
         pair: str,
         side: str,
         amount: Optional[float] = None,
@@ -959,7 +960,7 @@ class LocalTrade:
         else:
             return False
 
-    def update_order(self, order: dict) -> None:
+    def update_order(self, order: CcxtOrder) -> None:
         Order.update_orders(self.orders, order)
 
     @property

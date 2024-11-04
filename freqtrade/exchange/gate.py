@@ -99,7 +99,7 @@ class Gate(Exchange):
                             }
         return trades
 
-    def get_order_id_conditional(self, order: dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         return safe_value_fallback2(order, order, "id_stop", "id")
 
     def fetch_stoploss_order(
