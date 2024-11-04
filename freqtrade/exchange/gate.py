@@ -7,7 +7,7 @@ from typing import Any, Optional
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
 
 
@@ -102,7 +102,9 @@ class Gate(Exchange):
     def get_order_id_conditional(self, order: dict[str, Any]) -> str:
         return safe_value_fallback2(order, order, "id_stop", "id")
 
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: Optional[dict] = None
+    ) -> CcxtOrder:
         order = self.fetch_order(order_id=order_id, pair=pair, params={"stop": True})
         if order.get("status", "open") == "closed":
             # Places a real order - which we need to fetch explicitly.

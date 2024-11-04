@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import Any, Optional, TypedDict
 
 from freqtrade.enums import CandleType
 
@@ -93,6 +93,8 @@ class CcxtPosition(TypedDict):
     initialMargin: Optional[float]
     liquidationPrice: Optional[float]
 
+
+CcxtOrder = dict[str, Any]
 
 # pair, timeframe, candleType, OHLCV, drop last?,
 OHLCVResponse = tuple[str, str, CandleType, list, bool]

@@ -70,6 +70,7 @@ from freqtrade.exchange.common import (
 )
 from freqtrade.exchange.exchange_types import (
     CcxtBalances,
+    CcxtOrder,
     CcxtPosition,
     FtHas,
     OHLCVResponse,
@@ -1003,14 +1004,14 @@ class Exchange:
         leverage: float,
         params: Optional[dict] = None,
         stop_loss: bool = False,
-    ) -> dict[str, Any]:
+    ) -> CcxtOrder:
         now = dt_now()
         order_id = f"dry_run_{side}_{pair}_{now.timestamp()}"
         # Rounding here must respect to contract sizes
         _amount = self._contracts_to_amount(
             pair, self.amount_to_precision(pair, self._amount_to_contracts(pair, amount))
         )
-        dry_order: dict[str, Any] = {
+        dry_order: CcxtOrder = {
             "id": order_id,
             "symbol": pair,
             "price": rate,
@@ -1072,9 +1073,9 @@ class Exchange:
     def add_dry_order_fee(
         self,
         pair: str,
-        dry_order: dict[str, Any],
+        dry_order: CcxtOrder,
         taker_or_maker: MakerTaker,
-    ) -> dict[str, Any]:
+    ) -> CcxtOrder:
         fee = self.get_fee(pair, taker_or_maker=taker_or_maker)
         dry_order.update(
             {
@@ -1158,8 +1159,8 @@ class Exchange:
         return False
 
     def check_dry_limit_order_filled(
-        self, order: dict[str, Any], immediate: bool = False, orderbook: Optional[OrderBook] = None
-    ) -> dict[str, Any]:
+        self, order: CcxtOrder, immediate: bool = False, orderbook: Optional[OrderBook] = None
+    ) -> CcxtOrder:
         """
         Check dry-run limit order fill and update fee (if it filled).
         """
@@ -1186,7 +1187,7 @@ class Exchange:
 
         return order
 
-    def fetch_dry_run_order(self, order_id) -> dict[str, Any]:
+    def fetch_dry_run_order(self, order_id) -> CcxtOrder:
         """
         Return dry-run order
         Only call if running in dry-run mode.
@@ -1460,7 +1461,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def fetch_order_emulated(self, order_id: str, pair: str, params: dict) -> dict:
+    def fetch_order_emulated(self, order_id: str, pair: str, params: dict) -> CcxtOrder:
         """
         Emulated fetch_order if the exchange doesn't support fetch_order, but requires separate
         calls for open and closed orders.
@@ -1494,7 +1495,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier(retries=API_FETCH_ORDER_RETRY_COUNT)
-    def fetch_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> CcxtOrder:
         if self._config["dry_run"]:
             return self.fetch_dry_run_order(order_id)
         if params is None:
@@ -1523,12 +1524,14 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: Optional[dict] = None
+    ) -> CcxtOrder:
         return self.fetch_order(order_id, pair, params)
 
     def fetch_order_or_stoploss_order(
         self, order_id: str, pair: str, stoploss_order: bool = False
-    ) -> dict:
+    ) -> CcxtOrder:
         """
         Simple wrapper calling either fetch_order or fetch_stoploss_order depending on
         the stoploss_order parameter
@@ -1589,7 +1592,7 @@ class Exchange:
         required = ("fee", "status", "amount")
         return all(corder.get(k, None) is not None for k in required)
 
-    def cancel_order_with_result(self, order_id: str, pair: str, amount: float) -> dict:
+    def cancel_order_with_result(self, order_id: str, pair: str, amount: float) -> CcxtOrder:
         """
         Cancel order returning a result.
         Creates a fake result if cancel order returns a non-usable result
@@ -1686,7 +1689,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[dict]:
+    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
         if self.exchange_has("fetchClosedOrders"):
             orders = self._api.fetch_closed_orders(pair, since=since_ms)
@@ -1696,7 +1699,9 @@ class Exchange:
         return orders
 
     @retrier(retries=0)
-    def fetch_orders(self, pair: str, since: datetime, params: Optional[dict] = None) -> list[dict]:
+    def fetch_orders(
+        self, pair: str, since: datetime, params: Optional[dict] = None
+    ) -> list[CcxtOrder]:
         """
         Fetch all orders for a pair "since"
         :param pair: Pair for the query

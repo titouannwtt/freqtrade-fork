@@ -14,7 +14,7 @@ from freqtrade.exceptions import (
 )
 from freqtrade.exchange import Exchange, date_minus_candles
 from freqtrade.exchange.common import API_RETRY_COUNT, retrier
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
 from freqtrade.util import dt_now, dt_ts
 
@@ -209,7 +209,9 @@ class Okx(Exchange):
         return order
 
     @retrier(retries=API_RETRY_COUNT)
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: Optional[dict] = None
+    ) -> CcxtOrder:
         if self._config["dry_run"]:
             return self.fetch_dry_run_order(order_id)
 
@@ -231,7 +233,7 @@ class Okx(Exchange):
 
         return self._fetch_stop_order_fallback(order_id, pair)
 
-    def _fetch_stop_order_fallback(self, order_id: str, pair: str) -> dict:
+    def _fetch_stop_order_fallback(self, order_id: str, pair: str) -> CcxtOrder:
         params2 = {"stop": True, "ordType": "conditional"}
         for method in (
             self._api.fetch_open_orders,
@@ -263,7 +265,7 @@ class Okx(Exchange):
 
     def cancel_stoploss_order(
         self, order_id: str, pair: str, params: Optional[dict] = None
-    ) -> dict:
+    ) -> CcxtOrder:
         params1 = {"stop": True}
         # 'ordType': 'conditional'
         #
@@ -273,7 +275,7 @@ class Okx(Exchange):
             params=params1,
         )
 
-    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[dict]:
+    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
 
         orders = self._api.fetch_closed_orders(pair, since=since_ms)
