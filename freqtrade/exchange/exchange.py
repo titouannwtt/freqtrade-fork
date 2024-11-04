@@ -1056,7 +1056,7 @@ class Exchange:
                     "filled": _amount,
                     "remaining": 0.0,
                     "status": "closed",
-                    "cost": (dry_order["amount"] * average),
+                    "cost": (_amount * average),
                 }
             )
             # market orders will always incurr taker fees
