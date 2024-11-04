@@ -11,7 +11,7 @@ class FtHas(TypedDict, total=False):
     # Stoploss on exchange
     stoploss_on_exchange: bool
     stop_price_param: str
-    stop_price_prop: str
+    stop_price_prop: Literal["stopPrice", "stopLossPrice"]
     stop_price_type_field: str
     stop_price_type_value_mapping: dict
     stoploss_order_types: dict[str, str]

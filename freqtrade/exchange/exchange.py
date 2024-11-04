@@ -12,7 +12,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from math import floor, isnan
 from threading import Lock
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, TypeGuard, Union
 
 import ccxt
 import ccxt.pro as ccxt_pro
@@ -1586,7 +1586,7 @@ class Exchange:
     ) -> dict:
         return self.cancel_order(order_id, pair, params)
 
-    def is_cancel_order_result_suitable(self, corder) -> bool:
+    def is_cancel_order_result_suitable(self, corder) -> TypeGuard[CcxtOrder]:
         if not isinstance(corder, dict):
             return False
 
@@ -2207,7 +2207,7 @@ class Exchange:
             return round((fee_cost * fee_to_quote_rate) / cost, 8)
 
     def extract_cost_curr_rate(
-        self, fee: dict, symbol: str, cost: float, amount: float
+        self, fee: dict[str, Any], symbol: str, cost: float, amount: float
     ) -> tuple[float, str, Optional[float]]:
         """
         Extract tuple of cost, currency, rate.
