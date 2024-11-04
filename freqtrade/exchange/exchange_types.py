@@ -1,4 +1,4 @@
-from typing import Any, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 
 from freqtrade.enums import CandleType
 
@@ -44,7 +44,7 @@ class FtHas(TypedDict, total=False):
     funding_fee_timeframe: str
     floor_leverage: bool
     needs_trading_fees: bool
-    order_props_in_contracts: list[str]
+    order_props_in_contracts: list[Literal["amount", "cost", "filled", "remaining"]]
 
     # Websocket control
     ws_enabled: bool

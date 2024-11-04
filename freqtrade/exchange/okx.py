@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Optional
 
 import ccxt
 

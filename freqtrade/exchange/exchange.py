@@ -1027,7 +1027,6 @@ class Exchange:
             "status": "open",
             "fee": None,
             "info": {},
-            "leverage": leverage,
         }
         if stop_loss:
             dry_order["info"] = {"stopPrice": dry_order["price"]}
@@ -1552,7 +1551,9 @@ class Exchange:
         return order.get("status") in NON_OPEN_EXCHANGE_STATES and order.get("filled") == 0.0
 
     @retrier
-    def cancel_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def cancel_order(
+        self, order_id: str, pair: str, params: Optional[dict] = None
+    ) -> dict[str, Any]:
         if self._config["dry_run"]:
             try:
                 order = self.fetch_dry_run_order(order_id)
