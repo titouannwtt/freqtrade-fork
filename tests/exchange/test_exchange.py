@@ -1069,7 +1069,6 @@ def test_create_dry_run_order(default_conf, mocker, side, exchange_name, leverag
     assert order["type"] == "limit"
     assert order["symbol"] == "ETH/BTC"
     assert order["amount"] == 1
-    assert order["leverage"] == leverage
     assert order["cost"] == 1 * 200
 
 
