@@ -34,8 +34,6 @@ class FtHas(TypedDict, total=False):
     trades_pagination_arg: str
     trades_has_history: bool
     trades_pagination_overlap: bool
-    # Create order
-    create_order_has_all_data: bool
     # Orderbook
     l2_limit_range: Optional[list[int]]
     l2_limit_range_required: bool

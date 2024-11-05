@@ -29,7 +29,6 @@ class Hyperliquid(Exchange):
         "exchange_has_overrides": {"fetchTrades": False},
         "stoploss_order_types": {"limit": "limit"},
         "funding_fee_timeframe": "1h",
-        "create_order_has_all_data": False,
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
