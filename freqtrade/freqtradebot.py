@@ -1196,6 +1196,11 @@ class FreqtradeBot(LoggingMixin):
         current_rate = self.exchange.get_rate(
             trade.pair, side="entry", is_short=trade.is_short, refresh=False
         )
+        stake_amount = trade.stake_amount
+        if not fill:
+            stake_amount += sum(
+                o.stake_amount for o in trade.open_orders if o.ft_order_side == trade.entry_side
+            )
 
         msg: RPCEntryMsg = {
             "trade_id": trade.id,
@@ -1209,7 +1214,7 @@ class FreqtradeBot(LoggingMixin):
             "limit": open_rate,  # Deprecated (?)
             "open_rate": open_rate,
             "order_type": order_type or "unknown",
-            "stake_amount": trade.stake_amount,
+            "stake_amount": stake_amount,
             "stake_currency": self.config["stake_currency"],
             "base_currency": self.exchange.get_pair_base_currency(trade.pair),
             "quote_currency": self.exchange.get_pair_quote_currency(trade.pair),
