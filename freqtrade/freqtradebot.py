@@ -1198,6 +1198,8 @@ class FreqtradeBot(LoggingMixin):
         )
         stake_amount = trade.stake_amount
         if not fill:
+            # If we have open orders, we need to add the stake amount of the open orders
+            # as it's not yet included in the trade.stake_amount
             stake_amount += sum(
                 o.stake_amount for o in trade.open_orders if o.ft_order_side == trade.entry_side
             )
