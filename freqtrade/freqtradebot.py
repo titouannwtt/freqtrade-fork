@@ -1214,7 +1214,7 @@ class FreqtradeBot(LoggingMixin):
             "base_currency": self.exchange.get_pair_base_currency(trade.pair),
             "quote_currency": self.exchange.get_pair_quote_currency(trade.pair),
             "fiat_currency": self.config.get("fiat_display_currency", None),
-            "amount": order.safe_amount_after_fee if fill else (order.amount or trade.amount),
+            "amount": order.safe_amount_after_fee if fill else (order.safe_amount or trade.amount),
             "open_date": trade.open_date_utc or datetime.now(timezone.utc),
             "current_rate": current_rate,
             "sub_trade": sub_trade,
