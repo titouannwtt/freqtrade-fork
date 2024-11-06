@@ -558,10 +558,12 @@ class Telegram(RPCHandler):
             sell_noti = (
                 self._config["telegram"].get("notification_settings", {}).get(str(msg_type), {})
             )
+
             # For backward compatibility sell still can be string
             if isinstance(sell_noti, str):
                 noti = sell_noti
             else:
+                default_noti = sell_noti.get("*", default_noti)
                 noti = sell_noti.get(str(exit_reason), default_noti)
         else:
             noti = (

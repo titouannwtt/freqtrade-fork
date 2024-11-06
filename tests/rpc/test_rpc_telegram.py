@@ -2912,6 +2912,7 @@ def test_noficiation_settings(default_conf_usdt, mocker):
                 "exit_fill": {
                     "roi": "silent",
                     "partial_exit": "off",
+                    "*": "silent",  # Default to silent
                 },
                 "exit_cancel": "on",
                 "protection_trigger": "off",
@@ -2925,15 +2926,18 @@ def test_noficiation_settings(default_conf_usdt, mocker):
     assert telegram._message_loudness(RPCMessageType.ENTRY, "") == "silent"
     assert telegram._message_loudness(RPCMessageType.ENTRY_FILL, "") == "on"
     assert telegram._message_loudness(RPCMessageType.EXIT, "") == "on"
-    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "") == "on"
+    # Default to silent due to "*" definition
+    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "") == "silent"
     assert telegram._message_loudness(RPCMessageType.PROTECTION_TRIGGER, "") == "off"
     assert telegram._message_loudness(RPCMessageType.EXIT, "roi") == "silent"
     assert telegram._message_loudness(RPCMessageType.EXIT, "partial_exit") == "off"
+    # Not given key defaults to on
     assert telegram._message_loudness(RPCMessageType.EXIT, "cust_exit112") == "on"
+
     assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "roi") == "silent"
     assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "partial_exit") == "off"
-    # Default to on
-    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "cust_exit112") == "on"
+    # Default to silent due to "*" definition
+    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "cust_exit112") == "silent"
 
     # Simplified setup for exit
     telegram._config["telegram"].update(
