@@ -95,8 +95,11 @@ Example configuration showing the different settings:
             "stop_loss": "on",
             "stoploss_on_exchange": "on",
             "custom_exit": "silent",
-            "partial_exit": "on"
+            "partial_exit": "on",
+            // "custom_exit_message": "silent",  // Disable individual custom exit reasons
+            "*": "off"  // Disable all other exit reasons
         },
+        // "exit": "off",  // Simplistic configuration to disable all exit messages
         "exit_cancel": "on",
         "exit_fill": "off",
         "protection_trigger": "off",
@@ -109,16 +112,16 @@ Example configuration showing the different settings:
 },
 ```
 
-`entry` notifications are sent when the order is placed, while `entry_fill` notifications are sent when the order is filled on the exchange.  
-`exit` notifications are sent when the order is placed, while `exit_fill` notifications are sent when the order is filled on the exchange.  
-`*_fill` notifications are off by default and must be explicitly enabled.  
-`protection_trigger` notifications are sent when a protection triggers and `protection_trigger_global` notifications trigger when global protections are triggered.  
-`strategy_msg` - Receive notifications from the strategy, sent via `self.dp.send_msg()` from the strategy [more details](strategy-customization.md#send-notification).  
-`show_candle` - show candle values as part of entry/exit messages. Only possible values are `"ohlc"` or `"off"`.  
-
-`balance_dust_level` will define what the `/balance` command takes as "dust" - Currencies with a balance below this will be shown.  
-`allow_custom_messages` completely disable strategy messages.  
-`reload` allows you to disable reload-buttons on selected messages.  
+* `entry` notifications are sent when the order is placed, while `entry_fill` notifications are sent when the order is filled on the exchange.  
+* `exit` notifications are sent when the order is placed, while `exit_fill` notifications are sent when the order is filled on the exchange.  
+    Exit messages can be further controlled by individual exit reasons, with the specific exit reason as the key. the default for all exit reasons is `on` - but can be configured via `*` - which will act as a wildcard for all exit reasons that are not explicitly defined.
+* `*_fill` notifications are off by default and must be explicitly enabled.  
+* `protection_trigger` notifications are sent when a protection triggers and `protection_trigger_global` notifications trigger when global protections are triggered.  
+* `strategy_msg` - Receive notifications from the strategy, sent via `self.dp.send_msg()` from the strategy [more details](strategy-customization.md#send-notification).  
+* `show_candle` - show candle values as part of entry/exit messages. Only possible values are `"ohlc"` or `"off"`.  
+* `balance_dust_level` will define what the `/balance` command takes as "dust" - Currencies with a balance below this will be shown.  
+* `allow_custom_messages` completely disable strategy messages.  
+* `reload` allows you to disable reload-buttons on selected messages.  
 
 ## Create a custom keyboard (command shortcut buttons)
 
