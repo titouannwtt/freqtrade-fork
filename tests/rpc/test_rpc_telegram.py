@@ -2885,3 +2885,72 @@ async def test_telegram_list_custom_data(default_conf_usdt, update, ticker, fee,
     ) in msg_mock.call_args_list[2][0][0]
 
     msg_mock.reset_mock()
+
+
+def test_noficiation_settings(default_conf_usdt, mocker):
+    (telegram, _, _) = get_telegram_testobject(mocker, default_conf_usdt)
+    telegram._config["telegram"].update(
+        {
+            "notification_settings": {
+                "status": "silent",
+                "warning": "on",
+                "startup": "off",
+                "entry": "silent",
+                "entry_fill": "on",
+                "entry_cancel": "silent",
+                "exit": {
+                    "roi": "silent",
+                    "emergency_exit": "on",
+                    "force_exit": "on",
+                    "exit_signal": "silent",
+                    "trailing_stop_loss": "on",
+                    "stop_loss": "on",
+                    "stoploss_on_exchange": "on",
+                    "custom_exit": "silent",
+                    "partial_exit": "off",
+                },
+                "exit_cancel": "on",
+                "exit_fill": "off",
+                "protection_trigger": "off",
+                "protection_trigger_global": "on",
+                "strategy_msg": "off",
+                "show_candle": "off",
+            }
+        }
+    )
+
+    assert telegram._message_loudness(RPCMessageType.ENTRY, "") == "silent"
+    assert telegram._message_loudness(RPCMessageType.ENTRY_FILL, "") == "on"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "") == "on"
+    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "") == "off"
+    assert telegram._message_loudness(RPCMessageType.PROTECTION_TRIGGER, "") == "off"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "roi") == "silent"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "partial_exit") == "off"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "cust_exit112") == "on"
+
+    # Simplified setup for exit
+    telegram._config["telegram"].update(
+        {
+            "notification_settings": {
+                "status": "silent",
+                "warning": "on",
+                "startup": "off",
+                "entry": "silent",
+                "entry_fill": "on",
+                "entry_cancel": "silent",
+                "exit": "off",
+                "exit_cancel": "on",
+                "exit_fill": "on",
+                "protection_trigger": "off",
+                "protection_trigger_global": "on",
+                "strategy_msg": "off",
+                "show_candle": "off",
+            }
+        }
+    )
+
+    assert telegram._message_loudness(RPCMessageType.EXIT_FILL, "roi") == "on"
+    # All regular exits are off
+    assert telegram._message_loudness(RPCMessageType.EXIT, "roi") == "off"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "partial_exit") == "off"
+    assert telegram._message_loudness(RPCMessageType.EXIT, "cust_exit112") == "off"
