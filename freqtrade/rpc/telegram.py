@@ -554,7 +554,7 @@ class Telegram(RPCHandler):
 
         msg_type = msg_type
         noti = ""
-        if msg_type == RPCMessageType.EXIT:
+        if msg_type in (RPCMessageType.EXIT, RPCMessageType.EXIT_FILL):
             sell_noti = (
                 self._config["telegram"].get("notification_settings", {}).get(str(msg_type), {})
             )
