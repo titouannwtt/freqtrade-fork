@@ -547,14 +547,14 @@ class Telegram(RPCHandler):
             return None
         return message
 
-    def send_msg(self, msg: RPCSendMsg) -> None:
-        """Send a message to telegram channel"""
-
+    def _message_loudness(
+        self, msg_type: RPCMessageType, exit_reason: str
+    ) -> Literal["off", "silent", "on"]:
         default_noti = "on"
 
-        msg_type = msg["type"]
+        msg_type = msg_type
         noti = ""
-        if msg["type"] == RPCMessageType.EXIT:
+        if msg_type == RPCMessageType.EXIT:
             sell_noti = (
                 self._config["telegram"].get("notification_settings", {}).get(str(msg_type), {})
             )
@@ -562,7 +562,7 @@ class Telegram(RPCHandler):
             if isinstance(sell_noti, str):
                 noti = sell_noti
             else:
-                noti = sell_noti.get(str(msg["exit_reason"]), default_noti)
+                noti = sell_noti.get(str(exit_reason), default_noti)
         else:
             noti = (
                 self._config["telegram"]
@@ -570,8 +570,14 @@ class Telegram(RPCHandler):
                 .get(str(msg_type), default_noti)
             )
 
+        return noti
+
+    def send_msg(self, msg: RPCSendMsg) -> None:
+        """Send a message to telegram channel"""
+        noti = self._message_loudness(msg["type"], msg.get("exit_reason", ""))
+
         if noti == "off":
-            logger.info(f"Notification '{msg_type}' not sent.")
+            logger.info(f"Notification '{msg['type']}' not sent.")
             # Notification disabled
             return
 
