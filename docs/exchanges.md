@@ -311,7 +311,7 @@ walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily 
 
 privateKey also must be in hex format: `0x<64 hex characters>`. 
 
-If needed you can use your mnemonic phrase (the 12 or 24 words you had to write down when creating your wallet) to generate your pivate key in python. First install eth_account:
+If needed you can use your mnemonic phrase (the 12 or 24 words you had to write down when creating your wallet) to generate your private key in python. First install eth_account:
 ```shell
 $ pip3 install eth_account
 ```
