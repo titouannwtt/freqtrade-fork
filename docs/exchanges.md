@@ -297,7 +297,11 @@ It's therefore required to pass the UID as well.
 
 ## Hyperliquid
 
-Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet. This needs to be configured like this:
+!!! Tip "Stoploss on Exchange"
+    Hyperliquid supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it.
+    
+Hyperliquid is a Decentralized Exchange (DEX). Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet. 
+This needs to be configured like this:
 
 ```json
 "exchange": {
