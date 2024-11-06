@@ -547,9 +547,8 @@ class Telegram(RPCHandler):
             return None
         return message
 
-    def _message_loudness(
-        self, msg_type: RPCMessageType, exit_reason: str
-    ) -> Literal["off", "silent", "on"]:
+    def _message_loudness(self, msg_type: RPCMessageType, exit_reason: str) -> str:
+        """Determine the loudness of the message - on, off or silent"""
         default_noti = "on"
 
         msg_type = msg_type
