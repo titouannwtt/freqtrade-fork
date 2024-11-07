@@ -5,7 +5,7 @@ This module contains the argument manager class
 from argparse import ArgumentParser, Namespace, _ArgumentGroup
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from freqtrade.commands.cli_options import AVAILABLE_CLI_OPTIONS
 from freqtrade.constants import DEFAULT_CONFIG
@@ -275,9 +275,9 @@ class Arguments:
     Arguments Class. Manage the arguments received by the cli
     """
 
-    def __init__(self, args: Optional[list[str]]) -> None:
+    def __init__(self, args: list[str] | None) -> None:
         self.args = args
-        self._parsed_arg: Optional[Namespace] = None
+        self._parsed_arg: Namespace | None = None
 
     def get_parsed_arg(self) -> dict[str, Any]:
         """
@@ -319,9 +319,7 @@ class Arguments:
 
         return parsed_arg
 
-    def _build_args(
-        self, optionlist: list[str], parser: Union[ArgumentParser, _ArgumentGroup]
-    ) -> None:
+    def _build_args(self, optionlist: list[str], parser: ArgumentParser | _ArgumentGroup) -> None:
         for val in optionlist:
             opt = AVAILABLE_CLI_OPTIONS[val]
             parser.add_argument(*opt.cli, dest=val, **opt.kwargs)

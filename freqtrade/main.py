@@ -6,12 +6,7 @@ Read the documentation to know what cli arguments you need.
 
 import logging
 import sys
-from typing import Any, Optional
-
-
-# check min. python version
-if sys.version_info < (3, 10):  # pragma: no cover
-    sys.exit("Freqtrade requires Python version >= 3.10")
+from typing import Any
 
 from freqtrade import __version__
 from freqtrade.commands import Arguments
@@ -24,7 +19,7 @@ from freqtrade.system import asyncio_setup, gc_set_threshold
 logger = logging.getLogger("freqtrade")
 
 
-def main(sysargv: Optional[list[str]] = None) -> None:
+def main(sysargv: list[str] | None = None) -> None:
     """
     This function will initiate the bot and start the trading loop.
     :return: None

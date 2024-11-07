@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import ccxt
 
@@ -115,7 +115,7 @@ class Bybit(Exchange):
             raise OperationalException(e) from e
 
     def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
+        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
         if candle_type == CandleType.FUNDING_RATE:
             return 200
@@ -157,7 +157,7 @@ class Bybit(Exchange):
         leverage: float,
         wallet_balance: float,  # Or margin balance
         open_trades: list,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Important: Must be fetching data from cached values as this is used by backtesting!
         PERPETUAL:
@@ -230,7 +230,7 @@ class Bybit(Exchange):
         return 0.0
 
     def fetch_orders(
-        self, pair: str, since: datetime, params: Optional[dict] = None
+        self, pair: str, since: datetime, params: dict | None = None
     ) -> list[CcxtOrder]:
         """
         Fetch all orders for a pair "since"
@@ -248,7 +248,7 @@ class Bybit(Exchange):
 
         return orders
 
-    def fetch_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> CcxtOrder:
+    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
         if self.exchange_has("fetchOrder"):
             # Set acknowledged to True to avoid ccxt exception
             params = {"acknowledged": True}

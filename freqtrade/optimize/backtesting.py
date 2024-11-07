@@ -8,7 +8,7 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from numpy import nan
 from pandas import DataFrame
@@ -110,7 +110,7 @@ class Backtesting:
     backtesting.start()
     """
 
-    def __init__(self, config: Config, exchange: Optional[Exchange] = None) -> None:
+    def __init__(self, config: Config, exchange: Exchange | None = None) -> None:
         LoggingMixin.show_output = False
         self.config = config
         self.results: BacktestResultType = get_BacktestResultType_default()
@@ -685,7 +685,7 @@ class Backtesting:
         )
 
     def _try_close_open_order(
-        self, order: Optional[Order], trade: LocalTrade, current_date: datetime, row: tuple
+        self, order: Order | None, trade: LocalTrade, current_date: datetime, row: tuple
     ) -> bool:
         """
         Check if an order is open and if it should've filled.
@@ -742,8 +742,8 @@ class Backtesting:
         row: tuple,
         exit_: ExitCheckTuple,
         current_time: datetime,
-        amount: Optional[float] = None,
-    ) -> Optional[LocalTrade]:
+        amount: float | None = None,
+    ) -> LocalTrade | None:
         if exit_.exit_flag:
             trade.close_date = current_time
             exit_reason = exit_.exit_reason
@@ -822,8 +822,8 @@ class Backtesting:
         sell_row: tuple,
         close_rate: float,
         amount: float,
-        exit_reason: Optional[str],
-    ) -> Optional[LocalTrade]:
+        exit_reason: str | None,
+    ) -> LocalTrade | None:
         self.order_id_counter += 1
         exit_candle_time = sell_row[DATE_IDX].to_pydatetime()
         order_type = self.strategy.order_types["exit"]
@@ -859,7 +859,7 @@ class Backtesting:
 
     def _check_trade_exit(
         self, trade: LocalTrade, row: tuple, current_time: datetime
-    ) -> Optional[LocalTrade]:
+    ) -> LocalTrade | None:
         self._run_funding_fees(trade, current_time)
 
         # Check if we need to adjust our current positions
@@ -909,10 +909,10 @@ class Backtesting:
         stake_amount: float,
         direction: LongShort,
         current_time: datetime,
-        entry_tag: Optional[str],
-        trade: Optional[LocalTrade],
+        entry_tag: str | None,
+        trade: LocalTrade | None,
         order_type: str,
-        price_precision: Optional[float],
+        price_precision: float | None,
     ) -> tuple[float, float, float, float]:
         if order_type == "limit":
             new_rate = strategy_safe_wrapper(
@@ -1004,12 +1004,12 @@ class Backtesting:
         pair: str,
         row: tuple,
         direction: LongShort,
-        stake_amount: Optional[float] = None,
-        trade: Optional[LocalTrade] = None,
-        requested_rate: Optional[float] = None,
-        requested_stake: Optional[float] = None,
-        entry_tag1: Optional[str] = None,
-    ) -> Optional[LocalTrade]:
+        stake_amount: float | None = None,
+        trade: LocalTrade | None = None,
+        requested_rate: float | None = None,
+        requested_stake: float | None = None,
+        entry_tag1: str | None = None,
+    ) -> LocalTrade | None:
         """
         :param trade: Trade to adjust - initial entry if None
         :param requested_rate: Adjusted entry rate
@@ -1178,7 +1178,7 @@ class Backtesting:
         self.rejected_trades += 1
         return False
 
-    def check_for_trade_entry(self, row) -> Optional[LongShort]:
+    def check_for_trade_entry(self, row) -> LongShort | None:
         enter_long = row[LONG_IDX] == 1
         exit_long = row[ELONG_IDX] == 1
         enter_short = self._can_short and row[SHORT_IDX] == 1
@@ -1216,7 +1216,7 @@ class Backtesting:
 
     def check_order_cancel(
         self, trade: LocalTrade, order: Order, current_time: datetime
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Check if current analyzed order has to be canceled.
         Returns True if the trade should be Deleted (initial order was canceled),
@@ -1298,7 +1298,7 @@ class Backtesting:
 
     def validate_row(
         self, data: dict, pair: str, row_index: int, current_time: datetime
-    ) -> Optional[tuple]:
+    ) -> tuple | None:
         try:
             # Row is treated as "current incomplete candle".
             # entry / exit signals are shifted by 1 to compensate for this.
@@ -1332,7 +1332,7 @@ class Backtesting:
         row: tuple,
         pair: str,
         current_time: datetime,
-        trade_dir: Optional[LongShort],
+        trade_dir: LongShort | None,
         can_enter: bool,
     ) -> None:
         """
@@ -1354,15 +1354,15 @@ class Backtesting:
         row: tuple,
         pair: str,
         current_time: datetime,
-        trade_dir: Optional[LongShort],
+        trade_dir: LongShort | None,
         can_enter: bool,
-    ) -> Optional[LongShort]:
+    ) -> LongShort | None:
         """
         NOTE: This method is used by Hyperopt at each iteration. Please keep it optimized.
 
         Backtesting processing for one candle/pair.
         """
-        exiting_dir: Optional[LongShort] = None
+        exiting_dir: LongShort | None = None
         if not self._position_stacking and len(LocalTrade.bt_trades_open_pp[pair]) > 0:
             # position_stacking not supported for now.
             exiting_dir = "short" if LocalTrade.bt_trades_open_pp[pair][0].is_short else "long"
@@ -1481,7 +1481,7 @@ class Backtesting:
             self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
             self.dataprovider._set_dataframe_max_date(current_time)
             current_detail_time: datetime = row[DATE_IDX].to_pydatetime()
-            trade_dir: Optional[LongShort] = self.check_for_trade_entry(row)
+            trade_dir: LongShort | None = self.check_for_trade_entry(row)
 
             if (
                 (trade_dir is not None or len(LocalTrade.bt_trades_open_pp[pair]) > 0)
