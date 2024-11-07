@@ -165,7 +165,8 @@ Called for open trade every iteration (roughly every 5 seconds) until a trade is
 
 The usage of the custom stoploss method must be enabled by setting `use_custom_stoploss=True` on the strategy object.
 
-The stoploss price can only ever move upwards - if the stoploss value returned from `custom_stoploss` would result in a lower stoploss price than was previously set, it will be ignored. The traditional `stoploss` value serves as an absolute lower level and will be instated as the initial stoploss (before this method is called for the first time for a trade), and is still mandatory.
+The stoploss price can only ever move upwards - if the stoploss value returned from `custom_stoploss` would result in a lower stoploss price than was previously set, it will be ignored. The traditional `stoploss` value serves as an absolute lower level and will be instated as the initial stoploss (before this method is called for the first time for a trade), and is still mandatory.  
+As custom stoploss acts as regular, changing stoploss, it will behave similar to `trailing_stop` - and trades exiting due to this will have the exit_reason of `"trailing_stop_loss"`.
 
 The method must return a stoploss value (float / number) as a percentage of the current price.
 E.g. If the `current_rate` is 200 USD, then returning `0.02` will set the stoploss price 2% lower, at 196 USD.
