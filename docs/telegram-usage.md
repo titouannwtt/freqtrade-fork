@@ -114,7 +114,7 @@ Example configuration showing the different settings:
 
 * `entry` notifications are sent when the order is placed, while `entry_fill` notifications are sent when the order is filled on the exchange.  
 * `exit` notifications are sent when the order is placed, while `exit_fill` notifications are sent when the order is filled on the exchange.  
-    Exit messages can be further controlled by individual exit reasons, with the specific exit reason as the key. the default for all exit reasons is `on` - but can be configured via `*` - which will act as a wildcard for all exit reasons that are not explicitly defined.
+    Exit messages (`exit` and `exit_fill`) can be further controlled at individual exit reasons level, with the specific exit reason as the key. the default for all exit reasons is `on` - but can be configured via special `*` key - which will act as a wildcard for all exit reasons that are not explicitly defined.
 * `*_fill` notifications are off by default and must be explicitly enabled.  
 * `protection_trigger` notifications are sent when a protection triggers and `protection_trigger_global` notifications trigger when global protections are triggered.  
 * `strategy_msg` - Receive notifications from the strategy, sent via `self.dp.send_msg()` from the strategy [more details](strategy-customization.md#send-notification).  
