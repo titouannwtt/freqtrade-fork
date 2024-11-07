@@ -379,7 +379,7 @@ class Exchange:
             logger.info("Applying additional ccxt config: %s", ccxt_kwargs)
         if self._ccxt_params:
             # Inject static options after the above output to not confuse users.
-            ccxt_kwargs = deep_merge_dicts(self._ccxt_params, ccxt_kwargs)
+            ccxt_kwargs = deep_merge_dicts(self._ccxt_params, deepcopy(ccxt_kwargs))
         if ccxt_kwargs:
             ex_config.update(ccxt_kwargs)
         try:
