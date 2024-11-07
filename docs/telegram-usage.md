@@ -94,7 +94,7 @@ Example configuration showing the different settings:
             "trailing_stop_loss": "on",
             "stop_loss": "on",
             "stoploss_on_exchange": "on",
-            "custom_exit": "silent",
+            "custom_exit": "silent",  // custom_exit without specifying an exit reason
             "partial_exit": "on",
             // "custom_exit_message": "silent",  // Disable individual custom exit reasons
             "*": "off"  // Disable all other exit reasons
