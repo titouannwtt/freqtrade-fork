@@ -299,7 +299,7 @@ It's therefore required to pass the UID as well.
 
 !!! Tip "Stoploss on Exchange"
     Hyperliquid supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it.
-    
+
 Hyperliquid is a Decentralized Exchange (DEX). Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet. 
 This needs to be configured like this:
 
@@ -311,16 +311,19 @@ This needs to be configured like this:
     // ...
 }
 ```
-walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily copied from your wallet. 
+
+walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily copied from your wallet.
 
 privateKey also must be in hex format: `0x<64 hex characters>`. 
 
 If needed you can use your mnemonic phrase (the 12 or 24 words you had to write down when creating your wallet) to generate your private key in python. First install eth_account:
+
 ```shell
 $ pip3 install eth_account
 ```
 
 Then run this in python (replace <mnemonic phrase> with your actual mnemonic phrase) :
+
 ```python
 from eth_account import Account
 Account.enable_unaudited_hdwallet_features()
@@ -328,7 +331,8 @@ words = "<mnemonic phrase>"
 print(f"0x{Account.from_mnemonic(words)._private_key.hex()}")
 ```
 
-Some general best practices (non exhaustive): 
+Some general best practices (non exhaustive):
+
 * Don't ever run this conversion online. Online tools 'facilitating' this conversion are likely scams and will steal your funds.
 * Always keep your mnemonic phrase and private key (basically the same thing) private.
 * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
@@ -336,7 +340,7 @@ Some general best practices (non exhaustive):
 * Remember that if someone hacks the host you use for trading, or any other host you stored your private key / mnemonic on, you will lose the funds protected by that private key. That means the funds on that wallet and the funds deposited on Hyperliquid.
 * If you have funds you don't want to use for trading (after making a profit for example), transfer them back to your hardware wallet.
 
-Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 2 scaling solution built on top of Ethereum. Hyperliquid uses USDC as quote / collateral. The process of depositing USDC on Hyperliquid requires a couple of steps, see [how to start trading](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) for details on what steps are needed. 
+Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 2 scaling solution built on top of Ethereum. Hyperliquid uses USDC as quote / collateral. The process of depositing USDC on Hyperliquid requires a couple of steps, see [how to start trading](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) for details on what steps are needed.
 
 ## All exchanges
 
