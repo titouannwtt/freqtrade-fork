@@ -2458,10 +2458,10 @@ def test_MarketCapPairList_exceptions(mocker, default_conf_usdt):
         PairListManager(exchange, default_conf_usdt)
 
     default_conf_usdt["pairlists"] = [
-        {"method": "MarketCapPairList", "number_assets": 20, "max_rank": 260}
+        {"method": "MarketCapPairList", "number_assets": 20, "max_rank": 1010}
     ]
     with pytest.raises(
-        OperationalException, match="This filter only support marketcap rank up to 250."
+        OperationalException, match="This filter only support marketcap rank up to 1000."
     ):
         PairListManager(exchange, default_conf_usdt)
 

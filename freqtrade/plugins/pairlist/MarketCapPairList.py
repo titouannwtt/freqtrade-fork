@@ -5,6 +5,7 @@ Provides dynamic pair list based on Market Cap
 """
 
 import logging
+import math
 
 from cachetools import TTLCache
 
@@ -56,8 +57,8 @@ class MarketCapPairList(IPairList):
                         f"You can choose from {category_ids}"
                     )
 
-        if self._max_rank > 250:
-            raise OperationalException("This filter only support marketcap rank up to 250.")
+        if self._max_rank > 1000:
+            raise OperationalException("This filter only support marketcap rank up to 1000.")
 
     @property
     def needstickers(self) -> bool:
@@ -165,7 +166,11 @@ class MarketCapPairList(IPairList):
             data = []
 
             if not self._categories:
-                data = self._coingecko.get_coins_markets(**default_kwargs)
+                pages_required = math.ceil(self._max_rank / 250)
+                for page in range(1, pages_required + 1):
+                    default_kwargs["page"] = page
+                    page_data = self._coingecko.get_coins_markets(**default_kwargs)
+                    data.extend(page_data)
             else:
                 for category in self._categories:
                     category_data = self._coingecko.get_coins_markets(
