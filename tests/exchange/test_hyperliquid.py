@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
-from tests.conftest import get_mock_coro, get_patched_exchange
+import pytest
+
+from tests.conftest import EXMS, get_mock_coro, get_patched_exchange
 
 
 def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker):
@@ -278,7 +280,6 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker):
     ]
 
     api_mock = MagicMock()
-    get_mock_coro(return_value=markets)
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
     default_conf["stake_currency"] = "USDC"
@@ -300,7 +301,7 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker):
             position["collateral"],
             [],
         )
-        assert abs(liq_price_calculated - liq_price_returned) / liq_price_returned < 0.0001
+        assert pytest.approx(liq_price_returned, rel=0.0001) == liq_price_calculated
 
 
 def test_hyperliquid_get_funding_fees(default_conf, mocker):
@@ -317,3 +318,27 @@ def test_hyperliquid_get_funding_fees(default_conf, mocker):
     exchange.get_funding_fees("BTC/USDC:USDC", 1, False, now)
 
     assert exchange._fetch_and_calculate_funding_fees.call_count == 1
+
+
+def test_hyperliquid_get_max_leverage(default_conf, mocker):
+    markets = {
+        "BTC/USDC:USDC": {"limits": {"leverage": {"max": 50}}},
+        "ETH/USDC:USDC": {"limits": {"leverage": {"max": 50}}},
+        "SOL/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
+        "DOGE/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
+    }
+    exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
+    assert exchange.get_max_leverage("BTC/USDC:USDC", 1) == 1.0
+
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
+    exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
+    mocker.patch.multiple(
+        EXMS,
+        markets=PropertyMock(return_value=markets),
+    )
+
+    assert exchange.get_max_leverage("BTC/USDC:USDC", 1) == 50
+    assert exchange.get_max_leverage("ETH/USDC:USDC", 20) == 50
+    assert exchange.get_max_leverage("SOL/USDC:USDC", 50) == 20
+    assert exchange.get_max_leverage("DOGE/USDC:USDC", 3) == 20
