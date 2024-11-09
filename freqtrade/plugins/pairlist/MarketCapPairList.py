@@ -60,7 +60,8 @@ class MarketCapPairList(IPairList):
         if self._max_rank > 250:
             self.logger.warning(
                 f"The max rank you have set ({self._max_rank}) is quite high. "
-                "Please ensure this value is appropriate for your use case.",
+                "This may lead to coingecko API rate limit issues. "
+                "Please ensure this value is necessary for your use case.",
             )
 
     @property
