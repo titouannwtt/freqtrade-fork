@@ -6,7 +6,6 @@ Provides dynamic pair list based on Market Cap
 
 import logging
 import math
-import warnings
 
 from cachetools import TTLCache
 
