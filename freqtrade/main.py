@@ -8,6 +8,11 @@ import logging
 import sys
 from typing import Any
 
+
+# check min. python version
+if sys.version_info < (3, 10):  # pragma: no cover  # noqa: UP036
+    sys.exit("Freqtrade requires Python version >= 3.10")
+
 from freqtrade import __version__
 from freqtrade.commands import Arguments
 from freqtrade.constants import DOCS_LINK
