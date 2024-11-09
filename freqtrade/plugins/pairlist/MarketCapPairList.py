@@ -6,6 +6,7 @@ Provides dynamic pair list based on Market Cap
 
 import logging
 import math
+import warnings
 
 from cachetools import TTLCache
 
@@ -57,8 +58,11 @@ class MarketCapPairList(IPairList):
                         f"You can choose from {category_ids}"
                     )
 
-        if self._max_rank > 1000:
-            raise OperationalException("This filter only support marketcap rank up to 1000.")
+        if self._max_rank > 250:
+            self.logger.warning(
+                f"The max rank you have set ({self._max_rank}) is quite high. "
+                "Please ensure this value is appropriate for your use case.",
+            )
 
     @property
     def needstickers(self) -> bool:
