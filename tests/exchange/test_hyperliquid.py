@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
+from fastapi import params
 
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange
 
@@ -342,3 +343,33 @@ def test_hyperliquid_get_max_leverage(default_conf, mocker):
     assert exchange.get_max_leverage("ETH/USDC:USDC", 20) == 50
     assert exchange.get_max_leverage("SOL/USDC:USDC", 50) == 20
     assert exchange.get_max_leverage("DOGE/USDC:USDC", 3) == 20
+
+
+def test_hyperliquid__lev_prep(default_conf, mocker):
+    api_mock = MagicMock()
+    api_mock.set_margin_mode = MagicMock()
+    type(api_mock).has = PropertyMock(return_value={"setMarginMode": True})
+    exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="hyperliquid")
+    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
+
+    assert api_mock.set_margin_mode.call_count == 0
+
+    # test in futures mode
+    api_mock.set_margin_mode.reset_mock()
+    default_conf["dry_run"] = False
+
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
+
+    exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="hyperliquid")
+    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
+
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with("isolated", "BTC/USDC:USDC", {"leverage": 3})
+
+    api_mock.reset_mock()
+
+    exchange._lev_prep("BTC/USDC:USDC", 19.99, "sell")
+
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with("isolated", "BTC/USDC:USDC", {"leverage": 19})
