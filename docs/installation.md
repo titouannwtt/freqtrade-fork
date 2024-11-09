@@ -76,7 +76,7 @@ OS Specific steps are listed first, the common section below is necessary for al
 
     ```bash
     sudo apt-get install python3-venv libatlas-base-dev cmake curl
-    # Use pywheels.org to speed up installation
+    # Use piwheels.org to speed up installation
     sudo echo "[global]\nextra-index-url=https://www.piwheels.org/simple" > tee /etc/pip.conf
 
     git clone https://github.com/freqtrade/freqtrade.git
@@ -220,7 +220,7 @@ cd ..
 rm -rf ./ta-lib*
 ```
 
-#### Setup Python virtual environment (virtualenv)
+### Setup Python virtual environment (virtualenv)
 
 You will run freqtrade in separated `virtual environment`
 
@@ -232,7 +232,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-#### Install python dependencies
+### Install python dependencies
 
 ```bash
 python3 -m pip install --upgrade pip
@@ -242,9 +242,9 @@ python3 -m pip install -e .
 
 ### Congratulations
 
-[You are ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready), and run the bot
 
-#### (Optional) Post-installation Tasks
+### (Optional) Post-installation Tasks
 
 !!! Note 
     If you run the bot on a server, you should consider using [Docker](docker_quickstart.md) or a terminal multiplexer like `screen` or [`tmux`](https://en.wikipedia.org/wiki/Tmux) to avoid that the bot is stopped on logout.
