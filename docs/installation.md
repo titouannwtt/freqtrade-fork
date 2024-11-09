@@ -67,6 +67,18 @@ OS Specific steps are listed first, the common section below is necessary for al
     sudo apt install -y python3-pip python3-venv python3-dev python3-pandas git curl
     ```
 
+=== "MacOS"
+    #### Install necessary dependencies
+
+    Install [Homebrew](https://brew.sh/) if you don't have it already.
+
+    ```bash
+    # install packages
+    brew install gettext libomp
+    ```
+    !!! Note
+        The `setup.sh` script will install these dependencies for you - assuming brew is installed on your system.
+
 === "RaspberryPi/Raspbian"
     The following assumes the latest [Raspbian Buster lite image](https://www.raspberrypi.org/downloads/raspbian/).
     This image comes with python3.11 preinstalled, making it easy to get freqtrade up and running.
@@ -150,9 +162,7 @@ Each time you open a new terminal, you must run `source .venv/bin/activate` to a
 source ./.venv/bin/activate
 ```
 
-### Congratulations
-
-[You are ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready) to run the bot.
 
 ### Other options of /setup.sh script
 
@@ -237,12 +247,11 @@ source .venv/bin/activate
 ```bash
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
+# install freqtrade
 python3 -m pip install -e .
 ```
 
-### Congratulations
-
-[You are now ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready) to run the bot.
 
 ### (Optional) Post-installation Tasks
 
@@ -333,9 +342,7 @@ cd build_helpers
 bash install_ta-lib.sh ${CONDA_PREFIX} nosudo
 ```
 
-### Congratulations
-
-[You are ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready) to run the bot.
 
 ### Important shortcuts
 
