@@ -168,7 +168,7 @@ class MarketCapPairList(IPairList):
             if not self._categories:
                 pages_required = math.ceil(self._max_rank / 250)
                 for page in range(1, pages_required + 1):
-                    default_kwargs["page"] = page
+                    default_kwargs["page"] = str(page)
                     page_data = self._coingecko.get_coins_markets(**default_kwargs)
                     data.extend(page_data)
             else:
