@@ -30,7 +30,7 @@ from freqtrade.optimize.backtesting import Backtesting
 
 # Import IHyperOpt and IHyperOptLoss to allow unpickling classes from these modules
 from freqtrade.optimize.hyperopt_auto import HyperOptAuto
-from freqtrade.optimize.hyperopt_loss_interface import IHyperOptLoss
+from freqtrade.optimize.hyperopt_loss.hyperopt_loss_interface import IHyperOptLoss
 from freqtrade.optimize.hyperopt_output import HyperoptOutput
 from freqtrade.optimize.hyperopt_tools import (
     HyperoptStateContainer,
