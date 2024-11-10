@@ -613,12 +613,14 @@ def test_start_new_strategy(caplog, user_dir):
         "--strategy",
         "CoolNewStrategy",
         "--strategy-path",
-        str(user_dir / "nonexistant"),
+        str(user_dir / "nonexistent"),
     ]
     start_new_strategy(get_args(args))
     assert (user_dir / "CoolNewStrategy.py").exists()
 
     assert log_has_re("Creating strategy directory .*", caplog)
+    assert (user_dir / "nonexistent").is_dir()
+    assert (user_dir / "nonexistent" / "CoolNewStrategy.py").exists()
 
     shutil.rmtree(str(user_dir))
 
