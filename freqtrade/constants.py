@@ -38,6 +38,7 @@ HYPEROPT_LOSS_BUILTIN = [
     "MaxDrawDownHyperOptLoss",
     "MaxDrawDownRelativeHyperOptLoss",
     "ProfitDrawDownHyperOptLoss",
+    "MultiMetricHyperOptLoss",
 ]
 AVAILABLE_PAIRLISTS = [
     "StaticPairList",
