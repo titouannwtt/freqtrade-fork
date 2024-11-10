@@ -571,7 +571,7 @@ def test_create_datadir_failed(caplog):
     assert log_has("`create-userdir` requires --userdir to be set.", caplog)
 
 
-def test_create_datadir(caplog, mocker):
+def test_create_datadir(mocker):
     cud = mocker.patch(
         "freqtrade.configuration.directory_operations.create_userdata_dir", MagicMock()
     )
@@ -604,7 +604,7 @@ def test_start_new_strategy(mocker, caplog):
         start_new_strategy(get_args(args))
 
 
-def test_start_new_strategy_no_arg(mocker, caplog):
+def test_start_new_strategy_no_arg():
     args = [
         "new-strategy",
     ]
