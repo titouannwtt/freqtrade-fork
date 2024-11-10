@@ -115,7 +115,7 @@ ARGS_CREATE_USERDIR = ["user_data_dir", "reset"]
 ARGS_BUILD_CONFIG = ["config"]
 ARGS_SHOW_CONFIG = ["user_data_dir", "config", "show_sensitive"]
 
-ARGS_BUILD_STRATEGY = ["user_data_dir", "strategy", "template"]
+ARGS_BUILD_STRATEGY = ["user_data_dir", "strategy", "strategy_path", "template"]
 
 ARGS_CONVERT_DATA_TRADES = ["pairs", "format_from_trades", "format_to", "erase", "exchange"]
 ARGS_CONVERT_DATA = ["pairs", "format_from", "format_to", "erase", "exchange"]

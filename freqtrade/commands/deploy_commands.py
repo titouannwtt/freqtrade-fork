@@ -86,7 +86,11 @@ def start_new_strategy(args: dict[str, Any]) -> None:
     config = setup_utils_configuration(args, RunMode.UTIL_NO_EXCHANGE)
 
     if "strategy" in args and args["strategy"]:
-        new_path = config["user_data_dir"] / USERPATH_STRATEGIES / (args["strategy"] + ".py")
+        if "strategy_path" in args and args["strategy_path"]:
+            strategy_dir = Path(args["strategy_path"])
+        else:
+            strategy_dir = config["user_data_dir"] / USERPATH_STRATEGIES
+        new_path = strategy_dir / (args["strategy"] + ".py")
 
         if new_path.exists():
             raise OperationalException(
