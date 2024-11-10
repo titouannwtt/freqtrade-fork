@@ -86,7 +86,7 @@ class RPCExitMsg(__RPCEntryExitMsgBase):
     profit_ratio: float
     exit_reason: str | None
     close_date: datetime
-    # current_rate: Optional[float]
+    # current_rate: float | None
     order_rate: float | None
     final_profit_ratio: float | None
     is_final_exit: bool
