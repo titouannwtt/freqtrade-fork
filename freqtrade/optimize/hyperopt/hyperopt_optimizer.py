@@ -137,34 +137,6 @@ class HyperOptimizer:
         # and the values are taken from the list of parameters.
         return {d.name: v for d, v in zip(dimensions, raw_params, strict=False)}
 
-    def get_optimizer(
-        self,
-        cpu_count: int,
-        random_state: int,
-        initial_points: int,
-        model_queue_size: int,
-    ) -> Optimizer:
-        dimensions = self.dimensions
-        estimator = self.custom_hyperopt.generate_estimator(dimensions=dimensions)
-
-        acq_optimizer = "sampling"
-        if isinstance(estimator, str):
-            if estimator not in ("GP", "RF", "ET", "GBRT"):
-                raise OperationalException(f"Estimator {estimator} not supported.")
-            else:
-                acq_optimizer = "auto"
-
-        logger.info(f"Using estimator {estimator}.")
-        return Optimizer(
-            dimensions,
-            base_estimator=estimator,
-            acq_optimizer=acq_optimizer,
-            n_initial_points=initial_points,
-            acq_optimizer_kwargs={"n_jobs": cpu_count},
-            random_state=random_state,
-            model_queue_size=model_queue_size,
-        )
-
     def _get_params_details(self, params: dict) -> dict:
         """
         Return the params for each space
@@ -402,6 +374,34 @@ class HyperOptimizer:
             "results_explanation": results_explanation,
             "total_profit": total_profit,
         }
+
+    def get_optimizer(
+        self,
+        cpu_count: int,
+        random_state: int,
+        initial_points: int,
+        model_queue_size: int,
+    ) -> Optimizer:
+        dimensions = self.dimensions
+        estimator = self.custom_hyperopt.generate_estimator(dimensions=dimensions)
+
+        acq_optimizer = "sampling"
+        if isinstance(estimator, str):
+            if estimator not in ("GP", "RF", "ET", "GBRT"):
+                raise OperationalException(f"Estimator {estimator} not supported.")
+            else:
+                acq_optimizer = "auto"
+
+        logger.info(f"Using estimator {estimator}.")
+        return Optimizer(
+            dimensions,
+            base_estimator=estimator,
+            acq_optimizer=acq_optimizer,
+            n_initial_points=initial_points,
+            acq_optimizer_kwargs={"n_jobs": cpu_count},
+            random_state=random_state,
+            model_queue_size=model_queue_size,
+        )
 
     def advise_and_trim(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         preprocessed = self.backtesting.strategy.advise_all_indicators(data)
