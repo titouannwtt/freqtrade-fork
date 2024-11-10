@@ -90,6 +90,9 @@ def start_new_strategy(args: dict[str, Any]) -> None:
             strategy_dir = Path(args["strategy_path"])
         else:
             strategy_dir = config["user_data_dir"] / USERPATH_STRATEGIES
+        if not strategy_dir.is_dir():
+            logger.info(f"Creating strategy directory {strategy_dir}")
+            strategy_dir.mkdir(parents=True)
         new_path = strategy_dir / (args["strategy"] + ".py")
 
         if new_path.exists():
