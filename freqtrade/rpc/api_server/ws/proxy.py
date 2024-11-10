@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 from fastapi import WebSocket as FastAPIWebSocket
 from websockets.client import WebSocketClientProtocol as WebSocket
@@ -13,7 +13,7 @@ class WebSocketProxy:
     """
 
     def __init__(self, websocket: WebSocketType):
-        self._websocket: Union[FastAPIWebSocket, WebSocket] = websocket
+        self._websocket: FastAPIWebSocket | WebSocket = websocket
 
     @property
     def raw_websocket(self):

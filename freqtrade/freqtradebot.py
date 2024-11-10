@@ -9,7 +9,7 @@ from datetime import datetime, time, timedelta, timezone
 from math import isclose
 from threading import Lock
 from time import sleep
-from typing import Any, Optional
+from typing import Any
 
 from schedule import Scheduler
 
@@ -112,7 +112,7 @@ class FreqtradeBot(LoggingMixin):
 
         self.trading_mode: TradingMode = self.config.get("trading_mode", TradingMode.SPOT)
         self.margin_mode: MarginMode = self.config.get("margin_mode", MarginMode.NONE)
-        self.last_process: Optional[datetime] = None
+        self.last_process: datetime | None = None
 
         # RPC runs in separate threads, can start handling external commands just after
         # initialization, even before Freqtradebot has a chance to start its throttling,
@@ -326,7 +326,7 @@ class FreqtradeBot(LoggingMixin):
             }
             self.rpc.send_msg(msg)
 
-    def _refresh_active_whitelist(self, trades: Optional[list[Trade]] = None) -> list[str]:
+    def _refresh_active_whitelist(self, trades: list[Trade] | None = None) -> list[str]:
         """
         Refresh active whitelist from pairlist or edge and extend it with
         pairs that have open trades.
@@ -863,14 +863,14 @@ class FreqtradeBot(LoggingMixin):
         self,
         pair: str,
         stake_amount: float,
-        price: Optional[float] = None,
+        price: float | None = None,
         *,
         is_short: bool = False,
-        ordertype: Optional[str] = None,
-        enter_tag: Optional[str] = None,
-        trade: Optional[Trade] = None,
+        ordertype: str | None = None,
+        enter_tag: str | None = None,
+        trade: Trade | None = None,
         mode: EntryExecuteMode = "initial",
-        leverage_: Optional[float] = None,
+        leverage_: float | None = None,
     ) -> bool:
         """
         Executes an entry for the given pair
@@ -1079,13 +1079,13 @@ class FreqtradeBot(LoggingMixin):
     def get_valid_enter_price_and_stake(
         self,
         pair: str,
-        price: Optional[float],
+        price: float | None,
         stake_amount: float,
         trade_side: LongShort,
-        entry_tag: Optional[str],
-        trade: Optional[Trade],
+        entry_tag: str | None,
+        trade: Trade | None,
         mode: EntryExecuteMode,
-        leverage_: Optional[float],
+        leverage_: float | None,
     ) -> tuple[float, float, float]:
         """
         Validate and eventually adjust (within limits) limit, amount and leverage
@@ -1181,7 +1181,7 @@ class FreqtradeBot(LoggingMixin):
         self,
         trade: Trade,
         order: Order,
-        order_type: Optional[str],
+        order_type: str | None,
         fill: bool = False,
         sub_trade: bool = False,
     ) -> None:
@@ -1352,7 +1352,7 @@ class FreqtradeBot(LoggingMixin):
         return False
 
     def _check_and_execute_exit(
-        self, trade: Trade, exit_rate: float, enter: bool, exit_: bool, exit_tag: Optional[str]
+        self, trade: Trade, exit_rate: float, enter: bool, exit_: bool, exit_tag: str | None
     ) -> bool:
         """
         Check and execute trade exit
@@ -1612,7 +1612,7 @@ class FreqtradeBot(LoggingMixin):
                 self.emergency_exit(trade, order["price"], order["amount"])
 
     def emergency_exit(
-        self, trade: Trade, price: float, sub_trade_amt: Optional[float] = None
+        self, trade: Trade, price: float, sub_trade_amt: float | None = None
     ) -> None:
         try:
             self.execute_trade_exit(
@@ -1642,7 +1642,7 @@ class FreqtradeBot(LoggingMixin):
             )
             trade.delete()
 
-    def replace_order(self, order: CcxtOrder, order_obj: Optional[Order], trade: Trade) -> None:
+    def replace_order(self, order: CcxtOrder, order_obj: Order | None, trade: Trade) -> None:
         """
         Check if current analyzed entry order should be replaced or simply cancelled.
         To simply cancel the existing order(no replacement) adjust_entry_price() should return None
@@ -1749,7 +1749,7 @@ class FreqtradeBot(LoggingMixin):
         order: CcxtOrder,
         order_obj: Order,
         reason: str,
-        replacing: Optional[bool] = False,
+        replacing: bool | None = False,
     ) -> bool:
         """
         entry cancel - cancel order
@@ -1943,9 +1943,9 @@ class FreqtradeBot(LoggingMixin):
         limit: float,
         exit_check: ExitCheckTuple,
         *,
-        exit_tag: Optional[str] = None,
-        ordertype: Optional[str] = None,
-        sub_trade_amt: Optional[float] = None,
+        exit_tag: str | None = None,
+        ordertype: str | None = None,
+        sub_trade_amt: float | None = None,
     ) -> bool:
         """
         Executes a trade exit for the given trade and limit
@@ -2054,10 +2054,10 @@ class FreqtradeBot(LoggingMixin):
     def _notify_exit(
         self,
         trade: Trade,
-        order_type: Optional[str],
+        order_type: str | None,
         fill: bool = False,
         sub_trade: bool = False,
-        order: Optional[Order] = None,
+        order: Order | None = None,
     ) -> None:
         """
         Sends rpc notification when a sell occurred.
@@ -2170,7 +2170,7 @@ class FreqtradeBot(LoggingMixin):
         # Send the message
         self.rpc.send_msg(msg)
 
-    def order_obj_or_raise(self, order_id: str, order_obj: Optional[Order]) -> Order:
+    def order_obj_or_raise(self, order_id: str, order_obj: Order | None) -> Order:
         if not order_obj:
             raise DependencyException(
                 f"Order_obj not found for {order_id}. This should not have happened."
@@ -2184,8 +2184,8 @@ class FreqtradeBot(LoggingMixin):
     def update_trade_state(
         self,
         trade: Trade,
-        order_id: Optional[str],
-        action_order: Optional[CcxtOrder] = None,
+        order_id: str | None,
+        action_order: CcxtOrder | None = None,
         *,
         stoploss_order: bool = False,
         send_msg: bool = True,
@@ -2322,7 +2322,7 @@ class FreqtradeBot(LoggingMixin):
         amount: float,
         fee_abs: float,
         order_obj: Order,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Applies the fee to amount (either from Order or from Trades).
         Can eat into dust if more than the required asset is available.
@@ -2359,7 +2359,7 @@ class FreqtradeBot(LoggingMixin):
         except DependencyException as exception:
             logger.warning("Could not update trade amount: %s", exception)
 
-    def get_real_amount(self, trade: Trade, order: CcxtOrder, order_obj: Order) -> Optional[float]:
+    def get_real_amount(self, trade: Trade, order: CcxtOrder, order_obj: Order) -> float | None:
         """
         Detect and update trade fee.
         Calls trade.update_fee() upon correct detection.
@@ -2420,7 +2420,7 @@ class FreqtradeBot(LoggingMixin):
 
     def fee_detection_from_trades(
         self, trade: Trade, order: CcxtOrder, order_obj: Order, order_amount: float, trades: list
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         fee-detection fallback to Trades.
         Either uses provided trades list or the result of fetch_my_trades to get correct fee.

@@ -1,6 +1,5 @@
 import logging
 from datetime import timedelta
-from typing import Optional
 
 import ccxt
 
@@ -60,7 +59,7 @@ class Okx(Exchange):
     _ccxt_params: dict = {"options": {"brokerId": "ffb5405ad327SUDE"}}
 
     def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
+        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
         """
         Exchange ohlcv candle limit
@@ -210,7 +209,7 @@ class Okx(Exchange):
 
     @retrier(retries=API_RETRY_COUNT)
     def fetch_stoploss_order(
-        self, order_id: str, pair: str, params: Optional[dict] = None
+        self, order_id: str, pair: str, params: dict | None = None
     ) -> CcxtOrder:
         if self._config["dry_run"]:
             return self.fetch_dry_run_order(order_id)
@@ -263,9 +262,7 @@ class Okx(Exchange):
             return safe_value_fallback2(order, order, "id_stop", "id")
         return order["id"]
 
-    def cancel_stoploss_order(
-        self, order_id: str, pair: str, params: Optional[dict] = None
-    ) -> dict:
+    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         params1 = {"stop": True}
         # 'ordType': 'conditional'
         #

@@ -5,8 +5,8 @@ This module implements a convenience auto-hyperopt class, which can be used toge
 """
 
 import logging
+from collections.abc import Callable
 from contextlib import suppress
-from typing import Callable
 
 from freqtrade.exceptions import OperationalException
 
