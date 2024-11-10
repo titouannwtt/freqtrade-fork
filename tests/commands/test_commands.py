@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -585,23 +586,41 @@ def test_create_datadir(mocker):
     assert csf.call_count == 1
 
 
-def test_start_new_strategy(mocker, caplog):
-    wt_mock = mocker.patch.object(Path, "write_text", MagicMock())
-    mocker.patch.object(Path, "exists", MagicMock(return_value=False))
+def test_start_new_strategy(caplog, user_dir):
+    strategy_dir = user_dir / "strategies"
+    strategy_dir.mkdir(parents=True, exist_ok=True)
 
+    assert strategy_dir.is_dir()
     args = ["new-strategy", "--strategy", "CoolNewStrategy"]
     start_new_strategy(get_args(args))
+    assert strategy_dir.exists()
+    assert (strategy_dir / "CoolNewStrategy.py").exists()
 
-    assert wt_mock.call_count == 1
-    assert "CoolNewStrategy" in wt_mock.call_args_list[0][0][0]
     assert log_has_re("Writing strategy to .*", caplog)
 
-    mocker.patch("freqtrade.configuration.setup_utils_configuration")
-    mocker.patch.object(Path, "exists", MagicMock(return_value=True))
     with pytest.raises(
         OperationalException, match=r".* already exists. Please choose another Strategy Name\."
     ):
         start_new_strategy(get_args(args))
+
+    args = ["new-strategy", "--strategy", "CoolNewStrategy", "--strategy-path", str(user_dir)]
+    start_new_strategy(get_args(args))
+    assert (user_dir / "CoolNewStrategy.py").exists()
+
+    # strategy-path that doesn't exist
+    args = [
+        "new-strategy",
+        "--strategy",
+        "CoolNewStrategy",
+        "--strategy-path",
+        str(user_dir / "nonexistant"),
+    ]
+    start_new_strategy(get_args(args))
+    assert (user_dir / "CoolNewStrategy.py").exists()
+
+    assert log_has_re("Creating strategy directory .*", caplog)
+
+    shutil.rmtree(str(user_dir))
 
 
 def test_start_new_strategy_no_arg():
