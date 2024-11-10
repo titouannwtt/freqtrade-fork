@@ -14,7 +14,7 @@ from freqtrade.data.history import load_data
 from freqtrade.enums import ExitType, RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.optimize.hyperopt import Hyperopt
-from freqtrade.optimize.hyperopt_auto import HyperOptAuto
+from freqtrade.optimize.hyperopt.hyperopt_auto import HyperOptAuto
 from freqtrade.optimize.hyperopt_tools import HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.optimize.space import SKDecimal

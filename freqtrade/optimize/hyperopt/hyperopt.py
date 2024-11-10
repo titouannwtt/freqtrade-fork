@@ -27,10 +27,10 @@ from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts, file_dump_json, plural
 from freqtrade.optimize.backtesting import Backtesting
-from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
 
 # Import IHyperOpt and IHyperOptLoss to allow unpickling classes from these modules
-from freqtrade.optimize.hyperopt_auto import HyperOptAuto
+from freqtrade.optimize.hyperopt.hyperopt_auto import HyperOptAuto
+from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
 from freqtrade.optimize.hyperopt_loss.hyperopt_loss_interface import IHyperOptLoss
 from freqtrade.optimize.hyperopt_tools import (
     HyperoptStateContainer,
