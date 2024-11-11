@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import WebSocket as FastAPIWebSocket
-from websockets.client import WebSocketClientProtocol as WebSocket
+from websockets.asyncio.client import ClientConnection as WebSocket
 
 from freqtrade.rpc.api_server.ws.types import WebSocketType
 

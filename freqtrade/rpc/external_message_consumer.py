@@ -213,8 +213,7 @@ class ExternalMessageConsumer:
             except (
                 socket.gaierror,
                 ConnectionRefusedError,
-                websockets.exceptions.InvalidStatusCode,
-                websockets.exceptions.InvalidMessage,
+                websockets.exceptions.InvalidHandshake,
             ) as e:
                 logger.error(f"Connection Refused - {e} retrying in {self.sleep_time}s")
                 await asyncio.sleep(self.sleep_time)
