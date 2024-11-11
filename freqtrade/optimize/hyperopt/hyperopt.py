@@ -42,6 +42,8 @@ INITIAL_POINTS = 30
 # in the skopt model queue, to optimize memory consumption
 SKOPT_MODEL_QUEUE_SIZE = 10
 
+log_queue: Any
+
 
 class Hyperopt:
     """
