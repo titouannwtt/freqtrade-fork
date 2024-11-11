@@ -25,8 +25,8 @@ def logging_mp_setup(log_queue: Queue, verbosity: int):
 
 def logging_mp_handle(q: Queue):
     """
-    Handle logging in a child process.
-    Must be called in the child process after logging.
+    Handle logging from a child process.
+    Must be called in the parent process to handle log messages from the child process.
     """
 
     try:
