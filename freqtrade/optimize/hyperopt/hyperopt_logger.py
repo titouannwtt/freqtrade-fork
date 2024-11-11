@@ -32,12 +32,9 @@ def logging_mp_handle(q: Queue):
     try:
         while True:
             record = q.get(block=False)
-            # logger1 = logging.getLogger(record.name)
             if record is None:
                 break
             logger.handle(record)
 
     except Empty:
-        logger.info("empty")
-        # print("empty")
         pass
