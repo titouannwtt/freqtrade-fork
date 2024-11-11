@@ -1,7 +1,6 @@
-# pragma pylint: disable=too-many-instance-attributes, pointless-string-statement
-
 """
-This module contains the hyperopt logic
+This module contains the hyperopt optimizer class, which needs to be pickled
+and will be sent to the hyperopt worker processes.
 """
 
 import logging
