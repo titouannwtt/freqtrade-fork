@@ -2355,8 +2355,8 @@ def test_send_msg_exit_notification(default_conf, mocker) -> None:
             "*Direction:* `Long`\n"
             "*Amount:* `1333.33333333`\n"
             "*Open Rate:* `0.00075 ETH`\n"
-            "*Current Rate:* `0.00032 ETH`\n"
-            "*Exit Rate:* `0.00032 ETH`\n"
+            "*Current Rate:* `0.0003201 ETH`\n"
+            "*Exit Rate:* `0.0003201 ETH`\n"
             "*Duration:* `1:00:00 (60.0 min)`"
         )
 
@@ -2398,8 +2398,8 @@ def test_send_msg_exit_notification(default_conf, mocker) -> None:
             "*Direction:* `Long`\n"
             "*Amount:* `1333.33333333`\n"
             "*Open Rate:* `0.00075 ETH`\n"
-            "*Current Rate:* `0.00032 ETH`\n"
-            "*Exit Rate:* `0.00032 ETH`\n"
+            "*Current Rate:* `0.0003201 ETH`\n"
+            "*Exit Rate:* `0.0003201 ETH`\n"
             "*Remaining:* `0.01 ETH / -24.812 USD`"
         )
 
@@ -2437,8 +2437,8 @@ def test_send_msg_exit_notification(default_conf, mocker) -> None:
             "*Direction:* `Long`\n"
             "*Amount:* `1333.33333333`\n"
             "*Open Rate:* `0.00075 ETH`\n"
-            "*Current Rate:* `0.00032 ETH`\n"
-            "*Exit Rate:* `0.00032 ETH`\n"
+            "*Current Rate:* `0.0003201 ETH`\n"
+            "*Exit Rate:* `0.0003201 ETH`\n"
             "*Duration:* `1 day, 2:30:00 (1590.0 min)`"
         )
         # Reset singleton function to avoid random breaks
@@ -2536,7 +2536,7 @@ def test_send_msg_exit_fill_notification(
             f"{leverage_text}"
             "*Amount:* `1333.33333333`\n"
             "*Open Rate:* `0.00075 ETH`\n"
-            "*Exit Rate:* `0.00032 ETH`\n"
+            "*Exit Rate:* `0.0003201 ETH`\n"
             "*Duration:* `1 day, 2:30:00 (1590.0 min)`"
         )
 
@@ -2686,8 +2686,8 @@ def test_send_msg_exit_notification_no_fiat(
         f"{leverage_text}`\n"
         "*Amount:* `1333.33333333`\n"
         "*Open Rate:* `0.00075 ETH`\n"
-        "*Current Rate:* `0.00032 ETH`\n"
-        "*Exit Rate:* `0.00032 ETH`\n"
+        "*Current Rate:* `0.0003201 ETH`\n"
+        "*Exit Rate:* `0.0003201 ETH`\n"
         "*Duration:* `2:35:03 (155.1 min)`"
     )
 
