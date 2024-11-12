@@ -41,7 +41,14 @@ from freqtrade.misc import chunks, plural
 from freqtrade.persistence import Trade
 from freqtrade.rpc import RPC, RPCException, RPCHandler
 from freqtrade.rpc.rpc_types import RPCEntryMsg, RPCExitMsg, RPCOrderMsg, RPCSendMsg
-from freqtrade.util import dt_from_ts, dt_humanize_delta, fmt_coin, format_date, round_value
+from freqtrade.util import (
+    dt_from_ts,
+    dt_humanize_delta,
+    fmt_coin,
+    fmt_coin2,
+    format_date,
+    round_value,
+)
 
 
 MAX_MESSAGE_LENGTH = MessageLimit.MAX_TEXT_LENGTH
@@ -399,10 +406,10 @@ class Telegram(RPCHandler):
         if msg.get("leverage") and msg.get("leverage", 1.0) != 1.0:
             message += f" ({msg['leverage']:.3g}x)"
         message += "`\n"
-        message += f"*Open Rate:* `{round_value(msg['open_rate'], 8)} {msg['quote_currency']}`\n"
+        message += f"*Open Rate:* `{fmt_coin2(msg['open_rate'], msg['quote_currency'])}`\n"
         if msg["type"] == RPCMessageType.ENTRY and msg["current_rate"]:
             message += (
-                f"*Current Rate:* `{round_value(msg['current_rate'], 8)} {msg['quote_currency']}`\n"
+                f"*Current Rate:* `{fmt_coin2(msg['current_rate'], msg['quote_currency'])}`\n"
             )
 
         profit_fiat_extra = self.__format_profit_fiat(msg, "stake_amount")  # type: ignore
@@ -467,14 +474,16 @@ class Telegram(RPCHandler):
             f"*Direction:* `{msg['direction']}"
             f"{leverage_text}`\n"
             f"*Amount:* `{round_value(msg['amount'], 8)}`\n"
-            f"*Open Rate:* `{fmt_coin(msg['open_rate'], msg['quote_currency'])}`\n"
+            f"*Open Rate:* `{fmt_coin2(msg['open_rate'], msg['quote_currency'])}`\n"
         )
         if msg["type"] == RPCMessageType.EXIT and msg["current_rate"]:
-            message += f"*Current Rate:* `{fmt_coin(msg['current_rate'], msg['quote_currency'])}`\n"
+            message += (
+                f"*Current Rate:* `{fmt_coin2(msg['current_rate'], msg['quote_currency'])}`\n"
+            )
             if msg["order_rate"]:
-                message += f"*Exit Rate:* `{fmt_coin(msg['order_rate'], msg['quote_currency'])}`"
+                message += f"*Exit Rate:* `{fmt_coin2(msg['order_rate'], msg['quote_currency'])}`"
         elif msg["type"] == RPCMessageType.EXIT_FILL:
-            message += f"*Exit Rate:* `{fmt_coin(msg['close_rate'], msg['quote_currency'])}`"
+            message += f"*Exit Rate:* `{fmt_coin2(msg['close_rate'], msg['quote_currency'])}`"
 
         if is_sub_trade:
             stake_amount_fiat = self.__format_profit_fiat(msg, "stake_amount")
