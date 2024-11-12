@@ -325,8 +325,8 @@ This needs to be configured like this:
 
 Some general best practices (non exhaustive):
 
-* Beware of supplychainattacks, like pip package poisoning etcetera. However you export or (re-)generate your private key, make sure your environment is safe.
-* Interact as little with the private key as possible. Store it in a seperate file from the config.json (secrets.json for example) that you never have to touch, and secure it.
+* Beware of supply chain attacks, like pip package poisoning etcetera. However you export or (re-)generate your private key, make sure your environment is safe.
+* Interact as little with the private key as possible. Store it in a separate file from the config.json (secrets.json for example) that you never have to touch, and secure it.
 * Always keep your mnemonic phrase and private key private.
 * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
 * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet / private key to trade on Hyperliquid.
