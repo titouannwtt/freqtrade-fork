@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import CandleType, MarginMode, TradingMode
@@ -49,7 +48,7 @@ class Hyperliquid(Exchange):
         config.update(super()._ccxt_config)
         return config
 
-    def get_max_leverage(self, pair: str, stake_amount: Optional[float]) -> float:
+    def get_max_leverage(self, pair: str, stake_amount: float | None) -> float:
         # There are no leverage tiers
         if self.trading_mode == TradingMode.FUTURES:
             return self.markets[pair]["limits"]["leverage"]["max"]
@@ -57,7 +56,7 @@ class Hyperliquid(Exchange):
             return 1.0
 
     def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
+        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
         # Funding rate candles have a different limit
         if candle_type == CandleType.FUNDING_RATE:
@@ -83,7 +82,7 @@ class Hyperliquid(Exchange):
         leverage: float,
         wallet_balance: float,  # Or margin balance
         open_trades: list,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Optimized
         Docs: https://hyperliquid.gitbook.io/hyperliquid-docs/trading/liquidations
