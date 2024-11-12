@@ -102,7 +102,6 @@ def test_setup_hyperopt_configuration_with_arguments(mocker, default_conf, caplo
         "--timerange",
         ":100",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--epochs",
         "1000",
         "--spaces",
@@ -125,10 +124,6 @@ def test_setup_hyperopt_configuration_with_arguments(mocker, default_conf, caplo
 
     assert "position_stacking" in config
     assert log_has("Parameter --enable-position-stacking detected ...", caplog)
-
-    assert "use_max_market_positions" in config
-    assert log_has("Parameter --disable-max-market-positions detected ...", caplog)
-    assert log_has("max_open_trades set to unlimited ...", caplog)
 
     assert "timerange" in config
     assert log_has("Parameter --timerange detected: {} ...".format(config["timerange"]), caplog)

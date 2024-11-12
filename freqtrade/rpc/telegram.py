@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 import re
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -17,7 +17,7 @@ from html import escape
 from itertools import chain
 from math import isnan
 from threading import Thread
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Literal
 
 from tabulate import tabulate
 from telegram import (
@@ -146,7 +146,7 @@ class Telegram(RPCHandler):
         Validates the keyboard configuration from telegram config
         section.
         """
-        self._keyboard: list[list[Union[str, KeyboardButton]]] = [
+        self._keyboard: list[list[str | KeyboardButton]] = [
             ["/daily", "/profit", "/balance"],
             ["/status", "/status table", "/performance"],
             ["/count", "/start", "/stop", "/help"],
@@ -499,7 +499,7 @@ class Telegram(RPCHandler):
             profit_fiat_extra = f" / {profit_fiat:.3f} {fiat_currency}"
         return profit_fiat_extra
 
-    def compose_message(self, msg: RPCSendMsg) -> Optional[str]:
+    def compose_message(self, msg: RPCSendMsg) -> str | None:
         if msg["type"] == RPCMessageType.ENTRY or msg["type"] == RPCMessageType.ENTRY_FILL:
             message = self._format_entry_msg(msg)
 
@@ -547,21 +547,22 @@ class Telegram(RPCHandler):
             return None
         return message
 
-    def send_msg(self, msg: RPCSendMsg) -> None:
-        """Send a message to telegram channel"""
-
+    def _message_loudness(self, msg: RPCSendMsg) -> str:
+        """Determine the loudness of the message - on, off or silent"""
         default_noti = "on"
 
         msg_type = msg["type"]
         noti = ""
-        if msg["type"] == RPCMessageType.EXIT:
+        if msg["type"] == RPCMessageType.EXIT or msg["type"] == RPCMessageType.EXIT_FILL:
             sell_noti = (
                 self._config["telegram"].get("notification_settings", {}).get(str(msg_type), {})
             )
+
             # For backward compatibility sell still can be string
             if isinstance(sell_noti, str):
                 noti = sell_noti
             else:
+                default_noti = sell_noti.get("*", default_noti)
                 noti = sell_noti.get(str(msg["exit_reason"]), default_noti)
         else:
             noti = (
@@ -570,8 +571,14 @@ class Telegram(RPCHandler):
                 .get(str(msg_type), default_noti)
             )
 
+        return noti
+
+    def send_msg(self, msg: RPCSendMsg) -> None:
+        """Send a message to telegram channel"""
+        noti = self._message_loudness(msg)
+
         if noti == "off":
-            logger.info(f"Notification '{msg_type}' not sent.")
+            logger.info(f"Notification '{msg['type']}' not sent.")
             # Notification disabled
             return
 
@@ -1301,7 +1308,7 @@ class Telegram(RPCHandler):
                     await query.answer()
                     await query.edit_message_text(text="Force exit canceled.")
                     return
-                trade: Optional[Trade] = Trade.get_trades(trade_filter=Trade.id == trade_id).first()
+                trade: Trade | None = Trade.get_trades(trade_filter=Trade.id == trade_id).first()
                 await query.answer()
                 if trade:
                     await query.edit_message_text(
@@ -1311,7 +1318,7 @@ class Telegram(RPCHandler):
                 else:
                     await query.edit_message_text(text=f"Trade {trade_id} not found.")
 
-    async def _force_enter_action(self, pair, price: Optional[float], order_side: SignalDirection):
+    async def _force_enter_action(self, pair, price: float | None, order_side: SignalDirection):
         if pair != "cancel":
             try:
 
@@ -1999,10 +2006,10 @@ class Telegram(RPCHandler):
         msg: str,
         parse_mode: str = ParseMode.MARKDOWN,
         disable_notification: bool = False,
-        keyboard: Optional[list[list[InlineKeyboardButton]]] = None,
+        keyboard: list[list[InlineKeyboardButton]] | None = None,
         callback_path: str = "",
         reload_able: bool = False,
-        query: Optional[CallbackQuery] = None,
+        query: CallbackQuery | None = None,
     ) -> None:
         """
         Send given markdown message
@@ -2011,7 +2018,7 @@ class Telegram(RPCHandler):
         :param parse_mode: telegram parse mode
         :return: None
         """
-        reply_markup: Union[InlineKeyboardMarkup, ReplyKeyboardMarkup]
+        reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup
         if query:
             await self._update_msg(
                 query=query,

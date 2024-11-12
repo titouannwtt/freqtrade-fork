@@ -2885,3 +2885,85 @@ async def test_telegram_list_custom_data(default_conf_usdt, update, ticker, fee,
     ) in msg_mock.call_args_list[2][0][0]
 
     msg_mock.reset_mock()
+
+
+def test_noficiation_settings(default_conf_usdt, mocker):
+    (telegram, _, _) = get_telegram_testobject(mocker, default_conf_usdt)
+    telegram._config["telegram"].update(
+        {
+            "notification_settings": {
+                "status": "silent",
+                "warning": "on",
+                "startup": "off",
+                "entry": "silent",
+                "entry_fill": "on",
+                "entry_cancel": "silent",
+                "exit": {
+                    "roi": "silent",
+                    "emergency_exit": "on",
+                    "force_exit": "on",
+                    "exit_signal": "silent",
+                    "trailing_stop_loss": "on",
+                    "stop_loss": "on",
+                    "stoploss_on_exchange": "on",
+                    "custom_exit": "silent",
+                    "partial_exit": "off",
+                },
+                "exit_fill": {
+                    "roi": "silent",
+                    "partial_exit": "off",
+                    "*": "silent",  # Default to silent
+                },
+                "exit_cancel": "on",
+                "protection_trigger": "off",
+                "protection_trigger_global": "on",
+                "strategy_msg": "off",
+                "show_candle": "off",
+            }
+        }
+    )
+
+    loudness = telegram._message_loudness
+
+    assert loudness({"type": RPCMessageType.ENTRY, "exit_reason": ""}) == "silent"
+    assert loudness({"type": RPCMessageType.ENTRY_FILL, "exit_reason": ""}) == "on"
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": ""}) == "on"
+    # Default to silent due to "*" definition
+    assert loudness({"type": RPCMessageType.EXIT_FILL, "exit_reason": ""}) == "silent"
+    assert loudness({"type": RPCMessageType.PROTECTION_TRIGGER, "exit_reason": ""}) == "off"
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "roi"}) == "silent"
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "partial_exit"}) == "off"
+    # Not given key defaults to on
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "cust_exit112"}) == "on"
+
+    assert loudness({"type": RPCMessageType.EXIT_FILL, "exit_reason": "roi"}) == "silent"
+    assert loudness({"type": RPCMessageType.EXIT_FILL, "exit_reason": "partial_exit"}) == "off"
+    # Default to silent due to "*" definition
+    assert loudness({"type": RPCMessageType.EXIT_FILL, "exit_reason": "cust_exit112"}) == "silent"
+
+    # Simplified setup for exit
+    telegram._config["telegram"].update(
+        {
+            "notification_settings": {
+                "status": "silent",
+                "warning": "on",
+                "startup": "off",
+                "entry": "silent",
+                "entry_fill": "on",
+                "entry_cancel": "silent",
+                "exit": "off",
+                "exit_cancel": "on",
+                "exit_fill": "on",
+                "protection_trigger": "off",
+                "protection_trigger_global": "on",
+                "strategy_msg": "off",
+                "show_candle": "off",
+            }
+        }
+    )
+
+    assert loudness({"type": RPCMessageType.EXIT_FILL, "exit_reason": "roi"}) == "on"
+    # All regular exits are off
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "roi"}) == "off"
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "partial_exit"}) == "off"
+    assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "cust_exit112"}) == "off"

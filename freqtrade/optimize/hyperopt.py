@@ -11,7 +11,7 @@ import warnings
 from datetime import datetime, timezone
 from math import ceil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import rapidjson
 from joblib import Parallel, cpu_count, delayed, dump, load, wrap_non_picklable_objects
@@ -125,13 +125,7 @@ class Hyperopt:
 
         self.market_change = 0.0
         self.num_epochs_saved = 0
-        self.current_best_epoch: Optional[dict[str, Any]] = None
-
-        # Use max_open_trades for hyperopt as well, except --disable-max-market-positions is set
-        if not self.config.get("use_max_market_positions", True):
-            logger.debug("Ignoring max_open_trades (--disable-max-market-positions was used) ...")
-            self.backtesting.strategy.max_open_trades = float("inf")
-            config.update({"max_open_trades": self.backtesting.strategy.max_open_trades})
+        self.current_best_epoch: dict[str, Any] | None = None
 
         if HyperoptTools.has_space(self.config, "sell"):
             # Make sure use_exit_signal is enabled
@@ -177,7 +171,7 @@ class Hyperopt:
 
         # Return a dict where the keys are the names of the dimensions
         # and the values are taken from the list of parameters.
-        return {d.name: v for d, v in zip(dimensions, raw_params)}
+        return {d.name: v for d, v in zip(dimensions, raw_params, strict=False)}
 
     def _save_result(self, epoch: dict) -> None:
         """
@@ -485,7 +479,7 @@ class Hyperopt:
             delayed(wrap_non_picklable_objects(self.generate_optimizer))(v) for v in asked
         )
 
-    def _set_random_state(self, random_state: Optional[int]) -> int:
+    def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
 
     def advise_and_trim(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
@@ -557,7 +551,7 @@ class Hyperopt:
                 is_random = [True for _ in range(len(asked))]
             is_random_non_tried += [
                 rand
-                for x, rand in zip(asked, is_random)
+                for x, rand in zip(asked, is_random, strict=False)
                 if x not in self.opt.Xi and x not in asked_non_tried
             ]
             asked_non_tried += [
