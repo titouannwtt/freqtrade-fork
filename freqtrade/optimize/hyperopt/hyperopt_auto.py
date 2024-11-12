@@ -14,7 +14,7 @@ from freqtrade.exceptions import OperationalException
 with suppress(ImportError):
     from skopt.space import Dimension
 
-from freqtrade.optimize.hyperopt_interface import EstimatorType, IHyperOpt
+from freqtrade.optimize.hyperopt.hyperopt_interface import EstimatorType, IHyperOpt
 
 
 logger = logging.getLogger(__name__)

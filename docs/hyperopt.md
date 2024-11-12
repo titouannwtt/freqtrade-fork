@@ -913,6 +913,31 @@ Your epochs should therefore be aligned to the possible values - or you should b
 
 After you run Hyperopt for the desired amount of epochs, you can later list all results for analysis, select only best or profitable once, and show the details for any of the epochs previously evaluated. This can be done with the `hyperopt-list` and `hyperopt-show` sub-commands. The usage of these sub-commands is described in the [Utils](utils.md#list-hyperopt-results) chapter.
 
+## Output debug messages from your strategy
+
+If you want to output debug messages from your strategy, you can use the `logging` module. By default, Freqtrade will output all messages with a level of `INFO` or higher. 
+
+
+``` python
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+class MyAwesomeStrategy(IStrategy):
+    ...
+
+    def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        logger.info("This is a debug message")
+        ...
+
+```
+
+!!! Note "using print"
+    Messages printed via `print()` will not be shown in the hyperopt output unless parallelism is disabled (`-j 1`). 
+    It is recommended to use the `logging` module instead.
+
 ## Validate backtesting results
 
 Once the optimized strategy has been implemented into your strategy, you should backtest this strategy to make sure everything is working as expected.
@@ -920,6 +945,7 @@ Once the optimized strategy has been implemented into your strategy, you should 
 To achieve same the results (number of trades, their durations, profit, etc.) as during Hyperopt, please use the same configuration and parameters (timerange, timeframe, ...) used for hyperopt for Backtesting.
 
 ### Why do my backtest results not match my hyperopt results?
+
 Should results not match, check the following factors:
 
 * You may have added parameters to hyperopt in `populate_indicators()` where they will be calculated only once **for all epochs**. If you are, for example, trying to optimise multiple SMA timeperiod values, the hyperoptable timeperiod parameter should be placed in `populate_entry_trend()` which is calculated every epoch. See [Optimizing an indicator parameter](https://www.freqtrade.io/en/stable/hyperopt/#optimizing-an-indicator-parameter).
