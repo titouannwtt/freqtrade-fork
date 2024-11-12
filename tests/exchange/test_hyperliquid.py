@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
-from fastapi import params
 
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange
 
