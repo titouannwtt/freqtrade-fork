@@ -320,32 +320,14 @@ This needs to be configured like this:
 }
 ```
 
-walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily copied from your wallet.
-
-privateKey also must be in hex format: `0x<64 hex characters>`. 
-
-Some wallets, like metamask, support exporting the private key directly. However, if needed you can use your mnemonic phrase (the 12 or 24 words you had to write down when creating your wallet) to generate your private key in python. First install eth_account:
-
-```shell
-$ pip3 install eth_account
-```
-
-Then run this in python (replace <mnemonic phrase> with your actual mnemonic phrase) :
-
-```python
-from eth_account import Account
-Account.enable_unaudited_hdwallet_features()
-words = "<mnemonic phrase>"
-print(f"0x{Account.from_mnemonic(words)._private_key.hex()}")
-```
+* walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily copied from your wallet.
+* privateKey also must be in hex format: `0x<64 hex characters>`, and can either be exported from your wallet or regenerated using your mnemonic phrase.
 
 Some general best practices (non exhaustive):
 
-* If you have to run the mnemonic -> private key conversion:
-  * Don't ever run the mnemonic -> private key conversion online. Online tools 'facilitating' this conversion are likely scams and will steal your funds.
-  * Beware of supplychainattacks, pip package poisoning etcetera. Make sure your python environment, including the eth_account module, are safe to use. Use at your own risk.
+* Beware of supplychainattacks, like pip package poisoning etcetera. However you export or (re-)generate your private key, make sure your environment is safe.
 * Interact as little with the private key as possible. Store it in a seperate file from the config.json (secrets.json for example) that you never have to touch, and secure it.
-* Always keep your mnemonic phrase and private key (basically the same thing) private.
+* Always keep your mnemonic phrase and private key private.
 * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
 * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet / private key to trade on Hyperliquid.
 * Remember that if someone hacks the host you use for trading, or any other host you stored your private key / mnemonic on, you will lose the funds protected by that private key. That means the funds on that wallet and the funds deposited on Hyperliquid.
