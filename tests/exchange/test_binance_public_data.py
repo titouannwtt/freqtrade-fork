@@ -51,11 +51,11 @@ def make_daily_df(date, timeframe):
     return df
 
 
-def make_daily_zip(asset_type, symbol, timeframe, date) -> bytes:
+def make_daily_zip(asset_type_url_segment, symbol, timeframe, date) -> bytes:
     df = make_daily_df(date, timeframe)
-    if asset_type == "spot":
+    if asset_type_url_segment == "spot":
         header = True
-    elif asset_type == "futures/um":
+    elif asset_type_url_segment == "futures/um":
         header = None
     else:
         raise ValueError
@@ -85,8 +85,8 @@ class MockResponse:
 def make_response_from_url(start_date, end_date):
     def make_response(url):
         pattern = (
-            r"https://data.binance.vision/data/(?P<asset_type>spot|futures/um)/daily/klines/"
-            r"(?P<symbol>.*?)/(?P<timeframe>.*?)/(?P=symbol)-(?P=timeframe)-"
+            r"https://data.binance.vision/data/(?P<asset_type_url_segment>spot|futures/um)"
+            r"/daily/klines/(?P<symbol>.*?)/(?P<timeframe>.*?)/(?P=symbol)-(?P=timeframe)-"
             r"(?P<date>\d{4}-\d{2}-\d{2}).zip"
         )
         m = re.match(pattern, url)
@@ -97,7 +97,7 @@ def make_response_from_url(start_date, end_date):
         if date < start_date or date > end_date:
             return MockResponse(content="", status=404)
 
-        zip_file = make_daily_zip(m["asset_type"], m["symbol"], m["timeframe"], date)
+        zip_file = make_daily_zip(m["asset_type_url_segment"], m["symbol"], m["timeframe"], date)
         return MockResponse(content=zip_file, status=200)
 
     return make_response

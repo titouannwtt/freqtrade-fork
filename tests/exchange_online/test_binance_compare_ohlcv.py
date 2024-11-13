@@ -31,14 +31,14 @@ from freqtrade.util.datetime_helpers import dt_from_ts
 
 
 class Check:
-    def __init__(self, asset_type, timeframe):
-        self.asset_type = asset_type
+    def __init__(self, asset_type_url_segment, timeframe):
+        self.asset_type_url_segment = asset_type_url_segment
         self.timeframe = timeframe
         self.klines_endpoint = "https://api.binance.com/api/v3/klines"
         self.exchange_endpoint = "https://api.binance.com/api/v3/exchangeInfo"
         self.mismatch = set()
 
-        if asset_type == "futures/um":
+        if asset_type_url_segment == "futures/um":
             self.klines_endpoint = "https://fapi.binance.com/fapi/v1/klines"
             self.exchange_endpoint = "https://fapi.binance.com/fapi/v1/exchangeInfo"
 
@@ -52,7 +52,9 @@ class Check:
             first_kline_ts = first_kline[0]
             date = dt_from_ts(first_kline_ts).date()
 
-        archive_url = zip_url(self.asset_type, symbol=symbol, timeframe=self.timeframe, date=date)
+        archive_url = zip_url(
+            self.asset_type_url_segment, symbol=symbol, timeframe=self.timeframe, date=date
+        )
         async with self.session.get(
             archive_url, params=dict(symbol=symbol, interval=self.timeframe, startTime=0)
         ) as resp:
