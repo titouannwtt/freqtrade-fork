@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class Http404(Exception):
-    pass
+    def __init__(self, msg, date, url):
+        super().__init__(msg)
+        self.date = date
+        self.url = url
 
 
 class BadHttpStatus(Exception):
@@ -83,7 +86,7 @@ async def fetch_ohlcv(
         end = min(end, last_available_date)
         if start >= end:
             return DataFrame()
-        df = await _fetch_ohlcv(asset_type, symbol, timeframe, start, end, stop_on_404)
+        df = await _fetch_ohlcv(asset_type, symbol, pair, timeframe, start, end, stop_on_404)
         logger.debug(
             f"Downloaded data for {pair} from https://data.binance.vision with length {len(df)}."
         )
@@ -108,6 +111,7 @@ def concat(dfs) -> DataFrame:
 async def _fetch_ohlcv(
     asset_type: str,
     symbol: str,
+    pair: str,
     timeframe: str,
     start: datetime.date,
     end: datetime.date,
@@ -129,6 +133,8 @@ async def _fetch_ohlcv(
                 current_day += 1
                 if isinstance(result, Http404):
                     if stop_on_404:
+                        logger.debug(f"Failed to download {result.url} due to 404.")
+
                         # A 404 error on the first day indicates missing data
                         # on https://data.binance.vision, we provide the warning and the advice.
                         # https://github.com/freqtrade/freqtrade/blob/acc53065e5fa7ab5197073276306dc9dc3adbfa3/tests/exchange_online/test_binance_compare_ohlcv.py#L7
@@ -140,6 +146,13 @@ async def _fetch_ohlcv(
                                 "data before 2020 (using `--timerange yyyymmdd-20200101`), and "
                                 "then download the full data you need."
                             )
+                        else:
+                            logger.warning(
+                                f"Binance fast download for {pair} stopped at {result.date} due to"
+                                f"data missing: {result.url}, fall back to rest API for the "
+                                "remaining data download, this can take more time."
+                            )
+
                         logger.debug("Abort downloading from data.binance.vision due to 404")
                         return concat(dfs)
                     else:
@@ -241,7 +254,7 @@ async def get_daily_ohlcv(
                             return df
                 elif resp.status == 404:
                     logger.debug(f"No data available for {symbol} in {format_date(date)}")
-                    raise Http404
+                    raise Http404(f"404: {url}", date, url)
                 else:
                     raise BadHttpStatus(f"{resp.status} - {resp.reason}")
         except Exception as e:
