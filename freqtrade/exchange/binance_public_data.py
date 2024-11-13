@@ -142,17 +142,21 @@ async def _fetch_ohlcv(
                         # https://github.com/freqtrade/freqtrade/blob/acc53065e5fa7ab5197073276306dc9dc3adbfa3/tests/exchange_online/test_binance_compare_ohlcv.py#L7
                         if current_day == 1:
                             logger.warning(
-                                "Failed to use fast download, fall back to rest API download, this "
-                                "can take more time. If you're downloading BTC/USDT:USDT, "
-                                "ETH/USDT:USDT, BCH/USDT:USDT, please first download "
-                                "data before 2020 (using `--timerange yyyymmdd-20200101`), and "
-                                "then download the full data you need."
+                                f"Fast download is unavailable due to missing data: "
+                                f"{result.url}. Falling back to the slower REST API, "
+                                "which may take more time."
                             )
+                            if pair in ["BTC/USDT:USDT", "ETH/USDT:USDT", "BCH/USDT:USDT"]:
+                                logger.warning(
+                                    f"To avoid the delay, you can first download {pair} using "
+                                    "`--timerange <start date>-20200101`, and then download the "
+                                    "remaining data with `--timerange 20200101-<end date>`."
+                                )
                         else:
                             logger.warning(
-                                f"Binance fast download for {pair} stopped at {result.date} due to"
-                                f"data missing: {result.url}, fall back to rest API for the "
-                                "remaining data download, this can take more time."
+                                f"Binance fast download for {pair} stopped at {result.date} due to "
+                                f"missing data: {result.url}, falling back to rest API for the "
+                                "remaining data, this can take more time."
                             )
                         await cancel_uncompleted_tasks(tasks)
                         return concat(dfs)
