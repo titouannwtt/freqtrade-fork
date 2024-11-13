@@ -113,7 +113,7 @@ async def _fetch_ohlcv(
     end: datetime.date,
     stop_on_404: bool,
 ) -> DataFrame:
-    # daily dataframes
+    # daily dataframes, `None` indicates missing data in that day (when `stop_on_404` is False)
     dfs: list[DataFrame | None] = []
     # the current day being processing, starting at 1.
     current_day = 0
@@ -194,8 +194,14 @@ async def get_daily_ohlcv(
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
 
-    :return: None indicates a 404 when trying to download the daily archive file
-        This function won't raise any exception, but catch and return it
+    :asset_type: `spot` or `futures/um`
+    :symbol: binance symbol name, e.g. BTCUSDT
+    :timeframe: e.g. 1m, 1h
+    :date: the returned DataFrame will cover the entire day of `date` in UTC
+    :session: an aiohttp.ClientSession instance
+    :retry_count: times to retry before returning the exceptions
+    :retry_delay: the time to wait before every retry
+    :return: This function won't raise any exceptions, it will catch and return them
     """
 
     url = zip_url(asset_type, symbol, timeframe, date)
