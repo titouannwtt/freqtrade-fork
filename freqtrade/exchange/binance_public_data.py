@@ -120,7 +120,7 @@ async def _fetch_ohlcv(
     current_day = 0
 
     connector = aiohttp.TCPConnector(limit=100)
-    async with aiohttp.ClientSession(connector=connector) as session:
+    async with aiohttp.ClientSession(connector=connector, trust_env=True) as session:
         # the HTTP connections has been throttled by TCPConnector
         for dates in chunks(list(date_range(start, end)), 1000):
             results = await asyncio.gather(
