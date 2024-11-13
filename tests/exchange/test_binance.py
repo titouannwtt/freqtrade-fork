@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from random import randint
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import MagicMock, PropertyMock
 
 import ccxt
 import pandas as pd
@@ -763,12 +763,13 @@ def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
         until = dt_from_ts(until_ms) if until_ms else api_end + timedelta(seconds=1)
         return api_storage.loc[(api_storage["date"] >= since) & (api_storage["date"] < until)]
 
-    def fetch_ohlcv(
+    async def fetch_ohlcv(
         candle_type,
         pair,
         timeframe,
         since_ms,
         until_ms,
+        markets=None,
         stop_on_404=False,
     ):
         since = dt_from_ts(since_ms)
@@ -783,10 +784,10 @@ def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
         "freqtrade.exchange.Exchange._async_get_candle_history", return_value=candle_history
     )
     api_mock = mocker.patch(
-        "freqtrade.exchange.Exchange.get_historic_ohlcv", MagicMock(wraps=get_historic_ohlcv)
+        "freqtrade.exchange.Exchange.get_historic_ohlcv", side_effect=get_historic_ohlcv
     )
     archive_mock = mocker.patch(
-        "freqtrade.exchange.binance_public_data.fetch_ohlcv", AsyncMock(wraps=fetch_ohlcv)
+        "freqtrade.exchange.binance_public_data.fetch_ohlcv", side_effect=fetch_ohlcv
     )
     return candle_mock, api_mock, archive_mock
 
@@ -956,6 +957,9 @@ def test_get_historic_ohlcv_binance(
 
     since_ms = dt_ts(since)
     until_ms = dt_ts(until)
+
+    mocker.patch("ccxt.binance.binance")
+    mocker.patch("ccxt.binance.binance.markets", {"BTC/USDT": {"id": "BTCUSDT"}})
 
     df = exchange.get_historic_ohlcv(pair, timeframe, since_ms, candle_type, is_new_pair, until_ms)
 
