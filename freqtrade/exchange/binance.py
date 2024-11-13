@@ -110,11 +110,13 @@ class Binance(Exchange):
         candle_type: CandleType,
         is_new_pair: bool = False,
         until_ms: Optional[int] = None,
+        only_from_ccxt: bool = False,
     ) -> DataFrame:
         """
         Overwrite to introduce "fast new pair" functionality by detecting the pair's listing date
         Does not work for other exchanges, which don't return the earliest data when called with "0"
         :param candle_type: Any of the enum CandleType (must match trading mode!)
+        :param only_from_ccxt: Only download data using the API provided by CCXT
         """
         if is_new_pair:
             x = self.loop.run_until_complete(
@@ -134,6 +136,37 @@ class Binance(Exchange):
                     )
                     return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
 
+        if only_from_ccxt:
+            return super().get_historic_ohlcv(
+                pair=pair,
+                timeframe=timeframe,
+                since_ms=since_ms,
+                candle_type=candle_type,
+                is_new_pair=is_new_pair,
+                until_ms=until_ms,
+            )
+        else:
+            return self.get_historic_ohlcv_fast(
+                pair=pair,
+                timeframe=timeframe,
+                since_ms=since_ms,
+                candle_type=candle_type,
+                is_new_pair=is_new_pair,
+                until_ms=until_ms,
+            )
+
+    def get_historic_ohlcv_fast(
+        self,
+        pair: str,
+        timeframe: str,
+        since_ms: int,
+        candle_type: CandleType,
+        is_new_pair: bool = False,
+        until_ms: Optional[int] = None,
+    ):
+        """
+        Fetch ohlcv fast by utilizing https://data.binance.vision
+        """
         if (candle_type == CandleType.SPOT and timeframe in ["1s", "1m", "3m", "5m"]) or (
             candle_type == CandleType.FUTURES and timeframe in ["1m", "3m", "5m", "15m", "30m"]
         ):
@@ -163,15 +196,16 @@ class Binance(Exchange):
                     until_ms=until_ms,
                 )
             all_df = concat([df, rest_df])
-            return all_df
-        return super().get_historic_ohlcv(
-            pair=pair,
-            timeframe=timeframe,
-            since_ms=since_ms,
-            candle_type=candle_type,
-            is_new_pair=is_new_pair,
-            until_ms=until_ms,
-        )
+        else:
+            return super().get_historic_ohlcv(
+                pair=pair,
+                timeframe=timeframe,
+                since_ms=since_ms,
+                candle_type=candle_type,
+                is_new_pair=is_new_pair,
+                until_ms=until_ms,
+            )
+        return all_df
 
     def funding_fee_cutoff(self, open_date: datetime):
         """
