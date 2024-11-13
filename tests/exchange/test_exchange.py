@@ -2157,7 +2157,7 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
 
     pair = "ETH/USDT"
     respair, restf, _, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", 1500000000000, candle_type=candle_type, is_new_pair=False
+        pair, "5m", 1500000000000, candle_type=candle_type
     )
     assert respair == pair
     assert restf == "5m"
@@ -2169,7 +2169,7 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
     end_ts = 1_500_500_000_000
     start_ts = 1_500_000_000_000
     respair, restf, _, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", since_ms=start_ts, candle_type=candle_type, is_new_pair=False, until_ms=end_ts
+        pair, "5m", since_ms=start_ts, candle_type=candle_type, until_ms=end_ts
     )
     # Required candles
     candles = (end_ts - start_ts) / 300_000
