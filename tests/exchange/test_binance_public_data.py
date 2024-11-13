@@ -14,7 +14,7 @@ from freqtrade.enums import CandleType
 from freqtrade.exchange.binance_public_data import (
     BadHttpStatus,
     Http404,
-    fetch_ohlcv,
+    download_archive_ohlcv,
     get_daily_ohlcv,
     zip_name,
 )
@@ -196,7 +196,9 @@ def make_response_from_url(start_date, end_date):
         ),
     ],
 )
-async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_date, stop_on_404):
+async def test_download_archive_ohlcv(
+    mocker, candle_type, since, until, first_date, last_date, stop_on_404
+):
     history_start = dt_utc(2020, 1, 1).date()
     history_end = dt_utc(2020, 1, 3).date()
     timeframe = "1h"
@@ -214,7 +216,9 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
     )
     markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
 
-    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, markets, stop_on_404)
+    df = await download_archive_ohlcv(
+        candle_type, pair, timeframe, since_ms, until_ms, markets, stop_on_404
+    )
 
     if df.empty:
         assert first_date is None and last_date is None
@@ -224,7 +228,7 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
         assert df["date"].iloc[-1] == last_date
 
 
-async def test_fetch_ohlcv_exc(mocker):
+async def test_download_archive_ohlcv_exc(mocker):
     timeframe = "1h"
     pair = "BTC/USDT"
 
@@ -240,7 +244,7 @@ async def test_fetch_ohlcv_exc(mocker):
         {"BTC/USDT": {"id": "BTCUSDT"}},
     )
 
-    df = await fetch_ohlcv(CandleType.SPOT, pair, timeframe, since_ms, until_ms)
+    df = await download_archive_ohlcv(CandleType.SPOT, pair, timeframe, since_ms, until_ms)
 
     assert df.empty
 

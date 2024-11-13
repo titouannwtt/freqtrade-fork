@@ -35,7 +35,7 @@ class BadHttpStatus(Exception):
     pass
 
 
-async def fetch_ohlcv(
+async def download_archive_ohlcv(
     candle_type: CandleType,
     pair: str,
     timeframe: str,
@@ -86,7 +86,9 @@ async def fetch_ohlcv(
         end = min(end, last_available_date)
         if start >= end:
             return DataFrame()
-        df = await _fetch_ohlcv(asset_type, symbol, pair, timeframe, start, end, stop_on_404)
+        df = await _download_archive_ohlcv(
+            asset_type, symbol, pair, timeframe, start, end, stop_on_404
+        )
         logger.debug(
             f"Downloaded data for {pair} from https://data.binance.vision with length {len(df)}."
         )
@@ -108,7 +110,7 @@ def concat(dfs) -> DataFrame:
         return pd.concat(dfs)
 
 
-async def _fetch_ohlcv(
+async def _download_archive_ohlcv(
     asset_type: str,
     symbol: str,
     pair: str,

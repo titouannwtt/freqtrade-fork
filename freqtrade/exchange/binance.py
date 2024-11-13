@@ -10,8 +10,8 @@ from pandas import DataFrame
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
-from freqtrade.exchange import Exchange, binance_public_data
-from freqtrade.exchange.binance_public_data import concat
+from freqtrade.exchange import Exchange
+from freqtrade.exchange.binance_public_data import concat, download_archive_ohlcv
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
@@ -172,7 +172,7 @@ class Binance(Exchange):
             candle_type == CandleType.FUTURES and timeframe in ["1m", "3m", "5m", "15m", "30m"]
         ):
             df = self.loop.run_until_complete(
-                binance_public_data.fetch_ohlcv(
+                download_archive_ohlcv(
                     candle_type=candle_type,
                     pair=pair,
                     timeframe=timeframe,

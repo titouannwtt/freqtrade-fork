@@ -763,7 +763,7 @@ def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
         until = dt_from_ts(until_ms) if until_ms else api_end + timedelta(seconds=1)
         return api_storage.loc[(api_storage["date"] >= since) & (api_storage["date"] < until)]
 
-    async def fetch_ohlcv(
+    async def download_archive_ohlcv(
         candle_type,
         pair,
         timeframe,
@@ -787,7 +787,7 @@ def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
         "freqtrade.exchange.Exchange.get_historic_ohlcv", side_effect=get_historic_ohlcv
     )
     archive_mock = mocker.patch(
-        "freqtrade.exchange.binance_public_data.fetch_ohlcv", side_effect=fetch_ohlcv
+        "freqtrade.exchange.binance.download_archive_ohlcv", side_effect=download_archive_ohlcv
     )
     return candle_mock, api_mock, archive_mock
 
