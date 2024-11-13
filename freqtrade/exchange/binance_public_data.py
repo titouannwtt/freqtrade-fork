@@ -7,8 +7,10 @@ import datetime
 import io
 import logging
 import zipfile
+from typing import Any
 
 import aiohttp
+import ccxt
 import pandas as pd
 from pandas import DataFrame
 
@@ -36,6 +38,7 @@ async def fetch_ohlcv(
     timeframe: str,
     since_ms: int,
     until_ms: int | None,
+    markets: dict[str, Any] | None = None,
     stop_on_404: bool = True,
 ) -> DataFrame:
     """
@@ -53,7 +56,14 @@ async def fetch_ohlcv(
             asset_type = "futures/um"
         else:
             raise ValueError(f"Unsupported CandleType: {candle_type}")
-        symbol = symbol_ccxt_to_binance(pair)
+
+        if markets:
+            symbol = markets[pair]["id"]
+        else:
+            binance = ccxt.binance()
+            binance.load_markets()
+            symbol = binance.markets[pair]["id"]
+
         start = dt_from_ts(since_ms)
         end = dt_from_ts(until_ms) if until_ms else dt_now()
 

@@ -133,7 +133,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
-            dt_utc(2019, 1, 1),
+            dt_utc(2019, 12, 25),
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 3, 23),
@@ -165,7 +165,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
-            dt_utc(2019, 1, 1),
+            dt_utc(2019, 12, 25),
             dt_utc(2020, 1, 5),
             None,
             None,
@@ -201,7 +201,10 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
     history_start = dt_utc(2020, 1, 1).date()
     history_end = dt_utc(2020, 1, 3).date()
     timeframe = "1h"
-    pair = "BTCUSDT"
+    if candle_type == CandleType.SPOT:
+        pair = "BTC/USDT"
+    else:
+        pair = "BTC/USDT:USDT"
 
     since_ms = dt_ts(since)
     until_ms = dt_ts(until)
@@ -209,8 +212,9 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
     mocker.patch(
         "aiohttp.ClientSession.get", side_effect=make_response_from_url(history_start, history_end)
     )
+    markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
 
-    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, stop_on_404)
+    df = await fetch_ohlcv(candle_type, pair, timeframe, since_ms, until_ms, markets, stop_on_404)
 
     if df.empty:
         assert first_date is None and last_date is None
@@ -222,12 +226,14 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
 
 async def test_fetch_ohlcv_exc(mocker):
     timeframe = "1h"
-    pair = "BTCUSDT"
+    pair = "BTC/USDT"
 
     since_ms = dt_ts(dt_utc(2020, 1, 1))
     until_ms = dt_ts(dt_utc(2020, 1, 2))
 
     mocker.patch("aiohttp.ClientSession.get", side_effect=RuntimeError)
+    mocker.patch("ccxt.binance.binance")
+    mocker.patch("ccxt.binance.binance.markets", {"BTC/USDT": {"id": "BTCUSDT"}})
 
     df = await fetch_ohlcv(CandleType.SPOT, pair, timeframe, since_ms, until_ms)
 
