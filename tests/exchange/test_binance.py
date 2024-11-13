@@ -958,8 +958,11 @@ def test_get_historic_ohlcv_binance(
     since_ms = dt_ts(since)
     until_ms = dt_ts(until)
 
-    mocker.patch("ccxt.binance.binance")
-    mocker.patch("ccxt.binance.binance.markets", {"BTC/USDT": {"id": "BTCUSDT"}})
+    mocker.patch("freqtrade.exchange.binance_public_data.ccxt.binance")
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.ccxt.binance.markets",
+        {"BTC/USDT": {"id": "BTCUSDT"}},
+    )
 
     df = exchange.get_historic_ohlcv(pair, timeframe, since_ms, candle_type, is_new_pair, until_ms)
 

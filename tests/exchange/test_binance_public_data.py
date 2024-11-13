@@ -210,7 +210,8 @@ async def test_fetch_ohlcv(mocker, candle_type, since, until, first_date, last_d
     until_ms = dt_ts(until)
 
     mocker.patch(
-        "aiohttp.ClientSession.get", side_effect=make_response_from_url(history_start, history_end)
+        "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+        side_effect=make_response_from_url(history_start, history_end),
     )
     markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
 
@@ -231,9 +232,14 @@ async def test_fetch_ohlcv_exc(mocker):
     since_ms = dt_ts(dt_utc(2020, 1, 1))
     until_ms = dt_ts(dt_utc(2020, 1, 2))
 
-    mocker.patch("aiohttp.ClientSession.get", side_effect=RuntimeError)
-    mocker.patch("ccxt.binance.binance")
-    mocker.patch("ccxt.binance.binance.markets", {"BTC/USDT": {"id": "BTCUSDT"}})
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get", side_effect=RuntimeError
+    )
+    mocker.patch("freqtrade.exchange.binance_public_data.ccxt.binance")
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.ccxt.binance.markets",
+        {"BTC/USDT": {"id": "BTCUSDT"}},
+    )
 
     df = await fetch_ohlcv(CandleType.SPOT, pair, timeframe, since_ms, until_ms)
 
@@ -249,7 +255,10 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
 
     async with aiohttp.ClientSession() as session:
         path = testdatadir / "binance/binance_public_data/spot-klines-BTCUSDT-1h-2024-10-28.zip"
-        mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(path.read_bytes(), 200))
+        mocker.patch(
+            "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+            return_value=MockResponse(path.read_bytes(), 200),
+        )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert df["date"].iloc[0] == first_date
         assert df["date"].iloc[-1] == last_date
@@ -257,21 +266,33 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
         path = (
             testdatadir / "binance/binance_public_data/futures-um-klines-BTCUSDT-1h-2024-10-28.zip"
         )
-        mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(path.read_bytes(), 200))
+        mocker.patch(
+            "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+            return_value=MockResponse(path.read_bytes(), 200),
+        )
         df = await get_daily_ohlcv("futures/um", symbol, timeframe, date, session)
         assert df["date"].iloc[0] == first_date
         assert df["date"].iloc[-1] == last_date
 
-        mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(b"", 404))
+        mocker.patch(
+            "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+            return_value=MockResponse(b"", 404),
+        )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session, retry_delay=0)
         assert isinstance(df, Http404)
 
-        mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(b"", 500))
+        mocker.patch(
+            "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+            return_value=MockResponse(b"", 500),
+        )
         mocker.patch("asyncio.sleep")
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert isinstance(df, BadHttpStatus)
 
-        mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(b"nop", 200))
+        mocker.patch(
+            "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
+            return_value=MockResponse(b"nop", 200),
+        )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert isinstance(df, zipfile.BadZipFile)
 
