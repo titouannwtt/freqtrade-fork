@@ -16,7 +16,6 @@ from freqtrade.exchange.binance_public_data import (
     Http404,
     fetch_ohlcv,
     get_daily_ohlcv,
-    symbol_ccxt_to_binance,
     zip_name,
 )
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
@@ -295,10 +294,3 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
         )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert isinstance(df, zipfile.BadZipFile)
-
-
-def test_symbol_ccxt_to_binance():
-    assert symbol_ccxt_to_binance("BTC/USDT") == "BTCUSDT"
-    assert symbol_ccxt_to_binance("BTC/USDT:USDT") == "BTCUSDT"
-    with pytest.raises(ValueError):
-        assert symbol_ccxt_to_binance("BTC:USDT:USDT") == "BTCUSDT"

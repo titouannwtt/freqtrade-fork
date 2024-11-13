@@ -87,20 +87,6 @@ async def fetch_ohlcv(
         return df
 
 
-def symbol_ccxt_to_binance(symbol: str) -> str:
-    """
-    Convert ccxt symbol notation to binance notation
-    e.g. BTC/USDT -> BTCUSDT, BTC/USDT:USDT -> BTCUSDT
-    """
-    if ":" in symbol:
-        parts = symbol.split(":")
-        if len(parts) != 2:
-            raise ValueError(f"Cannot recognize symbol: {symbol}")
-        return parts[0].replace("/", "")
-    else:
-        return symbol.replace("/", "")
-
-
 def concat(dfs) -> DataFrame:
     if all(df is None for df in dfs):
         return DataFrame()
