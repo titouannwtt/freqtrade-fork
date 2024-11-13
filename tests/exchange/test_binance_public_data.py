@@ -254,43 +254,48 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
 
     async with aiohttp.ClientSession() as session:
         path = testdatadir / "binance/binance_public_data/spot-klines-BTCUSDT-1h-2024-10-28.zip"
-        mocker.patch(
+        get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(path.read_bytes(), 200),
         )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
+        assert get.call_count == 1
         assert df["date"].iloc[0] == first_date
         assert df["date"].iloc[-1] == last_date
 
         path = (
             testdatadir / "binance/binance_public_data/futures-um-klines-BTCUSDT-1h-2024-10-28.zip"
         )
-        mocker.patch(
+        get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(path.read_bytes(), 200),
         )
         df = await get_daily_ohlcv("futures/um", symbol, timeframe, date, session)
+        assert get.call_count == 1
         assert df["date"].iloc[0] == first_date
         assert df["date"].iloc[-1] == last_date
 
-        mocker.patch(
+        get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"", 404),
         )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session, retry_delay=0)
+        assert get.call_count == 1
         assert isinstance(df, Http404)
 
-        mocker.patch(
+        get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"", 500),
         )
         mocker.patch("asyncio.sleep")
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
+        assert get.call_count == 4  # 1 + 3 default retries
         assert isinstance(df, BadHttpStatus)
 
-        mocker.patch(
+        get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"nop", 200),
         )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
+        assert get.call_count == 4  # 1 + 3 default retries
         assert isinstance(df, zipfile.BadZipFile)

@@ -42,12 +42,22 @@ async def fetch_ohlcv(
     stop_on_404: bool = True,
 ) -> DataFrame:
     """
-    Fetch OHLCV data from https://data.binance.vision/
+    Fetch OHLCV data from https://data.binance.vision
+    The function makes its best effort to download data within the time range
+    [`since_ms`, `until_ms`) -- including `since_ms`, but excluding `until_ms`.
+    If `stop_one_404` is True, this returned DataFrame is guaranteed to start from `since_ms`
+    with no gaps in the data.
+
     :candle_type: Currently only spot and futures are supported
+    :pair: symbol name in CCXT convention
+    :since_ms: the start timestamp of data, including itself
+    :until_ms: the end timestamp of data, excluding itself
     :param until_ms: `None` indicates the timestamp of the latest available data
+    :markets: the CCXT markets dict, when it's None, the function will load the markets data
+        from a new `ccxt.binance` instance
     :param stop_on_404: Stop to download the following data when a 404 returned
-    :return: the date range is between [since_ms, until_ms),
-        return and empty DataFrame if no data available in the time range
+    :return: the date range is between [since_ms, until_ms), return an empty DataFrame if no data
+        available in the time range
     """
     try:
         if candle_type == CandleType.SPOT:
@@ -82,6 +92,7 @@ async def fetch_ohlcv(
         df = DataFrame()
 
     if not df.empty:
+        # only return the data within the requested time range
         return df.loc[(df["date"] >= start) & (df["date"] < end)]
     else:
         return df
@@ -102,7 +113,9 @@ async def _fetch_ohlcv(
     end: datetime.date,
     stop_on_404: bool,
 ) -> DataFrame:
+    # daily dataframes
     dfs: list[DataFrame | None] = []
+    # the current day being processing, starting at 1.
     current_day = 0
 
     connector = aiohttp.TCPConnector(limit=100)
@@ -116,8 +129,10 @@ async def _fetch_ohlcv(
                 current_day += 1
                 if isinstance(result, Http404):
                     if stop_on_404:
+                        # A 404 error on the first day indicates missing data
+                        # on https://data.binance.vision, we provide the warning and the advice.
+                        # https://github.com/freqtrade/freqtrade/blob/acc53065e5fa7ab5197073276306dc9dc3adbfa3/tests/exchange_online/test_binance_compare_ohlcv.py#L7
                         if current_day == 1:
-                            # https://github.com/freqtrade/freqtrade/blob/acc53065e5fa7ab5197073276306dc9dc3adbfa3/tests/exchange_online/test_binance_compare_ohlcv.py#L7
                             logger.warning(
                                 "Failed to use fast download, fall back to rest API download, this "
                                 "can take more time. If you're downloading BTC/USDT:USDT, "
@@ -131,8 +146,7 @@ async def _fetch_ohlcv(
                         dfs.append(None)
                 elif isinstance(result, BaseException):
                     logger.warning(f"An exception raised: : {result}")
-                    # Directly return the existing data, do not allow the gap
-                    # between the data
+                    # Directly return the existing data, do not allow the gap within the data
                     return concat(dfs)
                 else:
                     dfs.append(result)
@@ -175,7 +189,7 @@ async def get_daily_ohlcv(
     session: aiohttp.ClientSession,
     retry_count: int = 3,
     retry_delay: float = 0.0,
-) -> DataFrame | None | Exception:
+) -> DataFrame | Exception:
     """
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
@@ -225,7 +239,10 @@ async def get_daily_ohlcv(
                 else:
                     raise BadHttpStatus(f"{resp.status} - {resp.reason}")
         except Exception as e:
-            retry += 1
-            if retry >= retry_count:
-                logger.debug(f"Failed to get data from {url}: {e}")
+            if isinstance(e, Http404):
                 return e
+            else:
+                if retry >= retry_count:
+                    logger.debug(f"Failed to get data from {url}: {e}")
+                    return e
+            retry += 1

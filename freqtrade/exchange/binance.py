@@ -5,12 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import ccxt
-from pandas import DataFrame, concat
+from pandas import DataFrame
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange, binance_public_data
+from freqtrade.exchange.binance_public_data import concat
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
@@ -162,10 +163,11 @@ class Binance(Exchange):
         candle_type: CandleType,
         is_new_pair: bool = False,
         until_ms: int | None = None,
-    ):
+    ) -> DataFrame:
         """
-        Fetch ohlcv fast by utilizing https://data.binance.vision
+        Fastly fetch OHLCV data by leveraging https://data.binance.vision.
         """
+        # only download timeframes with significant improvements, otherwise fall back to rest API
         if (candle_type == CandleType.SPOT and timeframe in ["1s", "1m", "3m", "5m"]) or (
             candle_type == CandleType.FUTURES and timeframe in ["1m", "3m", "5m", "15m", "30m"]
         ):
@@ -179,10 +181,14 @@ class Binance(Exchange):
                     markets=self.markets,
                 )
             )
+
+            # download the remaining data from rest API
             if df.empty:
                 rest_since_ms = since_ms
             else:
                 rest_since_ms = dt_ts(df.iloc[-1].date) + timeframe_to_msecs(timeframe)
+
+            # make sure since <= until
             if until_ms and rest_since_ms > until_ms:
                 rest_df = DataFrame()
             else:
@@ -195,6 +201,7 @@ class Binance(Exchange):
                     until_ms=until_ms,
                 )
             all_df = concat([df, rest_df])
+            return all_df
         else:
             return super().get_historic_ohlcv(
                 pair=pair,
@@ -204,7 +211,6 @@ class Binance(Exchange):
                 is_new_pair=is_new_pair,
                 until_ms=until_ms,
             )
-        return all_df
 
     def funding_fee_cutoff(self, open_date: datetime):
         """
