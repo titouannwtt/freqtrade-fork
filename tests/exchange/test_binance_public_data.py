@@ -13,6 +13,7 @@ import pytest
 from freqtrade.enums import CandleType
 from freqtrade.exchange.binance_public_data import (
     BadHttpStatus,
+    Http404,
     fetch_ohlcv,
     get_daily_ohlcv,
     symbol_ccxt_to_binance,
@@ -256,8 +257,8 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
         assert df["date"].iloc[-1] == last_date
 
         mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(b"", 404))
-        df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
-        assert df is None
+        df = await get_daily_ohlcv("spot", symbol, timeframe, date, session, retry_delay=0)
+        assert isinstance(df, Http404)
 
         mocker.patch("aiohttp.ClientSession.get", return_value=MockResponse(b"", 500))
         mocker.patch("asyncio.sleep")

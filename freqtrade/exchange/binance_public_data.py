@@ -20,6 +20,10 @@ from freqtrade.util.datetime_helpers import dt_from_ts, dt_now
 logger = logging.getLogger(__name__)
 
 
+class Http404(Exception):
+    pass
+
+
 class BadHttpStatus(Exception):
     """Not 200/404"""
 
@@ -32,7 +36,7 @@ async def fetch_ohlcv(
     timeframe: str,
     since_ms: int,
     until_ms: int | None,
-    stop_on_404: bool = False,
+    stop_on_404: bool = True,
 ) -> DataFrame:
     """
     Fetch OHLCV data from https://data.binance.vision/
@@ -103,6 +107,7 @@ async def _fetch_ohlcv(
     stop_on_404: bool,
 ) -> DataFrame:
     dfs: list[DataFrame | None] = []
+    current_day = 0
 
     connector = aiohttp.TCPConnector(limit=100)
     async with aiohttp.ClientSession(connector=connector) as session:
@@ -112,13 +117,26 @@ async def _fetch_ohlcv(
                 *(get_daily_ohlcv(asset_type, symbol, timeframe, date, session) for date in dates)
             )
             for result in results:
-                if isinstance(result, BaseException):
+                current_day += 1
+                if isinstance(result, Http404):
+                    if stop_on_404:
+                        if current_day == 1:
+                            # https://github.com/freqtrade/freqtrade/blob/acc53065e5fa7ab5197073276306dc9dc3adbfa3/tests/exchange_online/test_binance_compare_ohlcv.py#L7
+                            logger.warning(
+                                "Failed to use fast download, fall back to rest API download, this "
+                                "can take more time. If you're downloading BTC/USDT:USDT, "
+                                "ETH/USDT:USDT, BCH/USDT:USDT, please first download "
+                                "data before 2020 (using `--timerange yyyymmdd-20200101`), and "
+                                "then download the full data you need."
+                            )
+                        logger.debug("Abort downloading from data.binance.vision due to 404")
+                        return concat(dfs)
+                    else:
+                        dfs.append(None)
+                elif isinstance(result, BaseException):
                     logger.warning(f"An exception raised: : {result}")
                     # Directly return the existing data, do not allow the gap
                     # between the data
-                    return concat(dfs)
-                elif result is None and stop_on_404:
-                    logger.debug("Abort downloading from data.binance.vision due to 404")
                     return concat(dfs)
                 else:
                     dfs.append(result)
@@ -160,6 +178,7 @@ async def get_daily_ohlcv(
     date: datetime.date,
     session: aiohttp.ClientSession,
     retry_count: int = 3,
+    retry_delay: float = 0.0,
 ) -> DataFrame | None | Exception:
     """
     Get daily OHLCV from https://data.binance.vision
@@ -176,7 +195,7 @@ async def get_daily_ohlcv(
     retry = 0
     while True:
         if retry > 0:
-            sleep_secs = retry * 0.5
+            sleep_secs = retry * retry_delay
             logger.debug(
                 f"[{retry}/{retry_count}] retry to download {url} after {sleep_secs} seconds"
             )
@@ -206,7 +225,7 @@ async def get_daily_ohlcv(
                             return df
                 elif resp.status == 404:
                     logger.debug(f"No data available for {symbol} in {format_date(date)}")
-                    return None
+                    raise Http404
                 else:
                     raise BadHttpStatus(f"{resp.status} - {resp.reason}")
         except Exception as e:

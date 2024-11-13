@@ -177,7 +177,6 @@ class Binance(Exchange):
                     timeframe=timeframe,
                     since_ms=since_ms,
                     until_ms=until_ms,
-                    stop_on_404=False,
                 )
             )
             if df.empty:
