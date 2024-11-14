@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Any
@@ -20,6 +21,11 @@ def _get_var_typed(val):
                 return True
             elif val.lower() in ("f", "false"):
                 return False
+            # try to convert from json
+            try:
+                return json.loads(val)
+            except json.decoder.JSONDecodeError:
+                pass
     # keep as string
     return val
 
