@@ -104,10 +104,11 @@ def make_response_from_url(start_date, end_date):
 
 
 @pytest.mark.parametrize(
-    "candle_type,since,until,first_date,last_date,stop_on_404",
+    "candle_type,pair,since,until,first_date,last_date,stop_on_404",
     [
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 2),
             dt_utc(2020, 1, 1),
@@ -116,6 +117,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 1, 23, 59, 59),
             dt_utc(2020, 1, 1),
@@ -124,6 +126,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
@@ -132,6 +135,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2019, 12, 25),
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
@@ -140,6 +144,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2019, 1, 1),
             dt_utc(2019, 1, 5),
             None,
@@ -148,6 +153,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2021, 1, 1),
             dt_utc(2021, 1, 5),
             None,
@@ -156,6 +162,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2020, 1, 2),
             None,
             dt_utc(2020, 1, 2),
@@ -164,14 +171,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.SPOT,
-            dt_utc(2019, 12, 25),
-            dt_utc(2020, 1, 5),
-            None,
-            None,
-            True,
-        ),
-        (
-            CandleType.SPOT,
+            "BTC/USDT",
             dt_utc(2020, 1, 5),
             dt_utc(2020, 1, 1),
             None,
@@ -180,6 +180,7 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.FUTURES,
+            "BTC/USDT:USDT",
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 1, 23, 59, 59),
             dt_utc(2020, 1, 1),
@@ -188,24 +189,49 @@ def make_response_from_url(start_date, end_date):
         ),
         (
             CandleType.INDEX,
+            "N/A",
             dt_utc(2020, 1, 1),
             dt_utc(2020, 1, 1, 23, 59, 59),
             None,
             None,
             False,
         ),
+        # stop_on_404 = True
+        (
+            CandleType.SPOT,
+            "BTC/USDT",
+            dt_utc(2019, 12, 25),
+            dt_utc(2020, 1, 5),
+            None,
+            None,
+            True,
+        ),
+        (
+            CandleType.SPOT,
+            "BTC/USDT",
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 5),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 3, 23),
+            True,
+        ),
+        (
+            CandleType.FUTURES,
+            "BTC/USDT:USDT",
+            dt_utc(2019, 12, 25),
+            dt_utc(2020, 1, 5),
+            None,
+            None,
+            True,
+        ),
     ],
 )
 async def test_download_archive_ohlcv(
-    mocker, candle_type, since, until, first_date, last_date, stop_on_404
+    mocker, candle_type, pair, since, until, first_date, last_date, stop_on_404
 ):
     history_start = dt_utc(2020, 1, 1).date()
     history_end = dt_utc(2020, 1, 3).date()
     timeframe = "1h"
-    if candle_type == CandleType.SPOT:
-        pair = "BTC/USDT"
-    else:
-        pair = "BTC/USDT:USDT"
 
     since_ms = dt_ts(since)
     until_ms = dt_ts(until)
@@ -283,23 +309,23 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"", 404),
         )
-        df = await get_daily_ohlcv("spot", symbol, timeframe, date, session, retry_delay=0)
+        with pytest.raises(Http404):
+            df = await get_daily_ohlcv("spot", symbol, timeframe, date, session, retry_delay=0)
         assert get.call_count == 1
-        assert isinstance(df, Http404)
 
         get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"", 500),
         )
         mocker.patch("asyncio.sleep")
-        df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
+        with pytest.raises(BadHttpStatus):
+            df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert get.call_count == 4  # 1 + 3 default retries
-        assert isinstance(df, BadHttpStatus)
 
         get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
             return_value=MockResponse(b"nop", 200),
         )
-        df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
+        with pytest.raises(zipfile.BadZipFile):
+            df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert get.call_count == 4  # 1 + 3 default retries
-        assert isinstance(df, zipfile.BadZipFile)

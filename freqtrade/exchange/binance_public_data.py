@@ -135,11 +135,12 @@ async def _download_archive_ohlcv(
                 for date in dates
             ]
             for task in tasks:
-                result = await task
                 current_day += 1
-                if isinstance(result, Http404):
+                try:
+                    df = await task
+                except Http404 as e:
                     if stop_on_404:
-                        logger.debug(f"Failed to download {result.url} due to 404.")
+                        logger.debug(f"Failed to download {e.url} due to 404.")
 
                         # A 404 error on the first day indicates missing data
                         # on https://data.binance.vision, we provide the warning and the advice.
@@ -147,7 +148,7 @@ async def _download_archive_ohlcv(
                         if current_day == 1:
                             logger.warning(
                                 f"Fast download is unavailable due to missing data: "
-                                f"{result.url}. Falling back to the slower REST API, "
+                                f"{e.url}. Falling back to the slower REST API, "
                                 "which may take more time."
                             )
                             if pair in ["BTC/USDT:USDT", "ETH/USDT:USDT", "BCH/USDT:USDT"]:
@@ -158,31 +159,31 @@ async def _download_archive_ohlcv(
                                 )
                         else:
                             logger.warning(
-                                f"Binance fast download for {pair} stopped at {result.date} due to "
-                                f"missing data: {result.url}, falling back to rest API for the "
+                                f"Binance fast download for {pair} stopped at {e.date} due to "
+                                f"missing data: {e.url}, falling back to rest API for the "
                                 "remaining data, this can take more time."
                             )
-                        await cancel_uncompleted_tasks(tasks)
+                        await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
                         return concat(dfs)
                     else:
                         dfs.append(None)
-                elif isinstance(result, BaseException):
-                    logger.warning(f"An exception raised: : {result}")
+                except BaseException as e:
+                    logger.warning(f"An exception raised: : {e}")
                     # Directly return the existing data, do not allow the gap within the data
-                    await cancel_uncompleted_tasks(tasks)
+                    await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
                     return concat(dfs)
                 else:
-                    dfs.append(result)
+                    dfs.append(df)
     return concat(dfs)
 
 
-async def cancel_uncompleted_tasks(tasks):
+async def cancel_and_await_tasks(unawaited_tasks):
+    """Cancel and await the tasks"""
     logger.debug("Try to cancel uncompleted download tasks.")
-    uncompleted_tasks = [task for task in tasks if not task.done()]
-    for task in uncompleted_tasks:
+    for task in unawaited_tasks:
         task.cancel()
-    await asyncio.gather(*uncompleted_tasks)
-    logger.debug("All uncompleted download tasks were successfully cancelled.")
+    await asyncio.gather(*unawaited_tasks, return_exceptions=True)
+    logger.debug("All download tasks were awaited.")
 
 
 def date_range(start: datetime.date, end: datetime.date):
@@ -221,7 +222,7 @@ async def get_daily_ohlcv(
     session: aiohttp.ClientSession,
     retry_count: int = 3,
     retry_delay: float = 0.0,
-) -> DataFrame | Exception:
+) -> DataFrame:
     """
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
@@ -233,7 +234,7 @@ async def get_daily_ohlcv(
     :session: an aiohttp.ClientSession instance
     :retry_count: times to retry before returning the exceptions
     :retry_delay: the time to wait before every retry
-    :return: This function won't raise any exceptions, it will catch and return them
+    :return: A dataframe containing columns date,open,high,low,close,volume
     """
 
     url = zip_url(asset_type_url_segment, symbol, timeframe, date)
@@ -276,13 +277,8 @@ async def get_daily_ohlcv(
                     raise Http404(f"404: {url}", date, url)
                 else:
                     raise BadHttpStatus(f"{resp.status} - {resp.reason}")
-        except asyncio.CancelledError as e:
-            return e
         except Exception as e:
-            if isinstance(e, Http404):
-                return e
-            else:
-                if retry >= retry_count:
-                    logger.debug(f"Failed to get data from {url}: {e}")
-                    return e
             retry += 1
+            if isinstance(e, Http404) or retry > retry_count:
+                logger.debug(f"Failed to get data from {url}: {e}")
+                raise
