@@ -32,7 +32,6 @@ class Hyperliquid(Exchange):
     _ft_has_futures: FtHas = {
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit"},
-        "marketOrderRequiresPrice": False,
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
