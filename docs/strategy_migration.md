@@ -329,7 +329,7 @@ After:
 `order_time_in_force` attributes changed from `"buy"` to `"entry"` and `"sell"` to `"exit"`.
 
 ``` python
-    order_time_in_force: Dict = {
+    order_time_in_force: dict = {
         "buy": "gtc",
         "sell": "gtc",
     }
@@ -338,7 +338,7 @@ After:
 After:
 
 ``` python hl_lines="2 3"
-    order_time_in_force: Dict = {
+    order_time_in_force: dict = {
         "entry": "GTC",
         "exit": "GTC",
     }

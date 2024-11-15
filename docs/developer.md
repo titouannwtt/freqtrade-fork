@@ -226,7 +226,7 @@ In `VolumePairList`, this implements different methods of sorting, does early va
 ##### sample
 
 ``` python
-    def filter_pairlist(self, pairlist: List[str], tickers: Dict) -> List[str]:
+    def filter_pairlist(self, pairlist: list[str], tickers: dict) -> List[str]:
         # Generate dynamic whitelist
         pairs = self._calculate_pairlist(pairlist, tickers)
         return pairs

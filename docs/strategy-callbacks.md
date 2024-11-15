@@ -835,7 +835,7 @@ class DigDeeperStrategy(IStrategy):
                               current_entry_rate: float, current_exit_rate: float,
                               current_entry_profit: float, current_exit_profit: float,
                               **kwargs
-                              ) -> Union[float | None, tuple[float | None, str | None]]:
+                              ) -> float | None | tuple[float | None, str | None]:
         """
         Custom trade adjustment logic, returning the stake amount that a trade should be
         increased or decreased.
