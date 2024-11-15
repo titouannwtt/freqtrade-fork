@@ -93,7 +93,11 @@ async def download_archive_ohlcv(
             f"Downloaded data for {pair} from https://data.binance.vision with length {len(df)}."
         )
     except Exception as e:
-        logger.debug("An exception occurred", exc_info=e)
+        logger.warning(
+            "An exception occurred during fast download from Binance, falling back to"
+            "the slower REST API, this can take more time.",
+            exc_info=e,
+        )
         df = DataFrame()
 
     if not df.empty:
