@@ -162,7 +162,7 @@ Hopefully you also want to contribute this back upstream.
 
 Whatever your motivations are - This should get you off the ground in trying to develop a new Pairlist Handler.
 
-First of all, have a look at the [VolumePairList](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/pairlist/VolumePairList.py) Handler, and best copy this file with a name of your new Pairlist Handler.
+First of all, have a look at the [VolumePairList](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/plugins/pairlist/VolumePairList.py) Handler, and best copy this file with a name of your new Pairlist Handler.
 
 This is a simple Handler, which however serves as a good example on how to start developing.
 
