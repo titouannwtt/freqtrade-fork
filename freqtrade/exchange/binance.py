@@ -260,3 +260,19 @@ class Binance(Exchange):
                 return self.get_leverage_tiers()
         else:
             return {}
+
+    async def _async_get_trade_history_id_startup(
+        self, pair: str, since: int | None
+    ) -> tuple[list[list], str]:
+        """
+        override for initial call
+
+        Binance only provides a limited set of historic trades data.
+        Using from_id=0, we can get the earliest available trades.
+        So if we don't get any data with the provided "since", we can assume to
+        download all available data.
+        """
+        t, from_id = await self._async_fetch_trades(pair, since=since)
+        if not t:
+            return [], "0"
+        return t, from_id

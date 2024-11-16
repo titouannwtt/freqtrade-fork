@@ -2886,6 +2886,14 @@ class Exchange:
         else:
             return trades[-1].get("timestamp")
 
+    async def _async_get_trade_history_id_startup(
+        self, pair: str, since: int | None
+    ) -> tuple[list[list], str]:
+        """
+        override for initial trade_history_id call
+        """
+        return await self._async_fetch_trades(pair, since=since)
+
     async def _async_get_trade_history_id(
         self, pair: str, until: int, since: int | None = None, from_id: str | None = None
     ) -> tuple[str, list[list]]:
@@ -2912,7 +2920,7 @@ class Exchange:
             # of up to an hour.
             # e.g. Binance returns the "last 1000" candles within a 1h time interval
             # - so we will miss the first trades.
-            t, from_id = await self._async_fetch_trades(pair, since=since)
+            t, from_id = await self._async_get_trade_history_id_startup(pair, since=since)
             trades.extend(t[x])
         while True:
             try:
