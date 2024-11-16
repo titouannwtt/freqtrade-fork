@@ -28,7 +28,7 @@ Freqtrade is a free and open source crypto trading bot written in Python. It is 
 - Develop your Strategy: Write your strategy in python, using [pandas](https://pandas.pydata.org/). Example strategies to inspire you are available in the [strategy repository](https://github.com/freqtrade/freqtrade-strategies).
 - Download market data: Download historical data of the exchange and the markets your may want to trade with.
 - Backtest: Test your strategy on downloaded historical data.
-- Optimize: Find the best parameters for your strategy using hyperoptimization which employs machining learning methods. You can optimize buy, sell, take profit (ROI), stop-loss and trailing stop-loss parameters for your strategy.
+- Optimize: Find the best parameters for your strategy using hyperoptimization which employs machine learning methods. You can optimize buy, sell, take profit (ROI), stop-loss and trailing stop-loss parameters for your strategy.
 - Select markets: Create your static list or use an automatic one based on top traded volumes and/or prices (not available during backtesting). You can also explicitly blacklist markets you don't want to trade.
 - Run: Test your strategy with simulated money (Dry-Run mode) or deploy it with real money (Live-Trade mode).
 - Run using Edge (optional module): The concept is to find the best historical [trade expectancy](edge.md#expectancy) by markets based on variation of the stop-loss and then allow/reject markets to trade. The sizing of the trade is based on a risk of a percentage of your capital.
