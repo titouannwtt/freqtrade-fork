@@ -613,6 +613,7 @@ def download_data_main(config: Config) -> None:
             "Please make sure you're using the correct Pair naming for your selected trade mode. \n"
             f"More info: {DOCS_LINK}/bot-basics/#pair-naming"
         )
+        return
 
     logger.info(
         f"About to download pairs: {expanded_pairs}, "
