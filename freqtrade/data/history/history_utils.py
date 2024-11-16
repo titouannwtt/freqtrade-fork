@@ -678,7 +678,7 @@ def download_data_main(config: Config) -> None:
             )
     finally:
         if pairs_not_available:
+            errors = "\n" + ("\n".join(pairs_not_available))
             logger.warning(
-                f"Encountered a problem downloading the following pairs from {exchange.name}: \n"
-                f"{'\n'.join(pairs_not_available)}"
+                f"Encountered a problem downloading the following pairs from {exchange.name}: {errors}"
             )
