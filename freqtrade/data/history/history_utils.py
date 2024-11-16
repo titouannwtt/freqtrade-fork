@@ -8,7 +8,6 @@ from pandas import DataFrame, concat
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import (
     DATETIME_PRINT_FORMAT,
-    DEFAULT_DATAFRAME_COLUMNS,
     DL_DATA_TIMEFRAMES,
     DOCS_LINK,
     Config,
@@ -199,14 +198,20 @@ def _load_cached_data_for_updating(
         candle_type=candle_type,
     )
     if not data.empty:
-        if not prepend and start and start < data.iloc[0]["date"]:
-            # Earlier data than existing data requested, redownload all
-            data = DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
+        if prepend:
+            end = data.iloc[0]["date"]
         else:
-            if prepend:
-                end = data.iloc[0]["date"]
-            else:
-                start = data.iloc[-1]["date"]
+            if start and start < data.iloc[0]["date"]:
+                # Earlier data than existing data requested, Update start date
+                logger.info(
+                    f"{pair}, {timeframe}, {candle_type}: "
+                    f"Start {start:{DATETIME_PRINT_FORMAT}} earlier than available data start. "
+                    f"Please use `--prepend` to download data prior "
+                    f"to {data.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}, or "
+                    "`--erase` to redownload all data."
+                )
+            start = data.iloc[-1]["date"]
+
     start_ms = int(start.timestamp() * 1000) if start else None
     end_ms = int(end.timestamp() * 1000) if end else None
     return data, start_ms, end_ms
