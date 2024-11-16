@@ -925,7 +925,7 @@ def test_download_data_trades(mocker):
         "freqtrade.data.history.history_utils.convert_trades_to_ohlcv", MagicMock(return_value=[])
     )
     patch_exchange(mocker)
-    mocker.patch(f"{EXMS}.get_markets", return_value={})
+    mocker.patch(f"{EXMS}.get_markets", return_value={"ETH/BTC": {}, "XRP/BTC": {}})
     args = [
         "download-data",
         "--exchange",
@@ -960,7 +960,7 @@ def test_download_data_trades(mocker):
 
 def test_download_data_data_invalid(mocker):
     patch_exchange(mocker, exchange="kraken")
-    mocker.patch(f"{EXMS}.get_markets", return_value={})
+    mocker.patch(f"{EXMS}.get_markets", return_value={"ETH/BTC": {}, "XRP/BTC": {}})
     args = [
         "download-data",
         "--exchange",
