@@ -589,8 +589,8 @@ def test_download_data_no_markets(mocker, default_conf, caplog, testdatadir):
     )
 
     assert dl_mock.call_count == 0
-    assert "BTT/BTC" in unav_pairs
-    assert "LTC/USDT" in unav_pairs
+    assert "BTT/BTC: Pair not available on exchange." in unav_pairs
+    assert "LTC/USDT: Pair not available on exchange." in unav_pairs
     assert log_has("Skipping pair BTT/BTC...", caplog)
 
 
@@ -617,7 +617,7 @@ def test_refresh_backtest_trades_data(mocker, default_conf, markets, caplog, tes
     assert dl_mock.call_args[1]["timerange"].starttype == "date"
 
     assert log_has("Downloading trades for pair ETH/BTC.", caplog)
-    assert unavailable_pairs == ["XRP/ETH"]
+    assert [p for p in unavailable_pairs if "XRP/ETH" in p]
     assert log_has("Skipping pair XRP/ETH...", caplog)
 
 
@@ -665,13 +665,16 @@ def test_download_trades_history(
 
     file1.unlink()
 
-    mocker.patch(f"{EXMS}.get_historic_trades", MagicMock(side_effect=ValueError))
+    mocker.patch(f"{EXMS}.get_historic_trades", MagicMock(side_effect=ValueError("he ho!")))
     caplog.clear()
 
-    assert not _download_trades_history(
-        data_handler=data_handler, exchange=exchange, pair="ETH/BTC", trading_mode=TradingMode.SPOT
-    )
-    assert log_has_re('Failed to download and store historic trades for pair: "ETH/BTC".*', caplog)
+    with pytest.raises(ValueError, match="he ho!"):
+        _download_trades_history(
+            data_handler=data_handler,
+            exchange=exchange,
+            pair="ETH/BTC",
+            trading_mode=TradingMode.SPOT,
+        )
 
     file2 = tmp_path / "XRP_ETH-trades.json.gz"
     copyfile(testdatadir / file2.name, file2)
@@ -682,17 +685,15 @@ def test_download_trades_history(
     since_time = int(trades_history[0][0] // 1000) - 500
     timerange = TimeRange("date", None, since_time, 0)
 
-    assert _download_trades_history(
-        data_handler=data_handler,
-        exchange=exchange,
-        pair="XRP/ETH",
-        timerange=timerange,
-        trading_mode=TradingMode.SPOT,
-    )
+    with pytest.raises(ValueError, match=r"Start .* earlier than available data"):
+        _download_trades_history(
+            data_handler=data_handler,
+            exchange=exchange,
+            pair="XRP/ETH",
+            timerange=timerange,
+            trading_mode=TradingMode.SPOT,
+        )
 
-    assert ght_mock.call_count == 1
+    assert ght_mock.call_count == 0
 
-    assert int(ght_mock.call_args_list[0][1]["since"] // 1000) == since_time
-    assert ght_mock.call_args_list[0][1]["from_id"] is None
-    assert log_has_re(r"Start .* earlier than available data. Redownloading trades for.*", caplog)
     _clean_test_file(file2)
