@@ -37,6 +37,7 @@ class Gate(Exchange):
     _ft_has_futures: FtHas = {
         "needs_trading_fees": True,
         "marketOrderRequiresPrice": False,
+        "funding_fee_candle_limit": 90,
         "stop_price_type_field": "price_type",
         "stop_price_type_value_mapping": {
             PriceType.LAST: 0,
