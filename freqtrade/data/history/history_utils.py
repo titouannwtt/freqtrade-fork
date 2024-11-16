@@ -345,7 +345,7 @@ def refresh_backtest_ohlcv_data(
             progress.update(timeframe_task, completed=0)
 
             if pair not in exchange.markets:
-                pairs_not_available.append(pair)
+                pairs_not_available.append(f"{pair}: Pair not available on exchange.")
                 logger.info(f"Skipping pair {pair}...")
                 continue
             for timeframe in timeframes:
@@ -411,79 +411,74 @@ def _download_trades_history(
     Download trade history from the exchange.
     Appends to previously downloaded trades data.
     """
-    try:
-        until = None
-        since = 0
-        if timerange:
-            if timerange.starttype == "date":
-                since = timerange.startts * 1000
-            if timerange.stoptype == "date":
-                until = timerange.stopts * 1000
+    until = None
+    since = 0
+    if timerange:
+        if timerange.starttype == "date":
+            since = timerange.startts * 1000
+        if timerange.stoptype == "date":
+            until = timerange.stopts * 1000
 
-        trades = data_handler.trades_load(pair, trading_mode)
+    trades = data_handler.trades_load(pair, trading_mode)
 
-        # TradesList columns are defined in constants.DEFAULT_TRADES_COLUMNS
-        # DEFAULT_TRADES_COLUMNS: 0 -> timestamp
-        # DEFAULT_TRADES_COLUMNS: 1 -> id
+    # TradesList columns are defined in constants.DEFAULT_TRADES_COLUMNS
+    # DEFAULT_TRADES_COLUMNS: 0 -> timestamp
+    # DEFAULT_TRADES_COLUMNS: 1 -> id
 
-        if not trades.empty and since > 0 and since < trades.iloc[0]["timestamp"]:
-            # since is before the first trade
-            logger.info(
-                f"Start ({trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}) earlier than "
-                f"available data. Redownloading trades for {pair}..."
-            )
-            trades = trades_list_to_df([])
-
-        from_id = trades.iloc[-1]["id"] if not trades.empty else None
-        if not trades.empty and since < trades.iloc[-1]["timestamp"]:
-            # Reset since to the last available point
-            # - 5 seconds (to ensure we're getting all trades)
-            since = trades.iloc[-1]["timestamp"] - (5 * 1000)
-            logger.info(
-                f"Using last trade date -5s - Downloading trades for {pair} "
-                f"since: {format_ms_time(since)}."
-            )
-
-        if not since:
-            since = dt_ts(dt_now() - timedelta(days=new_pairs_days))
-
-        logger.debug(
-            "Current Start: %s",
-            "None" if trades.empty else f"{trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}",
+    if not trades.empty and since > 0 and since < trades.iloc[0]["timestamp"]:
+        # since is before the first trade
+        raise ValueError(
+            f"Start {format_ms_time(since)} earlier than "
+            f"available data ({trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}). "
+            f"Please use `--erase` if you'd like to redownload {pair}."
         )
-        logger.debug(
-            "Current End: %s",
-            "None" if trades.empty else f"{trades.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}",
-        )
-        logger.info(f"Current Amount of trades: {len(trades)}")
 
-        # Default since_ms to 30 days if nothing is given
-        new_trades = exchange.get_historic_trades(
-            pair=pair,
-            since=since,
-            until=until,
-            from_id=from_id,
+    from_id = trades.iloc[-1]["id"] if not trades.empty else None
+    if not trades.empty and since < trades.iloc[-1]["timestamp"]:
+        # Reset since to the last available point
+        # - 5 seconds (to ensure we're getting all trades)
+        since = trades.iloc[-1]["timestamp"] - (5 * 1000)
+        logger.info(
+            f"Using last trade date -5s - Downloading trades for {pair} "
+            f"since: {format_ms_time(since)}."
         )
-        new_trades_df = trades_list_to_df(new_trades[1])
-        trades = concat([trades, new_trades_df], axis=0)
-        # Remove duplicates to make sure we're not storing data we don't need
-        trades = trades_df_remove_duplicates(trades)
-        data_handler.trades_store(pair, trades, trading_mode)
 
-        logger.debug(
-            "New Start: %s",
-            "None" if trades.empty else f"{trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}",
-        )
-        logger.debug(
-            "New End: %s",
-            "None" if trades.empty else f"{trades.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}",
-        )
-        logger.info(f"New Amount of trades: {len(trades)}")
-        return True
+    if not since:
+        since = dt_ts(dt_now() - timedelta(days=new_pairs_days))
 
-    except Exception:
-        logger.exception(f'Failed to download and store historic trades for pair: "{pair}". ')
-        return False
+    logger.debug(
+        "Current Start: %s",
+        "None" if trades.empty else f"{trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}",
+    )
+    logger.debug(
+        "Current End: %s",
+        "None" if trades.empty else f"{trades.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}",
+    )
+    logger.info(f"Current Amount of trades: {len(trades)}")
+
+    # Default since_ms to 30 days if nothing is given
+    new_trades = exchange.get_historic_trades(
+        pair=pair,
+        since=since,
+        until=until,
+        from_id=from_id,
+    )
+    new_trades_df = trades_list_to_df(new_trades[1])
+    trades = concat([trades, new_trades_df], axis=0)
+    # Remove duplicates to make sure we're not storing data we don't need
+    trades = trades_df_remove_duplicates(trades)
+    data_handler.trades_store(pair, trades, trading_mode)
+
+    logger.debug(
+        "New Start: %s",
+        "None" if trades.empty else f"{trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}",
+    )
+    logger.debug(
+        "New End: %s",
+        "None" if trades.empty else f"{trades.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}",
+    )
+    logger.info(f"New Amount of trades: {len(trades)}")
+    return True
 
 
 def refresh_backtest_trades_data(
@@ -508,7 +503,7 @@ def refresh_backtest_trades_data(
         for pair in pairs:
             progress.update(pair_task, description=f"Downloading trades [{pair}]")
             if pair not in exchange.markets:
-                pairs_not_available.append(pair)
+                pairs_not_available.append(f"{pair}: Pair not available on exchange.")
                 logger.info(f"Skipping pair {pair}...")
                 continue
 
@@ -517,14 +512,22 @@ def refresh_backtest_trades_data(
                     logger.info(f"Deleting existing data for pair {pair}.")
 
             logger.info(f"Downloading trades for pair {pair}.")
-            _download_trades_history(
-                exchange=exchange,
-                pair=pair,
-                new_pairs_days=new_pairs_days,
-                timerange=timerange,
-                data_handler=data_handler,
-                trading_mode=trading_mode,
-            )
+            try:
+                _download_trades_history(
+                    exchange=exchange,
+                    pair=pair,
+                    new_pairs_days=new_pairs_days,
+                    timerange=timerange,
+                    data_handler=data_handler,
+                    trading_mode=trading_mode,
+                )
+            except ValueError as e:
+                pairs_not_available.append(f"{pair}: {str(e)}")
+            except Exception:
+                logger.exception(
+                    f'Failed to download and store historic trades for pair: "{pair}". '
+                )
+
             progress.update(pair_task, advance=1)
 
     return pairs_not_available
@@ -674,7 +677,7 @@ def download_data_main(config: Config) -> None:
             )
     finally:
         if pairs_not_available:
-            logger.info(
-                f"Pairs [{','.join(pairs_not_available)}] not available "
-                f"on exchange {exchange.name}."
+            logger.warning(
+                f"Encountered a problem downloading the following pairs from {exchange.name}: \n"
+                f"{'\n'.join(pairs_not_available)}"
             )
