@@ -210,7 +210,7 @@ def test_json_pair_trades_filename(pair, trading_mode, expected_result):
     assert fn == Path(expected_result + ".gz")
 
 
-def test_load_cached_data_for_updating(mocker, testdatadir) -> None:
+def test_load_cached_data_for_updating(testdatadir) -> None:
     data_handler = get_datahandler(testdatadir, "json")
 
     test_data = None
@@ -225,13 +225,14 @@ def test_load_cached_data_for_updating(mocker, testdatadir) -> None:
     now_ts = test_data[-1][0] / 1000 + 60 * 60
 
     # timeframe starts earlier than the cached data
-    # should fully update data
+    # Update timestamp to candle end date
     timerange = TimeRange("date", None, test_data[0][0] / 1000 - 1, 0)
     data, start_ts, end_ts = _load_cached_data_for_updating(
         "UNITTEST/BTC", "1m", timerange, data_handler, CandleType.SPOT
     )
-    assert data.empty
-    assert start_ts == test_data[0][0] - 1000
+    assert not data.empty
+    # Last candle was removed - so 1 candle overlap
+    assert start_ts == test_data[-1][0] - 60 * 1000
     assert end_ts is None
 
     # timeframe starts earlier than the cached data - prepending
