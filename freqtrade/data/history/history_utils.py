@@ -6,12 +6,7 @@ from pathlib import Path
 from pandas import DataFrame, concat
 
 from freqtrade.configuration import TimeRange
-from freqtrade.constants import (
-    DATETIME_PRINT_FORMAT,
-    DL_DATA_TIMEFRAMES,
-    DOCS_LINK,
-    Config,
-)
+from freqtrade.constants import DATETIME_PRINT_FORMAT, DL_DATA_TIMEFRAMES, DOCS_LINK, Config
 from freqtrade.data.converter import (
     clean_ohlcv_dataframe,
     convert_trades_to_ohlcv,
