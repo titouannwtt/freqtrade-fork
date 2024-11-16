@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import CandleType, MarginMode, TradingMode
+from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
@@ -26,12 +26,13 @@ class Hyperliquid(Exchange):
         "tickers_have_bid_ask": False,
         "stoploss_on_exchange": False,
         "exchange_has_overrides": {"fetchTrades": False},
-        "funding_fee_timeframe": "1h",
         "marketOrderRequiresPrice": True,
     }
     _ft_has_futures: FtHas = {
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit"},
+        "funding_fee_timeframe": "1h",
+        "funding_fee_candle_limit": 500,
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -53,15 +54,6 @@ class Hyperliquid(Exchange):
             return self.markets[pair]["limits"]["leverage"]["max"]
         else:
             return 1.0
-
-    def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
-    ) -> int:
-        # Funding rate candles have a different limit
-        if candle_type == CandleType.FUNDING_RATE:
-            return 500
-
-        return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
 
     def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
         if self.trading_mode != TradingMode.SPOT:

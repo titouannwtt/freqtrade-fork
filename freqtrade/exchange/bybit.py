@@ -7,7 +7,7 @@ from typing import Any
 import ccxt
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, ExchangeError, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
@@ -47,6 +47,7 @@ class Bybit(Exchange):
         "ohlcv_has_history": True,
         "mark_ohlcv_timeframe": "4h",
         "funding_fee_timeframe": "8h",
+        "funding_fee_candle_limit": 200,
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit", "market": "market"},
         # bybit response parsing fails to populate stopLossPrice
@@ -113,14 +114,6 @@ class Bybit(Exchange):
             ) from e
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
-
-    def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
-    ) -> int:
-        if candle_type == CandleType.FUNDING_RATE:
-            return 200
-
-        return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
 
     def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
         if self.trading_mode != TradingMode.SPOT:
