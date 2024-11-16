@@ -200,8 +200,9 @@ def _load_cached_data_for_updating(
                 # Earlier data than existing data requested, Update start date
                 logger.info(
                     f"{pair}, {timeframe}, {candle_type}: "
-                    f"Start {start:{DATETIME_PRINT_FORMAT}} earlier than available data start. "
-                    f"Please use `--prepend` to download data prior "
+                    f"Requested start date {start:{DATETIME_PRINT_FORMAT}} earlier than local "
+                    f"data start date {data.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}. "
+                    f"Use `--prepend` to download data prior "
                     f"to {data.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}, or "
                     "`--erase` to redownload all data."
                 )
