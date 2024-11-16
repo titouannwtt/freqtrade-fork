@@ -607,17 +607,17 @@ def download_data_main(config: Config) -> None:
     if "timeframes" not in config:
         config["timeframes"] = DL_DATA_TIMEFRAMES
 
-    logger.info(
-        f"About to download pairs: {expanded_pairs}, "
-        f"intervals: {config['timeframes']} to {config['datadir']}"
-    )
-
     if len(expanded_pairs) == 0:
         logger.warning(
             "No pairs available for download. "
             "Please make sure you're using the correct Pair naming for your selected trade mode. \n"
             f"More info: {DOCS_LINK}/bot-basics/#pair-naming"
         )
+
+    logger.info(
+        f"About to download pairs: {expanded_pairs}, "
+        f"intervals: {config['timeframes']} to {config['datadir']}"
+    )
 
     for timeframe in config["timeframes"]:
         exchange.validate_timeframes(timeframe)
