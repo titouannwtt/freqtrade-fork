@@ -40,11 +40,12 @@ Freqtrade is a free and open source crypto trading bot written in Python. It is 
 Please read the [exchange specific notes](exchanges.md) to learn about eventual, special configurations needed for each exchange.
 
 - [X] [Binance](https://www.binance.com/)
-- [X] [Bitmart](https://bitmart.com/)
 - [X] [BingX](https://bingx.com/invite/0EM9RX)
+- [X] [Bitmart](https://bitmart.com/)
 - [X] [Bybit](https://bybit.com/)
 - [X] [Gate.io](https://www.gate.io/ref/6266643)
 - [X] [HTX](https://www.htx.com/) (Former Huobi)
+- [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
 - [X] [Kraken](https://kraken.com/)
 - [X] [OKX](https://okx.com/) (Former OKEX)
 - [ ] [potentially many others through <img alt="ccxt" width="30px" src="assets/ccxt-logo.svg" />](https://github.com/ccxt/ccxt/). _(We cannot guarantee they will work)_
@@ -52,9 +53,10 @@ Please read the [exchange specific notes](exchanges.md) to learn about eventual,
 ### Supported Futures Exchanges (experimental)
 
 - [X] [Binance](https://www.binance.com/)
-- [X] [Gate.io](https://www.gate.io/ref/6266643)
-- [X] [OKX](https://okx.com/)
 - [X] [Bybit](https://bybit.com/)
+- [X] [Gate.io](https://www.gate.io/ref/6266643)
+- [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
+- [X] [OKX](https://okx.com/)
 
 Please make sure to read the [exchange specific notes](exchanges.md), as well as the [trading with leverage](leverage.md) documentation before diving in.
 
