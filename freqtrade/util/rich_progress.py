@@ -34,11 +34,7 @@ class CustomProgress(Progress):
         refresh: bool = False,
         **fields: Any,
     ) -> None:
-        if self._ft_callback:
-            self._ft_callback(
-                self.tasks[task_id],
-            )
-        return super().update(
+        t = super().update(
             task_id,
             total=total,
             completed=completed,
@@ -48,6 +44,11 @@ class CustomProgress(Progress):
             refresh=refresh,
             **fields,
         )
+        if self._ft_callback:
+            self._ft_callback(
+                self.tasks[task_id],
+            )
+        return t
 
     def get_renderable(self) -> ConsoleRenderable | RichCast | str:
         objs = [obj for obj in self._cust_objs]
