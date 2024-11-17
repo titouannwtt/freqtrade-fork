@@ -12,6 +12,7 @@ from pydantic import (
 from freqtrade.constants import DL_DATA_TIMEFRAMES, IntOrInf
 from freqtrade.enums import MarginMode, OrderTypeValues, SignalDirection, TradingMode
 from freqtrade.ft_types import ValidExchangesType
+from freqtrade.rpc.api_server.webserver_bgwork import ProgressTask
 
 
 class ExchangeModePayloadMixin(BaseModel):
@@ -50,7 +51,7 @@ class BackgroundTaskStatus(BaseModel):
     status: str
     running: bool
     progress: float | None = None
-    progress_tasks: dict[str, Any] | None = None
+    progress_tasks: dict[str, ProgressTask] | None = None
     error: str | None = None
 
 

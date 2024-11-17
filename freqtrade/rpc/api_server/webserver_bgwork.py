@@ -4,12 +4,18 @@ from uuid import uuid4
 from freqtrade.exchange.exchange import Exchange
 
 
+class ProgressTask(TypedDict):
+    progress: float
+    total: float
+    description: str
+
+
 class JobsContainer(TypedDict):
     category: Literal["pairlist", "download_data"]
     is_running: bool
     status: str
     progress: float | None
-    progress_tasks: NotRequired[dict[str, Any]]
+    progress_tasks: NotRequired[dict[str, ProgressTask]]
     result: Any
     error: str | None
 
