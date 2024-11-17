@@ -50,6 +50,7 @@ class BackgroundTaskStatus(BaseModel):
     status: str
     running: bool
     progress: float | None = None
+    progress_tasks: dict[str, Any] | None = None
     error: str | None = None
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 from uuid import uuid4
 
 from freqtrade.exchange.exchange import Exchange
@@ -9,6 +9,7 @@ class JobsContainer(TypedDict):
     is_running: bool
     status: str
     progress: float | None
+    progress_tasks: NotRequired[dict[str, Any]]
     result: Any
     error: str | None
 
