@@ -29,14 +29,15 @@ def __run_download(job_id: str, config_loc: Config):
             exchange = get_exchange(config_loc)
 
             def ft_callback(task) -> None:
-                print(task)
+                ApiBG.jobs[job_id]["progress_tasks"][str(task.id)] = {
+                    "progress": task.completed,
+                    "total": task.total,
+                    "description": task.description,
+                }
 
             pt = get_progress_tracker(ft_callback=ft_callback)
 
             download_data(config_loc, exchange, progress_tracker=pt)
-            # ApiBG.jobs[job_id]["result"] = {
-
-            # }
             ApiBG.jobs[job_id]["status"] = "success"
     except (OperationalException, Exception) as e:
         logger.exception(e)
@@ -66,6 +67,7 @@ def pairlists_evaluate(
         "category": "download_data",
         "status": "pending",
         "progress": None,
+        "progress_tasks": {},
         "is_running": False,
         "result": {},
         "error": None,
