@@ -39,5 +39,6 @@ def background_job(jobid: str):
         "status": job["status"],
         "running": job["is_running"],
         "progress": job.get("progress"),
+        "progress_tasks": job.get("progress_tasks"),
         "error": job.get("error", None),
     }
