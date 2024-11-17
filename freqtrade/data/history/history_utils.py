@@ -328,7 +328,7 @@ def refresh_backtest_ohlcv_data(
     erase: bool = False,
     data_format: str | None = None,
     prepend: bool = False,
-    progress_tracker: Optional[ProgressLike] = None,
+    progress_tracker: ProgressLike | None = None,
 ) -> list[str]:
     """
     Refresh stored ohlcv data for backtesting and hyperopt operations.
@@ -495,7 +495,7 @@ def refresh_backtest_trades_data(
     new_pairs_days: int = 30,
     erase: bool = False,
     data_format: str = "feather",
-    progress_tracker: Optional[ProgressLike] = None,
+    progress_tracker: ProgressLike | None = None,
 ) -> list[str]:
     """
     Refresh stored trades data for backtesting and hyperopt operations.
@@ -597,7 +597,7 @@ def download_data(
     config: Config,
     exchange: Exchange,
     *,
-    progress_tracker: Optional[ProgressLike] = None,
+    progress_tracker: ProgressLike | None = None,
 ) -> None:
     """
     Download data function. Used from both cli and API.

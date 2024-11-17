@@ -490,9 +490,9 @@ class PairListsPayload(ExchangeModePayloadMixin, BaseModel):
 
 class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
     pairs: list[str]
-    timeframes: Optional[list[str]] = DL_DATA_TIMEFRAMES
-    days: Optional[int] = None
-    timerange: Optional[str] = None
+    timeframes: list[str] | None = DL_DATA_TIMEFRAMES
+    days: int | None = None
+    timerange: str | None = None
 
     @model_validator(mode="before")
     def check_mutually_exclusive(cls, values):

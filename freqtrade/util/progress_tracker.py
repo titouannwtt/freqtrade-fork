@@ -1,5 +1,5 @@
 from contextlib import AbstractContextManager
-from typing import Optional, Protocol
+from typing import Protocol
 
 from rich.progress import (
     BarColumn,
@@ -20,7 +20,7 @@ class ProgressLike(Protocol, AbstractContextManager["ProgressLike"]):
     def update(self, task_id: TaskID, *, advance: float | None = None, **kwargs): ...
 
 
-def retrieve_progress_tracker(pt: Optional[ProgressLike]) -> ProgressLike:
+def retrieve_progress_tracker(pt: ProgressLike | None) -> ProgressLike:
     if pt is None:
         return get_progress_tracker()
     return pt
