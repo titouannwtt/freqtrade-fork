@@ -13,7 +13,7 @@ class FtCoinGeckoApi(CoinGeckoAPI):
 
     def __init__(self, api_key: str = "", *, is_demo=True, retries=5):
         super().__init__(retries=retries)
-        # Doint' pass api_key to parent, instead set the header on the session directly
+        # Don't pass api_key to parent, instead set the header on the session directly
         self._api_key = api_key
 
         if api_key and not is_demo:
