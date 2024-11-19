@@ -7,7 +7,7 @@ pandas-ta==0.3.14b
 ccxt==4.4.31
 cryptography==42.0.8; platform_machine == 'armv7l'
 cryptography==43.0.3; platform_machine != 'armv7l'
-aiohttp==3.10.10
+aiohttp==3.10.11
 SQLAlchemy==2.0.36
 python-telegram-bot==21.7
 # can't be hard-pinned due to telegram-bot pinning httpx with ~
