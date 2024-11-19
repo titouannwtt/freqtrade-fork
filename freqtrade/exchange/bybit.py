@@ -140,6 +140,17 @@ class Bybit(Exchange):
             params["position_idx"] = 0
         return params
 
+    def _order_needs_price(self, side: BuySell, ordertype: str) -> bool:
+        # Bybit requires price for market orders - but only for classic accounts,
+        # and only in spot mode
+        return (
+            ordertype != "market"
+            or (
+                side == "buy" and not self.unified_account and self.trading_mode == TradingMode.SPOT
+            )
+            or self._ft_has.get("marketOrderRequiresPrice", False)
+        )
+
     def dry_run_liquidation_price(
         self,
         pair: str,
