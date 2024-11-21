@@ -7,7 +7,8 @@ from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
+from freqtrade.util.datetime_helpers import dt_from_ts
 
 
 logger = logging.getLogger(__name__)
@@ -155,3 +156,26 @@ class Hyperliquid(Exchange):
             except ExchangeError:
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
+
+    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
+        order = super().fetch_order(order_id, pair, params)
+
+        if (
+            order["average"] is None
+            and order["status"] in ("canceled", "closed")
+            and order["filled"] > 0
+        ):
+            # Hyperliquid does not fill the average price in the order response
+            # Fetch trades to calculate the average price to have the actual price
+            # the order was executed at
+            trades = self.get_trades_for_order(order_id, pair, since=dt_from_ts(order["timestamp"]))
+
+            if trades:
+                total_amount = sum(t["amount"] for t in trades)
+                order["average"] = (
+                    sum(t["price"] * t["amount"] for t in trades) / total_amount
+                    if total_amount
+                    else None
+                )
+
+        return order

@@ -372,3 +372,46 @@ def test_hyperliquid__lev_prep(default_conf, mocker):
 
     assert api_mock.set_margin_mode.call_count == 1
     api_mock.set_margin_mode.assert_called_with("isolated", "BTC/USDC:USDC", {"leverage": 19})
+
+
+def test_hyperliquid_fetch_order(default_conf_usdt, mocker):
+    default_conf_usdt["dry_run"] = False
+
+    api_mock = MagicMock()
+    api_mock.fetch_order = MagicMock(
+        return_value={
+            "id": "12345",
+            "symbol": "ETH/USDC:USDC",
+            "status": "closed",
+            "filled": 0.1,
+            "average": None,
+            "timestamp": 1630000000,
+        }
+    )
+
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    gtfo_mock = mocker.patch(
+        f"{EXMS}.get_trades_for_order",
+        return_value=[
+            {
+                "order_id": "12345",
+                "price": 1000,
+                "amount": 3,
+                "filled": 3,
+                "remaining": 0,
+            },
+            {
+                "order_id": "12345",
+                "price": 3000,
+                "amount": 1,
+                "filled": 1,
+                "remaining": 0,
+            },
+        ],
+    )
+    exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange="hyperliquid")
+    o = exchange.fetch_order("12345", "ETH/USDC:USDC")
+    # Uses weighted average
+    assert o["average"] == 1500
+
+    assert gtfo_mock.call_count == 1
