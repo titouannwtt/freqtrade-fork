@@ -16,7 +16,6 @@ from freqtrade.util.ft_precise import FtPrecise
 from freqtrade.util.measure_time import MeasureTime
 from freqtrade.util.periodic_cache import PeriodicCache
 from freqtrade.util.progress_tracker import (  # noqa F401
-    ProgressLike,
     get_progress_tracker,
     retrieve_progress_tracker,
 )

@@ -20,7 +20,7 @@ from freqtrade.exchange import Exchange
 from freqtrade.plugins.pairlist.pairlist_helpers import dynamic_expand_pairlist
 from freqtrade.util import dt_now, dt_ts, format_ms_time
 from freqtrade.util.migrations import migrate_data
-from freqtrade.util.progress_tracker import ProgressLike, retrieve_progress_tracker
+from freqtrade.util.progress_tracker import CustomProgress, retrieve_progress_tracker
 
 
 logger = logging.getLogger(__name__)
@@ -328,7 +328,7 @@ def refresh_backtest_ohlcv_data(
     erase: bool = False,
     data_format: str | None = None,
     prepend: bool = False,
-    progress_tracker: ProgressLike | None = None,
+    progress_tracker: CustomProgress | None = None,
 ) -> list[str]:
     """
     Refresh stored ohlcv data for backtesting and hyperopt operations.
@@ -495,7 +495,7 @@ def refresh_backtest_trades_data(
     new_pairs_days: int = 30,
     erase: bool = False,
     data_format: str = "feather",
-    progress_tracker: ProgressLike | None = None,
+    progress_tracker: CustomProgress | None = None,
 ) -> list[str]:
     """
     Refresh stored trades data for backtesting and hyperopt operations.
@@ -597,7 +597,7 @@ def download_data(
     config: Config,
     exchange: Exchange,
     *,
-    progress_tracker: ProgressLike | None = None,
+    progress_tracker: CustomProgress | None = None,
 ) -> None:
     """
     Download data function. Used from both cli and API.
