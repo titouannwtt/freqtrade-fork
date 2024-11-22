@@ -495,6 +495,8 @@ class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
     timeframes: list[str] | None = DL_DATA_TIMEFRAMES
     days: int | None = None
     timerange: str | None = None
+    erase: bool = False
+    download_trades: bool = False
 
     @model_validator(mode="before")
     def check_mutually_exclusive(cls, values):
