@@ -1,7 +1,7 @@
-from typing import Any, Literal, NotRequired
+from typing import Any, Literal
 from uuid import uuid4
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 from freqtrade.exchange.exchange import Exchange
 
