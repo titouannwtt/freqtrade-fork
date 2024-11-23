@@ -1,13 +1,7 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import (
-    AwareDatetime,
-    BaseModel,
-    RootModel,
-    SerializeAsAny,
-    model_validator,
-)
+from pydantic import AwareDatetime, BaseModel, RootModel, SerializeAsAny, model_validator
 
 from freqtrade.constants import DL_DATA_TIMEFRAMES, IntOrInf
 from freqtrade.enums import MarginMode, OrderTypeValues, SignalDirection, TradingMode
