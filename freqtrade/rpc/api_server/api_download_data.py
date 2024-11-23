@@ -57,12 +57,13 @@ def pairlists_evaluate(
     config_loc = deepcopy(config)
     config_loc["stake_currency"] = ""
     config_loc["pairs"] = payload.pairs
+    config_loc["timeframe"] = payload.timeframes
+    config_loc["days"] = payload.days
     config_loc["timeframes"] = payload.timeframes
     config_loc["erase"] = payload.erase
     config_loc["download_trades"] = payload.download_trades
 
     handleExchangePayload(payload, config_loc)
-    print(payload)
 
     job_id = ApiBG.get_job_id()
 
