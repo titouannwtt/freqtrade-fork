@@ -91,7 +91,7 @@ class HDF5DataHandler(IDataHandler):
             )
             pairdata = pairdata.reset_index(drop=True)
             return pairdata
-        except ValueError as e:
+        except ValueError:
             raise
         except Exception as e:
             logger.exception(
