@@ -526,6 +526,7 @@ class Exchange:
     def market_is_future(self, market: dict[str, Any]) -> bool:
         return (
             market.get(self._ft_has["ccxt_futures_name"], False) is True
+            and market.get("type", False) == "swap"
             and market.get("linear", False) is True
         )
 
