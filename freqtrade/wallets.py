@@ -252,7 +252,7 @@ class Wallets:
         else:
             tot_profit = Trade.get_total_closed_profit()
             open_stakes = Trade.total_open_trades_stakes()
-            available_balance = self.get_free(self._config["stake_currency"])
+            available_balance = self.get_free(self._stake_currency)
             return available_balance - tot_profit + open_stakes
 
     def get_total_stake_amount(self):
@@ -272,9 +272,9 @@ class Wallets:
             # Ensure <tradable_balance_ratio>% is used from the overall balance
             # Otherwise we'd risk lowering stakes with each open trade.
             # (tied up + current free) * ratio) - tied up
-            available_amount = (
-                val_tied_up + self.get_free(self._config["stake_currency"])
-            ) * self._config["tradable_balance_ratio"]
+            available_amount = (val_tied_up + self.get_free(self._stake_currency)) * self._config[
+                "tradable_balance_ratio"
+            ]
         return available_amount
 
     def get_available_stake_amount(self) -> float:
@@ -285,7 +285,7 @@ class Wallets:
         (<open_trade stakes> + free amount) * tradable_balance_ratio - <open_trade stakes>
         """
 
-        free = self.get_free(self._config["stake_currency"])
+        free = self.get_free(self._stake_currency)
         return min(self.get_total_stake_amount() - Trade.total_open_trades_stakes(), free)
 
     def _calculate_unlimited_stake_amount(
@@ -344,8 +344,8 @@ class Wallets:
         if edge:
             stake_amount = edge.stake_amount(
                 pair,
-                self.get_free(self._config["stake_currency"]),
-                self.get_total(self._config["stake_currency"]),
+                self.get_free(self._stake_currency),
+                self.get_total(self._stake_currency),
                 val_tied_up,
             )
         else:
