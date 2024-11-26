@@ -1768,7 +1768,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def fetch_bids_asks(self, symbols: list[str] | None = None, cached: bool = False) -> dict:
+    def fetch_bids_asks(self, symbols: list[str] | None = None, *, cached: bool = False) -> dict:
         """
         :param symbols: List of symbols to fetch
         :param cached: Allow cached result
@@ -1801,7 +1801,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def get_tickers(self, symbols: list[str] | None = None, cached: bool = False) -> Tickers:
+    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
         """
         :param symbols: List of symbols to fetch
         :param cached: Allow cached result
