@@ -199,8 +199,8 @@ class Exchange:
         # Timestamp of last markets refresh
         self._last_markets_refresh: int = 0
 
-        # Cache for 10 minutes ...
         self._cache_lock = Lock()
+        # Cache for 10 minutes ...
         self._fetch_tickers_cache: TTLCache = TTLCache(maxsize=2, ttl=60 * 10)
         # Cache values for 300 to avoid frequent polling of the exchange for prices
         # Caching only applies to RPC methods, so prices for open trades are still
