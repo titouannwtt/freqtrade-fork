@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
-from typing import Any, cast
+from typing import Any
 
 import psutil
 from dateutil.relativedelta import relativedelta
@@ -682,12 +682,23 @@ class RPC:
             est_bot_stake = amount
         else:
             pair = self._freqtrade.exchange.get_valid_pair_combination(coin, stake_currency)
-            rate: float | None = cast(Ticker, tickers.get(pair, {})).get("last", None)
-            if rate:
-                if pair.startswith(stake_currency) and not pair.endswith(stake_currency):
-                    rate = 1.0 / rate
-                est_stake = rate * balance.total
-                est_bot_stake = rate * amount
+            ticker: Ticker | None = tickers.get(pair, None)
+            if not ticker:
+                tickers_spot: Tickers = self._freqtrade.exchange.get_tickers(
+                    cached=True,
+                    market_type=TradingMode.SPOT
+                    if self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
+                    else TradingMode.FUTURES,
+                )
+                ticker = tickers_spot.get(pair, None)
+
+            if ticker:
+                rate: float | None = ticker.get("last", None)
+                if rate:
+                    if pair.startswith(stake_currency) and not pair.endswith(stake_currency):
+                        rate = 1.0 / rate
+                    est_stake = rate * balance.total
+                    est_bot_stake = rate * amount
 
         return est_stake, est_bot_stake
 
