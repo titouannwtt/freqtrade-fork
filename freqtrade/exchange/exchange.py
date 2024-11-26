@@ -201,7 +201,7 @@ class Exchange:
 
         self._cache_lock = Lock()
         # Cache for 10 minutes ...
-        self._fetch_tickers_cache: TTLCache = TTLCache(maxsize=2, ttl=60 * 10)
+        self._fetch_tickers_cache: TTLCache = TTLCache(maxsize=4, ttl=60 * 10)
         # Cache values for 300 to avoid frequent polling of the exchange for prices
         # Caching only applies to RPC methods, so prices for open trades are still
         # refreshed once every iteration.
@@ -1801,24 +1801,37 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
+    def get_tickers(
+        self,
+        symbols: list[str] | None = None,
+        *,
+        cached: bool = False,
+        market_type: TradingMode | None = None,
+    ) -> Tickers:
         """
         :param symbols: List of symbols to fetch
         :param cached: Allow cached result
+        :param market_type: Market type to fetch - either spot or futures.
         :return: fetch_tickers result
         """
         tickers: Tickers
         if not self.exchange_has("fetchTickers"):
             return {}
+        cache_key = f"fetch_tickers_{market_type}" if market_type else "fetch_tickers"
         if cached:
             with self._cache_lock:
-                tickers = self._fetch_tickers_cache.get("fetch_tickers")  # type: ignore
+                tickers = self._fetch_tickers_cache.get(cache_key)  # type: ignore
             if tickers:
                 return tickers
         try:
-            tickers = self._api.fetch_tickers(symbols)
+            # Re-map futures to swap
+            market_types = {
+                TradingMode.FUTURES: "swap",
+            }
+            params = {"type": market_types.get(market_type, market_type)} if market_type else {}
+            tickers = self._api.fetch_tickers(symbols, params)
             with self._cache_lock:
-                self._fetch_tickers_cache["fetch_tickers"] = tickers
+                self._fetch_tickers_cache[cache_key] = tickers
             return tickers
         except ccxt.NotSupported as e:
             raise OperationalException(

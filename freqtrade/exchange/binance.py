@@ -52,8 +52,14 @@ class Binance(Exchange):
         (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
 
-    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
-        tickers = super().get_tickers(symbols=symbols, cached=cached)
+    def get_tickers(
+        self,
+        symbols: list[str] | None = None,
+        *,
+        cached: bool = False,
+        market_type: TradingMode | None = None,
+    ) -> Tickers:
+        tickers = super().get_tickers(symbols=symbols, cached=cached, market_type=market_type)
         if self.trading_mode == TradingMode.FUTURES:
             # Binance's future result has no bid/ask values.
             # Therefore we must fetch that from fetch_bids_asks and combine the two results.
