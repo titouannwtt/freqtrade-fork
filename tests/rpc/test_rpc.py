@@ -530,6 +530,13 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "total": 5.0,
             "used": 4.0,
         },
+        # Invalid coin not in tickers list.
+        # This triggers a 2nd call to get_tickers
+        "NotACoin": {
+            "free": 0.0,
+            "total": 2.0,
+            "used": 0.0,
+        },
         "USDT": {
             "free": 50.0,
             "total": 100.0,
@@ -590,8 +597,10 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
 
     assert pytest.approx(result["total"]) == 2824.83464
     assert pytest.approx(result["value"]) == 2824.83464 * 1.2
-    assert tickers.call_count == 1
+    assert tickers.call_count == 2
     assert tickers.call_args_list[0][1]["cached"] is True
+    # Testing futures - so we should get spot tickers
+    assert tickers.call_args_list[1][1]["market_type"] == "spot"
     assert "USD" == result["symbol"]
     assert result["currencies"] == [
         {
@@ -621,6 +630,20 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "position": 0,
             "is_bot_managed": False,
             "is_position": False,
+        },
+        {
+            "currency": "NotACoin",
+            "balance": 2.0,
+            "bot_owned": 0,
+            "est_stake": 0,
+            "est_stake_bot": 0,
+            "free": 0.0,
+            "is_bot_managed": False,
+            "is_position": False,
+            "position": 0,
+            "side": "long",
+            "stake": "USDT",
+            "used": 0.0,
         },
         {
             "currency": "USDT",
