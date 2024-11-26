@@ -41,7 +41,7 @@ class Wallets:
         self._exchange = exchange
         self._wallets: dict[str, Wallet] = {}
         self._positions: dict[str, PositionWallet] = {}
-        self.start_cap = config["dry_run_wallet"]
+        self._start_cap = config["dry_run_wallet"]
         self._last_wallet_refresh: datetime | None = None
         self.update()
 
@@ -112,7 +112,7 @@ class Wallets:
 
                 _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
 
-            current_stake = self.start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap + tot_profit - tot_in_trades
             total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
@@ -129,7 +129,7 @@ class Wallets:
                     collateral=collateral,
                     side=position.trade_direction,
                 )
-            current_stake = self.start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap + tot_profit - tot_in_trades
             used_stake = tot_in_trades
             total_stake = current_stake + tot_in_trades
 
