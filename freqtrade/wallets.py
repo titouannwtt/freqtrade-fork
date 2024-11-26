@@ -116,8 +116,14 @@ class Wallets:
                     for o in trade.open_orders
                     if o.amount and o.ft_order_side == trade.exit_side
                 )
+                curr_wallet_bal = self._start_cap.get(curr, 0)
 
-                _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
+                _wallets[curr] = Wallet(
+                    curr,
+                    curr_wallet_bal + trade.amount - pending,
+                    pending,
+                    trade.amount + curr_wallet_bal,
+                )
 
             current_stake = self._start_cap[self._stake_currency] + tot_profit - tot_in_trades
             total_stake = current_stake + used_stake
@@ -147,6 +153,11 @@ class Wallets:
             used=used_stake,
             total=total_stake,
         )
+        for currency in self._start_cap:
+            if currency not in _wallets:
+                bal = self._start_cap[currency]
+                _wallets[currency] = Wallet(currency, bal, 0, bal)
+
         self._wallets = _wallets
         self._positions = _positions
 
