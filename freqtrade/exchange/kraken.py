@@ -68,7 +68,7 @@ class Kraken(Exchange):
             balances.pop("free", None)
             balances.pop("total", None)
             balances.pop("used", None)
-
+            self._log_exchange_response("fetch_balances", balances)
             orders = self._api.fetch_open_orders()
             order_list = [
                 (
@@ -86,6 +86,7 @@ class Kraken(Exchange):
                 balances[bal]["used"] = sum(order[1] for order in order_list if order[0] == bal)
                 balances[bal]["free"] = balances[bal]["total"] - balances[bal]["used"]
 
+            self._log_exchange_response("fetch_balances2", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e

@@ -1657,6 +1657,7 @@ class Exchange:
             balances.pop("total", None)
             balances.pop("used", None)
 
+            self._log_exchange_response("fetch_balances", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
