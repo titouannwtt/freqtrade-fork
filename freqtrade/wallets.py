@@ -41,7 +41,14 @@ class Wallets:
         self._exchange = exchange
         self._wallets: dict[str, Wallet] = {}
         self._positions: dict[str, PositionWallet] = {}
-        self._start_cap = config["dry_run_wallet"]
+        self._start_cap: dict[str, float] = {}
+        self._stake_currency = config["stake_currency"]
+
+        if isinstance(_start_cap := config["dry_run_wallet"], float | int):
+            self._start_cap[self._stake_currency] = _start_cap
+        else:
+            self._start_cap = _start_cap
+
         self._last_wallet_refresh: datetime | None = None
         self.update()
 
@@ -112,7 +119,7 @@ class Wallets:
 
                 _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
 
-            current_stake = self._start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap[self._stake_currency] + tot_profit - tot_in_trades
             total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
@@ -129,12 +136,13 @@ class Wallets:
                     collateral=collateral,
                     side=position.trade_direction,
                 )
-            current_stake = self._start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap[self._stake_currency] + tot_profit - tot_in_trades
+
             used_stake = tot_in_trades
             total_stake = current_stake + tot_in_trades
 
-        _wallets[self._config["stake_currency"]] = Wallet(
-            currency=self._config["stake_currency"],
+        _wallets[self._stake_currency] = Wallet(
+            currency=self._stake_currency,
             free=current_stake,
             used=used_stake,
             total=total_stake,
