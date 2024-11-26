@@ -1803,6 +1803,7 @@ class Exchange:
     @retrier
     def get_tickers(self, symbols: list[str] | None = None, cached: bool = False) -> Tickers:
         """
+        :param symbols: List of symbols to fetch
         :param cached: Allow cached result
         :return: fetch_tickers result
         """
