@@ -125,7 +125,9 @@ class Wallets:
                     trade.amount + curr_wallet_bal,
                 )
 
-            current_stake = self._start_cap[self._stake_currency] + tot_profit - tot_in_trades
+            current_stake = (
+                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+            )
             total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
@@ -142,7 +144,9 @@ class Wallets:
                     collateral=collateral,
                     side=position.trade_direction,
                 )
-            current_stake = self._start_cap[self._stake_currency] + tot_profit - tot_in_trades
+            current_stake = (
+                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+            )
 
             used_stake = tot_in_trades
             total_stake = current_stake + tot_in_trades
