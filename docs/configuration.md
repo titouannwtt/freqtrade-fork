@@ -146,10 +146,10 @@ Freqtrade can also load many options via command line (CLI) arguments (check out
 
 The prevalence for all Options is as follows:
 
-- CLI arguments override any other option
-- [Environment Variables](#environment-variables)
-- Configuration files are used in sequence (the last file wins) and override Strategy configurations.
-- Strategy configurations are only used if they are not set via configuration or command-line arguments. These options are marked with [Strategy Override](#parameters-in-the-strategy) in the below table.
+* CLI arguments override any other option
+* [Environment Variables](#environment-variables)
+* Configuration files are used in sequence (the last file wins) and override Strategy configurations.
+* Strategy configurations are only used if they are not set via configuration or command-line arguments. These options are marked with [Strategy Override](#parameters-in-the-strategy) in the below table.
 
 ### Parameters table
 
@@ -295,10 +295,10 @@ Values set in the configuration file always overwrite values set in the strategy
 * `order_time_in_force`
 * `unfilledtimeout`
 * `disable_dataframe_checks`
-- `use_exit_signal`
+* `use_exit_signal`
 * `exit_profit_only`
-- `exit_profit_offset`
-- `ignore_roi_if_entry_signal`
+* `exit_profit_offset`
+* `ignore_roi_if_entry_signal`
 * `ignore_buying_expired_candle_after`
 * `position_adjustment_enable`
 * `max_entry_position_adjustment`
@@ -362,9 +362,9 @@ To overcome this, the option `amend_last_stake_amount` can be set to `True`, whi
 
 In the example above this would mean:
 
-- Trade1: 400 USDT
-- Trade2: 400 USDT
-- Trade3: 200 USDT
+* Trade1: 400 USDT
+* Trade2: 400 USDT
+* Trade3: 200 USDT
 
 !!! Note
     This option only applies with [Static stake amount](#static-stake-amount) - since [Dynamic stake amount](#dynamic-stake-amount) divides the balances evenly.
