@@ -168,7 +168,7 @@ Mandatory parameters are marked as **Required**, which means that they are requi
 | `timeframe` | The timeframe to use (e.g `1m`, `5m`, `15m`, `30m`, `1h` ...). Usually missing in configuration, and specified in the strategy. [Strategy Override](#parameters-in-the-strategy). <br> **Datatype:** String
 | `fiat_display_currency` | Fiat currency used to show your profits. [More information below](#what-values-can-be-used-for-fiat_display_currency). <br> **Datatype:** String
 | `dry_run` | **Required.** Define if the bot must be in Dry Run or production mode. <br>*Defaults to `true`.* <br> **Datatype:** Boolean
-| `dry_run_wallet` | Define the starting amount in stake currency for the simulated wallet used by the bot running in Dry Run mode.<br>*Defaults to `1000`.* <br> **Datatype:** Float
+| `dry_run_wallet` | Define the starting amount in stake currency for the simulated wallet used by the bot running in Dry Run mode. [More information below](#dry-run-wallet)<br>*Defaults to `1000`.* <br> **Datatype:** Float or Dict
 | `cancel_open_orders_on_exit` | Cancel open orders when the `/stop` RPC command is issued, `Ctrl+C` is pressed or the bot dies unexpectedly. When set to `true`, this allows you to use `/stop` to cancel unfilled and partially filled orders in the event of a market crash. It does not impact open positions. <br>*Defaults to `false`.* <br> **Datatype:** Boolean
 | `process_only_new_candles` | Enable processing of indicators only when new candles arrive. If false each loop populates the indicators, this will mean the same candle is processed many times creating system load but can be useful of your strategy depends on tick data not only candle. [Strategy Override](#parameters-in-the-strategy). <br>*Defaults to `true`.*  <br> **Datatype:** Boolean
 | `minimal_roi` | **Required.** Set the threshold as ratio the bot will use to exit a trade. [More information below](#understand-minimal_roi). [Strategy Override](#parameters-in-the-strategy). <br> **Datatype:** Dict
@@ -322,6 +322,25 @@ To limit this calculation in case of large stoploss values, the calculated minim
 
 !!! Warning
     Since the limits on exchanges are usually stable and are not updated often, some pairs can show pretty high minimum limits, simply because the price increased a lot since the last limit adjustment by the exchange. Freqtrade adjusts the stake-amount to this value, unless it's > 30% more than the calculated/desired stake-amount - in which case the trade is rejected.
+
+#### Dry-run wallet
+
+When running in dry-run mode, the bot will use a simulated wallet to execute trades. The starting balance of this wallet is defined by `dry_run_wallet` (defaults to 1000).
+For more complex scenarios, you can also assign a dictionary to `dry_run_wallet` to define the starting balance for each currency.
+
+```json
+"dry_run_wallet": {
+    "BTC": 0.01,
+    "ETH": 2,
+    "USDT": 1000
+}
+```
+
+Command line options (`--dry-run-wallet`) can be used to override the configuration value, but only for the float value, not for the dictionary. If you'd like to use the dictionary, please adjust the configuration file.
+
+!!! Note
+    Balances not in stake-currency will not be used for trading, but are shown as part of the wallet balance.
+    On Cross-margin exchanges, the wallet balance may be used to calculate the available collateral for trading.
 
 #### Tradable balance
 
