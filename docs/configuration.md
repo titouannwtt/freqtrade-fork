@@ -311,12 +311,12 @@ There are several methods to configure how much of the stake currency the bot wi
 
 The minimum stake amount will depend on exchange and pair and is usually listed in the exchange support pages.
 
-Assuming the minimum tradable amount for XRP/USD is 20 XRP (given by the exchange), and the price is 0.6$, the minimum stake amount to buy this pair is `20 * 0.6 ~= 12`.
-This exchange has also a limit on USD - where all orders must be > 10$ - which however does not apply in this case.
+Assuming the minimum tradable amount for XRP/USD is 20 XRP (given by the exchange), and the price is 0.6\$, the minimum stake amount to buy this pair is `20 * 0.6 ~= 12`.
+This exchange has also a limit on USD - where all orders must be > 10\$ - which however does not apply in this case.
 
-To guarantee safe execution, freqtrade will not allow buying with a stake-amount of 10.1$, instead, it'll make sure that there's enough space to place a stoploss below the pair (+ an offset, defined by `amount_reserve_percent`, which defaults to 5%).
+To guarantee safe execution, freqtrade will not allow buying with a stake-amount of 10.1\$, instead, it'll make sure that there's enough space to place a stoploss below the pair (+ an offset, defined by `amount_reserve_percent`, which defaults to 5%).
 
-With a reserve of 5%, the minimum stake amount would be ~12.6$ (`12 * (1 + 0.05)`). If we take into account a stoploss of 10% on top of that - we'd end up with a value of ~14$ (`12.6 / (1 - 0.1)`).
+With a reserve of 5%, the minimum stake amount would be ~12.6\$ (`12 * (1 + 0.05)`). If we take into account a stoploss of 10% on top of that - we'd end up with a value of ~14\$ (`12.6 / (1 - 0.1)`).
 
 To limit this calculation in case of large stoploss values, the calculated minimum stake-limit will never be more than 50% above the real limit.
 
