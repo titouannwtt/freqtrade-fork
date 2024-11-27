@@ -110,13 +110,11 @@ class Binance(Exchange):
         candle_type: CandleType,
         is_new_pair: bool = False,
         until_ms: int | None = None,
-        only_from_ccxt: bool = False,
     ) -> DataFrame:
         """
         Overwrite to introduce "fast new pair" functionality by detecting the pair's listing date
         Does not work for other exchanges, which don't return the earliest data when called with "0"
         :param candle_type: Any of the enum CandleType (must match trading mode!)
-        :param only_from_ccxt: Only download data using the API provided by CCXT
         """
         if is_new_pair:
             x = self.loop.run_until_complete(
@@ -136,7 +134,7 @@ class Binance(Exchange):
                     )
                     return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
 
-        if only_from_ccxt:
+        if self._config["exchange"].get("only_from_ccxt", False):
             return super().get_historic_ohlcv(
                 pair=pair,
                 timeframe=timeframe,
@@ -146,6 +144,7 @@ class Binance(Exchange):
                 until_ms=until_ms,
             )
         else:
+            # Download from data.binance.vision
             return self.get_historic_ohlcv_fast(
                 pair=pair,
                 timeframe=timeframe,

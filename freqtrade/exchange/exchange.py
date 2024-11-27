@@ -2230,7 +2230,6 @@ class Exchange:
         candle_type: CandleType,
         is_new_pair: bool = False,
         until_ms: int | None = None,
-        only_from_ccxt: bool = False,
     ) -> DataFrame:
         """
         Get candle history using asyncio and returns the list of candles.
@@ -2242,7 +2241,6 @@ class Exchange:
         :param candle_type: '', mark, index, premiumIndex, or funding_rate
         :param is_new_pair: used by binance subclass to allow "fast" new pair downloading
         :param until_ms: Timestamp in milliseconds to get history up to
-        :param only_from_ccxt: Only download data using the API provided by CCXT
         :return: Dataframe with candle (OHLCV) data
         """
         pair, _, _, data, _ = self.loop.run_until_complete(
