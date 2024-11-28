@@ -3,10 +3,10 @@ Fetch daily-archived OHLCV data from https://data.binance.vision/
 """
 
 import asyncio
-import datetime
-import io
 import logging
 import zipfile
+from datetime import date, timedelta
+from io import BytesIO
 from typing import Any
 
 import aiohttp
@@ -82,7 +82,7 @@ async def download_archive_ohlcv(
 
         # We use two days ago as the last available day because the daily archives are daily
         # uploaded and have several hours delay
-        last_available_date = dt_now() - datetime.timedelta(days=2)
+        last_available_date = dt_now() - timedelta(days=2)
         end = min(end, last_available_date)
         if start >= end:
             return DataFrame()
@@ -119,8 +119,8 @@ async def _download_archive_ohlcv(
     symbol: str,
     pair: str,
     timeframe: str,
-    start: datetime.date,
-    end: datetime.date,
+    start: date,
+    end: date,
     stop_on_404: bool,
 ) -> DataFrame:
     # daily dataframes, `None` indicates missing data in that day (when `stop_on_404` is False)
@@ -190,19 +190,19 @@ async def cancel_and_await_tasks(unawaited_tasks):
     logger.debug("All download tasks were awaited.")
 
 
-def date_range(start: datetime.date, end: datetime.date):
+def date_range(start: date, end: date):
     date = start
     while date <= end:
         yield date
-        date += datetime.timedelta(days=1)
+        date += timedelta(days=1)
 
 
-def binance_vision_zip_name(symbol: str, timeframe: str, date: datetime.date) -> str:
+def binance_vision_zip_name(symbol: str, timeframe: str, date: date) -> str:
     return f"{symbol}-{timeframe}-{date.strftime('%Y-%m-%d')}.zip"
 
 
 def binance_vision_zip_url(
-    asset_type_url_segment: str, symbol: str, timeframe: str, date: datetime.date
+    asset_type_url_segment: str, symbol: str, timeframe: str, date: date
 ) -> str:
     """
     example urls:
@@ -220,7 +220,7 @@ async def get_daily_ohlcv(
     asset_type_url_segment: str,
     symbol: str,
     timeframe: str,
-    date: datetime.date,
+    date: date,
     session: aiohttp.ClientSession,
     retry_count: int = 3,
     retry_delay: float = 0.0,
@@ -256,7 +256,7 @@ async def get_daily_ohlcv(
                 if resp.status == 200:
                     content = await resp.read()
                     logger.debug(f"Successfully downloaded {url}")
-                    with zipfile.ZipFile(io.BytesIO(content)) as zipf:
+                    with zipfile.ZipFile(BytesIO(content)) as zipf:
                         with zipf.open(zipf.namelist()[0]) as csvf:
                             # https://github.com/binance/binance-public-data/issues/283
                             first_byte = csvf.read(1)[0]
