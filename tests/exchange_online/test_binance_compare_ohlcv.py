@@ -26,7 +26,7 @@ import os
 import aiohttp
 import pytest
 
-from freqtrade.exchange.binance_public_data import zip_url
+from freqtrade.exchange.binance_public_data import binance_vision_zip_url
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -52,7 +52,7 @@ class Check:
             first_kline_ts = first_kline[0]
             date = dt_from_ts(first_kline_ts).date()
 
-        archive_url = zip_url(
+        archive_url = binance_vision_zip_url(
             self.asset_type_url_segment, symbol=symbol, timeframe=self.timeframe, date=date
         )
         async with self.session.get(

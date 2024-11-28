@@ -197,15 +197,13 @@ def date_range(start: datetime.date, end: datetime.date):
         date += datetime.timedelta(days=1)
 
 
-def format_date(date: datetime.date) -> str:
-    return date.strftime("%Y-%m-%d")
+def binance_vision_zip_name(symbol: str, timeframe: str, date: datetime.date) -> str:
+    return f"{symbol}-{timeframe}-{date.strftime('%Y-%m-%d')}.zip"
 
 
-def zip_name(symbol: str, timeframe: str, date: datetime.date) -> str:
-    return f"{symbol}-{timeframe}-{format_date(date)}.zip"
-
-
-def zip_url(asset_type_url_segment: str, symbol: str, timeframe: str, date: datetime.date) -> str:
+def binance_vision_zip_url(
+    asset_type_url_segment: str, symbol: str, timeframe: str, date: datetime.date
+) -> str:
     """
     example urls:
     https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2023-10-27.zip
@@ -213,7 +211,7 @@ def zip_url(asset_type_url_segment: str, symbol: str, timeframe: str, date: date
     """
     url = (
         f"https://data.binance.vision/data/{asset_type_url_segment}/daily/klines/{symbol}"
-        f"/{timeframe}/{zip_name(symbol, timeframe, date)}"
+        f"/{timeframe}/{binance_vision_zip_name(symbol, timeframe, date)}"
     )
     return url
 
@@ -241,7 +239,7 @@ async def get_daily_ohlcv(
     :return: A dataframe containing columns date,open,high,low,close,volume
     """
 
-    url = zip_url(asset_type_url_segment, symbol, timeframe, date)
+    url = binance_vision_zip_url(asset_type_url_segment, symbol, timeframe, date)
 
     logger.debug(f"download data from binance: {url}")
 

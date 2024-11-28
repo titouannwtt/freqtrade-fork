@@ -14,9 +14,9 @@ from freqtrade.enums import CandleType
 from freqtrade.exchange.binance_public_data import (
     BadHttpStatus,
     Http404,
+    binance_vision_zip_name,
     download_archive_ohlcv,
     get_daily_ohlcv,
-    zip_name,
 )
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
 
@@ -62,7 +62,7 @@ def make_daily_zip(asset_type_url_segment, symbol, timeframe, date) -> bytes:
     csv = df.to_csv(index=False, header=header)
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zipf:
-        zipf.writestr(zip_name(symbol, timeframe, date), csv)
+        zipf.writestr(binance_vision_zip_name(symbol, timeframe, date), csv)
     return zip_buffer.getvalue()
 
 
