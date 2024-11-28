@@ -134,7 +134,19 @@ class Binance(Exchange):
                     )
                     return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
 
-        if self._config["exchange"].get("only_from_ccxt", False):
+        if (
+            self._config["exchange"].get("only_from_ccxt", False)
+            and
+            # only download timeframes with significant improvements,
+            # otherwise fall back to rest API
+            not (
+                (candle_type == CandleType.SPOT and timeframe in ["1s", "1m", "3m", "5m"])
+                or (
+                    candle_type == CandleType.FUTURES
+                    and timeframe in ["1m", "3m", "5m", "15m", "30m"]
+                )
+            )
+        ):
             return super().get_historic_ohlcv(
                 pair=pair,
                 timeframe=timeframe,
@@ -166,50 +178,37 @@ class Binance(Exchange):
         """
         Fastly fetch OHLCV data by leveraging https://data.binance.vision.
         """
-        # only download timeframes with significant improvements, otherwise fall back to rest API
-        if (candle_type == CandleType.SPOT and timeframe in ["1s", "1m", "3m", "5m"]) or (
-            candle_type == CandleType.FUTURES and timeframe in ["1m", "3m", "5m", "15m", "30m"]
-        ):
-            df = self.loop.run_until_complete(
-                download_archive_ohlcv(
-                    candle_type=candle_type,
-                    pair=pair,
-                    timeframe=timeframe,
-                    since_ms=since_ms,
-                    until_ms=until_ms,
-                    markets=self.markets,
-                )
-            )
-
-            # download the remaining data from rest API
-            if df.empty:
-                rest_since_ms = since_ms
-            else:
-                rest_since_ms = dt_ts(df.iloc[-1].date) + timeframe_to_msecs(timeframe)
-
-            # make sure since <= until
-            if until_ms and rest_since_ms > until_ms:
-                rest_df = DataFrame()
-            else:
-                rest_df = super().get_historic_ohlcv(
-                    pair=pair,
-                    timeframe=timeframe,
-                    since_ms=rest_since_ms,
-                    candle_type=candle_type,
-                    is_new_pair=is_new_pair,
-                    until_ms=until_ms,
-                )
-            all_df = concat([df, rest_df])
-            return all_df
-        else:
-            return super().get_historic_ohlcv(
+        df = self.loop.run_until_complete(
+            download_archive_ohlcv(
+                candle_type=candle_type,
                 pair=pair,
                 timeframe=timeframe,
                 since_ms=since_ms,
+                until_ms=until_ms,
+                markets=self.markets,
+            )
+        )
+
+        # download the remaining data from rest API
+        if df.empty:
+            rest_since_ms = since_ms
+        else:
+            rest_since_ms = dt_ts(df.iloc[-1].date) + timeframe_to_msecs(timeframe)
+
+        # make sure since <= until
+        if until_ms and rest_since_ms > until_ms:
+            rest_df = DataFrame()
+        else:
+            rest_df = super().get_historic_ohlcv(
+                pair=pair,
+                timeframe=timeframe,
+                since_ms=rest_since_ms,
                 candle_type=candle_type,
                 is_new_pair=is_new_pair,
                 until_ms=until_ms,
             )
+        all_df = concat([df, rest_df])
+        return all_df
 
     def funding_fee_cutoff(self, open_date: datetime):
         """
