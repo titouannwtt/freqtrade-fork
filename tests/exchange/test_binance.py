@@ -734,15 +734,14 @@ def test__set_leverage_binance(mocker, default_conf):
     )
 
 
-def make_storage(start: datetime, end: datetime, timeframe: str):
-    date = pd.date_range(start, end, freq=timeframe.replace("m", "min"))
-    df = pd.DataFrame(
-        data=dict(date=date, open=1.0, high=1.0, low=1.0, close=1.0),
-    )
-    return df
+def patch_binance_vision_ohlcv(mocker, start, archive_end, api_end, timeframe):
+    def make_storage(start: datetime, end: datetime, timeframe: str):
+        date = pd.date_range(start, end, freq=timeframe.replace("m", "min"))
+        df = pd.DataFrame(
+            data=dict(date=date, open=1.0, high=1.0, low=1.0, close=1.0),
+        )
+        return df
 
-
-def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
     archive_storage = make_storage(start, archive_end, timeframe)
     api_storage = make_storage(start, api_end, timeframe)
 
@@ -780,12 +779,8 @@ def patch_ohlcv(mocker, start, archive_end, api_end, timeframe):
             (archive_storage["date"] >= since) & (archive_storage["date"] < until)
         ]
 
-    candle_mock = mocker.patch(
-        "freqtrade.exchange.Exchange._async_get_candle_history", return_value=candle_history
-    )
-    api_mock = mocker.patch(
-        "freqtrade.exchange.Exchange.get_historic_ohlcv", side_effect=get_historic_ohlcv
-    )
+    candle_mock = mocker.patch(f"{EXMS}._async_get_candle_history", return_value=candle_history)
+    api_mock = mocker.patch(f"{EXMS}.get_historic_ohlcv", side_effect=get_historic_ohlcv)
     archive_mock = mocker.patch(
         "freqtrade.exchange.binance.download_archive_ohlcv", side_effect=download_archive_ohlcv
     )
@@ -948,7 +943,7 @@ def test_get_historic_ohlcv_binance(
     start = dt_utc(2020, 1, 1)
     archive_end = dt_utc(2020, 1, 2)
     api_end = dt_utc(2020, 1, 3)
-    candle_mock, api_mock, archive_mock = patch_ohlcv(
+    candle_mock, api_mock, archive_mock = patch_binance_vision_ohlcv(
         mocker, start=start, archive_end=archive_end, api_end=api_end, timeframe=timeframe
     )
 
