@@ -283,22 +283,24 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
     last_date = dt_utc(2024, 10, 28, 23)
 
     async with aiohttp.ClientSession() as session:
-        path = testdatadir / "binance/binance_public_data/spot-klines-BTCUSDT-1h-2024-10-28.zip"
+        spot_path = (
+            testdatadir / "binance/binance_public_data/spot-klines-BTCUSDT-1h-2024-10-28.zip"
+        )
         get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
-            return_value=MockResponse(path.read_bytes(), 200),
+            return_value=MockResponse(spot_path.read_bytes(), 200),
         )
         df = await get_daily_ohlcv("spot", symbol, timeframe, date, session)
         assert get.call_count == 1
         assert df["date"].iloc[0] == first_date
         assert df["date"].iloc[-1] == last_date
 
-        path = (
+        futures_path = (
             testdatadir / "binance/binance_public_data/futures-um-klines-BTCUSDT-1h-2024-10-28.zip"
         )
         get = mocker.patch(
             "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get",
-            return_value=MockResponse(path.read_bytes(), 200),
+            return_value=MockResponse(futures_path.read_bytes(), 200),
         )
         df = await get_daily_ohlcv("futures/um", symbol, timeframe, date, session)
         assert get.call_count == 1
