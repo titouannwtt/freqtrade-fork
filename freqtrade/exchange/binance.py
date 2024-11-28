@@ -11,7 +11,7 @@ from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.binance_public_data import concat, download_archive_ohlcv
+from freqtrade.exchange.binance_public_data import concat_safe, download_archive_ohlcv
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
@@ -207,7 +207,7 @@ class Binance(Exchange):
                 is_new_pair=is_new_pair,
                 until_ms=until_ms,
             )
-        all_df = concat([df, rest_df])
+        all_df = concat_safe([df, rest_df])
         return all_df
 
     def funding_fee_cutoff(self, open_date: datetime):

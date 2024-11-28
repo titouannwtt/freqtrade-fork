@@ -47,7 +47,7 @@ async def download_archive_ohlcv(
     """
     Fetch OHLCV data from https://data.binance.vision
     The function makes its best effort to download data within the time range
-    [`since_ms`, `until_ms`) -- including `since_ms`, but excluding `until_ms`.
+    [`since_ms`, `until_ms`] -- including `since_ms`, but excluding `until_ms`.
     If `stop_one_404` is True, this returned DataFrame is guaranteed to start from `since_ms`
     with no gaps in the data.
 
@@ -107,7 +107,7 @@ async def download_archive_ohlcv(
         return df
 
 
-def concat(dfs) -> DataFrame:
+def concat_safe(dfs) -> DataFrame:
     if all(df is None for df in dfs):
         return DataFrame()
     else:
@@ -168,17 +168,17 @@ async def _download_archive_ohlcv(
                                 "remaining data, this can take more time."
                             )
                         await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
-                        return concat(dfs)
+                        return concat_safe(dfs)
                     else:
                         dfs.append(None)
                 except BaseException as e:
                     logger.warning(f"An exception raised: : {e}")
                     # Directly return the existing data, do not allow the gap within the data
                     await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
-                    return concat(dfs)
+                    return concat_safe(dfs)
                 else:
                     dfs.append(df)
-    return concat(dfs)
+    return concat_safe(dfs)
 
 
 async def cancel_and_await_tasks(unawaited_tasks):
