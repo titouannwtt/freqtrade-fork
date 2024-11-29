@@ -691,8 +691,11 @@ def test_dca_exiting(default_conf_usdt, ticker_usdt, fee, mocker, caplog, levera
         assert freqtrade.wallets.get_total("USDT") == starting_amount + trade.realized_profit
 
 
-@pytest.mark.parametrize("leverage", [2])
-def test_dca_handle_similar_open_order(default_conf_usdt, ticker_usdt, leverage, fee, mocker) -> None:
+@pytest.mark.parametrize("leverage", [1, 2])
+@pytest.mark.parametrize("is_short", [False, True])
+def test_dca_handle_similar_open_order(
+    default_conf_usdt, ticker_usdt, is_short, leverage, fee, mocker
+) -> None:
     default_conf_usdt["position_adjustment_enable"] = True
     default_conf_usdt["trading_mode"] = "futures"
     default_conf_usdt["margin_mode"] = "isolated"
@@ -710,26 +713,21 @@ def test_dca_handle_similar_open_order(default_conf_usdt, ticker_usdt, leverage,
     mocker.patch(f"{EXMS}.get_funding_fees", return_value=0)
     mocker.patch(f"{EXMS}.get_maintenance_ratio_and_amt", return_value=(0, 0))
 
-    patch_get_signal(freqtrade)
+    patch_get_signal(freqtrade, enter_short=is_short, enter_long=not is_short)
     freqtrade.strategy.custom_entry_price = lambda **kwargs: ticker_usdt["ask"] * 0.96
     freqtrade.strategy.leverage = MagicMock(return_value=leverage)
     freqtrade.strategy.minimal_roi = {0: 0.2}
 
-    
-    # Create trade
-    # entry
+    # Create trade and initial entry order
     freqtrade.enter_positions()
 
     assert len(Trade.get_trades().all()) == 1
     trade: Trade = Trade.get_trades().first()
     assert len(trade.orders) == 1
+    assert trade.orders[-1].side == trade.entry_side
     assert trade.has_open_orders
 
-    print("Debug test_dca_handle_similar_open_order")
-    print("P0: Original entry order created")
-    print(trade.orders)
-    # Adjust with new price
-    # Cancel order and place new one
+    # Adjust with new price, cancel initial entry order and place new one
     freqtrade.strategy.adjust_entry_price = MagicMock(return_value=1.99)
     freqtrade.strategy.ft_check_timed_out = MagicMock(return_value=False)
     freqtrade.process()
@@ -738,28 +736,52 @@ def test_dca_handle_similar_open_order(default_conf_usdt, ticker_usdt, leverage,
 
     assert len(trade.orders) == 2
 
-    print("P1: Cancel order and place new one")
-    print(trade.orders)
-
     # Adjust with new amount, should cancel and replace existing order
-    #freqtrade.strategy.adjust_entry_price = MagicMock(return_value=1.90)
-    freqtrade.strategy.adjust_trade_position = MagicMock(return_value=0.1) # -(trade.stake_amount * 0.5)
+    freqtrade.strategy.adjust_trade_position = MagicMock(
+        return_value=21
+    )  # -(trade.stake_amount * 0.5)
     freqtrade.process()
     trade = Trade.get_trades().first()
-
-
-    print("P2: Cancel order and place new one")
-    print(trade.orders)
 
     assert len(trade.orders) == 3
 
-    # Adjust with new side, should cancel and replace existing order
-    freqtrade.strategy.adjust_trade_position = MagicMock(return_value=-120)
+    # Fill entry order
+    mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=True)
+    freqtrade.process()
+
+    # Should Create a new exit order
+    freqtrade.exchange.amount_to_contract_precision = MagicMock(return_value=2)
+    freqtrade.strategy.adjust_trade_position = MagicMock(return_value=-2)
+
+    mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=False)
     freqtrade.process()
     trade = Trade.get_trades().first()
 
+    assert trade.orders[-2].status == "closed"
+    assert trade.orders[-1].status == "open"
+    assert trade.orders[-1].side == trade.exit_side
+    assert len(trade.orders) == 5
 
-    # Adjust with same params, should kepp existing order as price and amount are similar
-    freqtrade.strategy.adjust_entry_price = MagicMock(return_value=1.99)
+    # Adjust with new exit amount, should cancel and replace existing exit order
+    freqtrade.exchange.amount_to_contract_precision = MagicMock(return_value=3)
+    freqtrade.strategy.adjust_trade_position = MagicMock(return_value=-3)
     freqtrade.process()
     trade = Trade.get_trades().first()
+
+    assert trade.orders[-2].status == "canceled"
+    assert len(trade.orders) == 6
+
+    # Adjust with new exit price, should cancel and replace existing exit order
+    freqtrade.strategy.custom_exit_price = MagicMock(return_value=1.95)
+    freqtrade.process()
+    trade = Trade.get_trades().first()
+
+    assert trade.orders[-2].status == "canceled"
+    assert len(trade.orders) == 7
+
+    # Adjust with same params, should keep existing order as price and amount are similar
+    freqtrade.strategy.custom_exit_price = MagicMock(return_value=1.95)
+    freqtrade.process()
+    trade = Trade.get_trades().first()
+
+    assert len(trade.orders) == 7
