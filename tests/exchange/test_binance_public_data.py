@@ -29,44 +29,9 @@ def event_loop_policy(request):
         return asyncio.DefaultEventLoopPolicy()
 
 
-# spot klines archive csv file format, the futures/um klines don't have the header line
-#
-# open_time,open,high,low,close,volume,close_time,quote_volume,count,taker_buy_volume,taker_buy_quote_volume,ignore  # noqa: E501
-# 1698364800000,34161.6,34182.5,33977.4,34024.2,409953,1698368399999,1202.97118037,15095,192220,564.12041453,0  # noqa: E501
-# 1698368400000,34024.2,34060.1,33776.4,33848.4,740960,1698371999999,2183.75671155,23938,368266,1085.17080793,0  # noqa: E501
-# 1698372000000,33848.5,34150.0,33815.1,34094.2,390376,1698375599999,1147.73267094,13854,231446,680.60405822,0  # noqa: E501
-
-
-def make_daily_df(date, timeframe):
-    start = dt_utc(date.year, date.month, date.day)
-    end = start + timedelta(days=1)
-    date_col = pd.date_range(start, end, freq=timeframe.replace("m", "min"), inclusive="left")
-    cols = (
-        "open_time,open,high,low,close,volume,close_time,quote_volume,count,taker_buy_volume,"
-        "taker_buy_quote_volume,ignore"
-    )
-    df = pd.DataFrame(columns=cols.split(","), dtype=float)
-    df["open_time"] = date_col.astype("int64") // 10**6
-    df["open"] = df["high"] = df["low"] = df["close"] = df["volume"] = 1.0
-    return df
-
-
-def make_daily_zip(asset_type_url_segment, symbol, timeframe, date) -> bytes:
-    df = make_daily_df(date, timeframe)
-    if asset_type_url_segment == "spot":
-        header = True
-    elif asset_type_url_segment == "futures/um":
-        header = None
-    else:
-        raise ValueError
-    csv = df.to_csv(index=False, header=header)
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zipf:
-        zipf.writestr(binance_vision_zip_name(symbol, timeframe, date), csv)
-    return zip_buffer.getvalue()
-
-
 class MockResponse:
+    """AioHTTP response mock"""
+
     def __init__(self, content, status, reason=""):
         self._content = content
         self.status = status
@@ -82,7 +47,42 @@ class MockResponse:
         return self
 
 
+# spot klines archive csv file format, the futures/um klines don't have the header line
+#
+# open_time,open,high,low,close,volume,close_time,quote_volume,count,taker_buy_volume,taker_buy_quote_volume,ignore  # noqa: E501
+# 1698364800000,34161.6,34182.5,33977.4,34024.2,409953,1698368399999,1202.97118037,15095,192220,564.12041453,0  # noqa: E501
+# 1698368400000,34024.2,34060.1,33776.4,33848.4,740960,1698371999999,2183.75671155,23938,368266,1085.17080793,0  # noqa: E501
+# 1698372000000,33848.5,34150.0,33815.1,34094.2,390376,1698375599999,1147.73267094,13854,231446,680.60405822,0  # noqa: E501
+
+
 def make_response_from_url(start_date, end_date):
+    def make_daily_df(date, timeframe):
+        start = dt_utc(date.year, date.month, date.day)
+        end = start + timedelta(days=1)
+        date_col = pd.date_range(start, end, freq=timeframe.replace("m", "min"), inclusive="left")
+        cols = (
+            "open_time,open,high,low,close,volume,close_time,quote_volume,count,taker_buy_volume,"
+            "taker_buy_quote_volume,ignore"
+        )
+        df = pd.DataFrame(columns=cols.split(","), dtype=float)
+        df["open_time"] = date_col.astype("int64") // 10**6
+        df["open"] = df["high"] = df["low"] = df["close"] = df["volume"] = 1.0
+        return df
+
+    def make_daily_zip(asset_type_url_segment, symbol, timeframe, date) -> bytes:
+        df = make_daily_df(date, timeframe)
+        if asset_type_url_segment == "spot":
+            header = True
+        elif asset_type_url_segment == "futures/um":
+            header = None
+        else:
+            raise ValueError
+        csv = df.to_csv(index=False, header=header)
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+            zipf.writestr(binance_vision_zip_name(symbol, timeframe, date), csv)
+        return zip_buffer.getvalue()
+
     def make_response(url):
         pattern = (
             r"https://data.binance.vision/data/(?P<asset_type_url_segment>spot|futures/um)"
