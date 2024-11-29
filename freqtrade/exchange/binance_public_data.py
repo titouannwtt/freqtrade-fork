@@ -10,7 +10,6 @@ from io import BytesIO
 from typing import Any
 
 import aiohttp
-import ccxt
 import pandas as pd
 from pandas import DataFrame
 
