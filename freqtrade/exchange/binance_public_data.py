@@ -39,9 +39,10 @@ async def download_archive_ohlcv(
     candle_type: CandleType,
     pair: str,
     timeframe: str,
+    *,
     since_ms: int,
     until_ms: int | None,
-    markets: dict[str, Any] | None = None,
+    markets: dict[str, Any],
     stop_on_404: bool = True,
 ) -> DataFrame:
     """
@@ -70,12 +71,7 @@ async def download_archive_ohlcv(
         else:
             raise ValueError(f"Unsupported CandleType: {candle_type}")
 
-        if markets:
-            symbol = markets[pair]["id"]
-        else:
-            binance = ccxt.binance()
-            binance.load_markets()
-            symbol = binance.markets[pair]["id"]
+        symbol = markets[pair]["id"]
 
         start = dt_from_ts(since_ms)
         end = dt_from_ts(until_ms) if until_ms else dt_now()

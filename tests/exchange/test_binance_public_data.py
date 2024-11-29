@@ -243,7 +243,13 @@ async def test_download_archive_ohlcv(
     markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
 
     df = await download_archive_ohlcv(
-        candle_type, pair, timeframe, since_ms, until_ms, markets, stop_on_404
+        candle_type,
+        pair,
+        timeframe,
+        since_ms=since_ms,
+        until_ms=until_ms,
+        markets=markets,
+        stop_on_404=stop_on_404,
     )
 
     if df.empty:
@@ -254,23 +260,21 @@ async def test_download_archive_ohlcv(
         assert df["date"].iloc[-1] == last_date
 
 
-async def test_download_archive_ohlcv_exc(mocker):
+async def test_download_archive_ohlcv_exception(mocker):
     timeframe = "1h"
     pair = "BTC/USDT"
 
     since_ms = dt_ts(dt_utc(2020, 1, 1))
     until_ms = dt_ts(dt_utc(2020, 1, 2))
 
+    markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
     mocker.patch(
         "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get", side_effect=RuntimeError
     )
-    mocker.patch("freqtrade.exchange.binance_public_data.ccxt.binance")
-    mocker.patch(
-        "freqtrade.exchange.binance_public_data.ccxt.binance.markets",
-        {"BTC/USDT": {"id": "BTCUSDT"}},
-    )
 
-    df = await download_archive_ohlcv(CandleType.SPOT, pair, timeframe, since_ms, until_ms)
+    df = await download_archive_ohlcv(
+        CandleType.SPOT, pair, timeframe, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
 
     assert df.empty
 
