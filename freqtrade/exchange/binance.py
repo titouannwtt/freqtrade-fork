@@ -129,7 +129,7 @@ class Binance(Exchange):
                 )
                 if until_ms and since_ms >= until_ms:
                     logger.warning(
-                        f"No available candle-data for {pair} before"
+                        f"No available candle-data for {pair} before "
                         f"{dt_from_ts(until_ms).isoformat()}"
                     )
                     return DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
