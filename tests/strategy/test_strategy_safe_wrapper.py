@@ -49,20 +49,21 @@ def test_strategy_safe_wrapper(value):
 @pytest.mark.usefixtures("init_persistence")
 def test_strategy_safe_wrapper_trade_copy(fee):
     create_mock_trades(fee)
+    trade_ = Trade.get_open_trades()[0]
 
     def working_method(trade):
         assert len(trade.orders) > 0
         assert trade.orders
         trade.orders = []
         assert len(trade.orders) == 0
+        assert id(trade_) != id(trade)
         return trade
 
-    trade = Trade.get_open_trades()[0]
     # Don't assert anything before strategy_wrapper.
     # This ensures that relationship loading works correctly.
-    ret = strategy_safe_wrapper(working_method, message="DeadBeef")(trade=trade)
+    ret = strategy_safe_wrapper(working_method, message="DeadBeef")(trade=trade_)
     assert isinstance(ret, Trade)
-    assert id(trade) != id(ret)
+    assert id(trade_) != id(ret)
     # Did not modify the original order
-    assert len(trade.orders) > 0
+    assert len(trade_.orders) > 0
     assert len(ret.orders) == 0
