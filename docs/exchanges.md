@@ -309,20 +309,20 @@ It's therefore required to pass the UID as well.
 !!! Tip "Stoploss on Exchange"
     Hyperliquid supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it.
 
-Hyperliquid is a Decentralized Exchange (DEX). Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet.
+Hyperliquid is a Decentralized Exchange (DEX). Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet (We recommend using an api Wallet for this, generated either on Hyperliquid or in your wallet of choice).
 This needs to be configured like this:
 
 ```json
 "exchange": {
     "name": "hyperliquid",
     "walletAddress": "your_eth_wallet_address",
-    "privateKey": "your_private_key",
+    "privateKey": "your_api_private_key",
     // ...
 }
 ```
 
-* walletAddress must be in hex format: `0x<40 hex characters>`, and can be easily copied from your wallet.
-* privateKey also must be in hex format: `0x<64 hex characters>`, and can either be exported from your wallet or regenerated using your mnemonic phrase.
+* walletAddress in hex format: `0x<40 hex characters>` - Can be easily copied from your wallet - and should be your wallet address, not your API Wallet Address.
+* privateKey in hex format: `0x<64 hex characters>` - Use the key the API Wallet shows on creation.
 
 Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 2 scaling solution built on top of Ethereum. Hyperliquid uses USDC as quote / collateral. The process of depositing USDC on Hyperliquid requires a couple of steps, see [how to start trading](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) for details on what steps are needed.
 
@@ -331,12 +331,12 @@ Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 
     Unfortunately, hyperliquid only offers 5000 historic candles, so backtesting will either need to build candles historically (by waiting and downloading the data incrementally over time) - or will be limited to the last 5000 candles.
 
 !!! Info "Some general best practices (non exhaustive)"
-    * Beware of supply chain attacks, like pip package poisoning etcetera. However you export or (re-)generate your private key, make sure your environment is safe.
-    * Interact as little with the private key as possible. Store it in a separate file from the config.json (secrets.json for example) that you never have to touch, and secure it.
+    * Beware of supply chain attacks, like pip package poisoning etcetera. Whenever you use your private key, make sure your environment is safe.
+    * Don't use your actual wallet private key for trading. Use the Hyperliquid [API generator](https://app.hyperliquid.xyz/API) to create a separate API wallet.
+    * Don't store your actual wallet private key on the server you use for freqtrade. Use the API wallet private key instead. This key won't allow withdrawals, only trading.
     * Always keep your mnemonic phrase and private key private.
     * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
-    * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet / private key to trade on Hyperliquid.
-    * Remember that if someone hacks the host you use for trading, or any other host you stored your private key / mnemonic on, you will lose the funds protected by that private key. That means the funds on that wallet and the funds deposited on Hyperliquid.
+    * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet to trade on Hyperliquid.
     * If you have funds you don't want to use for trading (after making a profit for example), transfer them back to your hardware wallet.
 
 ## All exchanges
