@@ -61,7 +61,7 @@ class Kraken(Exchange):
         Consolidate balances for the same currency.
         Kraken returns ".F" balances if rewards is enabled.
         """
-        consolidated = {}
+        consolidated: CcxtBalances = {}
         for currency, balance in balances.items():
             base_currency = currency[:-2] if currency.endswith(".F") else currency
             if base_currency in consolidated:
