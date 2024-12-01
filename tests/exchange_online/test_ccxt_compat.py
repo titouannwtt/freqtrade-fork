@@ -61,28 +61,31 @@ class TestCCXTExchange:
     def test_ccxt_order_parse(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchange_name = exchange
         if orders := EXCHANGES[exchange_name].get("sample_order"):
-            pair = "SOL/USDT"
             for order in orders:
+                pair = order["pair"]
+                exchange_response: dict = order["exchange_response"]
+
                 market = exch._api.markets[pair]
-                po = exch._api.parse_order(order, market)
+                po = exch._api.parse_order(exchange_response, market)
+                expected = order["expected"]
                 assert isinstance(po["id"], str)
                 assert po["id"] is not None
-                if len(order.keys()) < 5:
+                if len(exchange_response.keys()) < 5:
                     # Kucoin case
                     assert po["status"] is None
                     continue
-                assert po["timestamp"] == 1674493798550
+                assert po["timestamp"] == expected["timestamp"]
                 assert isinstance(po["datetime"], str)
                 assert isinstance(po["timestamp"], int)
                 assert isinstance(po["price"], float)
-                assert po["price"] == 15.5
+                assert po["price"] == expected["price"]
                 if po["status"] == "closed":
                     # Filled orders should have average assigned.
                     assert isinstance(po["average"], float)
                     assert po["average"] == 15.5
                 assert po["symbol"] == pair
                 assert isinstance(po["amount"], float)
-                assert po["amount"] == 1.1
+                assert po["amount"] == expected["amount"]
                 assert isinstance(po["status"], str)
         else:
             pytest.skip(f"No sample order available for exchange {exchange_name}")
@@ -118,9 +121,10 @@ class TestCCXTExchange:
         tickers = exch.get_tickers()
         assert pair in tickers
         assert "ask" in tickers[pair]
-        assert tickers[pair]["ask"] is not None
         assert "bid" in tickers[pair]
-        assert tickers[pair]["bid"] is not None
+        if EXCHANGES[exchangename].get("tickers_have_bid_ask"):
+            assert tickers[pair]["bid"] is not None
+            assert tickers[pair]["ask"] is not None
         assert "quoteVolume" in tickers[pair]
         if EXCHANGES[exchangename].get("hasQuoteVolume"):
             assert tickers[pair]["quoteVolume"] is not None
@@ -150,9 +154,10 @@ class TestCCXTExchange:
 
         ticker = exch.fetch_ticker(pair)
         assert "ask" in ticker
-        assert ticker["ask"] is not None
         assert "bid" in ticker
-        assert ticker["bid"] is not None
+        if EXCHANGES[exchangename].get("tickers_have_bid_ask"):
+            assert ticker["ask"] is not None
+            assert ticker["bid"] is not None
         assert "quoteVolume" in ticker
         if EXCHANGES[exchangename].get("hasQuoteVolume"):
             assert ticker["quoteVolume"] is not None

@@ -5,7 +5,7 @@ This module contains the argument manager class
 from argparse import ArgumentParser, Namespace, _ArgumentGroup
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from freqtrade.commands.cli_options import AVAILABLE_CLI_OPTIONS
 from freqtrade.constants import DEFAULT_CONFIG
@@ -37,7 +37,6 @@ ARGS_COMMON_OPTIMIZE = [
 
 ARGS_BACKTEST = ARGS_COMMON_OPTIMIZE + [
     "position_stacking",
-    "use_max_market_positions",
     "enable_protections",
     "dry_run_wallet",
     "timeframe_detail",
@@ -53,7 +52,6 @@ ARGS_HYPEROPT = ARGS_COMMON_OPTIMIZE + [
     "hyperopt",
     "hyperopt_path",
     "position_stacking",
-    "use_max_market_positions",
     "enable_protections",
     "dry_run_wallet",
     "timeframe_detail",
@@ -117,7 +115,7 @@ ARGS_CREATE_USERDIR = ["user_data_dir", "reset"]
 ARGS_BUILD_CONFIG = ["config"]
 ARGS_SHOW_CONFIG = ["user_data_dir", "config", "show_sensitive"]
 
-ARGS_BUILD_STRATEGY = ["user_data_dir", "strategy", "template"]
+ARGS_BUILD_STRATEGY = ["user_data_dir", "strategy", "strategy_path", "template"]
 
 ARGS_CONVERT_DATA_TRADES = ["pairs", "format_from_trades", "format_to", "erase", "exchange"]
 ARGS_CONVERT_DATA = ["pairs", "format_from", "format_to", "erase", "exchange"]
@@ -242,8 +240,7 @@ ARGS_STRATEGY_UPDATER = ["strategy_list", "strategy_path", "recursive_strategy_s
 ARGS_LOOKAHEAD_ANALYSIS = [
     a
     for a in ARGS_BACKTEST
-    if a
-    not in ("position_stacking", "use_max_market_positions", "backtest_cache", "backtest_breakdown")
+    if a not in ("position_stacking", "backtest_cache", "backtest_breakdown")
 ] + ["minimum_trade_amount", "targeted_trade_amount", "lookahead_analysis_exportfilename"]
 
 ARGS_RECURSIVE_ANALYSIS = ["timeframe", "timerange", "dataformat_ohlcv", "pairs", "startup_candle"]
@@ -258,6 +255,7 @@ NO_CONF_REQURIED = [
     "list-pairs",
     "list-strategies",
     "list-freqaimodels",
+    "list-hyperoptloss",
     "list-data",
     "hyperopt-list",
     "hyperopt-show",
@@ -277,9 +275,9 @@ class Arguments:
     Arguments Class. Manage the arguments received by the cli
     """
 
-    def __init__(self, args: Optional[list[str]]) -> None:
+    def __init__(self, args: list[str] | None) -> None:
         self.args = args
-        self._parsed_arg: Optional[Namespace] = None
+        self._parsed_arg: Namespace | None = None
 
     def get_parsed_arg(self) -> dict[str, Any]:
         """
@@ -321,9 +319,7 @@ class Arguments:
 
         return parsed_arg
 
-    def _build_args(
-        self, optionlist: list[str], parser: Union[ArgumentParser, _ArgumentGroup]
-    ) -> None:
+    def _build_args(self, optionlist: list[str], parser: ArgumentParser | _ArgumentGroup) -> None:
         for val in optionlist:
             opt = AVAILABLE_CLI_OPTIONS[val]
             parser.add_argument(*opt.cli, dest=val, **opt.kwargs)
@@ -365,6 +361,7 @@ class Arguments:
             start_list_data,
             start_list_exchanges,
             start_list_freqAI_models,
+            start_list_hyperopt_loss_functions,
             start_list_markets,
             start_list_strategies,
             start_list_timeframes,
@@ -565,6 +562,15 @@ class Arguments:
         )
         list_strategies_cmd.set_defaults(func=start_list_strategies)
         self._build_args(optionlist=ARGS_LIST_STRATEGIES, parser=list_strategies_cmd)
+
+        # Add list-Hyperopt loss subcommand
+        list_hyperopt_loss_cmd = subparsers.add_parser(
+            "list-hyperoptloss",
+            help="Print available hyperopt loss functions.",
+            parents=[_common_parser],
+        )
+        list_hyperopt_loss_cmd.set_defaults(func=start_list_hyperopt_loss_functions)
+        self._build_args(optionlist=ARGS_LIST_HYPEROPTS, parser=list_hyperopt_loss_cmd)
 
         # Add list-freqAI Models subcommand
         list_freqaimodels_cmd = subparsers.add_parser(

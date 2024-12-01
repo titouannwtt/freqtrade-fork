@@ -4,7 +4,7 @@
 import logging
 from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from freqtrade.constants import UNLIMITED_STAKE_AMOUNT, Config, IntOrInf
 from freqtrade.enums import RunMode, TradingMode
@@ -29,7 +29,7 @@ class Wallet(NamedTuple):
 class PositionWallet(NamedTuple):
     symbol: str
     position: float = 0
-    leverage: Optional[float] = 0  # Don't use this - it's not guaranteed to be set
+    leverage: float | None = 0  # Don't use this - it's not guaranteed to be set
     collateral: float = 0
     side: str = "long"
 
@@ -41,8 +41,8 @@ class Wallets:
         self._exchange = exchange
         self._wallets: dict[str, Wallet] = {}
         self._positions: dict[str, PositionWallet] = {}
-        self.start_cap = config["dry_run_wallet"]
-        self._last_wallet_refresh: Optional[datetime] = None
+        self._start_cap = config["dry_run_wallet"]
+        self._last_wallet_refresh: datetime | None = None
         self.update()
 
     def get_free(self, currency: str) -> float:
@@ -112,7 +112,7 @@ class Wallets:
 
                 _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
 
-            current_stake = self.start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap + tot_profit - tot_in_trades
             total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
@@ -129,7 +129,7 @@ class Wallets:
                     collateral=collateral,
                     side=position.trade_direction,
                 )
-            current_stake = self.start_cap + tot_profit - tot_in_trades
+            current_stake = self._start_cap + tot_profit - tot_in_trades
             used_stake = tot_in_trades
             total_stake = current_stake + tot_in_trades
 
@@ -352,10 +352,10 @@ class Wallets:
     def validate_stake_amount(
         self,
         pair: str,
-        stake_amount: Optional[float],
-        min_stake_amount: Optional[float],
+        stake_amount: float | None,
+        min_stake_amount: float | None,
         max_stake_amount: float,
-        trade_amount: Optional[float],
+        trade_amount: float | None,
     ):
         if not stake_amount:
             logger.debug(f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.")

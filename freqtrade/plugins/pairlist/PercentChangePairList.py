@@ -8,7 +8,7 @@ defined period or as coming from ticker
 
 import logging
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
 from cachetools import TTLCache
 from pandas import DataFrame
@@ -46,7 +46,7 @@ class PercentChangePairList(IPairList):
         self._lookback_days = self._pairlistconfig.get("lookback_days", 0)
         self._lookback_timeframe = self._pairlistconfig.get("lookback_timeframe", "1d")
         self._lookback_period = self._pairlistconfig.get("lookback_period", 0)
-        self._sort_direction: Optional[str] = self._pairlistconfig.get("sort_direction", "desc")
+        self._sort_direction: str | None = self._pairlistconfig.get("sort_direction", "desc")
         self._def_candletype = self._config["candle_type_def"]
 
         if (self._lookback_days > 0) & (self._lookback_period > 0):
@@ -293,7 +293,9 @@ class PercentChangePairList(IPairList):
                 current_close = pair_candles["close"].iloc[-1]
                 previous_close = pair_candles["close"].shift(self._lookback_period).iloc[-1]
                 pct_change = (
-                    ((current_close - previous_close) / previous_close) if previous_close > 0 else 0
+                    ((current_close - previous_close) / previous_close) * 100
+                    if previous_close > 0
+                    else 0
                 )
 
                 # replace change with a range change sum calculated above
@@ -311,7 +313,7 @@ class PercentChangePairList(IPairList):
             else:
                 filtered_tickers[i]["percentage"] = tickers[p["symbol"]]["percentage"]
 
-    def _validate_pair(self, pair: str, ticker: Optional[Ticker]) -> bool:
+    def _validate_pair(self, pair: str, ticker: Ticker | None) -> bool:
         """
         Check if one price-step (pip) is > than a certain barrier.
         :param pair: Pair that's currently validated

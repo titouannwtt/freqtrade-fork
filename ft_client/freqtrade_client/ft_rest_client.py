@@ -7,17 +7,18 @@ so it can be used as a standalone script, and can be installed independently.
 
 import json
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import requests
-from requests.exceptions import ConnectionError
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError as RequestConnectionError
 
 
 logger = logging.getLogger("ft_rest_client")
 
-ParamsT = Optional[dict[str, Any]]
-PostDataT = Optional[Union[dict[str, Any], list[dict[str, Any]]]]
+ParamsT = dict[str, Any] | None
+PostDataT = dict[str, Any] | list[dict[str, Any]] | None
 
 
 class FtRestClient:
@@ -28,14 +29,13 @@ class FtRestClient:
         self._session = requests.Session()
 
         # allow configuration of pool
-        adapter = requests.adapters.HTTPAdapter(
-            pool_connections=pool_connections, pool_maxsize=pool_maxsize
-        )
+        adapter = HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize)
         self._session.mount("http://", adapter)
 
-        self._session.auth = (username, password)
+        if username and password:
+            self._session.auth = (username, password)
 
-    def _call(self, method, apipath, params: Optional[dict] = None, data=None, files=None):
+    def _call(self, method, apipath, params: dict | None = None, data=None, files=None):
         if str(method).upper() not in ("GET", "POST", "PUT", "DELETE"):
             raise ValueError(f"invalid method <{method}>")
         basepath = f"{self._serverurl}/api/v1/{apipath}"
@@ -53,7 +53,7 @@ class FtRestClient:
             resp = self._session.request(method, url, headers=hd, data=json.dumps(data))
             # return resp.text
             return resp.json()
-        except ConnectionError:
+        except RequestConnectionError:
             logger.warning(f"Connection error - could not connect to {netloc}.")
 
     def _get(self, apipath, params: ParamsT = None):
@@ -243,7 +243,7 @@ class FtRestClient:
         :param limit: Limits log messages to the last <limit> logs. No limit to get the entire log.
         :return: json object
         """
-        return self._get("logs", params={"limit": limit} if limit else 0)
+        return self._get("logs", params={"limit": limit} if limit else {})
 
     def trades(self, limit=None, offset=None):
         """Return trades history, sorted by id

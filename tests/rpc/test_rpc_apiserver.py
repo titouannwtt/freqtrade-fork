@@ -691,20 +691,22 @@ def test_api_show_config(botclient):
 
 def test_api_daily(botclient, mocker, ticker, fee, markets):
     ftbot, client = botclient
-    patch_get_signal(ftbot)
-    mocker.patch.multiple(
-        EXMS,
-        get_balances=MagicMock(return_value=ticker),
-        fetch_ticker=ticker,
-        get_fee=fee,
-        markets=PropertyMock(return_value=markets),
-    )
+
+    ftbot.config["dry_run"] = False
+    mocker.patch(f"{EXMS}.get_balances", return_value=ticker)
+    mocker.patch(f"{EXMS}.get_tickers", ticker)
+    mocker.patch(f"{EXMS}.get_fee", fee)
+    mocker.patch(f"{EXMS}.markets", PropertyMock(return_value=markets))
+    ftbot.wallets.update()
+
     rc = client_get(client, f"{BASE_URI}/daily")
     assert_response(rc)
-    assert len(rc.json()["data"]) == 7
-    assert rc.json()["stake_currency"] == "BTC"
-    assert rc.json()["fiat_display_currency"] == "USD"
-    assert rc.json()["data"][0]["date"] == str(datetime.now(timezone.utc).date())
+    response = rc.json()
+    assert "data" in response
+    assert len(response["data"]) == 7
+    assert response["stake_currency"] == "BTC"
+    assert response["fiat_display_currency"] == "USD"
+    assert response["data"][0]["date"] == str(datetime.now(timezone.utc).date())
 
 
 def test_api_weekly(botclient, mocker, ticker, fee, markets, time_machine):
@@ -2189,6 +2191,22 @@ def test_api_exchanges(botclient):
     }
 
 
+def test_list_hyperoptloss(botclient, tmp_path):
+    ftbot, client = botclient
+    ftbot.config["user_data_dir"] = tmp_path
+
+    rc = client_get(client, f"{BASE_URI}/hyperoptloss")
+    assert_response(rc)
+    response = rc.json()
+    assert isinstance(response["loss_functions"], list)
+    assert len(response["loss_functions"]) > 0
+
+    sharpeloss = [r for r in response["loss_functions"] if r["name"] == "SharpeHyperOptLoss"]
+    assert len(sharpeloss) == 1
+    assert "Sharpe Ratio calculation" in sharpeloss[0]["description"]
+    assert len([r for r in response["loss_functions"] if r["name"] == "SortinoHyperOptLoss"]) == 1
+
+
 def test_api_freqaimodels(botclient, tmp_path, mocker):
     ftbot, client = botclient
     ftbot.config["user_data_dir"] = tmp_path
@@ -2339,9 +2357,7 @@ def test_api_pairlists_evaluate(botclient, tmp_path, mocker):
     ]
     assert response["result"]["length"] == 2
     # Patch __run_pairlists
-    plm = mocker.patch(
-        "freqtrade.rpc.api_server.api_background_tasks.__run_pairlist", return_value=None
-    )
+    plm = mocker.patch("freqtrade.rpc.api_server.api_pairlists.__run_pairlist", return_value=None)
     body = {
         "pairlists": [
             {
@@ -2598,6 +2614,8 @@ def test_api_delete_backtest_history_entry(botclient, tmp_path: Path):
     file_path.touch()
     meta_path = file_path.with_suffix(".meta.json")
     meta_path.touch()
+    market_change_path = file_path.with_name(file_path.stem + "_market_change.feather")
+    market_change_path.touch()
 
     rc = client_delete(client, f"{BASE_URI}/backtest/history/randomFile.json")
     assert_response(rc, 503)
@@ -2614,6 +2632,7 @@ def test_api_delete_backtest_history_entry(botclient, tmp_path: Path):
 
     assert not file_path.exists()
     assert not meta_path.exists()
+    assert not market_change_path.exists()
 
 
 def test_api_patch_backtest_history_entry(botclient, tmp_path: Path):
@@ -2844,3 +2863,74 @@ def test_api_ws_send_msg(default_conf, mocker, caplog):
     finally:
         ApiServer.shutdown()
         ApiServer.shutdown()
+
+
+def test_api_download_data(botclient, mocker, tmp_path, caplog):
+    ftbot, client = botclient
+
+    rc = client_post(client, f"{BASE_URI}/download_data", data={})
+    assert_response(rc, 503)
+    assert rc.json()["detail"] == "Bot is not in the correct state."
+
+    ftbot.config["runmode"] = RunMode.WEBSERVER
+    ftbot.config["user_data_dir"] = tmp_path
+
+    body = {
+        "pairs": ["ETH/BTC", "XRP/BTC"],
+        "timeframes": ["5m"],
+    }
+
+    # Fail, already running
+    ApiBG.download_data_running = True
+    rc = client_post(client, f"{BASE_URI}/download_data", body)
+    assert_response(rc, 400)
+    assert rc.json()["detail"] == "Data Download is already running."
+
+    # Reset running state
+    ApiBG.download_data_running = False
+
+    # Test successful download
+    mocker.patch(
+        "freqtrade.data.history.history_utils.download_data",
+        return_value=None,
+    )
+
+    rc = client_post(client, f"{BASE_URI}/download_data", body)
+    assert_response(rc)
+    assert rc.json()["status"] == "Data Download started in background."
+    job_id = rc.json()["job_id"]
+
+    rc = client_get(client, f"{BASE_URI}/background/{job_id}")
+    assert_response(rc)
+    response = rc.json()
+    assert response["job_id"] == job_id
+    assert response["job_category"] == "download_data"
+    # Job finishes immediately due to mock.
+    assert response["status"] == "success"
+
+    # Background list contains the job
+    rc = client_get(client, f"{BASE_URI}/background")
+    assert_response(rc)
+    response = rc.json()
+    assert isinstance(response, list)
+    assert len(response) == 1
+    assert response[0]["job_id"] == job_id
+
+    # Test error case
+    ApiBG.download_data_running = False
+    mocker.patch(
+        "freqtrade.data.history.history_utils.download_data",
+        side_effect=OperationalException("Download error"),
+    )
+    rc = client_post(client, f"{BASE_URI}/download_data", body)
+    assert_response(rc)
+    assert rc.json()["status"] == "Data Download started in background."
+    job_id = rc.json()["job_id"]
+
+    rc = client_get(client, f"{BASE_URI}/background/{job_id}")
+    assert_response(rc)
+    response = rc.json()
+    assert response["job_id"] == job_id
+    assert response["job_category"] == "download_data"
+    assert response["status"] == "failed"
+    assert response["error"] == "Download error"

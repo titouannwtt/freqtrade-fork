@@ -3,7 +3,6 @@
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import ccxt
 
@@ -53,12 +52,12 @@ class Binance(Exchange):
         (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
 
-    def get_tickers(self, symbols: Optional[list[str]] = None, cached: bool = False) -> Tickers:
+    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
         tickers = super().get_tickers(symbols=symbols, cached=cached)
         if self.trading_mode == TradingMode.FUTURES:
             # Binance's future result has no bid/ask values.
             # Therefore we must fetch that from fetch_bids_asks and combine the two results.
-            bidsasks = self.fetch_bids_asks(symbols, cached)
+            bidsasks = self.fetch_bids_asks(symbols, cached=cached)
             tickers = deep_merge_dicts(bidsasks, tickers, allow_null_overrides=False)
         return tickers
 
@@ -106,7 +105,7 @@ class Binance(Exchange):
         candle_type: CandleType,
         is_new_pair: bool = False,
         raise_: bool = False,
-        until_ms: Optional[int] = None,
+        until_ms: int | None = None,
     ) -> OHLCVResponse:
         """
         Overwrite to introduce "fast new pair" functionality by detecting the pair's listing date
@@ -144,9 +143,7 @@ class Binance(Exchange):
         """
         return open_date.minute == 0 and open_date.second < 15
 
-    def fetch_funding_rates(
-        self, symbols: Optional[list[str]] = None
-    ) -> dict[str, dict[str, float]]:
+    def fetch_funding_rates(self, symbols: list[str] | None = None) -> dict[str, dict[str, float]]:
         """
         Fetch funding rates for the given symbols.
         :param symbols: List of symbols to fetch funding rates for
@@ -177,7 +174,7 @@ class Binance(Exchange):
         leverage: float,
         wallet_balance: float,  # Or margin balance
         open_trades: list,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Important: Must be fetching data from cached values as this is used by backtesting!
         MARGIN: https://www.binance.com/en/support/faq/f6b010588e55413aa58b7d63ee0125ed
@@ -263,3 +260,19 @@ class Binance(Exchange):
                 return self.get_leverage_tiers()
         else:
             return {}
+
+    async def _async_get_trade_history_id_startup(
+        self, pair: str, since: int | None
+    ) -> tuple[list[list], str]:
+        """
+        override for initial call
+
+        Binance only provides a limited set of historic trades data.
+        Using from_id=0, we can get the earliest available trades.
+        So if we don't get any data with the provided "since", we can assume to
+        download all available data.
+        """
+        t, from_id = await self._async_fetch_trades(pair, since=since)
+        if not t:
+            return [], "0"
+        return t, from_id

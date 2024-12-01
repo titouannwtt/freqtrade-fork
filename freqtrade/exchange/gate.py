@@ -2,12 +2,15 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+
+import ccxt
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, PriceType, TradingMode
+from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.common import retrier
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
 
 
@@ -24,6 +27,8 @@ class Gate(Exchange):
     may still not work as expected.
     """
 
+    unified_account = False
+
     _ft_has: FtHas = {
         "ohlcv_candle_limit": 1000,
         "order_time_in_force": ["GTC", "IOC"],
@@ -38,6 +43,7 @@ class Gate(Exchange):
     _ft_has_futures: FtHas = {
         "needs_trading_fees": True,
         "marketOrderRequiresPrice": False,
+        "funding_fee_candle_limit": 90,
         "stop_price_type_field": "price_type",
         "stop_price_type_value_mapping": {
             PriceType.LAST: 0,
@@ -52,6 +58,35 @@ class Gate(Exchange):
         # (TradingMode.FUTURES, MarginMode.CROSS),
         (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
+
+    @retrier
+    def additional_exchange_init(self) -> None:
+        """
+        Additional exchange initialization logic.
+        .api will be available at this point.
+        Must be overridden in child methods if required.
+        """
+        try:
+            if not self._config["dry_run"]:
+                # TODO: This should work with 4.4.34 and later.
+                self._api.load_unified_status()
+                is_unified = self._api.options.get("unifiedAccount")
+
+                # Returns a tuple of bools, first for margin, second for Account
+                if is_unified:
+                    self.unified_account = True
+                    logger.info("Gate: Unified account.")
+                else:
+                    self.unified_account = False
+                    logger.info("Gate: Classic account.")
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Error in additional_exchange_init due to {e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
 
     def _get_params(
         self,
@@ -74,7 +109,7 @@ class Gate(Exchange):
         return params
 
     def get_trades_for_order(
-        self, order_id: str, pair: str, since: datetime, params: Optional[dict] = None
+        self, order_id: str, pair: str, since: datetime, params: dict | None = None
     ) -> list:
         trades = super().get_trades_for_order(order_id, pair, since, params)
 
@@ -99,10 +134,12 @@ class Gate(Exchange):
                             }
         return trades
 
-    def get_order_id_conditional(self, order: dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         return safe_value_fallback2(order, order, "id_stop", "id")
 
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: dict | None = None
+    ) -> CcxtOrder:
         order = self.fetch_order(order_id=order_id, pair=pair, params={"stop": True})
         if order.get("status", "open") == "closed":
             # Places a real order - which we need to fetch explicitly.
@@ -119,7 +156,5 @@ class Gate(Exchange):
                 return order1
         return order
 
-    def cancel_stoploss_order(
-        self, order_id: str, pair: str, params: Optional[dict] = None
-    ) -> dict:
+    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})

@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -45,7 +44,7 @@ class HDF5DataHandler(IDataHandler):
         )
 
     def _ohlcv_load(
-        self, pair: str, timeframe: str, timerange: Optional[TimeRange], candle_type: CandleType
+        self, pair: str, timeframe: str, timerange: TimeRange | None, candle_type: CandleType
     ) -> pd.DataFrame:
         """
         Internal method used to load data for one pair from disk.
@@ -69,28 +68,36 @@ class HDF5DataHandler(IDataHandler):
             )
             if not filename.exists():
                 return pd.DataFrame(columns=self._columns)
-        where = []
-        if timerange:
-            if timerange.starttype == "date":
-                where.append(f"date >= Timestamp({timerange.startts * 1e9})")
-            if timerange.stoptype == "date":
-                where.append(f"date <= Timestamp({timerange.stopts * 1e9})")
+        try:
+            where = []
+            if timerange:
+                if timerange.starttype == "date":
+                    where.append(f"date >= Timestamp({timerange.startts * 1e9})")
+                if timerange.stoptype == "date":
+                    where.append(f"date <= Timestamp({timerange.stopts * 1e9})")
 
-        pairdata = pd.read_hdf(filename, key=key, mode="r", where=where)
+            pairdata = pd.read_hdf(filename, key=key, mode="r", where=where)
 
-        if list(pairdata.columns) != self._columns:
-            raise ValueError("Wrong dataframe format")
-        pairdata = pairdata.astype(
-            dtype={
-                "open": "float",
-                "high": "float",
-                "low": "float",
-                "close": "float",
-                "volume": "float",
-            }
-        )
-        pairdata = pairdata.reset_index(drop=True)
-        return pairdata
+            if list(pairdata.columns) != self._columns:
+                raise ValueError("Wrong dataframe format")
+            pairdata = pairdata.astype(
+                dtype={
+                    "open": "float",
+                    "high": "float",
+                    "low": "float",
+                    "close": "float",
+                    "volume": "float",
+                }
+            )
+            pairdata = pairdata.reset_index(drop=True)
+            return pairdata
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.exception(
+                f"Error loading data from {filename}. Exception: {e}. Returning empty dataframe."
+            )
+            return pd.DataFrame(columns=self._columns)
 
     def ohlcv_append(
         self, pair: str, timeframe: str, data: pd.DataFrame, candle_type: CandleType
@@ -134,7 +141,7 @@ class HDF5DataHandler(IDataHandler):
         raise NotImplementedError()
 
     def _trades_load(
-        self, pair: str, trading_mode: TradingMode, timerange: Optional[TimeRange] = None
+        self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> pd.DataFrame:
         """
         Load a pair from h5 file.
