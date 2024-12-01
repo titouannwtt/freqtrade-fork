@@ -536,7 +536,7 @@ def test_dca_order_adjust_entry_replace_fails(
 
     freqtrade.process()
 
-    assert freqtrade.strategy.adjust_trade_position.call_count == 1
+    assert freqtrade.strategy.adjust_trade_position.call_count == 2
     trades = Trade.session.scalars(
         select(Trade)
         .where(Order.ft_is_open.is_(True))
