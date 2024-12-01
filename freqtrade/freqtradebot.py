@@ -1728,7 +1728,7 @@ class FreqtradeBot(LoggingMixin):
                         self.replace_order_failed(trade, f"Could not replace order for {trade}.")
 
     def cancel_open_orders_of_trade(
-        self, trade: Trade, sides: list[str], reason: str, replacing: Optional[bool] = False
+        self, trade: Trade, sides: list[str], reason: str, replacing: bool = False
     ) -> None:
         """
         Cancel trade orders of specified sides that are currently open
