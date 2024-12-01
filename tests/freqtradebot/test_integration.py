@@ -681,7 +681,11 @@ def test_dca_exiting(default_conf_usdt, ticker_usdt, fee, mocker, caplog, levera
     assert trade.orders[-1].ft_order_side == "sell"
     assert pytest.approx(trade.stake_amount) == 40
     assert trade.is_open is False
-    assert log_has_re("Amount to exit is 0.0 due to exchange limits - not exiting.", caplog)
+    assert log_has_re(
+        "Wanted to exit of -0.01 amount, but exit amount is now 0.0 due to exchange limits "
+        "- not exiting.",
+        caplog,
+    )
     expected_profit = starting_amount - 60 + trade.realized_profit
     assert pytest.approx(freqtrade.wallets.get_free("USDT")) == expected_profit
     if spot:
