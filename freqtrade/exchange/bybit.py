@@ -2,16 +2,16 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import ccxt
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, ExchangeError, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.util.datetime_helpers import dt_now, dt_ts
 
 
@@ -47,6 +47,7 @@ class Bybit(Exchange):
         "ohlcv_has_history": True,
         "mark_ohlcv_timeframe": "4h",
         "funding_fee_timeframe": "8h",
+        "funding_fee_candle_limit": 200,
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit", "market": "market"},
         # bybit response parsing fails to populate stopLossPrice
@@ -114,14 +115,6 @@ class Bybit(Exchange):
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
-    ) -> int:
-        if candle_type == CandleType.FUNDING_RATE:
-            return 200
-
-        return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
-
     def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
         if self.trading_mode != TradingMode.SPOT:
             params = {"leverage": leverage}
@@ -147,6 +140,17 @@ class Bybit(Exchange):
             params["position_idx"] = 0
         return params
 
+    def _order_needs_price(self, side: BuySell, ordertype: str) -> bool:
+        # Bybit requires price for market orders - but only for classic accounts,
+        # and only in spot mode
+        return (
+            ordertype != "market"
+            or (
+                side == "buy" and not self.unified_account and self.trading_mode == TradingMode.SPOT
+            )
+            or self._ft_has.get("marketOrderRequiresPrice", False)
+        )
+
     def dry_run_liquidation_price(
         self,
         pair: str,
@@ -157,7 +161,7 @@ class Bybit(Exchange):
         leverage: float,
         wallet_balance: float,  # Or margin balance
         open_trades: list,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Important: Must be fetching data from cached values as this is used by backtesting!
         PERPETUAL:
@@ -229,7 +233,9 @@ class Bybit(Exchange):
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
 
-    def fetch_orders(self, pair: str, since: datetime, params: Optional[dict] = None) -> list[dict]:
+    def fetch_orders(
+        self, pair: str, since: datetime, params: dict | None = None
+    ) -> list[CcxtOrder]:
         """
         Fetch all orders for a pair "since"
         :param pair: Pair for the query
@@ -246,7 +252,7 @@ class Bybit(Exchange):
 
         return orders
 
-    def fetch_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
         if self.exchange_has("fetchOrder"):
             # Set acknowledged to True to avoid ccxt exception
             params = {"acknowledged": True}

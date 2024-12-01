@@ -4,7 +4,7 @@ This page explains how to customize your strategies, add new indicators and set 
 
 If you haven't already, please familiarize yourself with:
 
-- the [Freqtrade strategy 101](freqtrade-101.md), which provides a quick start to strategy development
+- the [Freqtrade strategy 101](strategy-101.md), which provides a quick start to strategy development
 - the [Freqtrade bot basics](bot-basics.md), which provides overall info on how the bot operates
 
 ## Develop your own strategy
@@ -582,11 +582,14 @@ When hyperopting, use of the hyperoptable parameter `.value` attribute is not su
 
 ??? info "Full documentation"
     ``` python
-    def informative(timeframe: str, asset: str = '',
-                    fmt: Optional[Union[str, Callable[[KwArg(str)], str]]] = None,
-                    *,
-                    candle_type: Optional[CandleType] = None,
-                    ffill: bool = True) -> Callable[[PopulateIndicators], PopulateIndicators]:
+    def informative(
+        timeframe: str,
+        asset: str = "",
+        fmt: str | Callable[[Any], str] | None = None,
+        *,
+        candle_type: CandleType | str | None = None,
+        ffill: bool = True,
+    ) -> Callable[[PopulateIndicators], PopulateIndicators]:
         """
         A decorator for populate_indicators_Nn(self, dataframe, metadata), allowing these functions to
         define informative indicators.

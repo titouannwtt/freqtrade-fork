@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from pandas import DataFrame, read_feather, to_datetime
 
@@ -37,7 +36,7 @@ class FeatherDataHandler(IDataHandler):
         )
 
     def _ohlcv_load(
-        self, pair: str, timeframe: str, timerange: Optional[TimeRange], candle_type: CandleType
+        self, pair: str, timeframe: str, timerange: TimeRange | None, candle_type: CandleType
     ) -> DataFrame:
         """
         Internal method used to load data for one pair from disk.
@@ -59,20 +58,25 @@ class FeatherDataHandler(IDataHandler):
             )
             if not filename.exists():
                 return DataFrame(columns=self._columns)
-
-        pairdata = read_feather(filename)
-        pairdata.columns = self._columns
-        pairdata = pairdata.astype(
-            dtype={
-                "open": "float",
-                "high": "float",
-                "low": "float",
-                "close": "float",
-                "volume": "float",
-            }
-        )
-        pairdata["date"] = to_datetime(pairdata["date"], unit="ms", utc=True)
-        return pairdata
+        try:
+            pairdata = read_feather(filename)
+            pairdata.columns = self._columns
+            pairdata = pairdata.astype(
+                dtype={
+                    "open": "float",
+                    "high": "float",
+                    "low": "float",
+                    "close": "float",
+                    "volume": "float",
+                }
+            )
+            pairdata["date"] = to_datetime(pairdata["date"], unit="ms", utc=True)
+            return pairdata
+        except Exception as e:
+            logger.exception(
+                f"Error loading data from {filename}. Exception: {e}. Returning empty dataframe."
+            )
+            return DataFrame(columns=self._columns)
 
     def ohlcv_append(
         self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType
@@ -108,7 +112,7 @@ class FeatherDataHandler(IDataHandler):
         raise NotImplementedError()
 
     def _trades_load(
-        self, pair: str, trading_mode: TradingMode, timerange: Optional[TimeRange] = None
+        self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> DataFrame:
         """
         Load a pair from file, either .json.gz or .json

@@ -517,8 +517,11 @@ CONF_SCHEMA = {
                         },
                         "exit_fill": {
                             "description": "Telegram setting for exit fill signals.",
-                            "type": "string",
-                            "enum": TELEGRAM_SETTING_OPTIONS,
+                            "type": ["string", "object"],
+                            "additionalProperties": {
+                                "type": "string",
+                                "enum": TELEGRAM_SETTING_OPTIONS,
+                            },
                             "default": "on",
                         },
                         "exit_cancel": {

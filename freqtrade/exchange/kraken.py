@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import ccxt
 from pandas import DataFrame
@@ -50,11 +50,27 @@ class Kraken(Exchange):
 
         return parent_check and market.get("darkpool", False) is False
 
-    def get_tickers(self, symbols: Optional[list[str]] = None, cached: bool = False) -> Tickers:
+    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
         # Only fetch tickers for current stake currency
         # Otherwise the request for kraken becomes too large.
         symbols = list(self.get_markets(quote_currencies=[self._config["stake_currency"]]))
         return super().get_tickers(symbols=symbols, cached=cached)
+
+    def consolidate_balances(self, balances: CcxtBalances) -> CcxtBalances:
+        """
+        Consolidate balances for the same currency.
+        Kraken returns ".F" balances if rewards is enabled.
+        """
+        consolidated: CcxtBalances = {}
+        for currency, balance in balances.items():
+            base_currency = currency[:-2] if currency.endswith(".F") else currency
+            if base_currency in consolidated:
+                consolidated[base_currency]["free"] += balance["free"]
+                consolidated[base_currency]["used"] += balance["used"]
+                consolidated[base_currency]["total"] += balance["total"]
+            else:
+                consolidated[base_currency] = balance
+        return consolidated
 
     @retrier
     def get_balances(self) -> CcxtBalances:
@@ -68,6 +84,10 @@ class Kraken(Exchange):
             balances.pop("free", None)
             balances.pop("total", None)
             balances.pop("used", None)
+            self._log_exchange_response("fetch_balances", balances)
+
+            # Consolidate balances
+            balances = self.consolidate_balances(balances)
 
             orders = self._api.fetch_open_orders()
             order_list = [
@@ -86,6 +106,7 @@ class Kraken(Exchange):
                 balances[bal]["used"] = sum(order[1] for order in order_list if order[0] == bal)
                 balances[bal]["free"] = balances[bal]["total"] - balances[bal]["used"]
 
+            self._log_exchange_response("fetch_balances2", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
@@ -99,7 +120,7 @@ class Kraken(Exchange):
     def _set_leverage(
         self,
         leverage: float,
-        pair: Optional[str] = None,
+        pair: str | None = None,
         accept_fail: bool = False,
     ):
         """
@@ -137,7 +158,7 @@ class Kraken(Exchange):
         is_short: bool,
         open_date: datetime,
         close_date: datetime,
-        time_in_ratio: Optional[float] = None,
+        time_in_ratio: float | None = None,
     ) -> float:
         """
         # ! This method will always error when run by Freqtrade because time_in_ratio is never

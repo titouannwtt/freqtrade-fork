@@ -7,18 +7,18 @@ so it can be used as a standalone script, and can be installed independently.
 
 import json
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError as RequestConnectionError
 
 
 logger = logging.getLogger("ft_rest_client")
 
-ParamsT = Optional[dict[str, Any]]
-PostDataT = Optional[Union[dict[str, Any], list[dict[str, Any]]]]
+ParamsT = dict[str, Any] | None
+PostDataT = dict[str, Any] | list[dict[str, Any]] | None
 
 
 class FtRestClient:
@@ -35,7 +35,7 @@ class FtRestClient:
         if username and password:
             self._session.auth = (username, password)
 
-    def _call(self, method, apipath, params: Optional[dict] = None, data=None, files=None):
+    def _call(self, method, apipath, params: dict | None = None, data=None, files=None):
         if str(method).upper() not in ("GET", "POST", "PUT", "DELETE"):
             raise ValueError(f"invalid method <{method}>")
         basepath = f"{self._serverurl}/api/v1/{apipath}"
@@ -53,7 +53,7 @@ class FtRestClient:
             resp = self._session.request(method, url, headers=hd, data=json.dumps(data))
             # return resp.text
             return resp.json()
-        except ConnectionError:
+        except RequestConnectionError:
             logger.warning(f"Connection error - could not connect to {netloc}.")
 
     def _get(self, apipath, params: ParamsT = None):

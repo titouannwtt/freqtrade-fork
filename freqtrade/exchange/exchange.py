@@ -12,7 +12,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from math import floor, isnan
 from threading import Lock
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, TypeGuard
 
 import ccxt
 import ccxt.pro as ccxt_pro
@@ -70,6 +70,7 @@ from freqtrade.exchange.common import (
 )
 from freqtrade.exchange.exchange_types import (
     CcxtBalances,
+    CcxtOrder,
     CcxtPosition,
     FtHas,
     OHLCVResponse,
@@ -169,7 +170,7 @@ class Exchange:
         self,
         config: Config,
         *,
-        exchange_config: Optional[ExchangeConfig] = None,
+        exchange_config: ExchangeConfig | None = None,
         validate: bool = True,
         load_leverage_tiers: bool = False,
     ) -> None:
@@ -181,7 +182,7 @@ class Exchange:
         self._api: ccxt.Exchange
         self._api_async: ccxt_pro.Exchange
         self._ws_async: ccxt_pro.Exchange = None
-        self._exchange_ws: Optional[ExchangeWS] = None
+        self._exchange_ws: ExchangeWS | None = None
         self._markets: dict = {}
         self._trading_fees: dict[str, Any] = {}
         self._leverage_tiers: dict[str, list[dict]] = {}
@@ -198,8 +199,8 @@ class Exchange:
         # Timestamp of last markets refresh
         self._last_markets_refresh: int = 0
 
-        # Cache for 10 minutes ...
         self._cache_lock = Lock()
+        # Cache for 10 minutes ...
         self._fetch_tickers_cache: TTLCache = TTLCache(maxsize=2, ttl=60 * 10)
         # Cache values for 300 to avoid frequent polling of the exchange for prices
         # Caching only applies to RPC methods, so prices for open trades are still
@@ -378,7 +379,7 @@ class Exchange:
             logger.info("Applying additional ccxt config: %s", ccxt_kwargs)
         if self._ccxt_params:
             # Inject static options after the above output to not confuse users.
-            ccxt_kwargs = deep_merge_dicts(self._ccxt_params, ccxt_kwargs)
+            ccxt_kwargs = deep_merge_dicts(self._ccxt_params, deepcopy(ccxt_kwargs))
         if ccxt_kwargs:
             ex_config.update(ccxt_kwargs)
         try:
@@ -452,28 +453,31 @@ class Exchange:
             logger.info(f"API {endpoint}: {add_info_str}{response}")
 
     def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
+        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
         """
         Exchange ohlcv candle limit
         Uses ohlcv_candle_limit_per_timeframe if the exchange has different limits
         per timeframe (e.g. bittrex), otherwise falls back to ohlcv_candle_limit
-        TODO: this is most likely no longer needed since only bittrex needed this.
         :param timeframe: Timeframe to check
         :param candle_type: Candle-type
         :param since_ms: Starting timestamp
         :return: Candle limit as integer
         """
+
+        fallback_val = self._ft_has.get("ohlcv_candle_limit")
+        if candle_type == CandleType.FUNDING_RATE:
+            fallback_val = self._ft_has.get("funding_fee_candle_limit", fallback_val)
         return int(
             self._ft_has.get("ohlcv_candle_limit_per_timeframe", {}).get(
-                timeframe, str(self._ft_has.get("ohlcv_candle_limit"))
+                timeframe, str(fallback_val)
             )
         )
 
     def get_markets(
         self,
-        base_currencies: Optional[list[str]] = None,
-        quote_currencies: Optional[list[str]] = None,
+        base_currencies: list[str] | None = None,
+        quote_currencies: list[str] | None = None,
         spot_only: bool = False,
         margin_only: bool = False,
         futures_only: bool = False,
@@ -522,6 +526,7 @@ class Exchange:
     def market_is_future(self, market: dict[str, Any]) -> bool:
         return (
             market.get(self._ft_has["ccxt_futures_name"], False) is True
+            and market.get("type", False) == "swap"
             and market.get("linear", False) is True
         )
 
@@ -566,7 +571,7 @@ class Exchange:
         else:
             return DataFrame(columns=DEFAULT_TRADES_COLUMNS)
 
-    def get_contract_size(self, pair: str) -> Optional[float]:
+    def get_contract_size(self, pair: str) -> float | None:
         if self.trading_mode == TradingMode.FUTURES:
             market = self.markets.get(pair, {})
             contract_size: float = 1.0
@@ -587,7 +592,7 @@ class Exchange:
                     trade["amount"] = trade["amount"] * contract_size
         return trades
 
-    def _order_contracts_to_amount(self, order: dict) -> dict:
+    def _order_contracts_to_amount(self, order: CcxtOrder) -> CcxtOrder:
         if "symbol" in order and order["symbol"] is not None:
             contract_size = self.get_contract_size(order["symbol"])
             if contract_size != 1:
@@ -709,7 +714,7 @@ class Exchange:
                 return pair
         raise ValueError(f"Could not combine {curr_1} and {curr_2} to get a valid pair.")
 
-    def validate_timeframes(self, timeframe: Optional[str]) -> None:
+    def validate_timeframes(self, timeframe: str | None) -> None:
         """
         Check if timeframe from config is a supported timeframe on the exchange
         """
@@ -839,7 +844,7 @@ class Exchange:
     def validate_trading_mode_and_margin_mode(
         self,
         trading_mode: TradingMode,
-        margin_mode: Optional[MarginMode],  # Only None when trading_mode = TradingMode.SPOT
+        margin_mode: MarginMode | None,  # Only None when trading_mode = TradingMode.SPOT
     ):
         """
         Checks if freqtrade can perform trades using the configured
@@ -855,7 +860,7 @@ class Exchange:
                 f"Freqtrade does not support {mm_value} {trading_mode} on {self.name}"
             )
 
-    def get_option(self, param: str, default: Optional[Any] = None) -> Any:
+    def get_option(self, param: str, default: Any | None = None) -> Any:
         """
         Get parameter value from _ft_has
         """
@@ -872,7 +877,7 @@ class Exchange:
             return self._ft_has["exchange_has_overrides"][endpoint]
         return endpoint in self._api_async.has and self._api_async.has[endpoint]
 
-    def get_precision_amount(self, pair: str) -> Optional[float]:
+    def get_precision_amount(self, pair: str) -> float | None:
         """
         Returns the amount precision of the exchange.
         :param pair: Pair to get precision for
@@ -880,7 +885,7 @@ class Exchange:
         """
         return self.markets.get(pair, {}).get("precision", {}).get("amount", None)
 
-    def get_precision_price(self, pair: str) -> Optional[float]:
+    def get_precision_price(self, pair: str) -> float | None:
         """
         Returns the price precision of the exchange.
         :param pair: Pair to get precision for
@@ -920,8 +925,8 @@ class Exchange:
             return 1 / pow(10, precision)
 
     def get_min_pair_stake_amount(
-        self, pair: str, price: float, stoploss: float, leverage: Optional[float] = 1.0
-    ) -> Optional[float]:
+        self, pair: str, price: float, stoploss: float, leverage: float | None = 1.0
+    ) -> float | None:
         return self._get_stake_amount_limit(pair, price, stoploss, "min", leverage)
 
     def get_max_pair_stake_amount(self, pair: str, price: float, leverage: float = 1.0) -> float:
@@ -939,8 +944,8 @@ class Exchange:
         price: float,
         stoploss: float,
         limit: Literal["min", "max"],
-        leverage: Optional[float] = 1.0,
-    ) -> Optional[float]:
+        leverage: float | None = 1.0,
+    ) -> float | None:
         isMin = limit == "min"
 
         try:
@@ -997,20 +1002,20 @@ class Exchange:
         self,
         pair: str,
         ordertype: str,
-        side: str,
+        side: BuySell,
         amount: float,
         rate: float,
         leverage: float,
-        params: Optional[dict] = None,
+        params: dict | None = None,
         stop_loss: bool = False,
-    ) -> dict[str, Any]:
+    ) -> CcxtOrder:
         now = dt_now()
         order_id = f"dry_run_{side}_{pair}_{now.timestamp()}"
         # Rounding here must respect to contract sizes
         _amount = self._contracts_to_amount(
             pair, self.amount_to_precision(pair, self._amount_to_contracts(pair, amount))
         )
-        dry_order: dict[str, Any] = {
+        dry_order: CcxtOrder = {
             "id": order_id,
             "symbol": pair,
             "price": rate,
@@ -1026,14 +1031,13 @@ class Exchange:
             "status": "open",
             "fee": None,
             "info": {},
-            "leverage": leverage,
         }
         if stop_loss:
             dry_order["info"] = {"stopPrice": dry_order["price"]}
             dry_order[self._ft_has["stop_price_prop"]] = dry_order["price"]
             # Workaround to avoid filling stoploss orders immediately
             dry_order["ft_order_type"] = "stoploss"
-        orderbook: Optional[OrderBook] = None
+        orderbook: OrderBook | None = None
         if self.exchange_has("fetchL2OrderBook"):
             orderbook = self.fetch_l2_order_book(pair, 20)
         if ordertype == "limit" and orderbook:
@@ -1055,7 +1059,7 @@ class Exchange:
                     "filled": _amount,
                     "remaining": 0.0,
                     "status": "closed",
-                    "cost": (dry_order["amount"] * average),
+                    "cost": (_amount * average),
                 }
             )
             # market orders will always incurr taker fees
@@ -1072,9 +1076,9 @@ class Exchange:
     def add_dry_order_fee(
         self,
         pair: str,
-        dry_order: dict[str, Any],
+        dry_order: CcxtOrder,
         taker_or_maker: MakerTaker,
-    ) -> dict[str, Any]:
+    ) -> CcxtOrder:
         fee = self.get_fee(pair, taker_or_maker=taker_or_maker)
         dry_order.update(
             {
@@ -1088,7 +1092,7 @@ class Exchange:
         return dry_order
 
     def get_dry_market_fill_price(
-        self, pair: str, side: str, amount: float, rate: float, orderbook: Optional[OrderBook]
+        self, pair: str, side: str, amount: float, rate: float, orderbook: OrderBook | None
     ) -> float:
         """
         Get the market order fill price based on orderbook interpolation
@@ -1136,7 +1140,7 @@ class Exchange:
         pair: str,
         side: str,
         limit: float,
-        orderbook: Optional[OrderBook] = None,
+        orderbook: OrderBook | None = None,
         offset: float = 0.0,
     ) -> bool:
         if not self.exchange_has("fetchL2OrderBook"):
@@ -1158,8 +1162,8 @@ class Exchange:
         return False
 
     def check_dry_limit_order_filled(
-        self, order: dict[str, Any], immediate: bool = False, orderbook: Optional[OrderBook] = None
-    ) -> dict[str, Any]:
+        self, order: CcxtOrder, immediate: bool = False, orderbook: OrderBook | None = None
+    ) -> CcxtOrder:
         """
         Check dry-run limit order fill and update fee (if it filled).
         """
@@ -1186,7 +1190,7 @@ class Exchange:
 
         return order
 
-    def fetch_dry_run_order(self, order_id) -> dict[str, Any]:
+    def fetch_dry_run_order(self, order_id) -> CcxtOrder:
         """
         Return dry-run order
         Only call if running in dry-run mode.
@@ -1248,7 +1252,7 @@ class Exchange:
         leverage: float,
         reduceOnly: bool = False,
         time_in_force: str = "GTC",
-    ) -> dict:
+    ) -> CcxtOrder:
         if self._config["dry_run"]:
             dry_order = self.create_dry_run_order(
                 pair, ordertype, side, amount, self.price_to_precision(pair, rate), leverage
@@ -1306,7 +1310,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def stoploss_adjust(self, stop_loss: float, order: dict, side: str) -> bool:
+    def stoploss_adjust(self, stop_loss: float, order: CcxtOrder, side: str) -> bool:
         """
         Verify stop_loss against stoploss-order value (limit or price)
         Returns True if adjustment is necessary.
@@ -1367,7 +1371,7 @@ class Exchange:
         order_types: dict,
         side: BuySell,
         leverage: float,
-    ) -> dict:
+    ) -> CcxtOrder:
         """
         creates a stoploss order.
         requires `_ft_has['stoploss_order_types']` to be set as a dict mapping limit and market
@@ -1460,7 +1464,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def fetch_order_emulated(self, order_id: str, pair: str, params: dict) -> dict:
+    def fetch_order_emulated(self, order_id: str, pair: str, params: dict) -> CcxtOrder:
         """
         Emulated fetch_order if the exchange doesn't support fetch_order, but requires separate
         calls for open and closed orders.
@@ -1494,7 +1498,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier(retries=API_FETCH_ORDER_RETRY_COUNT)
-    def fetch_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
         if self._config["dry_run"]:
             return self.fetch_dry_run_order(order_id)
         if params is None:
@@ -1523,12 +1527,14 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: dict | None = None
+    ) -> CcxtOrder:
         return self.fetch_order(order_id, pair, params)
 
     def fetch_order_or_stoploss_order(
         self, order_id: str, pair: str, stoploss_order: bool = False
-    ) -> dict:
+    ) -> CcxtOrder:
         """
         Simple wrapper calling either fetch_order or fetch_stoploss_order depending on
         the stoploss_order parameter
@@ -1540,7 +1546,7 @@ class Exchange:
             return self.fetch_stoploss_order(order_id, pair)
         return self.fetch_order(order_id, pair)
 
-    def check_order_canceled_empty(self, order: dict) -> bool:
+    def check_order_canceled_empty(self, order: CcxtOrder) -> bool:
         """
         Verify if an order has been cancelled without being partially filled
         :param order: Order dict as returned from fetch_order()
@@ -1549,7 +1555,7 @@ class Exchange:
         return order.get("status") in NON_OPEN_EXCHANGE_STATES and order.get("filled") == 0.0
 
     @retrier
-    def cancel_order(self, order_id: str, pair: str, params: Optional[dict] = None) -> dict:
+    def cancel_order(self, order_id: str, pair: str, params: dict | None = None) -> dict[str, Any]:
         if self._config["dry_run"]:
             try:
                 order = self.fetch_dry_run_order(order_id)
@@ -1577,19 +1583,17 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def cancel_stoploss_order(
-        self, order_id: str, pair: str, params: Optional[dict] = None
-    ) -> dict:
+    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         return self.cancel_order(order_id, pair, params)
 
-    def is_cancel_order_result_suitable(self, corder) -> bool:
+    def is_cancel_order_result_suitable(self, corder) -> TypeGuard[CcxtOrder]:
         if not isinstance(corder, dict):
             return False
 
         required = ("fee", "status", "amount")
         return all(corder.get(k, None) is not None for k in required)
 
-    def cancel_order_with_result(self, order_id: str, pair: str, amount: float) -> dict:
+    def cancel_order_with_result(self, order_id: str, pair: str, amount: float) -> CcxtOrder:
         """
         Cancel order returning a result.
         Creates a fake result if cancel order returns a non-usable result
@@ -1620,7 +1624,9 @@ class Exchange:
 
         return order
 
-    def cancel_stoploss_order_with_result(self, order_id: str, pair: str, amount: float) -> dict:
+    def cancel_stoploss_order_with_result(
+        self, order_id: str, pair: str, amount: float
+    ) -> CcxtOrder:
         """
         Cancel stoploss order returning a result.
         Creates a fake result if cancel order returns a non-usable result
@@ -1651,6 +1657,7 @@ class Exchange:
             balances.pop("total", None)
             balances.pop("used", None)
 
+            self._log_exchange_response("fetch_balances", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
@@ -1662,7 +1669,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def fetch_positions(self, pair: Optional[str] = None) -> list[CcxtPosition]:
+    def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
         """
         Fetch positions from the exchange.
         If no pair is given, all positions are returned.
@@ -1686,7 +1693,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[dict]:
+    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
         if self.exchange_has("fetchClosedOrders"):
             orders = self._api.fetch_closed_orders(pair, since=since_ms)
@@ -1696,7 +1703,9 @@ class Exchange:
         return orders
 
     @retrier(retries=0)
-    def fetch_orders(self, pair: str, since: datetime, params: Optional[dict] = None) -> list[dict]:
+    def fetch_orders(
+        self, pair: str, since: datetime, params: dict | None = None
+    ) -> list[CcxtOrder]:
         """
         Fetch all orders for a pair "since"
         :param pair: Pair for the query
@@ -1712,7 +1721,9 @@ class Exchange:
                 if not params:
                     params = {}
                 try:
-                    orders: list[dict] = self._api.fetch_orders(pair, since=since_ms, params=params)
+                    orders: list[CcxtOrder] = self._api.fetch_orders(
+                        pair, since=since_ms, params=params
+                    )
                 except ccxt.NotSupported:
                     # Some exchanges don't support fetchOrders
                     # attempt to fetch open and closed orders separately
@@ -1757,7 +1768,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def fetch_bids_asks(self, symbols: Optional[list[str]] = None, cached: bool = False) -> dict:
+    def fetch_bids_asks(self, symbols: list[str] | None = None, *, cached: bool = False) -> dict:
         """
         :param symbols: List of symbols to fetch
         :param cached: Allow cached result
@@ -1790,8 +1801,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def get_tickers(self, symbols: Optional[list[str]] = None, cached: bool = False) -> Tickers:
+    def get_tickers(self, symbols: list[str] | None = None, *, cached: bool = False) -> Tickers:
         """
+        :param symbols: List of symbols to fetch
         :param cached: Allow cached result
         :return: fetch_tickers result
         """
@@ -1850,7 +1862,7 @@ class Exchange:
 
     @staticmethod
     def get_next_limit_in_list(
-        limit: int, limit_range: Optional[list[int]], range_required: bool = True
+        limit: int, limit_range: list[int] | None, range_required: bool = True
     ):
         """
         Get next greater value in the list.
@@ -1914,8 +1926,8 @@ class Exchange:
         refresh: bool,
         side: EntryExit,
         is_short: bool,
-        order_book: Optional[OrderBook] = None,
-        ticker: Optional[Ticker] = None,
+        order_book: OrderBook | None = None,
+        ticker: Ticker | None = None,
     ) -> float:
         """
         Calculates bid/ask target
@@ -1964,7 +1976,7 @@ class Exchange:
 
     def _get_rate_from_ticker(
         self, side: EntryExit, ticker: Ticker, conf_strategy: dict[str, Any], price_side: BidAsk
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Get rate from ticker.
         """
@@ -2043,7 +2055,7 @@ class Exchange:
 
     @retrier
     def get_trades_for_order(
-        self, order_id: str, pair: str, since: datetime, params: Optional[dict] = None
+        self, order_id: str, pair: str, since: datetime, params: dict | None = None
     ) -> list:
         """
         Fetch Orders using the "fetch_my_trades" endpoint and filter them by order-id.
@@ -2090,7 +2102,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def get_order_id_conditional(self, order: dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         return order["id"]
 
     @retrier
@@ -2139,7 +2151,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     @staticmethod
-    def order_has_fee(order: dict) -> bool:
+    def order_has_fee(order: CcxtOrder) -> bool:
         """
         Verifies if the passed in order dict has the needed keys to extract fees,
         and that these keys (currency, cost) are not empty.
@@ -2158,7 +2170,7 @@ class Exchange:
 
     def calculate_fee_rate(
         self, fee: dict, symbol: str, cost: float, amount: float
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Calculate fee rate if it's not given by the exchange.
         :param fee: ccxt Fee dict - must contain cost / currency / rate
@@ -2197,8 +2209,8 @@ class Exchange:
             return round((fee_cost * fee_to_quote_rate) / cost, 8)
 
     def extract_cost_curr_rate(
-        self, fee: dict, symbol: str, cost: float, amount: float
-    ) -> tuple[float, str, Optional[float]]:
+        self, fee: dict[str, Any], symbol: str, cost: float, amount: float
+    ) -> tuple[float, str, float | None]:
         """
         Extract tuple of cost, currency, rate.
         Requires order_has_fee to run first!
@@ -2223,7 +2235,7 @@ class Exchange:
         since_ms: int,
         candle_type: CandleType,
         is_new_pair: bool = False,
-        until_ms: Optional[int] = None,
+        until_ms: int | None = None,
     ) -> DataFrame:
         """
         Get candle history using asyncio and returns the list of candles.
@@ -2257,7 +2269,7 @@ class Exchange:
         candle_type: CandleType,
         is_new_pair: bool = False,
         raise_: bool = False,
-        until_ms: Optional[int] = None,
+        until_ms: int | None = None,
     ) -> OHLCVResponse:
         """
         Download historic ohlcv
@@ -2302,7 +2314,7 @@ class Exchange:
         pair: str,
         timeframe: str,
         candle_type: CandleType,
-        since_ms: Optional[int],
+        since_ms: int | None,
         cache: bool,
     ) -> Coroutine[Any, Any, OHLCVResponse]:
         not_all_data = cache and self.required_candle_call_count > 1
@@ -2371,7 +2383,7 @@ class Exchange:
             )
 
     def _build_ohlcv_dl_jobs(
-        self, pair_list: ListPairsWithTimeframes, since_ms: Optional[int], cache: bool
+        self, pair_list: ListPairsWithTimeframes, since_ms: int | None, cache: bool
     ) -> tuple[list[Coroutine], list[PairWithTimeframe]]:
         """
         Build Coroutines to execute as part of refresh_latest_ohlcv
@@ -2448,9 +2460,9 @@ class Exchange:
         self,
         pair_list: ListPairsWithTimeframes,
         *,
-        since_ms: Optional[int] = None,
+        since_ms: int | None = None,
         cache: bool = True,
-        drop_incomplete: Optional[bool] = None,
+        drop_incomplete: bool | None = None,
     ) -> dict[PairWithTimeframe, DataFrame]:
         """
         Refresh in-memory OHLCV asynchronously and set `_klines` with the result
@@ -2544,7 +2556,7 @@ class Exchange:
         pair: str,
         timeframe: str,
         candle_type: CandleType,
-        since_ms: Optional[int] = None,
+        since_ms: int | None = None,
     ) -> OHLCVResponse:
         """
         Asynchronously get candle history data using fetch_ohlcv
@@ -2618,7 +2630,7 @@ class Exchange:
         pair: str,
         timeframe: str,
         limit: int,
-        since_ms: Optional[int] = None,
+        since_ms: int | None = None,
     ) -> list[list]:
         """
         Fetch funding rate history - used to selectively override this by subclasses.
@@ -2677,7 +2689,7 @@ class Exchange:
 
     async def _build_trades_dl_jobs(
         self, pairwt: PairWithTimeframe, data_handler, cache: bool
-    ) -> tuple[PairWithTimeframe, Optional[DataFrame]]:
+    ) -> tuple[PairWithTimeframe, DataFrame | None]:
         """
         Build coroutines to refresh trades for (they're then called through async.gather)
         """
@@ -2821,7 +2833,7 @@ class Exchange:
 
     @retrier_async
     async def _async_fetch_trades(
-        self, pair: str, since: Optional[int] = None, params: Optional[dict] = None
+        self, pair: str, since: int | None = None, params: dict | None = None
     ) -> tuple[list[list], Any]:
         """
         Asynchronously gets trade history using fetch_trades.
@@ -2880,8 +2892,16 @@ class Exchange:
         else:
             return trades[-1].get("timestamp")
 
+    async def _async_get_trade_history_id_startup(
+        self, pair: str, since: int | None
+    ) -> tuple[list[list], str]:
+        """
+        override for initial trade_history_id call
+        """
+        return await self._async_fetch_trades(pair, since=since)
+
     async def _async_get_trade_history_id(
-        self, pair: str, until: int, since: Optional[int] = None, from_id: Optional[str] = None
+        self, pair: str, until: int, since: int | None = None, from_id: str | None = None
     ) -> tuple[str, list[list]]:
         """
         Asynchronously gets trade history using fetch_trades
@@ -2906,7 +2926,7 @@ class Exchange:
             # of up to an hour.
             # e.g. Binance returns the "last 1000" candles within a 1h time interval
             # - so we will miss the first trades.
-            t, from_id = await self._async_fetch_trades(pair, since=since)
+            t, from_id = await self._async_get_trade_history_id_startup(pair, since=since)
             trades.extend(t[x])
         while True:
             try:
@@ -2936,7 +2956,7 @@ class Exchange:
         return (pair, trades)
 
     async def _async_get_trade_history_time(
-        self, pair: str, until: int, since: Optional[int] = None
+        self, pair: str, until: int, since: int | None = None
     ) -> tuple[str, list[list]]:
         """
         Asynchronously gets trade history using fetch_trades,
@@ -2977,9 +2997,9 @@ class Exchange:
     async def _async_get_trade_history(
         self,
         pair: str,
-        since: Optional[int] = None,
-        until: Optional[int] = None,
-        from_id: Optional[str] = None,
+        since: int | None = None,
+        until: int | None = None,
+        from_id: str | None = None,
     ) -> tuple[str, list[list]]:
         """
         Async wrapper handling downloading trades using either time or id based methods.
@@ -3008,9 +3028,9 @@ class Exchange:
     def get_historic_trades(
         self,
         pair: str,
-        since: Optional[int] = None,
-        until: Optional[int] = None,
-        from_id: Optional[str] = None,
+        since: int | None = None,
+        until: int | None = None,
+        from_id: str | None = None,
     ) -> tuple[str, list]:
         """
         Get trade history data using asyncio.
@@ -3039,7 +3059,7 @@ class Exchange:
             return self.loop.run_until_complete(task)
 
     @retrier
-    def _get_funding_fees_from_exchange(self, pair: str, since: Union[datetime, int]) -> float:
+    def _get_funding_fees_from_exchange(self, pair: str, since: datetime | int) -> float:
         """
         Returns the sum of all funding fees that were exchanged for a pair within a timeframe
         Dry-run handling happens as part of _calculate_funding_fees.
@@ -3170,8 +3190,8 @@ class Exchange:
         file_dump_json(filename, data)
 
     def load_cached_leverage_tiers(
-        self, stake_currency: str, cache_time: Optional[timedelta] = None
-    ) -> Optional[dict[str, list[dict]]]:
+        self, stake_currency: str, cache_time: timedelta | None = None
+    ) -> dict[str, list[dict]] | None:
         """
         Load cached leverage tiers from disk
         :param cache_time: The maximum age of the cache before it is considered outdated
@@ -3216,7 +3236,7 @@ class Exchange:
             "maintAmt": float(info["cum"]) if "cum" in info else None,
         }
 
-    def get_max_leverage(self, pair: str, stake_amount: Optional[float]) -> float:
+    def get_max_leverage(self, pair: str, stake_amount: float | None) -> float:
         """
         Returns the maximum leverage that a pair can be traded at
         :param pair: The base/quote currency pair being traded
@@ -3294,7 +3314,7 @@ class Exchange:
     def _set_leverage(
         self,
         leverage: float,
-        pair: Optional[str] = None,
+        pair: str | None = None,
         accept_fail: bool = False,
     ):
         """
@@ -3346,7 +3366,7 @@ class Exchange:
         pair: str,
         margin_mode: MarginMode,
         accept_fail: bool = False,
-        params: Optional[dict] = None,
+        params: dict | None = None,
     ):
         """
         Set's the margin mode on the exchange to cross or isolated for a specific pair
@@ -3381,7 +3401,7 @@ class Exchange:
         amount: float,
         is_short: bool,
         open_date: datetime,
-        close_date: Optional[datetime] = None,
+        close_date: datetime | None = None,
     ) -> float:
         """
         Fetches and calculates the sum of all funding fees that occurred for a pair
@@ -3434,7 +3454,7 @@ class Exchange:
 
     @staticmethod
     def combine_funding_and_mark(
-        funding_rates: DataFrame, mark_rates: DataFrame, futures_funding_rate: Optional[int] = None
+        funding_rates: DataFrame, mark_rates: DataFrame, futures_funding_rate: int | None = None
     ) -> DataFrame:
         """
         Combine funding-rates and mark-rates dataframes
@@ -3475,7 +3495,7 @@ class Exchange:
         is_short: bool,
         open_date: datetime,
         close_date: datetime,
-        time_in_ratio: Optional[float] = None,
+        time_in_ratio: float | None = None,
     ) -> float:
         """
         calculates the sum of all funding fees that occurred for a pair during a futures trade
@@ -3533,8 +3553,8 @@ class Exchange:
         stake_amount: float,
         leverage: float,
         wallet_balance: float,
-        open_trades: Optional[list] = None,
-    ) -> Optional[float]:
+        open_trades: list | None = None,
+    ) -> float | None:
         """
         Set's the margin mode on the exchange to cross or isolated for a specific pair
         """
@@ -3582,7 +3602,7 @@ class Exchange:
         leverage: float,
         wallet_balance: float,  # Or margin balance
         open_trades: list,
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Important: Must be fetching data from cached values as this is used by backtesting!
         PERPETUAL:
@@ -3633,7 +3653,7 @@ class Exchange:
         self,
         pair: str,
         notional_value: float,
-    ) -> tuple[float, Optional[float]]:
+    ) -> tuple[float, float | None]:
         """
         Important: Must be fetching data from cached values as this is used by backtesting!
         :param pair: Market symbol

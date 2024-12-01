@@ -44,7 +44,7 @@ dependencies = [
   "pandas-ta",
   "technical",
   "tabulate",
-  "pycoingecko",
+  "pycoingecko>=3.2.0",
   "py_find_1st",
   "python-rapidjson",
   "orjson",
@@ -246,7 +246,6 @@ reportTypedDictNotRequiredAccess = false  # 27
 [tool.ruff]
 line-length = 100
 extend-exclude = [".env", ".venv"]
-target-version = "py39"
 
 [tool.ruff.lint]
 extend-select = [

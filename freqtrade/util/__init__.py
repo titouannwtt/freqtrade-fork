@@ -11,11 +11,14 @@ from freqtrade.util.datetime_helpers import (
     format_ms_time,
     shorten_date,
 )
-from freqtrade.util.formatters import decimals_per_coin, fmt_coin, round_value
+from freqtrade.util.formatters import decimals_per_coin, fmt_coin, fmt_coin2, round_value
 from freqtrade.util.ft_precise import FtPrecise
 from freqtrade.util.measure_time import MeasureTime
 from freqtrade.util.periodic_cache import PeriodicCache
-from freqtrade.util.progress_tracker import get_progress_tracker  # noqa F401
+from freqtrade.util.progress_tracker import (  # noqa F401
+    get_progress_tracker,
+    retrieve_progress_tracker,
+)
 from freqtrade.util.rich_progress import CustomProgress
 from freqtrade.util.rich_tables import print_df_rich_table, print_rich_table
 from freqtrade.util.template_renderer import render_template, render_template_with_fallback  # noqa
@@ -38,6 +41,7 @@ __all__ = [
     "decimals_per_coin",
     "round_value",
     "fmt_coin",
+    "fmt_coin2",
     "MeasureTime",
     "print_rich_table",
     "print_df_rich_table",
