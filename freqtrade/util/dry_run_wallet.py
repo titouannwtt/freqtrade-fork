@@ -1,4 +1,4 @@
-from pytest import Config
+from freqtrade.constants import Config
 
 
 def get_dry_run_wallet(config: Config) -> int | float:

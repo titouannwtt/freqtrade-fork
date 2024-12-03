@@ -69,7 +69,7 @@ def generate_rejected_signals(
 
 
 def _generate_result_line(
-    result: DataFrame, starting_balance: int, first_column: str | list[str]
+    result: DataFrame, starting_balance: float, first_column: str | list[str]
 ) -> dict:
     """
     Generate one result dict, with "first_column" as key.
@@ -111,7 +111,7 @@ def _generate_result_line(
 def generate_pair_metrics(
     pairlist: list[str],
     stake_currency: str,
-    starting_balance: int,
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
 ) -> list[dict]:
@@ -144,7 +144,7 @@ def generate_pair_metrics(
 
 def generate_tag_metrics(
     tag_type: Literal["enter_tag", "exit_reason"] | list[Literal["enter_tag", "exit_reason"]],
-    starting_balance: int,
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
 ) -> list[dict]:
