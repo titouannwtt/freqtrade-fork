@@ -18,7 +18,7 @@ from freqtrade.data.metrics import (
     calculate_sortino,
 )
 from freqtrade.ft_types import BacktestResultType
-from freqtrade.util import decimals_per_coin, fmt_coin
+from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -373,7 +373,7 @@ def generate_strategy_stats(
         return {}
     config = content["config"]
     max_open_trades = min(config["max_open_trades"], len(pairlist))
-    start_balance = config["dry_run_wallet"]
+    start_balance = get_dry_run_wallet(config)
     stake_currency = config["stake_currency"]
 
     pair_results = generate_pair_metrics(

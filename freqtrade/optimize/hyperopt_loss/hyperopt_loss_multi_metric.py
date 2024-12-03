@@ -36,6 +36,7 @@ from pandas import DataFrame
 from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_expectancy, calculate_max_drawdown
 from freqtrade.optimize.hyperopt import IHyperOptLoss
+from freqtrade.util import get_dry_run_wallet
 
 
 # smaller numbers penalize drawdowns more severely
@@ -83,7 +84,7 @@ class MultiMetricHyperOptLoss(IHyperOptLoss):
         # Calculate drawdown
         try:
             drawdown = calculate_max_drawdown(
-                results, starting_balance=config["dry_run_wallet"], value_col="profit_abs"
+                results, starting_balance=get_dry_run_wallet(config), value_col="profit_abs"
             )
             relative_account_drawdown = drawdown.relative_account_drawdown
         except ValueError:

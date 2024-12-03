@@ -4,6 +4,7 @@ from typing import Any
 from freqtrade import constants
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import ConfigurationError, OperationalException
+from freqtrade.util import get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def setup_optimize_configuration(args: dict[str, Any], method: RunMode) -> dict[
         RunMode.HYPEROPT: "hyperoptimization",
     }
     if method in no_unlimited_runmodes.keys():
-        wallet_size = config["dry_run_wallet"] * config["tradable_balance_ratio"]
+        wallet_size = get_dry_run_wallet(config) * config["tradable_balance_ratio"]
         # tradable_balance_ratio
         if (
             config["stake_amount"] != constants.UNLIMITED_STAKE_AMOUNT

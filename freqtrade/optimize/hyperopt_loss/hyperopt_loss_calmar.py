@@ -12,6 +12,7 @@ from pandas import DataFrame
 from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_calmar
 from freqtrade.optimize.hyperopt import IHyperOptLoss
+from freqtrade.util import get_dry_run_wallet
 
 
 class CalmarHyperOptLoss(IHyperOptLoss):
@@ -36,7 +37,7 @@ class CalmarHyperOptLoss(IHyperOptLoss):
 
         Uses Calmar Ratio calculation.
         """
-        starting_balance = config["dry_run_wallet"]
+        starting_balance = get_dry_run_wallet(config)
         calmar_ratio = calculate_calmar(results, min_date, max_date, starting_balance)
         # print(expected_returns_mean, max_drawdown, calmar_ratio)
         return -calmar_ratio
