@@ -102,6 +102,7 @@ def populate_dataframe_with_trades(
         stacked_imbalances_ask_series = pd.Series(index=dataframe.index, dtype=object)
 
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
+        candle_start: datetime
         for candle_start, trades_grouped_df in trades_grouped_by_candle_start:
             is_between = candle_start == dataframe["date"]
             if is_between.any():
@@ -181,9 +182,9 @@ def populate_dataframe_with_trades(
                 dataframe.loc[indices, "total_trades"] = len(trades_grouped_df)
 
                 # Cache the result
-                cached_grouped_trades[(typing.cast(datetime, candle_start), candle_next)] = (
-                    dataframe.loc[is_between].copy()
-                )
+                cached_grouped_trades[(candle_start, candle_next)] = dataframe.loc[
+                    is_between
+                ].copy()
 
                 # Maintain cache size
                 if (
