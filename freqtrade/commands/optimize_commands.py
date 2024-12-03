@@ -4,7 +4,6 @@ from typing import Any
 from freqtrade import constants
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import ConfigurationError, OperationalException
-from freqtrade.util import get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,7 @@ def setup_optimize_configuration(args: dict[str, Any], method: RunMode) -> dict[
     :return: Configuration
     """
     from freqtrade.configuration import setup_utils_configuration
-    from freqtrade.util import fmt_coin
+    from freqtrade.util import fmt_coin, get_dry_run_wallet
 
     config = setup_utils_configuration(args, method)
 
