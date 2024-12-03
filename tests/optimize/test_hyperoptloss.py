@@ -116,6 +116,7 @@ def test_loss_functions_better_profits(default_conf, hyperopt_results, lossfunct
         config=default_conf,
         processed=None,
         backtest_stats={"profit_total": hyperopt_results["profit_abs"].sum()},
+        starting_balance=default_conf["dry_run_wallet"],
     )
     over = hl.hyperopt_loss_function(
         results_over,

@@ -13,7 +13,6 @@ from pandas import DataFrame
 from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_max_drawdown
 from freqtrade.optimize.hyperopt import IHyperOptLoss
-from freqtrade.util import get_dry_run_wallet
 
 
 # smaller numbers penalize drawdowns more severely
@@ -22,12 +21,14 @@ DRAWDOWN_MULT = 0.075
 
 class ProfitDrawDownHyperOptLoss(IHyperOptLoss):
     @staticmethod
-    def hyperopt_loss_function(results: DataFrame, config: Config, *args, **kwargs) -> float:
+    def hyperopt_loss_function(
+        results: DataFrame, config: Config, starting_balance: float, *args, **kwargs
+    ) -> float:
         total_profit = results["profit_abs"].sum()
 
         try:
             drawdown = calculate_max_drawdown(
-                results, starting_balance=get_dry_run_wallet(config), value_col="profit_abs"
+                results, starting_balance=starting_balance, value_col="profit_abs"
             )
             relative_account_drawdown = drawdown.relative_account_drawdown
         except ValueError:

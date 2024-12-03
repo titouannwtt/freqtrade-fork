@@ -10,7 +10,6 @@ from pandas import DataFrame
 from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_underwater
 from freqtrade.optimize.hyperopt import IHyperOptLoss
-from freqtrade.util import get_dry_run_wallet
 
 
 class MaxDrawDownRelativeHyperOptLoss(IHyperOptLoss):
@@ -22,7 +21,9 @@ class MaxDrawDownRelativeHyperOptLoss(IHyperOptLoss):
     """
 
     @staticmethod
-    def hyperopt_loss_function(results: DataFrame, config: Config, *args, **kwargs) -> float:
+    def hyperopt_loss_function(
+        results: DataFrame, config: Config, starting_balance: float, *args, **kwargs
+    ) -> float:
         """
         Objective function.
 
@@ -32,7 +33,7 @@ class MaxDrawDownRelativeHyperOptLoss(IHyperOptLoss):
         total_profit = results["profit_abs"].sum()
         try:
             drawdown_df = calculate_underwater(
-                results, value_col="profit_abs", starting_balance=get_dry_run_wallet(config)
+                results, value_col="profit_abs", starting_balance=starting_balance
             )
             max_drawdown = abs(min(drawdown_df["drawdown"]))
             relative_drawdown = max(drawdown_df["drawdown_relative"])
