@@ -91,8 +91,6 @@ def populate_dataframe_with_trades(
         trades = trades.loc[trades["candle_start"] >= start_date]
         trades.reset_index(inplace=True, drop=True)
 
-        # group trades by candle start
-        trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
         # Create Series to hold complex data
         trades_series = pd.Series(index=dataframe.index, dtype=object)
         orderflow_series = pd.Series(index=dataframe.index, dtype=object)
@@ -100,7 +98,9 @@ def populate_dataframe_with_trades(
         stacked_imbalances_bid_series = pd.Series(index=dataframe.index, dtype=object)
         stacked_imbalances_ask_series = pd.Series(index=dataframe.index, dtype=object)
 
+        # group trades by candle start
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
+
         candle_start: datetime
         for candle_start, trades_grouped_df in trades_grouped_by_candle_start:
             is_between = candle_start == dataframe["date"]
