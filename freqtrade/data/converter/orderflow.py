@@ -4,7 +4,6 @@ Functions to convert orderflow data from public_trades
 
 import logging
 import time
-import typing
 from collections import OrderedDict
 from datetime import datetime
 
@@ -108,7 +107,7 @@ def populate_dataframe_with_trades(
             if is_between.any():
                 from freqtrade.exchange import timeframe_to_next_date
 
-                candle_next = timeframe_to_next_date(timeframe, typing.cast(datetime, candle_start))
+                candle_next = timeframe_to_next_date(timeframe, candle_start)
                 if candle_next not in trades_grouped_by_candle_start.groups:
                     logger.warning(
                         f"candle at {candle_start} with {len(trades_grouped_df)} trades "
@@ -117,9 +116,7 @@ def populate_dataframe_with_trades(
 
                 # Use caching mechanism
                 if (candle_start, candle_next) in cached_grouped_trades:
-                    cache_entry = cached_grouped_trades[
-                        (typing.cast(datetime, candle_start), candle_next)
-                    ]
+                    cache_entry = cached_grouped_trades[(candle_start, candle_next)]
                     # dataframe.loc[is_between] = cache_entry # doesn't take, so we need workaround:
                     # Create a dictionary of the column values to be assigned
                     update_dict = {c: cache_entry[c].iat[0] for c in cache_entry.columns}
