@@ -115,13 +115,6 @@ def populate_dataframe_with_trades(
                         f"might be unfinished, because no finished trades at {candle_next}"
                     )
 
-                indices = dataframe.index[is_between].tolist()
-                # Add trades to each candle
-                trades_series.loc[indices] = [
-                    trades_grouped_df.drop(columns=["candle_start", "candle_end"]).to_dict(
-                        orient="records"
-                    )
-                ]
                 # Use caching mechanism
                 if (candle_start, candle_next) in cached_grouped_trades:
                     cache_entry = cached_grouped_trades[
@@ -136,6 +129,13 @@ def populate_dataframe_with_trades(
                     )
                     continue
 
+                indices = dataframe.index[is_between].tolist()
+                # Add trades to each candle
+                trades_series.loc[indices] = [
+                    trades_grouped_df.drop(columns=["candle_start", "candle_end"]).to_dict(
+                        orient="records"
+                    )
+                ]
                 # Calculate orderflow for each candle
                 orderflow = trades_to_volumeprofile_with_total_delta_bid_ask(
                     trades_grouped_df, scale=config_orderflow["scale"]
