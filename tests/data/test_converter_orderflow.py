@@ -499,11 +499,15 @@ def test_analyze_with_orderflow(
     strategy.dp = DataProvider(default_conf_usdt, None, None)
 
     mocker.patch.object(strategy.dp, "trades", return_value=populate_dataframe_with_trades_trades)
+    import freqtrade.data.converter.orderflow as orderflow_module
 
-    df = strategy.advise_indicators(ohlcv_history, {"pair:": "ETH/BTC"})
+    spy = mocker.spy(orderflow_module, "trades_to_volumeprofile_with_total_delta_bid_ask")
+
+    pair = "ETH/BTC"
+    df = strategy.advise_indicators(ohlcv_history, {"pair:": pair})
     assert len(df) == len(ohlcv_history)
     assert "open" in df.columns
-    pair = "ETH/BTC"
+    assert spy.call_count == 0
 
     expected_cols = [
         "trades",
@@ -537,6 +541,8 @@ def test_analyze_with_orderflow(
     df1 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
     assert len(df1) == len(ohlcv_history)
     assert "open" in df1.columns
+    assert spy.call_count == 5
+
     for col in expected_cols:
         assert col in df1.columns, f"Column {col} not found in df.columns"
 
@@ -545,10 +551,16 @@ def test_analyze_with_orderflow(
 
     assert len(strategy._cached_grouped_trades_per_pair[pair]) == 5
 
+    lastval_trades = df1.at[len(df1) - 1, "trades"]
+    assert isinstance(lastval_trades, list)
+    assert len(lastval_trades) == 122
+
+    spy.reset_mock()
     # Ensure caching works - call the same logic again.
     df2 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
     assert len(df2) == len(ohlcv_history)
     assert "open" in df2.columns
+    assert spy.call_count == 0
     for col in expected_cols:
         assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
 
