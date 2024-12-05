@@ -503,6 +503,7 @@ def test_analyze_with_orderflow(
     df = strategy.advise_indicators(ohlcv_history, {"pair:": "ETH/BTC"})
     assert len(df) == len(ohlcv_history)
     assert "open" in df.columns
+    pair = "ETH/BTC"
 
     expected_cols = [
         "trades",
@@ -532,7 +533,8 @@ def test_analyze_with_orderflow(
     }
 
     strategy.config = default_conf_usdt
-    df1 = strategy.advise_indicators(ohlcv_history, {"pair": "ETH/BTC"})
+    # First round - builds cache
+    df1 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
     assert len(df1) == len(ohlcv_history)
     assert "open" in df1.columns
     for col in expected_cols:
@@ -541,8 +543,10 @@ def test_analyze_with_orderflow(
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
             assert df1[col].count() == 5, f"Column {col} has {df1[col].count()} non-NaN values"
 
+    assert len(strategy._cached_grouped_trades_per_pair[pair]) == 5
+
     # Ensure caching works - call the same logic again.
-    df2 = strategy.advise_indicators(ohlcv_history, {"pair": "ETH/BTC"})
+    df2 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
     assert len(df2) == len(ohlcv_history)
     assert "open" in df2.columns
     for col in expected_cols:
