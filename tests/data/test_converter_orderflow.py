@@ -8,6 +8,8 @@ from freqtrade.constants import DEFAULT_TRADES_COLUMNS
 from freqtrade.data.converter import populate_dataframe_with_trades
 from freqtrade.data.converter.orderflow import trades_to_volumeprofile_with_total_delta_bid_ask
 from freqtrade.data.converter.trade_converter import trades_list_to_df
+from freqtrade.data.dataprovider import DataProvider
+from tests.strategy.strats.strategy_test_v3 import StrategyTestV3
 
 
 BIN_SIZE_SCALE = 0.5
@@ -483,3 +485,70 @@ def test_public_trades_testdata_sanity(
         "cost",
         "date",
     ]
+
+
+def test_analyze_with_orderflow(
+    default_conf_usdt,
+    mocker,
+    populate_dataframe_with_trades_dataframe,
+    populate_dataframe_with_trades_trades,
+):
+    ohlcv_history = populate_dataframe_with_trades_dataframe
+    # call without orderflow
+    strategy = StrategyTestV3(config=default_conf_usdt)
+    strategy.dp = DataProvider(default_conf_usdt, None, None)
+
+    mocker.patch.object(strategy.dp, "trades", return_value=populate_dataframe_with_trades_trades)
+
+    df = strategy.advise_indicators(ohlcv_history, {"pair:": "ETH/BTC"})
+    assert len(df) == len(ohlcv_history)
+    assert "open" in df.columns
+
+    expected_cols = [
+        "trades",
+        "orderflow",
+        "imbalances",
+        "stacked_imbalances_bid",
+        "stacked_imbalances_ask",
+        "max_delta",
+        "min_delta",
+        "bid",
+        "ask",
+        "delta",
+        "total_trades",
+    ]
+    # Not expected to run - shouldn't have added orderflow columns
+    for col in expected_cols:
+        assert col not in df.columns, f"Column {col} found in df.columns"
+
+    default_conf_usdt["exchange"]["use_public_trades"] = True
+    default_conf_usdt["orderflow"] = {
+        "cache_size": 5,
+        "max_candles": 5,
+        "scale": 0.005,
+        "imbalance_volume": 0,
+        "imbalance_ratio": 3,
+        "stacked_imbalance_range": 3,
+    }
+
+    strategy.config = default_conf_usdt
+    df1 = strategy.advise_indicators(ohlcv_history, {"pair": "ETH/BTC"})
+    assert len(df1) == len(ohlcv_history)
+    assert "open" in df1.columns
+    for col in expected_cols:
+        assert col in df1.columns, f"Column {col} not found in df.columns"
+
+        if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
+            assert df1[col].count() == 5, f"Column {col} has {df1[col].count()} non-NaN values"
+
+    # Ensure caching works - call the same logic again.
+    df2 = strategy.advise_indicators(ohlcv_history, {"pair": "ETH/BTC"})
+    assert len(df2) == len(ohlcv_history)
+    assert "open" in df2.columns
+    for col in expected_cols:
+        assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
+
+        if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
+            assert (
+                df2[col].count() == 5
+            ), f"Round2: Column {col} has {df2[col].count()} non-NaN values"
