@@ -37,6 +37,7 @@ def populate_dataframe_with_trades_trades(testdatadir):
 
 @pytest.fixture
 def candles(testdatadir):
+    # TODO: this fixture isn't really necessary and could be removed
     return pd.read_json(testdatadir / "orderflow/candles.json").copy()
 
 
