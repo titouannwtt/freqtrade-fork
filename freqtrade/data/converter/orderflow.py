@@ -71,6 +71,8 @@ def populate_dataframe_with_trades(
     :param trades: Trades to populate with
     :return: Dataframe with trades populated
     """
+    from freqtrade.exchange import timeframe_to_next_date
+
     timeframe = config["timeframe"]
     config_orderflow = config["orderflow"]
 
@@ -105,8 +107,6 @@ def populate_dataframe_with_trades(
         for candle_start, trades_grouped_df in trades_grouped_by_candle_start:
             is_between = candle_start == dataframe["date"]
             if is_between.any():
-                from freqtrade.exchange import timeframe_to_next_date
-
                 candle_next = timeframe_to_next_date(timeframe, candle_start)
                 if candle_next not in trades_grouped_by_candle_start.groups:
                     logger.warning(
