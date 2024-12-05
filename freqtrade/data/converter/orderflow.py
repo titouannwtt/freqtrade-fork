@@ -158,15 +158,15 @@ def populate_dataframe_with_trades(
                 deltas_per_trade = ask - bid
                 min_delta = deltas_per_trade.cumsum().min()
                 max_delta = deltas_per_trade.cumsum().max()
-                dataframe.loc[index, "max_delta"] = max_delta
-                dataframe.loc[index, "min_delta"] = min_delta
+                dataframe.at[index, "max_delta"] = max_delta
+                dataframe.at[index, "min_delta"] = min_delta
 
-                dataframe.loc[index, "bid"] = bid.sum()
-                dataframe.loc[index, "ask"] = ask.sum()
-                dataframe.loc[index, "delta"] = (
-                    dataframe.loc[index, "ask"] - dataframe.loc[index, "bid"]
+                dataframe.at[index, "bid"] = bid.sum()
+                dataframe.at[index, "ask"] = ask.sum()
+                dataframe.at[index, "delta"] = (
+                    dataframe.at[index, "ask"] - dataframe.at[index, "bid"]
                 )
-                dataframe.loc[index, "total_trades"] = len(trades_grouped_df)
+                dataframe.at[index, "total_trades"] = len(trades_grouped_df)
 
                 # Cache the result
                 cached_grouped_trades[(candle_start, candle_next)] = dataframe.loc[
