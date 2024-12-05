@@ -17,6 +17,20 @@ from freqtrade.exceptions import DependencyException
 
 logger = logging.getLogger(__name__)
 
+ADDED_COLUMNS = [
+    "trades",
+    "orderflow",
+    "imbalances",
+    "stacked_imbalances_bid",
+    "stacked_imbalances_ask",
+    "max_delta",
+    "min_delta",
+    "bid",
+    "ask",
+    "delta",
+    "total_trades",
+]
+
 
 def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
     """
@@ -24,24 +38,18 @@ def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
     :param dataframe: Dataframe to populate
     """
     # Initialize columns with appropriate dtypes
-    dataframe["trades"] = np.nan
-    dataframe["orderflow"] = np.nan
-    dataframe["imbalances"] = np.nan
-    dataframe["stacked_imbalances_bid"] = np.nan
-    dataframe["stacked_imbalances_ask"] = np.nan
-    dataframe["max_delta"] = np.nan
-    dataframe["min_delta"] = np.nan
-    dataframe["bid"] = np.nan
-    dataframe["ask"] = np.nan
-    dataframe["delta"] = np.nan
-    dataframe["total_trades"] = np.nan
+    for column in ADDED_COLUMNS:
+        dataframe[column] = np.nan
 
-    # Ensure the 'trades' column is of object type
-    dataframe["trades"] = dataframe["trades"].astype(object)
-    dataframe["orderflow"] = dataframe["orderflow"].astype(object)
-    dataframe["imbalances"] = dataframe["imbalances"].astype(object)
-    dataframe["stacked_imbalances_bid"] = dataframe["stacked_imbalances_bid"].astype(object)
-    dataframe["stacked_imbalances_ask"] = dataframe["stacked_imbalances_ask"].astype(object)
+    # Set columns to object type
+    for column in (
+        "trades",
+        "orderflow",
+        "imbalances",
+        "stacked_imbalances_bid",
+        "stacked_imbalances_ask",
+    ):
+        dataframe[column] = dataframe[column].astype(object)
 
 
 def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
