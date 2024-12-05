@@ -93,13 +93,6 @@ def populate_dataframe_with_trades(
         trades = trades.loc[trades["candle_start"] >= start_date]
         trades.reset_index(inplace=True, drop=True)
 
-        # Create Series to hold complex data
-        trades_series = pd.Series(index=dataframe.index, dtype=object)
-        orderflow_series = pd.Series(index=dataframe.index, dtype=object)
-        imbalances_series = pd.Series(index=dataframe.index, dtype=object)
-        stacked_imbalances_bid_series = pd.Series(index=dataframe.index, dtype=object)
-        stacked_imbalances_ask_series = pd.Series(index=dataframe.index, dtype=object)
-
         # group trades by candle start
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
 
@@ -126,37 +119,34 @@ def populate_dataframe_with_trades(
                     )
                     continue
 
-                indices = dataframe.index[is_between].tolist()
-                # Add trades to each candle
-                trades_series.loc[indices] = [
-                    trades_grouped_df.drop(columns=["candle_start", "candle_end"]).to_dict(
-                        orient="records"
-                    )
-                ]
+                # there can only be one row with the same date
+                index = dataframe.index[is_between][0]
+                dataframe.at[index, "trades"] = trades_grouped_df.drop(
+                    columns=["candle_start", "candle_end"]
+                ).to_dict(orient="records")
+
                 # Calculate orderflow for each candle
                 orderflow = trades_to_volumeprofile_with_total_delta_bid_ask(
                     trades_grouped_df, scale=config_orderflow["scale"]
                 )
-                orderflow_series.loc[indices] = [orderflow.to_dict(orient="index")]
+                dataframe.at[index, "orderflow"] = orderflow.to_dict(orient="index")
+                # orderflow_series.loc[[index]] = [orderflow.to_dict(orient="index")]
                 # Calculate imbalances for each candle's orderflow
                 imbalances = trades_orderflow_to_imbalances(
                     orderflow,
                     imbalance_ratio=config_orderflow["imbalance_ratio"],
                     imbalance_volume=config_orderflow["imbalance_volume"],
                 )
-                imbalances_series.loc[indices] = [imbalances.to_dict(orient="index")]
+                dataframe.at[index, "imbalances"] = imbalances.to_dict(orient="index")
 
                 stacked_imbalance_range = config_orderflow["stacked_imbalance_range"]
-                stacked_imbalances_bid_series.loc[indices] = [
-                    stacked_imbalance_bid(
-                        imbalances, stacked_imbalance_range=stacked_imbalance_range
-                    )
-                ]
-                stacked_imbalances_ask_series.loc[indices] = [
-                    stacked_imbalance_ask(
-                        imbalances, stacked_imbalance_range=stacked_imbalance_range
-                    )
-                ]
+                dataframe.at[index, "stacked_imbalances_bid"] = stacked_imbalance_bid(
+                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                )
+
+                dataframe.at[index, "stacked_imbalances_ask"] = stacked_imbalance_ask(
+                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                )
 
                 bid = np.where(
                     trades_grouped_df["side"].str.contains("sell"), trades_grouped_df["amount"], 0
@@ -168,15 +158,15 @@ def populate_dataframe_with_trades(
                 deltas_per_trade = ask - bid
                 min_delta = deltas_per_trade.cumsum().min()
                 max_delta = deltas_per_trade.cumsum().max()
-                dataframe.loc[indices, "max_delta"] = max_delta
-                dataframe.loc[indices, "min_delta"] = min_delta
+                dataframe.loc[index, "max_delta"] = max_delta
+                dataframe.loc[index, "min_delta"] = min_delta
 
-                dataframe.loc[indices, "bid"] = bid.sum()
-                dataframe.loc[indices, "ask"] = ask.sum()
-                dataframe.loc[indices, "delta"] = (
-                    dataframe.loc[indices, "ask"] - dataframe.loc[indices, "bid"]
+                dataframe.loc[index, "bid"] = bid.sum()
+                dataframe.loc[index, "ask"] = ask.sum()
+                dataframe.loc[index, "delta"] = (
+                    dataframe.loc[index, "ask"] - dataframe.loc[index, "bid"]
                 )
-                dataframe.loc[indices, "total_trades"] = len(trades_grouped_df)
+                dataframe.loc[index, "total_trades"] = len(trades_grouped_df)
 
                 # Cache the result
                 cached_grouped_trades[(candle_start, candle_next)] = dataframe.loc[
@@ -192,13 +182,6 @@ def populate_dataframe_with_trades(
             else:
                 logger.debug(f"Found NO candles for trades starting with {candle_start}")
         logger.debug(f"trades.groups_keys in {time.time() - start_time} seconds")
-
-        # Merge the complex data Series back into the DataFrame
-        dataframe["trades"] = trades_series
-        dataframe["orderflow"] = orderflow_series
-        dataframe["imbalances"] = imbalances_series
-        dataframe["stacked_imbalances_bid"] = stacked_imbalances_bid_series
-        dataframe["stacked_imbalances_ask"] = stacked_imbalances_ask_series
 
     except Exception as e:
         logger.exception("Error populating dataframe with trades")
