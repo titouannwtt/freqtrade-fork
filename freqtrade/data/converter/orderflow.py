@@ -154,10 +154,8 @@ def populate_dataframe_with_trades(
                     trades_grouped_df["side"].str.contains("buy"), trades_grouped_df["amount"], 0
                 )
                 deltas_per_trade = ask - bid
-                min_delta = deltas_per_trade.cumsum().min()
-                max_delta = deltas_per_trade.cumsum().max()
-                dataframe.at[index, "max_delta"] = max_delta
-                dataframe.at[index, "min_delta"] = min_delta
+                dataframe.at[index, "max_delta"] = deltas_per_trade.cumsum().max()
+                dataframe.at[index, "min_delta"] = deltas_per_trade.cumsum().min()
 
                 dataframe.at[index, "bid"] = bid.sum()
                 dataframe.at[index, "ask"] = ask.sum()
