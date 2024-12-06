@@ -4,7 +4,10 @@ import pytest
 
 from freqtrade.constants import DEFAULT_TRADES_COLUMNS
 from freqtrade.data.converter import populate_dataframe_with_trades
-from freqtrade.data.converter.orderflow import trades_to_volumeprofile_with_total_delta_bid_ask
+from freqtrade.data.converter.orderflow import (
+    ORDERFLOW_ADDED_COLUMNS,
+    trades_to_volumeprofile_with_total_delta_bid_ask,
+)
 from freqtrade.data.converter.trade_converter import trades_list_to_df
 from freqtrade.data.dataprovider import DataProvider
 from tests.strategy.strats.strategy_test_v3 import StrategyTestV3
@@ -505,21 +508,8 @@ def test_analyze_with_orderflow(
     assert "open" in df.columns
     assert spy.call_count == 0
 
-    expected_cols = [
-        "trades",
-        "orderflow",
-        "imbalances",
-        "stacked_imbalances_bid",
-        "stacked_imbalances_ask",
-        "max_delta",
-        "min_delta",
-        "bid",
-        "ask",
-        "delta",
-        "total_trades",
-    ]
     # Not expected to run - shouldn't have added orderflow columns
-    for col in expected_cols:
+    for col in ORDERFLOW_ADDED_COLUMNS:
         assert col not in df.columns, f"Column {col} found in df.columns"
 
     default_conf_usdt["exchange"]["use_public_trades"] = True
@@ -539,7 +529,7 @@ def test_analyze_with_orderflow(
     assert "open" in df1.columns
     assert spy.call_count == 5
 
-    for col in expected_cols:
+    for col in ORDERFLOW_ADDED_COLUMNS:
         assert col in df1.columns, f"Column {col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
@@ -560,7 +550,7 @@ def test_analyze_with_orderflow(
     assert len(df2) == len(ohlcv_history)
     assert "open" in df2.columns
     assert spy.call_count == 0
-    for col in expected_cols:
+    for col in ORDERFLOW_ADDED_COLUMNS:
         assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):

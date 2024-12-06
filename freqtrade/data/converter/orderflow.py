@@ -15,7 +15,7 @@ from freqtrade.exceptions import DependencyException
 
 logger = logging.getLogger(__name__)
 
-ADDED_COLUMNS = [
+ORDERFLOW_ADDED_COLUMNS = [
     "trades",
     "orderflow",
     "imbalances",
@@ -36,7 +36,7 @@ def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
     :param dataframe: Dataframe to populate
     """
     # Initialize columns with appropriate dtypes
-    for column in ADDED_COLUMNS:
+    for column in ORDERFLOW_ADDED_COLUMNS:
         dataframe[column] = np.nan
 
     # Set columns to object type
@@ -115,7 +115,7 @@ def populate_dataframe_with_trades(
                     cache_idx = cached_grouped_trades.index[
                         cached_grouped_trades["date"] == candle_start
                     ][0]
-                    for col in ADDED_COLUMNS:
+                    for col in ORDERFLOW_ADDED_COLUMNS:
                         dataframe.at[index, col] = cached_grouped_trades.at[cache_idx, col]
                     continue
 
