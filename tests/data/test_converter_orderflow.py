@@ -551,6 +551,9 @@ def test_analyze_with_orderflow(
     assert isinstance(lastval_trades, list)
     assert len(lastval_trades) == 122
 
+    lastval_of = df1.at[len(df1) - 1, "orderflow"]
+    assert isinstance(lastval_of, dict)
+
     spy.reset_mock()
     # Ensure caching works - call the same logic again.
     df2 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
@@ -564,3 +567,10 @@ def test_analyze_with_orderflow(
             assert (
                 df2[col].count() == 5
             ), f"Round2: Column {col} has {df2[col].count()} non-NaN values"
+
+    lastval_trade2 = df2.at[len(df2) - 1, "trades"]
+    assert isinstance(lastval_trade2, list)
+    assert len(lastval_trade2) == 122
+
+    lastval_of2 = df2.at[len(df2) - 1, "orderflow"]
+    assert isinstance(lastval_of2, dict)
