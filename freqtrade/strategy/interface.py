@@ -1601,13 +1601,11 @@ class IStrategy(ABC, HyperStrategyMixin):
         if use_public_trades:
             trades = self.dp.trades(pair=metadata["pair"], copy=False)
 
-            config = self.config
-            config["timeframe"] = self.timeframe
             pair = metadata["pair"]
             # TODO: slice trades to size of dataframe for faster backtesting
             cached_grouped_trades: DataFrame | None = self._cached_grouped_trades_per_pair.get(pair)
             dataframe, cached_grouped_trades = populate_dataframe_with_trades(
-                cached_grouped_trades, config, dataframe, trades
+                cached_grouped_trades, self.config, dataframe, trades
             )
 
             # dereference old cache
