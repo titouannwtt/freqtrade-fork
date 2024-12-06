@@ -113,10 +113,11 @@ def populate_dataframe_with_trades(
                 ):
                     logger.info(f"Using cached orderflow data for {candle_start}")
                     # Check if the trades are already in the cache
+                    cache_idx = cached_grouped_trades.index[
+                        cached_grouped_trades["date"] == candle_start
+                    ][0]
                     for col in ADDED_COLUMNS:
-                        dataframe.at[index, col] = cached_grouped_trades.loc[
-                            (cached_grouped_trades["date"] == candle_start), col
-                        ].values
+                        dataframe.at[index, col] = cached_grouped_trades.at[cache_idx, col]
                     continue
 
                 dataframe.at[index, "trades"] = trades_grouped_df.drop(
