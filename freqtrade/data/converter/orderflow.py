@@ -111,7 +111,6 @@ def populate_dataframe_with_trades(
                     cached_grouped_trades is not None
                     and (candle_start == cached_grouped_trades["date"]).any()
                 ):
-                    logger.info(f"Using cached orderflow data for {candle_start}")
                     # Check if the trades are already in the cache
                     cache_idx = cached_grouped_trades.index[
                         cached_grouped_trades["date"] == candle_start
