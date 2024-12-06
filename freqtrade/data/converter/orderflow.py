@@ -50,6 +50,33 @@ def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
         dataframe[column] = dataframe[column].astype(object)
 
 
+def timeframe_to_DateOffset(timeframe: str) -> pd.DateOffset:
+    """
+    Translates the timeframe interval value written in the human readable
+    form ('1m', '5m', '1h', '1d', '1w', etc.) to the number
+    of seconds for one timeframe interval.
+    """
+    from freqtrade.exchange import (
+        timeframe_to_seconds,
+    )
+
+    timeframe_seconds = timeframe_to_seconds(timeframe)
+    timeframe_minutes = timeframe_seconds // 60
+    if timeframe_minutes < 1:
+        return pd.DateOffset(seconds=timeframe_seconds)
+    elif 59 < timeframe_minutes < 1440:
+        return pd.DateOffset(hours=timeframe_minutes // 60)
+    elif 1440 <= timeframe_minutes < 10080:
+        return pd.DateOffset(days=timeframe_minutes // 1440)
+    elif 10000 < timeframe_minutes < 43200:
+        return pd.DateOffset(weeks=1)
+    elif timeframe_minutes >= 43200 and timeframe_minutes < 525600:
+        return pd.DateOffset(months=1)
+    elif timeframe == "1y":
+        return pd.DateOffset(years=1)
+    else:
+        return pd.DateOffset(minutes=timeframe_minutes)
+
 def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
     from freqtrade.exchange import timeframe_to_next_date, timeframe_to_resample_freq
 
