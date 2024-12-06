@@ -68,18 +68,17 @@ def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
 
 
 def populate_dataframe_with_trades(
-    cached_grouped_trades: OrderedDict[tuple[datetime, datetime], pd.DataFrame],
+    cached_grouped_trades: pd.DataFrame | None,
     config: Config,
     dataframe: pd.DataFrame,
     trades: pd.DataFrame,
-) -> tuple[pd.DataFrame, OrderedDict[tuple[datetime, datetime], pd.DataFrame]]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Populates a dataframe with trades
     :param dataframe: Dataframe to populate
     :param trades: Trades to populate with
     :return: Dataframe with trades populated
     """
-    from freqtrade.exchange import timeframe_to_next_date
 
     timeframe = config["timeframe"]
     config_orderflow = config["orderflow"]
@@ -101,34 +100,27 @@ def populate_dataframe_with_trades(
         trades = trades.loc[trades["candle_start"] >= start_date]
         trades.reset_index(inplace=True, drop=True)
 
-        # group trades by candle start
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
 
         candle_start: datetime
         for candle_start, trades_grouped_df in trades_grouped_by_candle_start:
             is_between = candle_start == dataframe["date"]
             if is_between.any():
-                candle_next = timeframe_to_next_date(timeframe, candle_start)
-                if candle_next not in trades_grouped_by_candle_start.groups:
-                    logger.warning(
-                        f"candle at {candle_start} with {len(trades_grouped_df)} trades "
-                        f"might be unfinished, because no finished trades at {candle_next}"
-                    )
-
-                # Use caching mechanism
-                if (candle_start, candle_next) in cached_grouped_trades:
-                    cache_entry = cached_grouped_trades[(candle_start, candle_next)]
-                    # dataframe.loc[is_between] = cache_entry # doesn't take, so we need workaround:
-                    # Create a dictionary of the column values to be assigned
-                    update_dict = {c: cache_entry[c].iat[0] for c in cache_entry.columns}
-                    # Assign the values using the update_dict
-                    dataframe.loc[is_between, update_dict.keys()] = pd.DataFrame(
-                        [update_dict], index=dataframe.loc[is_between].index
-                    )
-                    continue
-
                 # there can only be one row with the same date
                 index = dataframe.index[is_between][0]
+
+                if (
+                    cached_grouped_trades is not None
+                    and (candle_start == cached_grouped_trades["date"]).any()
+                ):
+                    logger.info(f"Using cached orderflow data for {candle_start}")
+                    # Check if the trades are already in the cache
+                    for col in ADDED_COLUMNS:
+                        dataframe.at[index, col] = cached_grouped_trades.loc[
+                            (cached_grouped_trades["date"] == candle_start), col
+                        ].values
+                    continue
+
                 dataframe.at[index, "trades"] = trades_grouped_df.drop(
                     columns=["candle_start", "candle_end"]
                 ).to_dict(orient="records")
@@ -176,20 +168,10 @@ def populate_dataframe_with_trades(
                 )
                 dataframe.at[index, "total_trades"] = len(trades_grouped_df)
 
-                # Cache the result
-                cached_grouped_trades[(candle_start, candle_next)] = dataframe.loc[
-                    is_between
-                ].copy()
-
-                # Maintain cache size
-                if (
-                    config.get("runmode") in (RunMode.DRY_RUN, RunMode.LIVE)
-                    and len(cached_grouped_trades) > config_orderflow["cache_size"]
-                ):
-                    cached_grouped_trades.popitem(last=False)
-            else:
-                logger.debug(f"Found NO candles for trades starting with {candle_start}")
         logger.debug(f"trades.groups_keys in {time.time() - start_time} seconds")
+
+        # Cache the entire dataframe
+        cached_grouped_trades = dataframe.tail(config_orderflow["cache_size"]).copy()
 
     except Exception as e:
         logger.exception("Error populating dataframe with trades")
