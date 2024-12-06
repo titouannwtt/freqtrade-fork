@@ -4,14 +4,12 @@ Functions to convert orderflow data from public_trades
 
 import logging
 import time
-from collections import OrderedDict
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from freqtrade.constants import DEFAULT_ORDERFLOW_COLUMNS, Config
-from freqtrade.enums import RunMode
 from freqtrade.exceptions import DependencyException
 
 

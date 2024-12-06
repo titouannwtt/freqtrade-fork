@@ -5,7 +5,6 @@ This module defines the interface to apply for strategies
 
 import logging
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from math import isinf, isnan
 
