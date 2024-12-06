@@ -56,6 +56,11 @@ repos:
                 .*\.md
             )$
 
+  - repo: https://github.com/stefmolin/exif-stripper
+    rev: 0.6.1
+    hooks:
+      - id: strip-exif
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
