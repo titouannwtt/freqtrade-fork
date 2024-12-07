@@ -1163,10 +1163,10 @@ class IStrategy(ABC, HyperStrategyMixin):
             logger.warning(f"Empty candle (OHLCV) data for pair {pair}")
             return None, None
 
-        latest_date = dataframe["date"].max()
-        latest = dataframe.loc[dataframe["date"] == latest_date].iloc[-1]
+        latest_date_pd = dataframe["date"].max()
+        latest = dataframe.loc[dataframe["date"] == latest_date_pd].iloc[-1]
         # Explicitly convert to datetime object to ensure the below comparison does not fail
-        latest_date = latest_date.to_pydatetime()
+        latest_date: datetime = latest_date_pd.to_pydatetime()
 
         # Check if dataframe is out of date
         timeframe_minutes = timeframe_to_minutes(timeframe)
