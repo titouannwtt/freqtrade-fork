@@ -41,7 +41,14 @@ class Wallets:
         self._exchange = exchange
         self._wallets: dict[str, Wallet] = {}
         self._positions: dict[str, PositionWallet] = {}
-        self._start_cap = config["dry_run_wallet"]
+        self._start_cap: dict[str, float] = {}
+        self._stake_currency = config["stake_currency"]
+
+        if isinstance(_start_cap := config["dry_run_wallet"], float | int):
+            self._start_cap[self._stake_currency] = _start_cap
+        else:
+            self._start_cap = _start_cap
+
         self._last_wallet_refresh: datetime | None = None
         self.update()
 
@@ -109,10 +116,18 @@ class Wallets:
                     for o in trade.open_orders
                     if o.amount and o.ft_order_side == trade.exit_side
                 )
+                curr_wallet_bal = self._start_cap.get(curr, 0)
 
-                _wallets[curr] = Wallet(curr, trade.amount - pending, pending, trade.amount)
+                _wallets[curr] = Wallet(
+                    curr,
+                    curr_wallet_bal + trade.amount - pending,
+                    pending,
+                    trade.amount + curr_wallet_bal,
+                )
 
-            current_stake = self._start_cap + tot_profit - tot_in_trades
+            current_stake = (
+                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+            )
             total_stake = current_stake + used_stake
         else:
             tot_in_trades = 0
@@ -129,16 +144,24 @@ class Wallets:
                     collateral=collateral,
                     side=position.trade_direction,
                 )
-            current_stake = self._start_cap + tot_profit - tot_in_trades
+            current_stake = (
+                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+            )
+
             used_stake = tot_in_trades
             total_stake = current_stake + tot_in_trades
 
-        _wallets[self._config["stake_currency"]] = Wallet(
-            currency=self._config["stake_currency"],
+        _wallets[self._stake_currency] = Wallet(
+            currency=self._stake_currency,
             free=current_stake,
             used=used_stake,
             total=total_stake,
         )
+        for currency in self._start_cap:
+            if currency not in _wallets:
+                bal = self._start_cap[currency]
+                _wallets[currency] = Wallet(currency, bal, 0, bal)
+
         self._wallets = _wallets
         self._positions = _positions
 
@@ -244,7 +267,7 @@ class Wallets:
         else:
             tot_profit = Trade.get_total_closed_profit()
             open_stakes = Trade.total_open_trades_stakes()
-            available_balance = self.get_free(self._config["stake_currency"])
+            available_balance = self.get_free(self._stake_currency)
             return available_balance - tot_profit + open_stakes
 
     def get_total_stake_amount(self):
@@ -264,9 +287,9 @@ class Wallets:
             # Ensure <tradable_balance_ratio>% is used from the overall balance
             # Otherwise we'd risk lowering stakes with each open trade.
             # (tied up + current free) * ratio) - tied up
-            available_amount = (
-                val_tied_up + self.get_free(self._config["stake_currency"])
-            ) * self._config["tradable_balance_ratio"]
+            available_amount = (val_tied_up + self.get_free(self._stake_currency)) * self._config[
+                "tradable_balance_ratio"
+            ]
         return available_amount
 
     def get_available_stake_amount(self) -> float:
@@ -277,7 +300,7 @@ class Wallets:
         (<open_trade stakes> + free amount) * tradable_balance_ratio - <open_trade stakes>
         """
 
-        free = self.get_free(self._config["stake_currency"])
+        free = self.get_free(self._stake_currency)
         return min(self.get_total_stake_amount() - Trade.total_open_trades_stakes(), free)
 
     def _calculate_unlimited_stake_amount(
@@ -336,8 +359,8 @@ class Wallets:
         if edge:
             stake_amount = edge.stake_amount(
                 pair,
-                self.get_free(self._config["stake_currency"]),
-                self.get_total(self._config["stake_currency"]),
+                self.get_free(self._stake_currency),
+                self.get_total(self._stake_currency),
                 val_tied_up,
             )
         else:

@@ -168,7 +168,7 @@ def test_get_trade_stake_amount_unlimited_amount(
     assert result == 0
 
     freqtrade.config["dry_run_wallet"] = 200
-    freqtrade.wallets._start_cap = 200
+    freqtrade.wallets._start_cap["BTC"] = 200
     result = freqtrade.wallets.get_trade_stake_amount("XRP/USDT", 3)
     assert round(result, 4) == round(result2, 4)
 
@@ -451,3 +451,63 @@ def test_check_exit_amount_futures(mocker, default_conf, fee):
     assert freqtrade.wallets.check_exit_amount(trade) is False
     assert total_mock.call_count == 0
     assert update_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "config,wallets",
+    [
+        (
+            {"stake_currency": "USDT", "dry_run_wallet": 1000.0},
+            {"USDT": {"currency": "USDT", "free": 1000.0, "used": 0.0, "total": 1000.0}},
+        ),
+        (
+            {"stake_currency": "USDT", "dry_run_wallet": {"USDT": 1000.0, "BTC": 0.1, "ETH": 2.0}},
+            {
+                "USDT": {"currency": "USDT", "free": 1000.0, "used": 0.0, "total": 1000.0},
+                "BTC": {"currency": "BTC", "free": 0.1, "used": 0.0, "total": 0.1},
+                "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
+            },
+        ),
+    ],
+)
+def test_dry_run_wallet_initialization(mocker, default_conf_usdt, config, wallets):
+    default_conf_usdt.update(config)
+    freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
+
+    # Verify each wallet matches the expected values
+    for currency, expected_wallet in wallets.items():
+        wallet = freqtrade.wallets._wallets[currency]
+        assert wallet.currency == expected_wallet["currency"]
+        assert wallet.free == expected_wallet["free"]
+        assert wallet.used == expected_wallet["used"]
+        assert wallet.total == expected_wallet["total"]
+
+    # Verify no extra wallets were created
+    assert len(freqtrade.wallets._wallets) == len(wallets)
+
+    # Create a trade and verify the new currency is added to the wallets
+    mocker.patch(f"{EXMS}.get_min_pair_stake_amount", return_value=0.0)
+    mocker.patch(f"{EXMS}.get_rate", return_value=2.22)
+    mocker.patch(
+        f"{EXMS}.fetch_ticker",
+        return_value={
+            "bid": 0.20,
+            "ask": 0.22,
+            "last": 0.22,
+        },
+    )
+    freqtrade.execute_entry("NEO/USDT", 100.0)
+
+    # Update wallets and verify NEO is now included
+    freqtrade.wallets.update()
+    assert "NEO" in freqtrade.wallets._wallets
+
+    assert freqtrade.wallets._wallets["NEO"].total == 45.04504504  # 100 USDT / 0.22
+    assert freqtrade.wallets._wallets["NEO"].used == 0.0
+    assert freqtrade.wallets._wallets["NEO"].free == 45.04504504
+
+    # Verify USDT wallet was reduced by trade amount
+    assert (
+        pytest.approx(freqtrade.wallets._wallets["USDT"].total) == wallets["USDT"]["total"] - 100.0
+    )
+    assert len(freqtrade.wallets._wallets) == len(wallets) + 1  # Original wallets + NEO
