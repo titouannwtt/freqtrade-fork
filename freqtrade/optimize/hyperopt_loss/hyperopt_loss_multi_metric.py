@@ -33,7 +33,6 @@ TARGET_TRADE_AMOUNT variable sets the minimum number of trades required to avoid
 import numpy as np
 from pandas import DataFrame
 
-from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_expectancy, calculate_max_drawdown
 from freqtrade.optimize.hyperopt import IHyperOptLoss
 
@@ -57,7 +56,6 @@ class MultiMetricHyperOptLoss(IHyperOptLoss):
     def hyperopt_loss_function(
         results: DataFrame,
         trade_count: int,
-        config: Config,
         starting_balance: float,
         **kwargs,
     ) -> float:

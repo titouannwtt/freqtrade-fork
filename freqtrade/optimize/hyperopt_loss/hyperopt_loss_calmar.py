@@ -9,7 +9,6 @@ from datetime import datetime
 
 from pandas import DataFrame
 
-from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_calmar
 from freqtrade.optimize.hyperopt import IHyperOptLoss
 
@@ -24,10 +23,8 @@ class CalmarHyperOptLoss(IHyperOptLoss):
     @staticmethod
     def hyperopt_loss_function(
         results: DataFrame,
-        trade_count: int,
         min_date: datetime,
         max_date: datetime,
-        config: Config,
         starting_balance: float,
         *args,
         **kwargs,

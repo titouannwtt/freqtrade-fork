@@ -7,7 +7,6 @@ Hyperoptimization.
 
 from pandas import DataFrame
 
-from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_underwater
 from freqtrade.optimize.hyperopt import IHyperOptLoss
 
@@ -22,7 +21,7 @@ class MaxDrawDownRelativeHyperOptLoss(IHyperOptLoss):
 
     @staticmethod
     def hyperopt_loss_function(
-        results: DataFrame, config: Config, starting_balance: float, *args, **kwargs
+        results: DataFrame, starting_balance: float, *args, **kwargs
     ) -> float:
         """
         Objective function.

@@ -10,7 +10,6 @@ individual needs.
 
 from pandas import DataFrame
 
-from freqtrade.constants import Config
 from freqtrade.data.metrics import calculate_max_drawdown
 from freqtrade.optimize.hyperopt import IHyperOptLoss
 
@@ -22,7 +21,7 @@ DRAWDOWN_MULT = 0.075
 class ProfitDrawDownHyperOptLoss(IHyperOptLoss):
     @staticmethod
     def hyperopt_loss_function(
-        results: DataFrame, config: Config, starting_balance: float, *args, **kwargs
+        results: DataFrame, starting_balance: float, *args, **kwargs
     ) -> float:
         total_profit = results["profit_abs"].sum()
 
