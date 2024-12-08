@@ -2007,6 +2007,49 @@ def test_get_tickers(default_conf, mocker, exchange_name, caplog):
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
+def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
+    api_mock = MagicMock()
+    tick = {
+        "ETH/USDT": {
+            "last": 42,
+        },
+        "BCH/USDT": {
+            "last": 41,
+        },
+        "ETH/BTC": {
+            "last": 250,
+        },
+    }
+    tick2 = {
+        "XRP/USDT": {
+            "symbol": "XRP/USDT",
+            "bid": 0.5,
+            "ask": 1,
+            "last": 2.5,
+        }
+    }
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    api_mock.fetch_tickers = MagicMock(side_effect=[tick, tick2])
+    api_mock.fetch_bids_asks = MagicMock(return_value={})
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange=exchange_name)
+    # retrieve original ticker
+    assert exchange.get_conversion_rate("USDT", "USDT") == 1
+    assert api_mock.fetch_tickers.call_count == 0
+    assert exchange.get_conversion_rate("ETH", "USDT") == 42
+    assert exchange.get_conversion_rate("ETH", "USDC") is None
+    assert exchange.get_conversion_rate("ETH", "BTC") == 250
+    assert exchange.get_conversion_rate("BTC", "ETH") == 0.004
+
+    assert api_mock.fetch_tickers.call_count == 1
+    api_mock.fetch_tickers.reset_mock()
+
+    assert exchange.get_conversion_rate("XRP", "USDT") == 2.5
+    # Only the call to the "others" market
+    assert api_mock.fetch_tickers.call_count == 1
+
+
+@pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_fetch_ticker(default_conf, mocker, exchange_name):
     api_mock = MagicMock()
     tick = {

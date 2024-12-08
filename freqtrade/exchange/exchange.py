@@ -1867,7 +1867,11 @@ class Exchange:
         if coin == currency:
             return 1.0
         tickers = self.get_tickers(cached=True)
-        pair = self.get_valid_pair_combination(coin, currency)
+        try:
+            pair = self.get_valid_pair_combination(coin, currency)
+        except ValueError:
+            return None
+
         ticker: Ticker | None = tickers.get(pair, None)
         if not ticker:
             tickers_other: Tickers = self.get_tickers(
