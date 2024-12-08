@@ -586,7 +586,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         fetch_positions=MagicMock(return_value=mock_pos),
         get_tickers=tickers,
         get_valid_pair_combination=MagicMock(
-            side_effect=lambda a, b: f"{b}/{a}" if a == "USDT" else f"{a}/{b}"
+            side_effect=lambda a, b: [f"{b}/{a}" if a == "USDT" else f"{a}/{b}"]
         ),
     )
     default_conf_usdt["dry_run"] = False

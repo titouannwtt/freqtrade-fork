@@ -2021,10 +2021,7 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
         },
     }
     tick2 = {
-        "XRP/USDT": {
-            "symbol": "XRP/USDT",
-            "bid": 0.5,
-            "ask": 1,
+        "ADA/USDT:USDT": {
             "last": 2.5,
         }
     }
@@ -2044,7 +2041,7 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
     assert api_mock.fetch_tickers.call_count == 1
     api_mock.fetch_tickers.reset_mock()
 
-    assert exchange.get_conversion_rate("XRP", "USDT") == 2.5
+    assert exchange.get_conversion_rate("ADA", "USDT") == 2.5
     # Only the call to the "others" market
     assert api_mock.fetch_tickers.call_count == 1
 
@@ -4122,10 +4119,16 @@ def test_get_valid_pair_combination(default_conf, mocker, markets):
     )
     ex = Exchange(default_conf)
 
-    assert ex.get_valid_pair_combination("ETH", "BTC") == "ETH/BTC"
-    assert ex.get_valid_pair_combination("BTC", "ETH") == "ETH/BTC"
+    assert next(ex.get_valid_pair_combination("ETH", "BTC")) == "ETH/BTC"
+    assert next(ex.get_valid_pair_combination("BTC", "ETH")) == "ETH/BTC"
+    multicombs = list(ex.get_valid_pair_combination("ETH", "USDT"))
+    assert len(multicombs) == 2
+    assert "ETH/USDT" in multicombs
+    assert "ETH/USDT:USDT" in multicombs
+
     with pytest.raises(ValueError, match=r"Could not combine.* to get a valid pair."):
-        ex.get_valid_pair_combination("NOPAIR", "ETH")
+        for x in ex.get_valid_pair_combination("NOPAIR", "ETH"):
+            pass
 
 
 @pytest.mark.parametrize(
