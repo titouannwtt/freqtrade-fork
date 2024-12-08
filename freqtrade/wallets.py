@@ -145,9 +145,8 @@ class Wallets:
             used=used_stake,
             total=total_stake,
         )
-        for currency in self._start_cap:
+        for currency, bal in self._start_cap.items():
             if currency not in _wallets:
-                bal = self._start_cap[currency]
                 _wallets[currency] = Wallet(currency, bal, 0, bal)
 
         self._wallets = _wallets
