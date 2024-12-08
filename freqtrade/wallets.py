@@ -124,11 +124,6 @@ class Wallets:
                     pending,
                     trade.amount + curr_wallet_bal,
                 )
-
-            current_stake = (
-                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
-            )
-            total_stake = current_stake + used_stake
         else:
             for position in open_trades:
                 _positions[position.pair] = PositionWallet(
@@ -138,12 +133,11 @@ class Wallets:
                     collateral=position.stake_amount,
                     side=position.trade_direction,
                 )
-            current_stake = (
-                self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
-            )
 
             used_stake = tot_in_trades
-            total_stake = current_stake + tot_in_trades
+
+        current_stake = self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+        total_stake = current_stake + used_stake
 
         _wallets[self._stake_currency] = Wallet(
             currency=self._stake_currency,
