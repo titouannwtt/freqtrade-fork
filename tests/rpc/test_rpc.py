@@ -514,8 +514,13 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
-    with pytest.raises(RPCException, match="Error getting current tickers."):
-        rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
+    res = rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
+    assert res["stake"] == "BTC"
+
+    assert len(res["currencies"]) == 1
+    assert res["currencies"][0]["currency"] == "BTC"
+    # ETH has not been converted.
+    assert all(currency["currency"] != "ETH" for currency in res["currencies"])
 
 
 def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
@@ -597,10 +602,10 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
 
     assert pytest.approx(result["total"]) == 2824.83464
     assert pytest.approx(result["value"]) == 2824.83464 * 1.2
-    assert tickers.call_count == 2
+    assert tickers.call_count == 4
     assert tickers.call_args_list[0][1]["cached"] is True
     # Testing futures - so we should get spot tickers
-    assert tickers.call_args_list[1][1]["market_type"] == "spot"
+    assert tickers.call_args_list[-1][1]["market_type"] == "spot"
     assert "USD" == result["symbol"]
     assert result["currencies"] == [
         {
