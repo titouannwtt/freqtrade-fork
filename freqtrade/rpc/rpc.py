@@ -32,7 +32,6 @@ from freqtrade.enums import (
 )
 from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
-from freqtrade.exchange.exchange_types import Ticker, Tickers
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
