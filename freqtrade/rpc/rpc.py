@@ -726,7 +726,7 @@ class RPC:
         coin: str
         balance: Wallet
         for coin, balance in self._freqtrade.wallets.get_all_balances().items():
-            if not balance.total:
+            if not balance.total and not balance.free:
                 continue
 
             trade = open_assets.get(coin, None)
