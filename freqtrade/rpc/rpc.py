@@ -33,6 +33,7 @@ from freqtrade.enums import (
 from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_types import Ticker, Tickers
+from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
@@ -243,7 +244,11 @@ class RPC:
                 stoploss_entry_dist_ratio = stop_entry.profit_ratio
 
                 # calculate distance to stoploss
-                stoploss_current_dist = trade.stop_loss - current_rate
+                stoploss_current_dist = price_to_precision(
+                    trade.stop_loss - current_rate,
+                    trade.price_precision,
+                    trade.precision_mode_price,
+                )
                 stoploss_current_dist_ratio = stoploss_current_dist / current_rate
 
                 trade_dict = trade.to_json()
