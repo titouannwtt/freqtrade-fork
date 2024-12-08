@@ -1,6 +1,7 @@
 # pragma pylint: disable=missing-docstring
 import json
 import logging
+import platform
 import re
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -515,6 +516,30 @@ def create_mock_trades_usdt(fee, is_short: bool | None = False, use_db: bool = T
 @pytest.fixture(autouse=True)
 def patch_gc(mocker) -> None:
     mocker.patch("freqtrade.main.gc_set_threshold")
+
+
+def is_arm() -> bool:
+    machine = platform.machine()
+    return "arm" in machine or "aarch64" in machine
+
+
+def is_mac() -> bool:
+    machine = platform.system()
+    return "Darwin" in machine
+
+
+@pytest.fixture(autouse=True)
+def patch_torch_initlogs(mocker) -> None:
+    if is_mac():
+        # Mock torch import completely
+        import sys
+        import types
+
+        module_name = "torch"
+        mocked_module = types.ModuleType(module_name)
+        sys.modules[module_name] = mocked_module
+    else:
+        mocker.patch("torch._logging._init_logs")
 
 
 @pytest.fixture(autouse=True)
