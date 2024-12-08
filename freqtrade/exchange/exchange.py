@@ -3599,7 +3599,7 @@ class Exchange:
             liquidation_price_buffer = (
                 liquidation_price - buffer_amount if is_short else liquidation_price + buffer_amount
             )
-            return max(liquidation_price_buffer, 0.0)
+            return self.price_to_precision(pair, max(liquidation_price_buffer, 0.0))
         else:
             return None
 
