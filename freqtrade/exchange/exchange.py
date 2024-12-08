@@ -1863,7 +1863,7 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def get_conversion_rate(self, coin: str, currency: str) -> float:
+    def get_conversion_rate(self, coin: str, currency: str) -> float | None:
         """
         Quick and cached way to get conversion rate one currency to the other.
         Can then be used as "rate * amount" to convert between currencies.
