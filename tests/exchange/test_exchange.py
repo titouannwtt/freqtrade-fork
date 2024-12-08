@@ -6131,6 +6131,7 @@ def test_get_liquidation_price(
     default_conf_usdt["exchange"]["name"] = exchange_name
     default_conf_usdt["margin_mode"] = margin_mode
     mocker.patch("freqtrade.exchange.gate.Gate.validate_ordertypes")
+    mocker.patch(f"{EXMS}.price_to_precision", lambda s, x, y, **kwargs: y)
     exchange = get_patched_exchange(mocker, default_conf_usdt, exchange=exchange_name)
 
     exchange.get_maintenance_ratio_and_amt = MagicMock(return_value=(0.01, 0.01))
