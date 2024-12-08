@@ -130,18 +130,12 @@ class Wallets:
             )
             total_stake = current_stake + used_stake
         else:
-            tot_in_trades = 0
             for position in open_trades:
-                # size = self._exchange._contracts_to_amount(position.pair, position['contracts'])
-                size = position.amount
-                collateral = position.stake_amount
-                leverage = position.leverage
-                tot_in_trades += collateral
                 _positions[position.pair] = PositionWallet(
                     position.pair,
-                    position=size,
-                    leverage=leverage,
-                    collateral=collateral,
+                    position=position.amount,
+                    leverage=position.leverage,
+                    collateral=position.stake_amount,
                     side=position.trade_direction,
                 )
             current_stake = (
