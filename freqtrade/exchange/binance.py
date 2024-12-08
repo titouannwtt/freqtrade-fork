@@ -91,7 +91,10 @@ class Binance(Exchange):
                         "\nHedge Mode is not supported by freqtrade. "
                         "Please change 'Position Mode' on your binance futures account."
                     )
-                if assets_margin.get("multiAssetsMargin") is True:
+                if (
+                    assets_margin.get("multiAssetsMargin") is True
+                    and self.margin_mode != MarginMode.CROSS
+                ):
                     msg += (
                         "\nMulti-Asset Mode is not supported by freqtrade. "
                         "Please change 'Asset Mode' on your binance futures account."
