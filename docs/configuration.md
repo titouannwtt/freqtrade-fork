@@ -39,11 +39,17 @@ Please note that Environment variables will overwrite corresponding settings in 
 
 Common example:
 
-```
+``` bash
 FREQTRADE__TELEGRAM__CHAT_ID=<telegramchatid>
 FREQTRADE__TELEGRAM__TOKEN=<telegramToken>
 FREQTRADE__EXCHANGE__KEY=<yourExchangeKey>
 FREQTRADE__EXCHANGE__SECRET=<yourExchangeSecret>
+```
+
+Json lists are parsed as json - so you can use the following to set a list of pairs:
+
+``` bash
+export FREQTRADE__EXCHANGE__PAIR_WHITELIST='["BTC/USDT", "ETH/USDT"]'
 ```
 
 !!! Note
@@ -54,7 +60,7 @@ FREQTRADE__EXCHANGE__SECRET=<yourExchangeSecret>
 
 ??? Warning "Loading sequence"
     Environment variables are loaded after the initial configuration. As such, you cannot provide the path to the configuration through environment variables. Please use `--config path/to/config.json` for that.
-    This also applies to user_dir to some degree. while the user directory can be set through environment variables - the configuration will **not** be loaded from that location.
+    This also applies to `user_dir` to some degree. while the user directory can be set through environment variables - the configuration will **not** be loaded from that location.
 
 ### Multiple configuration files
 
