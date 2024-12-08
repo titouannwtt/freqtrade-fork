@@ -675,7 +675,7 @@ class RPC:
         }
 
     def __balance_get_est_stake(
-        self, coin: str, stake_currency: str, amount: float, balance: Wallet, tickers: Tickers
+        self, coin: str, stake_currency: str, amount: float, balance: Wallet
     ) -> tuple[float, float]:
         est_stake = 0.0
         est_bot_stake = 0.0
@@ -686,25 +686,31 @@ class RPC:
                 est_stake = balance.free
             est_bot_stake = amount
         else:
-            pair = self._freqtrade.exchange.get_valid_pair_combination(coin, stake_currency)
-            ticker: Ticker | None = tickers.get(pair, None)
-            if not ticker:
-                tickers_spot: Tickers = self._freqtrade.exchange.get_tickers(
-                    cached=True,
-                    market_type=TradingMode.SPOT
-                    if self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
-                    else TradingMode.FUTURES,
-                )
-                ticker = tickers_spot.get(pair, None)
+            try:
+                tickers: Tickers = self._freqtrade.exchange.get_tickers(cached=True)
+                pair = self._freqtrade.exchange.get_valid_pair_combination(coin, stake_currency)
+                ticker: Ticker | None = tickers.get(pair, None)
+                if not ticker:
+                    tickers_spot: Tickers = self._freqtrade.exchange.get_tickers(
+                        cached=True,
+                        market_type=TradingMode.SPOT
+                        if self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
+                        else TradingMode.FUTURES,
+                    )
+                    ticker = tickers_spot.get(pair, None)
 
-            if ticker:
-                rate: float | None = ticker.get("last", None)
-                if rate:
-                    if pair.startswith(stake_currency) and not pair.endswith(stake_currency):
-                        rate = 1.0 / rate
-                    est_stake = rate * balance.total
-                    est_bot_stake = rate * amount
+                if ticker:
+                    rate: float | None = ticker.get("last", None)
+                    if rate:
+                        if pair.startswith(stake_currency) and not pair.endswith(stake_currency):
+                            rate = 1.0 / rate
+                        est_stake = rate * balance.total
+                        est_bot_stake = rate * amount
 
+                return est_stake, est_bot_stake
+            except (ExchangeError, PricingError) as e:
+                logger.warning(f"Error {e} getting rate for {coin}")
+                pass
         return est_stake, est_bot_stake
 
     def _rpc_balance(self, stake_currency: str, fiat_display_currency: str) -> dict:
@@ -712,10 +718,6 @@ class RPC:
         currencies: list[dict] = []
         total = 0.0
         total_bot = 0.0
-        try:
-            tickers: Tickers = self._freqtrade.exchange.get_tickers(cached=True)
-        except ExchangeError:
-            raise RPCException("Error getting current tickers.")
 
         open_trades: list[Trade] = Trade.get_open_trades()
         open_assets: dict[str, Trade] = {t.safe_base_currency: t for t in open_trades}
@@ -742,7 +744,7 @@ class RPC:
 
             try:
                 est_stake, est_stake_bot = self.__balance_get_est_stake(
-                    coin, stake_currency, trade_amount, balance, tickers
+                    coin, stake_currency, trade_amount, balance
                 )
             except ValueError:
                 continue
