@@ -1855,7 +1855,36 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    # Pricing info
+    def get_conversion_rate(self, coin: str, currency: str) -> float:
+        """
+        Quick and cached way to get conversion rate one currency to the other.
+        Can then be used as "rate * amount" to convert between currencies.
+        :param coin: Coin to convert
+        :param currency: Currency to convert to
+        :returns: Conversion rate from coin to currency
+        :raises: ExchangeErrors
+        """
+        if coin == currency:
+            return 1.0
+        tickers = self.get_tickers(cached=True)
+        pair = self.get_valid_pair_combination(coin, currency)
+        ticker: Ticker | None = tickers.get(pair, None)
+        if not ticker:
+            tickers_other: Tickers = self.get_tickers(
+                cached=True,
+                market_type=(
+                    TradingMode.SPOT
+                    if self.trading_mode != TradingMode.SPOT
+                    else TradingMode.FUTURES
+                ),
+            )
+            ticker = tickers_other.get(pair, None)
+        if ticker:
+            rate: float | None = ticker.get("last", None)
+            if rate and pair.startswith(currency) and not pair.endswith(currency):
+                rate = 1.0 / rate
+            return rate
+        return None
 
     @retrier
     def fetch_ticker(self, pair: str) -> Ticker:
