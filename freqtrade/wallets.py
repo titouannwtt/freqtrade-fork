@@ -339,7 +339,7 @@ class Wallets:
                 f"lower than stake amount ({stake_amount} {self._config['stake_currency']})"
             )
 
-        return stake_amount
+        return max(stake_amount, 0)
 
     def get_trade_stake_amount(
         self, pair: str, max_open_trades: IntOrInf, edge=None, update: bool = True
