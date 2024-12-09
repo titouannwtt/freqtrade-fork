@@ -483,6 +483,35 @@ def test_check_exit_amount_futures(mocker, default_conf, fee):
                 "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
             },
         ),
+        (
+            {
+                "stake_currency": "USDT",
+                "margin_mode": "cross",
+                "dry_run_wallet": {"USDT": 500, "USDC": 1000.0, "BTC": 0.1, "ETH": 2.0},
+            },
+            {
+                # USDT wallet should be created with 500 balance, but Free balance, since
+                # it's converted from the other currencies
+                "USDT": {"currency": "USDT", "free": 4700.0, "used": 0.0, "total": 500.0},
+                "USDC": {"currency": "USDC", "free": 1000.0, "used": 0.0, "total": 1000.0},
+                "BTC": {"currency": "BTC", "free": 0.1, "used": 0.0, "total": 0.1},
+                "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
+            },
+        ),
+        (
+            # Same as above, but without cross
+            {
+                "stake_currency": "USDT",
+                "dry_run_wallet": {"USDT": 500, "USDC": 1000.0, "BTC": 0.1, "ETH": 2.0},
+            },
+            {
+                # No "free" transfer for USDT wallet
+                "USDT": {"currency": "USDT", "free": 500.0, "used": 0.0, "total": 500.0},
+                "USDC": {"currency": "USDC", "free": 1000.0, "used": 0.0, "total": 1000.0},
+                "BTC": {"currency": "BTC", "free": 0.1, "used": 0.0, "total": 0.1},
+                "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
+            },
+        ),
     ],
 )
 def test_dry_run_wallet_initialization(mocker, default_conf_usdt, config, wallets):
