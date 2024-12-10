@@ -4,8 +4,8 @@ python -m pip install --upgrade pip wheel
 
 $pyv = python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
 
-
-pip install --find-links=build_helpers\ --only-binary  ta-lib
+pip install -U wheel
+pip install --find-links=build_helpers\ ta-lib
 
 pip install -r requirements-dev.txt
 pip install -e .
