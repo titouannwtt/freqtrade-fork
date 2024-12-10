@@ -512,6 +512,23 @@ def test_check_exit_amount_futures(mocker, default_conf, fee):
                 "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
             },
         ),
+        (
+            # Same as above, but with futures and cross
+            {
+                "stake_currency": "USDT",
+                "margin_mode": "cross",
+                "trading_mode": "futures",
+                "dry_run_wallet": {"USDT": 500, "USDC": 1000.0, "BTC": 0.1, "ETH": 2.0},
+            },
+            {
+                # USDT wallet should be created with 500 balance, but Free balance, since
+                # it's converted from the other currencies
+                "USDT": {"currency": "USDT", "free": 4700.0, "used": 0.0, "total": 500.0},
+                "USDC": {"currency": "USDC", "free": 1000.0, "used": 0.0, "total": 1000.0},
+                "BTC": {"currency": "BTC", "free": 0.1, "used": 0.0, "total": 0.1},
+                "ETH": {"currency": "ETH", "free": 2.0, "used": 0.0, "total": 2.0},
+            },
+        ),
     ],
 )
 def test_dry_run_wallet_initialization(mocker, default_conf_usdt, config, wallets):
@@ -525,7 +542,7 @@ def test_dry_run_wallet_initialization(mocker, default_conf_usdt, config, wallet
         },
     )
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
-
+    stake_currency = config["stake_currency"]
     # Verify each wallet matches the expected values
     for currency, expected_wallet in wallets.items():
         wallet = freqtrade.wallets._wallets[currency]
@@ -548,20 +565,37 @@ def test_dry_run_wallet_initialization(mocker, default_conf_usdt, config, wallet
             "last": 0.22,
         },
     )
+    # Without position, collateral will be the same as free
+    assert freqtrade.wallets.get_collateral() == freqtrade.wallets.get_free(stake_currency)
     freqtrade.execute_entry("NEO/USDT", 100.0)
 
     # Update wallets and verify NEO is now included
     freqtrade.wallets.update()
-    assert "NEO" in freqtrade.wallets._wallets
+    if default_conf_usdt["trading_mode"] != "futures":
+        assert "NEO" in freqtrade.wallets._wallets
 
-    assert freqtrade.wallets._wallets["NEO"].total == 45.04504504  # 100 USDT / 0.22
-    assert freqtrade.wallets._wallets["NEO"].used == 0.0
-    assert freqtrade.wallets._wallets["NEO"].free == 45.04504504
+        assert freqtrade.wallets._wallets["NEO"].total == 45.04504504  # 100 USDT / 0.22
+        assert freqtrade.wallets._wallets["NEO"].used == 0.0
+        assert freqtrade.wallets._wallets["NEO"].free == 45.04504504
+        assert freqtrade.wallets.get_collateral() == freqtrade.wallets.get_free(stake_currency)
+        # Verify USDT wallet was reduced by trade amount
+        assert (
+            pytest.approx(freqtrade.wallets._wallets[stake_currency].total)
+            == wallets[stake_currency]["total"] - 100.0
+        )
+        assert len(freqtrade.wallets._wallets) == len(wallets) + 1  # Original wallets + NEO
+    else:
+        # Futures mode
+        assert "NEO" not in freqtrade.wallets._wallets
+        assert freqtrade.wallets._positions["NEO/USDT"].position == 45.04504504
+        assert pytest.approx(freqtrade.wallets._positions["NEO/USDT"].collateral) == 100
 
-    # Verify USDT wallet was reduced by trade amount
-    stake_currency = config["stake_currency"]
-    assert (
-        pytest.approx(freqtrade.wallets._wallets[stake_currency].total)
-        == wallets[stake_currency]["total"] - 100.0
-    )
-    assert len(freqtrade.wallets._wallets) == len(wallets) + 1  # Original wallets + NEO
+        # Verify USDT wallet's free was reduced by trade amount
+        assert (
+            pytest.approx(freqtrade.wallets.get_collateral())
+            == freqtrade.wallets.get_free(stake_currency) + 100
+        )
+        assert (
+            pytest.approx(freqtrade.wallets._wallets[stake_currency].free)
+            == wallets[stake_currency]["free"] - 100.0
+        )
