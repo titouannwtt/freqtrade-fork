@@ -267,6 +267,8 @@ jobs:
       matrix:
         os: [ windows-latest ]
         python-version: ["3.10", "3.11", "3.12"]
+    env:
+      UV_SYSTEM_PYTHON: 1
 
     steps:
     - uses: actions/checkout@v4
@@ -275,15 +277,15 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        python-version-file: ".python-version"
 
-    - name: Pip cache (Windows)
-      uses: actions/cache@v4
-      with:
-        path: ~\AppData\Local\pip\Cache
-        key: pip-${{ matrix.os }}-${{ matrix.python-version }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+
 
     - name: Installation
       run: |
+        Set-Alias -name pip -value "uv pip"
         ./build_helpers/install_windows.ps1
 
     - name: Tests
