@@ -285,7 +285,8 @@ jobs:
 
     - name: Installation
       run: |
-        Set-Alias -name pip -value "uv pip"
+        function uvpipFunction { uv pip $args }
+        Set-Alias -name pip -value uvpipFunction
         ./build_helpers/install_windows.ps1
 
     - name: Tests
