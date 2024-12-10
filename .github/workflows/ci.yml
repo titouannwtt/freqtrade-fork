@@ -282,7 +282,6 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v4
 
-
     - name: Installation
       run: |
         function uvpipFunction { uv pip $args }
