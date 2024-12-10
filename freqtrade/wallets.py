@@ -73,6 +73,18 @@ class Wallets:
         else:
             return 0
 
+    def get_collateral(self) -> float:
+        """
+        Get total collateral for liquidation price calculation.
+        """
+        if self._config.get("margin_mode") == "cross":
+            # free includes all balances and, combined with position collateral,
+            # is used as "wallet balance".
+            return self.get_free(self._stake_currency) + sum(
+                pos.collateral for pos in self._positions.values()
+            )
+        return self.get_total(self._stake_currency)
+
     def get_owned(self, pair: str, base_currency: str) -> float:
         """
         Get currently owned value.
@@ -139,6 +151,8 @@ class Wallets:
         cross_margin = 0.0
         if self._config.get("margin_mode") == "cross":
             # In cross-margin mode, the total balance is used as collateral.
+            # This is moved as "free" into the stake currency balance.
+            # strongly tied to the get_collateral() implementation.
             for curr, bal in self._start_cap.items():
                 if curr == self._stake_currency:
                     continue
