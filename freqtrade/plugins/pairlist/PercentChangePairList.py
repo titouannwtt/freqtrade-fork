@@ -217,7 +217,7 @@ class PercentChangePairList(IPairList):
             self.fetch_percent_change_from_lookback_period(filtered_tickers)
         else:
             # Fetching 24h change by default from supported exchange tickers
-            self.fetch_percent_change_from_tickers(filtered_tickers, tickers)
+            filtered_tickers = self.fetch_percent_change_from_tickers(filtered_tickers, tickers)
 
         if self._min_value is not None:
             filtered_tickers = [v for v in filtered_tickers if v["percentage"] > self._min_value]
@@ -261,7 +261,6 @@ class PercentChangePairList(IPairList):
             )
             * 1000
         )
-        # todo: utc date output for starting date
         self.log_once(
             f"Using change range of {self._lookback_period} candles, timeframe: "
             f"{self._lookback_timeframe}, starting from {format_ms_time(since_ms)} "
@@ -302,15 +301,21 @@ class PercentChangePairList(IPairList):
             else:
                 filtered_tickers[i]["percentage"] = 0
 
-    def fetch_percent_change_from_tickers(self, filtered_tickers: list[dict[str, Any]], tickers):
-        for i, p in enumerate(filtered_tickers):
+    def fetch_percent_change_from_tickers(
+        self, filtered_tickers: list[dict[str, Any]], tickers
+    ) -> list[dict[str, Any]]:
+        valid_tickers: list[dict[str, Any]] = []
+        for p in filtered_tickers:
             # Filter out assets
-            if not self._validate_pair(
-                p["symbol"], tickers[p["symbol"]] if p["symbol"] in tickers else None
+            if (
+                self._validate_pair(
+                    p["symbol"], tickers[p["symbol"]] if p["symbol"] in tickers else None
+                )
+                and p["symbol"] != "UNI/USDT"
             ):
-                filtered_tickers.remove(p)
-            else:
-                filtered_tickers[i]["percentage"] = tickers[p["symbol"]]["percentage"]
+                p["percentage"] = tickers[p["symbol"]]["percentage"]
+                valid_tickers.append(p)
+        return valid_tickers
 
     def _validate_pair(self, pair: str, ticker: Ticker | None) -> bool:
         """
