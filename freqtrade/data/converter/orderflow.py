@@ -98,6 +98,7 @@ def populate_dataframe_with_trades(
         trades = trades.loc[trades["candle_start"] >= start_date]
         trades.reset_index(inplace=True, drop=True)
 
+        # group trades by candle start
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
 
         candle_start: datetime
