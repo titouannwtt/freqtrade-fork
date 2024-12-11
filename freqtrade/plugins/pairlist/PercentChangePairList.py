@@ -191,7 +191,6 @@ class PercentChangePairList(IPairList):
                     for k, v in tickers.items()
                     if (
                         self._exchange.get_pair_quote_currency(k) == self._stake_currency
-                        and (self._use_range or v.get("percentage") is not None)
                         and v["symbol"] in _pairlist
                     )
                 ]
