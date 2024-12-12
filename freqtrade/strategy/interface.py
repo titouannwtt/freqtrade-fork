@@ -5,7 +5,6 @@ This module defines the interface to apply for strategies
 
 import logging
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from math import isinf, isnan
 
@@ -141,9 +140,7 @@ class IStrategy(ABC, HyperStrategyMixin):
     market_direction: MarketDirection = MarketDirection.NONE
 
     # Global cache dictionary
-    _cached_grouped_trades_per_pair: dict[
-        str, OrderedDict[tuple[datetime, datetime], DataFrame]
-    ] = {}
+    _cached_grouped_trades_per_pair: dict[str, DataFrame] = {}
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -1604,15 +1601,11 @@ class IStrategy(ABC, HyperStrategyMixin):
         if use_public_trades:
             trades = self.dp.trades(pair=metadata["pair"], copy=False)
 
-            config = self.config
-            config["timeframe"] = self.timeframe
             pair = metadata["pair"]
             # TODO: slice trades to size of dataframe for faster backtesting
-            cached_grouped_trades: OrderedDict[tuple[datetime, datetime], DataFrame] = (
-                self._cached_grouped_trades_per_pair.get(pair, OrderedDict())
-            )
+            cached_grouped_trades: DataFrame | None = self._cached_grouped_trades_per_pair.get(pair)
             dataframe, cached_grouped_trades = populate_dataframe_with_trades(
-                cached_grouped_trades, config, dataframe, trades
+                cached_grouped_trades, self.config, dataframe, trades
             )
 
             # dereference old cache
