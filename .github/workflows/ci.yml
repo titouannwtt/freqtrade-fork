@@ -278,7 +278,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        python-version-file: ".python-version"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -290,6 +289,8 @@ jobs:
 
     - name: Installation
       run: |
+        uv venv
+        .venv\Scripts\activate
         function uvpipFunction { uv pip $args }
         Set-Alias -name pip -value uvpipFunction
         ./build_helpers/install_windows.ps1
