@@ -928,10 +928,6 @@ class FreqtradeBot(LoggingMixin):
             return False
 
         if trade and self.handle_similar_open_order(trade, enter_limit_requested, amount, side):
-            logger.info(
-                f"A similar open order was found for {trade.pair}. \
-                Keeping existing {side} order. price: {enter_limit_requested}, amount: {amount}"
-            )
             return False
 
         order = self.exchange.create_order(
@@ -1780,6 +1776,10 @@ class FreqtradeBot(LoggingMixin):
             oo = trade.select_order(side, True)
             if oo is not None:
                 if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
+                    logger.info(
+                        f"A similar open order was found for {trade.pair}. "
+                        f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
+                    )
                     return True
                 else:
                     # cancel open order of this trade if order is different
@@ -2067,10 +2067,6 @@ class FreqtradeBot(LoggingMixin):
 
         if trade.has_open_orders:
             if self.handle_similar_open_order(trade, limit, amount, trade.exit_side):
-                logger.info(
-                    f"A similar open order was found for {trade.pair}. \
-                    Keeping existing {trade.exit_side} order. price: {limit}, amount: {amount}"
-                )
                 return False
 
             # cancel any open order of this trade
