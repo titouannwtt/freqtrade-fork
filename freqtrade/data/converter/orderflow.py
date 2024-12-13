@@ -56,9 +56,7 @@ def timeframe_to_DateOffset(timeframe: str) -> pd.DateOffset:
     form ('1m', '5m', '1h', '1d', '1w', etc.) to the number
     of seconds for one timeframe interval.
     """
-    from freqtrade.exchange import (
-        timeframe_to_seconds,
-    )
+    from freqtrade.exchange import timeframe_to_seconds
 
     timeframe_seconds = timeframe_to_seconds(timeframe)
     timeframe_minutes = timeframe_seconds // 60
@@ -79,9 +77,7 @@ def timeframe_to_DateOffset(timeframe: str) -> pd.DateOffset:
 
 
 def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
-    from freqtrade.exchange import (
-        timeframe_to_resample_freq,
-    )
+    from freqtrade.exchange import timeframe_to_resample_freq
 
     if df is not None and not df.empty:
         timeframe_frequency = timeframe_to_resample_freq(timeframe)
