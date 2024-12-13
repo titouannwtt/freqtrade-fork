@@ -1782,9 +1782,12 @@ class FreqtradeBot(LoggingMixin):
                     )
                     return True
                 else:
-                    # cancel open order of this trade if order is different
+                    # cancel open orders of this trade if order is different
                     self.cancel_open_orders_of_trade(
-                        trade, [trade.entry_side], constants.CANCEL_REASON["REPLACE"], True
+                        trade,
+                        [trade.entry_side, trade.exit_side],
+                        constants.CANCEL_REASON["REPLACE"],
+                        True,
                     )
                     Trade.commit()
                     return False
@@ -2068,12 +2071,6 @@ class FreqtradeBot(LoggingMixin):
         if trade.has_open_orders:
             if self.handle_similar_open_order(trade, limit, amount, trade.exit_side):
                 return False
-
-            # cancel any open order of this trade
-            self.cancel_open_orders_of_trade(
-                trade, [trade.exit_side], constants.CANCEL_REASON["REPLACE"], True
-            )
-            Trade.commit()
 
         try:
             # Execute sell and update trade record
