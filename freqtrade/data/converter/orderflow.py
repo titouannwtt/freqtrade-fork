@@ -77,18 +77,20 @@ def timeframe_to_DateOffset(timeframe: str) -> pd.DateOffset:
     else:
         return pd.DateOffset(minutes=timeframe_minutes)
 
-def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
-    from freqtrade.exchange import timeframe_to_next_date, timeframe_to_resample_freq
 
-    timeframe_frequency = timeframe_to_resample_freq(timeframe)
-    # calculate ohlcv candle start and end
+def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
+    from freqtrade.exchange import (
+        timeframe_to_resample_freq,
+    )
+
     if df is not None and not df.empty:
+        timeframe_frequency = timeframe_to_resample_freq(timeframe)
+        dofs = timeframe_to_DateOffset(timeframe)
+        # calculate ohlcv candle start and end
         df["datetime"] = pd.to_datetime(df["date"], unit="ms")
         df["candle_start"] = df["datetime"].dt.floor(timeframe_frequency)
         # used in _now_is_time_to_refresh_trades
-        df["candle_end"] = df["candle_start"].apply(
-            lambda candle_start: timeframe_to_next_date(timeframe, candle_start)
-        )
+        df["candle_end"] = df["candle_start"] + dofs
         df.drop(columns=["datetime"], inplace=True)
 
 
