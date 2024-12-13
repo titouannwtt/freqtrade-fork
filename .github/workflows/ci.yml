@@ -267,9 +267,6 @@ jobs:
       matrix:
         os: [ windows-latest ]
         python-version: ["3.10", "3.11", "3.12"]
-    env:
-      UV_SYSTEM_PYTHON: 1
-      UV_LINK_MODE: hardlink
 
     steps:
     - uses: actions/checkout@v4
@@ -291,6 +288,9 @@ jobs:
       run: |
         uv venv
         .venv\Scripts\activate
+        # persist the venv path for future steps
+        "$(pwd)/.venv/Scripts" >> $env:GITHUB_PATH
+
         function uvpipFunction { uv pip $args }
         Set-Alias -name pip -value uvpipFunction
         ./build_helpers/install_windows.ps1
