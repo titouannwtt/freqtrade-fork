@@ -90,11 +90,9 @@ def _store_backtest_analysis_data(
 
 def store_backtest_analysis_results(
     recordfilename: Path,
-    candles: dict[str, dict],
-    trades: dict[str, dict],
-    exited: dict[str, dict],
+    candles: dict[str, dict[str, DataFrame]],
     dtappendix: str,
 ) -> None:
-    _store_backtest_analysis_data(recordfilename, candles, dtappendix, "signals")
-    _store_backtest_analysis_data(recordfilename, trades, dtappendix, "rejected")
-    _store_backtest_analysis_data(recordfilename, exited, dtappendix, "exited")
+    _store_backtest_analysis_data(recordfilename, candles["signals"], dtappendix, "signals")
+    _store_backtest_analysis_data(recordfilename, candles["rejected"], dtappendix, "rejected")
+    _store_backtest_analysis_data(recordfilename, candles["exited"], dtappendix, "exited")
