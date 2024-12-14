@@ -804,7 +804,7 @@ Back to the example above, since current rate is 200, the current USDT value of 
     This can also cause deviating results between live and backtesting, since backtesting can adjust the trade only once per candle, whereas live could adjust the trade multiple times per candle.
 
 !!! Warning "Loose Logic"
-    On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run ot of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
+    On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run out of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
 
     Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order.
 
