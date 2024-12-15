@@ -47,8 +47,7 @@ from freqtrade.optimize.optimize_reports import (
     generate_rejected_signals,
     generate_trade_signal_candles,
     show_backtest_results,
-    store_backtest_analysis_results,
-    store_backtest_stats,
+    store_backtest_results,
 )
 from freqtrade.persistence import (
     CustomDataWrapper,
@@ -1662,21 +1661,12 @@ class Backtesting:
             dt_appendix = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             if self.config.get("export", "none") in ("trades", "signals"):
                 combined_res = combined_dataframes_with_rel_mean(data, min_date, max_date)
-                store_backtest_stats(
-                    self.config["exportfilename"],
+                store_backtest_results(
+                    self.config,
                     self.results,
                     dt_appendix,
                     market_change_data=combined_res,
-                )
-
-            if (
-                self.config.get("export", "none") == "signals"
-                and self.dataprovider.runmode == RunMode.BACKTEST
-            ):
-                store_backtest_analysis_results(
-                    self.config["exportfilename"],
-                    self.analysis_results,
-                    dt_appendix,
+                    analysis_results=self.analysis_results,
                 )
 
         # Results may be mixed up now. Sort them so they follow --strategy-list order.
