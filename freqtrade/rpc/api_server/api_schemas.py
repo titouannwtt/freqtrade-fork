@@ -617,3 +617,6 @@ class Health(BaseModel):
     bot_start_ts: int | None = None
     bot_startup: datetime | None = None
     bot_startup_ts: int | None = None
+
+class ListCustomData(BaseModel):
+    custom_data: list[dict[str, Any]] | None = None

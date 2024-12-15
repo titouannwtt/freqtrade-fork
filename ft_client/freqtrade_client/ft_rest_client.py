@@ -474,3 +474,19 @@ class FtRestClient:
         :return: json object
         """
         return self._get("health")
+
+    def list_custom_data(self, trade_id=None, key=None):
+        """Lists custom_data of the running bot.
+
+        :param tradeid: Optional keyword argument - Id of the trade (can be received via status command)
+        :param key: Optional keyword argument - Key of the custom data
+
+        :return: json object
+        """
+        params = {}
+        if trade_id is not None:
+            params["trade_id"] = trade_id
+        if key is not None:
+            params["key"] = key
+        
+        return self._get("list_custom_data", params=params)

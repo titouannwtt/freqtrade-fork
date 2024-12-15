@@ -1097,19 +1097,28 @@ class RPC:
                 "cancel_order_count": c_count,
             }
 
-    def _rpc_list_custom_data(self, trade_id: int, key: str | None) -> list[dict[str, Any]]:
-        # Query for trade
-        trade = Trade.get_trades(trade_filter=[Trade.id == trade_id]).first()
-        if trade is None:
-            return []
-        # Query custom_data
-        custom_data = []
-        if key:
-            data = trade.get_custom_data(key=key)
-            if data:
-                custom_data = [data]
+    def _rpc_list_custom_data(self, trade_id: int | None = None, key: str | None = None) -> list[dict[str, Any]]:
+        # Query trades based on trade_id
+        if trade_id:
+            trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
         else:
-            custom_data = trade.get_all_custom_data()
+            # If no trade_id, get all trades
+            trades = Trade.get_trades().all()
+
+        if not trades:
+            return []
+    
+        # Collect custom data
+        custom_data = []
+        for trade in trades:
+            if key:
+                data = trade.get_custom_data(key=key)
+                if data:
+                    custom_data.append(data)
+            else:
+                custom_data.extend(trade.get_all_custom_data())
+
+        # Format the results
         return [
             {
                 "id": data_entry.id,
