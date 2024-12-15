@@ -291,6 +291,7 @@ def test_store_backtest_results_real(tmp_path):
 
 
 def test_store_backtest_candles(testdatadir, mocker):
+    mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_joblib")
 
     candle_dict = {"DefStrat": {"UNITTEST/BTC": pd.DataFrame()}}
