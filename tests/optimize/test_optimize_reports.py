@@ -290,7 +290,7 @@ def test_store_backtest_results_real(tmp_path):
     assert fn == "backtest-result-2024_01_01_15_05_25.json"
 
 
-def test_store_backtest_candles(testdatadir, mocker):
+def test_store_backtest_candles(tmp_path, mocker):
     mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_joblib")
 
@@ -298,7 +298,7 @@ def test_store_backtest_candles(testdatadir, mocker):
     bt_results = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
 
     mock_conf = {
-        "exportfilename": testdatadir,
+        "exportfilename": tmp_path,
         "export": "signals",
         "runmode": "backtest",
     }
@@ -320,12 +320,12 @@ def test_store_backtest_candles(testdatadir, mocker):
 
     dump_mock.reset_mock()
     # mock file exporting
-    filename = Path(testdatadir / "testresult")
+    filename = Path(tmp_path / "testresult")
     mock_conf["exportfilename"] = filename
     store_backtest_results(mock_conf, bt_results, "2022_01_01_15_05_13", analysis_results=data)
     assert dump_mock.call_count == 3
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
-    # result will be testdatadir / testresult-<timestamp>_signals.pkl
+    # result will be tmp_path / testresult-<timestamp>_signals.pkl
     assert str(dump_mock.call_args_list[0][0][0]).endswith("_signals.pkl")
     assert str(dump_mock.call_args_list[1][0][0]).endswith("_rejected.pkl")
     assert str(dump_mock.call_args_list[2][0][0]).endswith("_exited.pkl")
