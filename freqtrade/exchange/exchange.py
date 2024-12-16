@@ -156,6 +156,7 @@ class Exchange:
         # Override createMarketBuyOrderRequiresPrice where ccxt has it wrong
         "marketOrderRequiresPrice": False,
         "exchange_has_overrides": {},  # Dictionary overriding ccxt's "has".
+        "proxy_coin_mapping": {},  # Mapping for proxy coins
         # Expected to be in the format {"fetchOHLCV": True} or {"fetchOHLCV": False}
         "ws_enabled": False,  # Set to true for exchanges with tested websocket support
     }
@@ -1872,6 +1873,9 @@ class Exchange:
         :returns: Conversion rate from coin to currency
         :raises: ExchangeErrors
         """
+
+        if (proxy_coin := self._ft_has["proxy_coin_mapping"].get(coin, None)) is not None:
+            coin = proxy_coin
         if coin == currency:
             return 1.0
         tickers = self.get_tickers(cached=True)

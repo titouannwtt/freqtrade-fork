@@ -48,6 +48,10 @@ class Binance(Exchange):
             PriceType.MARK: "MARK_PRICE",
         },
         "ws_enabled": False,
+        "proxy_coin_mapping": {
+            "BNFCR": "USDC",
+            "BFUSD": "USDT",
+        },
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
