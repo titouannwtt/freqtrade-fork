@@ -3,8 +3,10 @@ Helpers when analyzing backtest data
 """
 
 import logging
+import zipfile
 from copy import copy
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any, Literal
 
@@ -165,8 +167,23 @@ def load_backtest_stats(filename: Path | str) -> BacktestResultType:
     if not filename.is_file():
         raise ValueError(f"File {filename} does not exist.")
     logger.info(f"Loading backtest result from {filename}")
-    with filename.open() as file:
-        data = json_load(file)
+
+    if filename.suffix == ".zip":
+        try:
+            with zipfile.ZipFile(filename) as zipf:
+                json_filename = filename.with_suffix(".json")
+                try:
+                    with zipf.open(json_filename.name) as json_file:
+                        # Need to convert to StringIO since json_load expects a text stream
+                        data = json_load(StringIO(json_file.read().decode("utf-8")))
+                except KeyError:
+                    # File not found in zip
+                    raise ValueError(f"Could not find {json_filename.name} in {filename}")
+        except zipfile.BadZipFile:
+            raise ValueError(f"Bad zip file: {filename}")
+    else:
+        with filename.open() as file:
+            data = json_load(file)
 
     # Legacy list format does not contain metadata.
     if isinstance(data, dict):

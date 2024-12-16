@@ -72,7 +72,7 @@ def store_backtest_results(
 
     # Store latest backtest info separately
     latest_filename = Path.joinpath(zip_filename.parent, LAST_BT_RESULT_FN)
-    file_dump_json(latest_filename, {"latest_backtest": str(zip_filename.name)})
+    file_dump_json(latest_filename, {"latest_backtest": str(zip_filename.name)}, log=False)
 
     # Create zip file and add the files
     with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -83,7 +83,7 @@ def store_backtest_results(
         }
         stats_buf = StringIO()
         dump_json_to_file(stats_buf, stats_copy)
-        zipf.writestr(json_filename, stats_buf.getvalue())
+        zipf.writestr(json_filename.name, stats_buf.getvalue())
 
         # Add market change data if present
         if market_change_data is not None:
