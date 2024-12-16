@@ -548,7 +548,7 @@ jobs:
         merge-multiple: true
 
     - name: Publish to PyPI (Test)
-      uses: pypa/gh-action-pypi-publish@v1.12.2
+      uses: pypa/gh-action-pypi-publish@v1.12.3
       with:
         repository-url: https://test.pypi.org/legacy/
 
@@ -575,7 +575,7 @@ jobs:
         merge-multiple: true
 
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.12.2
+      uses: pypa/gh-action-pypi-publish@v1.12.3
 
 
   deploy-docker:
