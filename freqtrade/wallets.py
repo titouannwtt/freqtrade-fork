@@ -2,7 +2,6 @@
 """Wallet"""
 
 import logging
-from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
@@ -178,19 +177,16 @@ class Wallets:
 
     def _update_live(self) -> None:
         balances = self._exchange.get_balances()
+        _wallets = {}
 
         for currency in balances:
             if isinstance(balances[currency], dict):
-                self._wallets[currency] = Wallet(
+                _wallets[currency] = Wallet(
                     currency,
                     balances[currency].get("free", 0),
                     balances[currency].get("used", 0),
                     balances[currency].get("total", 0),
                 )
-        # Remove currencies no longer in get_balances output
-        for currency in deepcopy(self._wallets):
-            if currency not in balances:
-                del self._wallets[currency]
 
         positions = self._exchange.fetch_positions()
         _parsed_positions = {}
@@ -210,6 +206,7 @@ class Wallets:
                 side=position["side"],
             )
         self._positions = _parsed_positions
+        self._wallets = _wallets
 
     def update(self, require_update: bool = True) -> None:
         """
