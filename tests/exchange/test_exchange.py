@@ -2028,6 +2028,7 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
     mocker.patch(f"{EXMS}.exchange_has", return_value=True)
     api_mock.fetch_tickers = MagicMock(side_effect=[tick, tick2])
     api_mock.fetch_bids_asks = MagicMock(return_value={})
+    default_conf_usdt["trading_mode"] = "futures"
 
     exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange=exchange_name)
     # retrieve original ticker
@@ -2044,6 +2045,11 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
     assert exchange.get_conversion_rate("ADA", "USDT") == 2.5
     # Only the call to the "others" market
     assert api_mock.fetch_tickers.call_count == 1
+
+    if exchange_name == "binance":
+        # Special binance case of BNFCR matching USDT.
+        assert exchange.get_conversion_rate("BNFCR", "USDT") is None
+        assert exchange.get_conversion_rate("BNFCR", "USDC") == 1
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
