@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 from pandas import DataFrame
 
@@ -14,7 +14,7 @@ from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename
 logger = logging.getLogger(__name__)
 
 
-def file_dump_joblib(filename: Path, data: Any, log: bool = True) -> None:
+def file_dump_joblib(file_obj: TextIO, data: Any, log: bool = True) -> None:
     """
     Dump object data into a file
     :param filename: file to create
@@ -23,11 +23,7 @@ def file_dump_joblib(filename: Path, data: Any, log: bool = True) -> None:
     """
     import joblib
 
-    if log:
-        logger.info(f'dumping joblib to "{filename}"')
-    with filename.open("wb") as fp:
-        joblib.dump(data, fp)
-    logger.debug(f'done joblib dump to "{filename}"')
+    joblib.dump(data, file_obj)
 
 
 def _generate_filename(recordfilename: Path, appendix: str, suffix: str) -> Path:
@@ -122,6 +118,9 @@ def _store_backtest_analysis_data(
     """
     filename = _generate_filename(recordfilename, f"{dtappendix}_{name}", ".pkl")
 
-    file_dump_joblib(filename, data)
+    logger.info(f'dumping joblib to "{filename}"')
+    with filename.open("wb") as fp:
+        file_dump_joblib(fp, data)
+    logger.debug(f'done joblib dump to "{filename}"')
 
     return filename
