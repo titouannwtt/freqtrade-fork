@@ -32,8 +32,8 @@ def _load_backtest_analysis_data(backtest_dir: Path, name: str):
         with scpf.open("rb") as scp:
             loaded_data = joblib.load(scp)
             logger.info(f"Loaded {name} candles: {str(scpf)}")
-    except Exception as e:
-        logger.error(f"Cannot load {name} data from pickled results: ", e)
+    except Exception:
+        logger.exception(f"Cannot load {name} data from pickled results.")
         return None
 
     return loaded_data
