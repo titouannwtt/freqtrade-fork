@@ -1,16 +1,33 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from pandas import DataFrame
 
 from freqtrade.constants import LAST_BT_RESULT_FN
 from freqtrade.enums.runmode import RunMode
 from freqtrade.ft_types import BacktestResultType
-from freqtrade.misc import file_dump_joblib, file_dump_json
+from freqtrade.misc import file_dump_json
 from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename
 
 
 logger = logging.getLogger(__name__)
+
+
+def file_dump_joblib(filename: Path, data: Any, log: bool = True) -> None:
+    """
+    Dump object data into a file
+    :param filename: file to create
+    :param data: Object data to save
+    :return:
+    """
+    import joblib
+
+    if log:
+        logger.info(f'dumping joblib to "{filename}"')
+    with filename.open("wb") as fp:
+        joblib.dump(data, fp)
+    logger.debug(f'done joblib dump to "{filename}"')
 
 
 def _generate_filename(recordfilename: Path, appendix: str, suffix: str) -> Path:

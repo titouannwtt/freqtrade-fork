@@ -54,22 +54,6 @@ def file_dump_json(filename: Path, data: Any, is_zip: bool = False, log: bool = 
     logger.debug(f'done json to "{filename}"')
 
 
-def file_dump_joblib(filename: Path, data: Any, log: bool = True) -> None:
-    """
-    Dump object data into a file
-    :param filename: file to create
-    :param data: Object data to save
-    :return:
-    """
-    import joblib
-
-    if log:
-        logger.info(f'dumping joblib to "{filename}"')
-    with filename.open("wb") as fp:
-        joblib.dump(data, fp)
-    logger.debug(f'done joblib dump to "{filename}"')
-
-
 def json_load(datafile: TextIO) -> Any:
     """
     load data with rapidjson
