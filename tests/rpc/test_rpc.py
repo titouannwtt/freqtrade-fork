@@ -600,8 +600,6 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
     )
 
-    assert pytest.approx(result["total"]) == 2824.83464
-    assert pytest.approx(result["value"]) == 2824.83464 * 1.2
     assert tickers.call_count == 4
     assert tickers.call_args_list[0][1]["cached"] is True
     # Testing futures - so we should get spot tickers
@@ -680,6 +678,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
     ]
     assert pytest.approx(result["total_bot"]) == 69.5
     assert pytest.approx(result["total"]) == 2824.83464  # ETH stake is missing.
+    assert pytest.approx(result["value"]) == 2824.83464 * 1.2
     assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
     assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
 
