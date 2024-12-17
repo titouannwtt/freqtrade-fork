@@ -680,8 +680,8 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
     ]
     assert pytest.approx(result["total_bot"]) == 69.5
     assert pytest.approx(result["total"]) == 2824.83464  # ETH stake is missing.
-    assert result["starting_capital"] == 50
-    assert result["starting_capital_ratio"] == pytest.approx(0.3899999)
+    assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
+    assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
 
 
 def test_rpc_start(mocker, default_conf) -> None:
