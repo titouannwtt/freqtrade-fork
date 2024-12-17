@@ -276,7 +276,9 @@ class Wallets:
             tot_profit = Trade.get_total_closed_profit()
             open_stakes = Trade.total_open_trades_stakes()
             available_balance = self.get_free(self._stake_currency)
-            return available_balance - tot_profit + open_stakes
+            return (available_balance - tot_profit + open_stakes) * self._config[
+                "tradable_balance_ratio"
+            ]
 
     def get_total_stake_amount(self):
         """
