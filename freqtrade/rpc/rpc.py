@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import psutil
 from dateutil.relativedelta import relativedelta
@@ -98,6 +98,10 @@ class RPC:
 
     # Bind _fiat_converter if needed
     _fiat_converter: CryptoToFiatConverter | None = None
+    if TYPE_CHECKING:
+        from freqtrade.freqtradebot import FreqtradeBot
+
+        _freqtrade: FreqtradeBot
 
     def __init__(self, freqtrade) -> None:
         """
@@ -201,7 +205,7 @@ class RPC:
                 # calculate profit and send message to user
                 if trade.is_open:
                     try:
-                        current_rate = self._freqtrade.exchange.get_rate(
+                        current_rate: float = self._freqtrade.exchange.get_rate(
                             trade.pair, side="exit", is_short=trade.is_short, refresh=False
                         )
                     except (ExchangeError, PricingError):
@@ -219,7 +223,7 @@ class RPC:
 
                 else:
                     # Closed trade ...
-                    current_rate = trade.close_rate
+                    current_rate = trade.close_rate or 0.0
                     current_profit = trade.close_profit or 0.0
                     current_profit_abs = trade.close_profit_abs or 0.0
 
@@ -576,8 +580,8 @@ class RPC:
         # Doing the sum is not right - overall profit needs to be based on initial capital
         profit_all_ratio_sum = sum(profit_all_ratio) if profit_all_ratio else 0.0
         starting_balance = self._freqtrade.wallets.get_starting_balance()
-        profit_closed_ratio_fromstart = 0
-        profit_all_ratio_fromstart = 0
+        profit_closed_ratio_fromstart = 0.0
+        profit_all_ratio_fromstart = 0.0
         if starting_balance:
             profit_closed_ratio_fromstart = profit_closed_coin_sum / starting_balance
             profit_all_ratio_fromstart = profit_all_coin_sum / starting_balance
@@ -890,10 +894,10 @@ class RPC:
             if amount and amount < trade.amount:
                 # Partial exit ...
                 min_exit_stake = self._freqtrade.exchange.get_min_pair_stake_amount(
-                    trade.pair, current_rate, trade.stop_loss_pct
+                    trade.pair, current_rate, trade.stop_loss_pct or 0.0
                 )
                 remaining = (trade.amount - amount) * current_rate
-                if remaining < min_exit_stake:
+                if min_exit_stake and remaining < min_exit_stake:
                     raise RPCException(f"Remaining amount of {remaining} would be too small.")
                 sub_amount = amount
 
@@ -1233,7 +1237,7 @@ class RPC:
             for pair in add:
                 if pair not in self._freqtrade.pairlists.blacklist:
                     try:
-                        expand_pairlist([pair], self._freqtrade.exchange.get_markets().keys())
+                        expand_pairlist([pair], list(self._freqtrade.exchange.get_markets().keys()))
                         self._freqtrade.pairlists.blacklist.append(pair)
 
                     except ValueError:
