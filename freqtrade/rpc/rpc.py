@@ -1102,8 +1102,8 @@ class RPC:
         if trade_id:
             trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
         else:
-            # If no trade_id, get all trades
-            trades = Trade.get_trades().all()
+            # If no trade_id, get all open trades
+            trades = Trade.get_open_trades()
 
         if not trades:
             return []

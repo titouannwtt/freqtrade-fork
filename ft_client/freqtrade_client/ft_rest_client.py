@@ -477,6 +477,7 @@ class FtRestClient:
 
     def list_custom_data(self, trade_id=None, key=None):
         """Lists custom_data of the running bot.
+        Without a tradeid, returns all custom_data from open trades.
 
         :param tradeid: Optional keyword argument - Id of the trade (can be received via status command)
         :param key: Optional keyword argument - Key of the custom data
