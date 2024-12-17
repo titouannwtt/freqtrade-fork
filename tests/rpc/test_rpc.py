@@ -523,7 +523,9 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     assert all(currency["currency"] != "ETH" for currency in res["currencies"])
 
 
-def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
+@pytest.mark.parametrize("proxy_coin", [None, "BNFCR"])
+@pytest.mark.parametrize("margin_mode", ["isolated", "cross"])
+def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, margin_mode):
     mock_balance = {
         "BTC": {
             "free": 0.01,
@@ -548,6 +550,14 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "used": 5.0,
         },
     }
+    if proxy_coin:
+        default_conf_usdt["proxy_coin"] = proxy_coin
+        mock_balance[proxy_coin] = {
+            "free": 1500.0,
+            "total": 0.0,
+            "used": 0.0,
+        }
+
     mock_pos = [
         {
             "symbol": "ETH/USDT:USDT",
@@ -591,6 +601,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
     )
     default_conf_usdt["dry_run"] = False
     default_conf_usdt["trading_mode"] = "futures"
+    default_conf_usdt["margin_mode"] = margin_mode
     freqtradebot = get_patched_freqtradebot(mocker, default_conf_usdt)
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
@@ -600,12 +611,12 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
     )
 
-    assert tickers.call_count == 4
+    assert tickers.call_count == 4 if not proxy_coin else 6
     assert tickers.call_args_list[0][1]["cached"] is True
     # Testing futures - so we should get spot tickers
     assert tickers.call_args_list[-1][1]["market_type"] == "spot"
     assert "USD" == result["symbol"]
-    assert result["currencies"] == [
+    expected_curr = [
         {
             "currency": "BTC",
             "free": 0.01,
@@ -676,11 +687,71 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "is_position": True,
         },
     ]
-    assert pytest.approx(result["total_bot"]) == 69.5
-    assert pytest.approx(result["total"]) == 686.6972  # ETH stake is missing.
-    assert pytest.approx(result["value"]) == 686.6972 * 1.2
-    assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
-    assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
+    if proxy_coin:
+        if margin_mode == "cross":
+            # Insert before ETH - as positions are always last.
+            expected_curr.insert(
+                len(expected_curr) - 1,
+                {
+                    "currency": proxy_coin,
+                    "free": 1500.0,
+                    "balance": 0.0,
+                    "used": 0.0,
+                    "bot_owned": 1485.0,
+                    "est_stake": 1500.0,
+                    "est_stake_bot": 1485.0,
+                    "stake": "USDT",
+                    "side": "long",
+                    "position": 0,
+                    "is_bot_managed": True,
+                    "is_position": False,
+                },
+            )
+            expected_curr[-3] = {
+                "currency": "USDT",
+                "free": 50.0,
+                "balance": 100.0,
+                "used": 5.0,
+                "bot_owned": 0,
+                "est_stake": 50.0,
+                "est_stake_bot": 0,
+                "stake": "USDT",
+                "side": "long",
+                "position": 0,
+                "is_bot_managed": False,
+                "is_position": False,
+            }
+        else:
+            expected_curr.insert(
+                len(expected_curr) - 1,
+                {
+                    "currency": proxy_coin,
+                    "free": 1500.0,
+                    "balance": 0.0,
+                    "used": 0.0,
+                    "bot_owned": 0.0,
+                    "est_stake": 0,
+                    "est_stake_bot": 0,
+                    "stake": "USDT",
+                    "side": "long",
+                    "position": 0,
+                    "is_bot_managed": False,
+                    "is_position": False,
+                },
+            )
+
+    assert result["currencies"] == expected_curr
+    if proxy_coin and margin_mode == "cross":
+        assert pytest.approx(result["total_bot"]) == 1505.0
+        assert pytest.approx(result["total"]) == 2186.6972  # ETH stake is missing.
+        assert result["starting_capital"] == 1500 * default_conf_usdt["tradable_balance_ratio"]
+        assert result["starting_capital_ratio"] == pytest.approx(0.013468013468013407)
+    else:
+        assert pytest.approx(result["total_bot"]) == 69.5
+        assert pytest.approx(result["total"]) == 686.6972  # ETH stake is missing.
+        assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
+        assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
+    assert pytest.approx(result["value"]) == result["total"] * 1.2
 
 
 def test_rpc_start(mocker, default_conf) -> None:
