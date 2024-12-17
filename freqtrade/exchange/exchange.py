@@ -1864,6 +1864,14 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
+    def get_proxy_coin(self) -> str:
+        """
+        Get the proxy coin for the given coin
+        Falls back to the stake currency if no proxy coin is found
+        :return: Proxy coin or stake currency
+        """
+        return self._config["stake_currency"]
+
     def get_conversion_rate(self, coin: str, currency: str) -> float | None:
         """
         Quick and cached way to get conversion rate one currency to the other.

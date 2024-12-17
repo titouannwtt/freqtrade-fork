@@ -58,8 +58,18 @@ class Binance(Exchange):
         # TradingMode.SPOT always supported and not required in this list
         # (TradingMode.MARGIN, MarginMode.CROSS),
         # (TradingMode.FUTURES, MarginMode.CROSS),
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
+
+    def get_proxy_coin(self) -> str:
+        """
+        Get the proxy coin for the given coin
+        Falls back to the stake currency if no proxy coin is found
+        :return: Proxy coin or stake currency
+        """
+        if self.margin_mode == MarginMode.CROSS:
+            return "BNFCR"
+        return self._config["stake_currency"]
 
     def get_tickers(
         self,
