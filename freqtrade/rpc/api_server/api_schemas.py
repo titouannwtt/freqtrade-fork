@@ -619,4 +619,5 @@ class Health(BaseModel):
     bot_startup_ts: int | None = None
 
 class ListCustomData(BaseModel):
-    custom_data: list[dict[str, Any]] | None = None
+    trade_id: int
+    custom_data: list[dict[str, Any]]
