@@ -2050,6 +2050,8 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
         # Special binance case of BNFCR matching USDT.
         assert exchange.get_conversion_rate("BNFCR", "USDT") is None
         assert exchange.get_conversion_rate("BNFCR", "USDC") == 1
+        assert exchange.get_conversion_rate("USDT", "BNFCR") is None
+        assert exchange.get_conversion_rate("USDC", "BNFCR") == 1
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)

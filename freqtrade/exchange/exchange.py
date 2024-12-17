@@ -1884,6 +1884,8 @@ class Exchange:
 
         if (proxy_coin := self._ft_has["proxy_coin_mapping"].get(coin, None)) is not None:
             coin = proxy_coin
+        if (proxy_currency := self._ft_has["proxy_coin_mapping"].get(currency, None)) is not None:
+            currency = proxy_currency
         if coin == currency:
             return 1.0
         tickers = self.get_tickers(cached=True)
