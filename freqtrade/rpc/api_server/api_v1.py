@@ -535,7 +535,7 @@ def sysinfo():
 def health(rpc: RPC = Depends(get_rpc)):
     return rpc.health()
 
-@router.get("/list_custom_data", response_model=ListCustomData, tags=["info"])
-def list_custom_data(trade_id: int | None = None, key: str | None = None, rpc: RPC = Depends(get_rpc)):        
-    custom_data = rpc._rpc_list_custom_data(trade_id, key)
+@router.get("/trades/{tradeid}/custom_data", response_model=ListCustomData, tags=["info"])
+def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):     
+    custom_data = rpc._rpc_list_custom_data(trade_id)
     return ListCustomData(custom_data=custom_data)
