@@ -612,7 +612,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "balance": 0.012,
             "used": 0.002,
             "bot_owned": 0,
-            "est_stake": 103.78464,
+            "est_stake": 86.4872,
             "est_stake_bot": 0,
             "stake": "USDT",
             "side": "long",
@@ -626,7 +626,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "balance": 5.0,
             "used": 4.0,
             "bot_owned": 0,
-            "est_stake": 2651.05,
+            "est_stake": 530.21,
             "est_stake_bot": 0,
             "stake": "USDT",
             "side": "long",
@@ -677,8 +677,8 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         },
     ]
     assert pytest.approx(result["total_bot"]) == 69.5
-    assert pytest.approx(result["total"]) == 2824.83464  # ETH stake is missing.
-    assert pytest.approx(result["value"]) == 2824.83464 * 1.2
+    assert pytest.approx(result["total"]) == 686.6972  # ETH stake is missing.
+    assert pytest.approx(result["value"]) == 686.6972 * 1.2
     assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
     assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
 
