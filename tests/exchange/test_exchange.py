@@ -4729,7 +4729,7 @@ def test_extract_cost_curr_rate(mocker, default_conf, order, expected) -> None:
     ],
 )
 def test_calculate_fee_rate(mocker, default_conf, order, expected, unknown_fee_rate) -> None:
-    mocker.patch(f"{EXMS}.fetch_ticker", return_value={"last": 0.081})
+    mocker.patch(f"{EXMS}.get_tickers", return_value={"NEO/BTC": {"last": 0.081}})
     if unknown_fee_rate:
         default_conf["exchange"]["unknown_fee_rate"] = unknown_fee_rate
 
