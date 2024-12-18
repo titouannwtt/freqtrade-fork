@@ -2265,13 +2265,11 @@ class Exchange:
                 # If cost is None or 0.0 -> falsy, return None
                 return None
             try:
-                for comb in self.get_valid_pair_combination(
+                fee_to_quote_rate = self.get_conversion_rate(
                     fee_curr, self._config["stake_currency"]
-                ):
-                    tick = self.fetch_ticker(comb)
-                    fee_to_quote_rate = safe_value_fallback2(tick, tick, "last", "ask")
-                    if tick:
-                        break
+                )
+                if not fee_to_quote_rate:
+                    raise ValueError("Conversion rate not found.")
             except (ValueError, ExchangeError):
                 fee_to_quote_rate = self._config["exchange"].get("unknown_fee_rate", None)
                 if not fee_to_quote_rate:
