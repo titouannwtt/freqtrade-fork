@@ -4906,7 +4906,7 @@ def test_set_margin_mode(mocker, default_conf, margin_mode):
         ("okx", TradingMode.FUTURES, MarginMode.ISOLATED, False),
         # * Remove once implemented
         ("binance", TradingMode.MARGIN, MarginMode.CROSS, True),
-        ("binance", TradingMode.FUTURES, MarginMode.CROSS, True),
+        ("binance", TradingMode.FUTURES, MarginMode.CROSS, False),
         ("kraken", TradingMode.MARGIN, MarginMode.CROSS, True),
         ("kraken", TradingMode.FUTURES, MarginMode.CROSS, True),
         ("gate", TradingMode.MARGIN, MarginMode.CROSS, True),
