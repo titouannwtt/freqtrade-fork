@@ -727,7 +727,11 @@ class RPC:
             if not balance.total and not balance.free:
                 continue
 
-            trade = open_assets.get(coin, None)
+            trade = (
+                open_assets.get(coin, None)
+                if self._freqtrade.trading_mode != TradingMode.FUTURES
+                else None
+            )
             is_stake_currency = coin == self._freqtrade.exchange.get_proxy_coin()
             is_bot_managed = is_stake_currency or trade is not None
             trade_amount = trade.amount if trade else 0
