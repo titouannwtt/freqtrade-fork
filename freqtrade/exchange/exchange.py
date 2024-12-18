@@ -1903,7 +1903,7 @@ class Exchange:
                     )
                     ticker = tickers_other.get(pair, None)
                 if ticker:
-                    rate: float | None = ticker.get("last", None)
+                    rate: float | None = safe_value_fallback2(ticker, ticker, "last", "ask", None)
                     if rate and pair.startswith(currency) and not pair.endswith(currency):
                         rate = 1.0 / rate
                     return rate
