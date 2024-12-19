@@ -777,7 +777,9 @@ class LocalTrade:
         """
         if liquidation_price is None:
             return
-        self.liquidation_price = liquidation_price
+        self.liquidation_price = price_to_precision(
+            liquidation_price, self.price_precision, self.precision_mode_price
+        )
 
     def set_funding_fees(self, funding_fee: float) -> None:
         """
