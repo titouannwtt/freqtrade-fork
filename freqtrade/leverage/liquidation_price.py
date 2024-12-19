@@ -33,7 +33,7 @@ def update_liquidation_prices(
                 "Updating liquidation price for all open trades. "
                 f"Collateral {total_wallet_stake} {stake_currency}."
             )
-            open_trades = Trade.get_open_trades()
+            open_trades: list[Trade] = Trade.get_open_trades()
             for t in open_trades:
                 # TODO: This should be done in a batch update
                 t.set_liquidation_price(
