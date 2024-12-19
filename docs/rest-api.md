@@ -311,10 +311,10 @@ whitelist
 
 ```
 
-
 ### Available endpoints
 
 If you wish to call the REST API manually via another route, e.g. directly via `curl`, the table below shows the relevant URL endpoints and parameters.
+All endpoints in the below table need to be prefixed with the base URL of the API, e.g. `http://127.0.0.1:8080/api/v1/` - so the command becomes `http://127.0.0.1:8080/api/v1/<command>`.
 
 |  Endpoint | Params (type) | Method | Description |
 |-----------|---------------|--------|-------------|
@@ -366,7 +366,6 @@ If you wish to call the REST API manually via another route, e.g. directly via `
 
 !!! Warning "Alpha status"
     Endpoints labeled with *Alpha status* above may change at any time without notice.
-
 
 ### Message WebSocket
 
