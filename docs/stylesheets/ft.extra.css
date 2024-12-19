@@ -16,6 +16,6 @@
     font-weight: 500 !important;
 }
 
-#available-endpoints + p + .md-typeset__scrollwrap .md-typeset__table th:first-of-type {
+#available-endpoints ~ .md-typeset__scrollwrap .md-typeset__table th:first-of-type {
     width: 35% !important;
 }
