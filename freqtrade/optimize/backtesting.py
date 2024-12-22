@@ -1166,9 +1166,13 @@ class Backtesting:
         """
         for pair in open_trades.keys():
             for trade in list(open_trades[pair]):
-                if trade.has_open_orders and trade.nr_of_successful_entries == 0:
+                if (
+                    trade.has_open_orders and trade.nr_of_successful_entries == 0
+                ) or not not trade.has_open_position:
                     # Ignore trade if entry-order did not fill yet
+                    LocalTrade.remove_bt_trade(trade)
                     continue
+
                 exit_row = data[pair][-1]
                 self._exit_trade(
                     trade, exit_row, exit_row[OPEN_IDX], trade.amount, ExitType.FORCE_EXIT.value
