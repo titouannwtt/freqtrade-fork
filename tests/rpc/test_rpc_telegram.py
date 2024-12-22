@@ -960,7 +960,7 @@ async def test_telegram_balance_handle(default_conf, update, mocker, rpc_balance
     default_conf["dry_run"] = False
     mocker.patch(f"{EXMS}.get_balances", return_value=rpc_balance)
     mocker.patch(f"{EXMS}.get_tickers", tickers)
-    mocker.patch(f"{EXMS}.get_valid_pair_combination", side_effect=lambda a, b: f"{a}/{b}")
+    mocker.patch(f"{EXMS}.get_valid_pair_combination", side_effect=lambda a, b: [f"{a}/{b}"])
 
     telegram, freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf)
     patch_get_signal(freqtradebot)
@@ -1049,7 +1049,7 @@ async def test_telegram_balance_handle_futures(
     mocker.patch(f"{EXMS}.get_balances", return_value=rpc_balance)
     mocker.patch(f"{EXMS}.fetch_positions", return_value=mock_pos)
     mocker.patch(f"{EXMS}.get_tickers", tickers)
-    mocker.patch(f"{EXMS}.get_valid_pair_combination", side_effect=lambda a, b: f"{a}/{b}")
+    mocker.patch(f"{EXMS}.get_valid_pair_combination", side_effect=lambda a, b: [f"{a}/{b}"])
 
     telegram, freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf)
     patch_get_signal(freqtradebot)
@@ -1087,7 +1087,7 @@ async def test_balance_handle_empty_response_dry(default_conf, update, mocker) -
     result = msg_mock.call_args_list[0][0][0]
     assert msg_mock.call_count == 1
     assert "*Warning:* Simulated balances in Dry Mode." in result
-    assert "Starting capital: `1000 BTC`" in result
+    assert "Starting capital: `990 BTC`" in result
 
 
 async def test_balance_handle_too_large_response(default_conf, update, mocker) -> None:

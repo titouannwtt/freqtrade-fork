@@ -4022,7 +4022,7 @@ def test_get_real_amount_fees_order(
     default_conf_usdt, market_buy_order_usdt_doublefee, fee, mocker
 ):
     tfo_mock = mocker.patch(f"{EXMS}.get_trades_for_order", return_value=[])
-    mocker.patch(f"{EXMS}.get_valid_pair_combination", return_value="BNB/USDT")
+    mocker.patch(f"{EXMS}.get_valid_pair_combination", return_value=["BNB/USDT"])
     mocker.patch(f"{EXMS}.fetch_ticker", return_value={"last": 200})
     trade = Trade(
         pair="LTC/USDT",
@@ -5191,6 +5191,13 @@ def test_update_funding_fees(
     open_exit_order = limit_order_open[exit_side(is_short)]
     bid = 0.11
     enter_rate_mock = MagicMock(return_value=bid)
+    open_order.update(
+        {
+            "status": "closed",
+            "filled": open_order["amount"],
+            "remaining": 0,
+        }
+    )
     enter_mm = MagicMock(return_value=open_order)
     patch_RPCManager(mocker)
     patch_exchange(mocker)

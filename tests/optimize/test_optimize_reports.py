@@ -26,8 +26,7 @@ from freqtrade.optimize.optimize_reports import (
     generate_strategy_comparison,
     generate_trading_stats,
     show_sorted_pairlist,
-    store_backtest_analysis_results,
-    store_backtest_stats,
+    store_backtest_results,
     text_table_bt_results,
     text_table_strategy,
 )
@@ -226,8 +225,9 @@ def test_generate_backtest_stats(default_conf, testdatadir, tmp_path):
     filename_last = tmp_path / LAST_BT_RESULT_FN
     _backup_file(filename_last, copy_file=True)
     assert not filename.is_file()
+    default_conf["exportfilename"] = filename
 
-    store_backtest_stats(filename, stats, "2022_01_01_15_05_13")
+    store_backtest_results(default_conf, stats, "2022_01_01_15_05_13")
 
     # get real Filename (it's btresult-<date>.json)
     last_fn = get_latest_backtest_filename(filename_last.parent)
@@ -246,11 +246,12 @@ def test_generate_backtest_stats(default_conf, testdatadir, tmp_path):
     filename1.unlink()
 
 
-def test_store_backtest_stats(testdatadir, mocker):
+def test_store_backtest_results(testdatadir, mocker):
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
 
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-    store_backtest_stats(testdatadir, data, "2022_01_01_15_05_13")
+
+    store_backtest_results({"exportfilename": testdatadir}, data, "2022_01_01_15_05_13")
 
     assert dump_mock.call_count == 3
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
@@ -258,16 +259,16 @@ def test_store_backtest_stats(testdatadir, mocker):
 
     dump_mock.reset_mock()
     filename = testdatadir / "testresult.json"
-    store_backtest_stats(filename, data, "2022_01_01_15_05_13")
+    store_backtest_results({"exportfilename": filename}, data, "2022_01_01_15_05_13")
     assert dump_mock.call_count == 3
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
     # result will be testdatadir / testresult-<timestamp>.json
     assert str(dump_mock.call_args_list[0][0][0]).startswith(str(testdatadir / "testresult"))
 
 
-def test_store_backtest_stats_real(tmp_path):
+def test_store_backtest_results_real(tmp_path):
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-    store_backtest_stats(tmp_path, data, "2022_01_01_15_05_13")
+    store_backtest_results({"exportfilename": tmp_path}, data, "2022_01_01_15_05_13")
 
     assert (tmp_path / "backtest-result-2022_01_01_15_05_13.json").is_file()
     assert (tmp_path / "backtest-result-2022_01_01_15_05_13.meta.json").is_file()
@@ -276,7 +277,9 @@ def test_store_backtest_stats_real(tmp_path):
     fn = get_latest_backtest_filename(tmp_path)
     assert fn == "backtest-result-2022_01_01_15_05_13.json"
 
-    store_backtest_stats(tmp_path, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame())
+    store_backtest_results(
+        {"exportfilename": tmp_path}, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame()
+    )
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25.json").is_file()
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25.meta.json").is_file()
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25_market_change.feather").is_file()
@@ -287,13 +290,27 @@ def test_store_backtest_stats_real(tmp_path):
     assert fn == "backtest-result-2024_01_01_15_05_25.json"
 
 
-def test_store_backtest_candles(testdatadir, mocker):
+def test_store_backtest_candles(tmp_path, mocker):
+    mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_joblib")
 
     candle_dict = {"DefStrat": {"UNITTEST/BTC": pd.DataFrame()}}
+    bt_results = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
+
+    mock_conf = {
+        "exportfilename": tmp_path,
+        "export": "signals",
+        "runmode": "backtest",
+    }
 
     # mock directory exporting
-    store_backtest_analysis_results(testdatadir, candle_dict, {}, {}, "2022_01_01_15_05_13")
+    data = {
+        "signals": candle_dict,
+        "rejected": {},
+        "exited": {},
+    }
+
+    store_backtest_results(mock_conf, bt_results, "2022_01_01_15_05_13", analysis_results=data)
 
     assert dump_mock.call_count == 3
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
@@ -303,11 +320,12 @@ def test_store_backtest_candles(testdatadir, mocker):
 
     dump_mock.reset_mock()
     # mock file exporting
-    filename = Path(testdatadir / "testresult")
-    store_backtest_analysis_results(filename, candle_dict, {}, {}, "2022_01_01_15_05_13")
+    filename = Path(tmp_path / "testresult")
+    mock_conf["exportfilename"] = filename
+    store_backtest_results(mock_conf, bt_results, "2022_01_01_15_05_13", analysis_results=data)
     assert dump_mock.call_count == 3
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
-    # result will be testdatadir / testresult-<timestamp>_signals.pkl
+    # result will be tmp_path / testresult-<timestamp>_signals.pkl
     assert str(dump_mock.call_args_list[0][0][0]).endswith("_signals.pkl")
     assert str(dump_mock.call_args_list[1][0][0]).endswith("_rejected.pkl")
     assert str(dump_mock.call_args_list[2][0][0]).endswith("_exited.pkl")
@@ -317,10 +335,21 @@ def test_store_backtest_candles(testdatadir, mocker):
 
 def test_write_read_backtest_candles(tmp_path):
     candle_dict = {"DefStrat": {"UNITTEST/BTC": pd.DataFrame()}}
+    bt_results = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
 
+    mock_conf = {
+        "exportfilename": tmp_path,
+        "export": "signals",
+        "runmode": "backtest",
+    }
     # test directory exporting
     sample_date = "2022_01_01_15_05_13"
-    store_backtest_analysis_results(tmp_path, candle_dict, {}, {}, sample_date)
+    data = {
+        "signals": candle_dict,
+        "rejected": {},
+        "exited": {},
+    }
+    store_backtest_results(mock_conf, bt_results, sample_date, analysis_results=data)
     stored_file = tmp_path / f"backtest-result-{sample_date}_signals.pkl"
     with stored_file.open("rb") as scp:
         pickled_signal_candles = joblib.load(scp)
@@ -335,7 +364,8 @@ def test_write_read_backtest_candles(tmp_path):
 
     # test file exporting
     filename = tmp_path / "testresult"
-    store_backtest_analysis_results(filename, candle_dict, {}, {}, sample_date)
+    mock_conf["exportfilename"] = filename
+    store_backtest_results(mock_conf, bt_results, sample_date, analysis_results=data)
     stored_file = tmp_path / f"testresult-{sample_date}_signals.pkl"
     with stored_file.open("rb") as scp:
         pickled_signal_candles = joblib.load(scp)

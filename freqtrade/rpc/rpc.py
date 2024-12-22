@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any
 
 import psutil
 from dateutil.relativedelta import relativedelta
@@ -32,7 +32,7 @@ from freqtrade.enums import (
 )
 from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
-from freqtrade.exchange.exchange_types import Ticker, Tickers
+from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
@@ -98,6 +98,10 @@ class RPC:
 
     # Bind _fiat_converter if needed
     _fiat_converter: CryptoToFiatConverter | None = None
+    if TYPE_CHECKING:
+        from freqtrade.freqtradebot import FreqtradeBot
+
+        _freqtrade: FreqtradeBot
 
     def __init__(self, freqtrade) -> None:
         """
@@ -201,7 +205,7 @@ class RPC:
                 # calculate profit and send message to user
                 if trade.is_open:
                     try:
-                        current_rate = self._freqtrade.exchange.get_rate(
+                        current_rate: float = self._freqtrade.exchange.get_rate(
                             trade.pair, side="exit", is_short=trade.is_short, refresh=False
                         )
                     except (ExchangeError, PricingError):
@@ -219,7 +223,7 @@ class RPC:
 
                 else:
                     # Closed trade ...
-                    current_rate = trade.close_rate
+                    current_rate = trade.close_rate or 0.0
                     current_profit = trade.close_profit or 0.0
                     current_profit_abs = trade.close_profit_abs or 0.0
 
@@ -243,7 +247,11 @@ class RPC:
                 stoploss_entry_dist_ratio = stop_entry.profit_ratio
 
                 # calculate distance to stoploss
-                stoploss_current_dist = trade.stop_loss - current_rate
+                stoploss_current_dist = price_to_precision(
+                    trade.stop_loss - current_rate,
+                    trade.price_precision,
+                    trade.precision_mode_price,
+                )
                 stoploss_current_dist_ratio = stoploss_current_dist / current_rate
 
                 trade_dict = trade.to_json()
@@ -572,8 +580,8 @@ class RPC:
         # Doing the sum is not right - overall profit needs to be based on initial capital
         profit_all_ratio_sum = sum(profit_all_ratio) if profit_all_ratio else 0.0
         starting_balance = self._freqtrade.wallets.get_starting_balance()
-        profit_closed_ratio_fromstart = 0
-        profit_all_ratio_fromstart = 0
+        profit_closed_ratio_fromstart = 0.0
+        profit_all_ratio_fromstart = 0.0
         if starting_balance:
             profit_closed_ratio_fromstart = profit_closed_coin_sum / starting_balance
             profit_all_ratio_fromstart = profit_all_coin_sum / starting_balance
@@ -670,7 +678,7 @@ class RPC:
         }
 
     def __balance_get_est_stake(
-        self, coin: str, stake_currency: str, amount: float, balance: Wallet, tickers: Tickers
+        self, coin: str, stake_currency: str, amount: float, balance: Wallet
     ) -> tuple[float, float]:
         est_stake = 0.0
         est_bot_stake = 0.0
@@ -681,14 +689,18 @@ class RPC:
                 est_stake = balance.free
             est_bot_stake = amount
         else:
-            pair = self._freqtrade.exchange.get_valid_pair_combination(coin, stake_currency)
-            rate: float | None = cast(Ticker, tickers.get(pair, {})).get("last", None)
-            if rate:
-                if pair.startswith(stake_currency) and not pair.endswith(stake_currency):
-                    rate = 1.0 / rate
-                est_stake = rate * balance.total
-                est_bot_stake = rate * amount
+            try:
+                rate: float | None = self._freqtrade.exchange.get_conversion_rate(
+                    coin, stake_currency
+                )
+                if rate:
+                    est_stake = rate * balance.total
+                    est_bot_stake = rate * amount
 
+                return est_stake, est_bot_stake
+            except (ExchangeError, PricingError) as e:
+                logger.warning(f"Error {e} getting rate for {coin}")
+                pass
         return est_stake, est_bot_stake
 
     def _rpc_balance(self, stake_currency: str, fiat_display_currency: str) -> dict:
@@ -696,10 +708,6 @@ class RPC:
         currencies: list[dict] = []
         total = 0.0
         total_bot = 0.0
-        try:
-            tickers: Tickers = self._freqtrade.exchange.get_tickers(cached=True)
-        except ExchangeError:
-            raise RPCException("Error getting current tickers.")
 
         open_trades: list[Trade] = Trade.get_open_trades()
         open_assets: dict[str, Trade] = {t.safe_base_currency: t for t in open_trades}
@@ -715,7 +723,7 @@ class RPC:
         coin: str
         balance: Wallet
         for coin, balance in self._freqtrade.wallets.get_all_balances().items():
-            if not balance.total:
+            if not balance.total and not balance.free:
                 continue
 
             trade = open_assets.get(coin, None)
@@ -726,7 +734,7 @@ class RPC:
 
             try:
                 est_stake, est_stake_bot = self.__balance_get_est_stake(
-                    coin, stake_currency, trade_amount, balance, tickers
+                    coin, stake_currency, trade_amount, balance
                 )
             except ValueError:
                 continue
@@ -886,10 +894,10 @@ class RPC:
             if amount and amount < trade.amount:
                 # Partial exit ...
                 min_exit_stake = self._freqtrade.exchange.get_min_pair_stake_amount(
-                    trade.pair, current_rate, trade.stop_loss_pct
+                    trade.pair, current_rate, trade.stop_loss_pct or 0.0
                 )
                 remaining = (trade.amount - amount) * current_rate
-                if remaining < min_exit_stake:
+                if min_exit_stake and remaining < min_exit_stake:
                     raise RPCException(f"Remaining amount of {remaining} would be too small.")
                 sub_amount = amount
 
@@ -1229,7 +1237,7 @@ class RPC:
             for pair in add:
                 if pair not in self._freqtrade.pairlists.blacklist:
                     try:
-                        expand_pairlist([pair], self._freqtrade.exchange.get_markets().keys())
+                        expand_pairlist([pair], list(self._freqtrade.exchange.get_markets().keys()))
                         self._freqtrade.pairlists.blacklist.append(pair)
 
                     except ValueError:
