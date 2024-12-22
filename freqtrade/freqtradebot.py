@@ -1781,16 +1781,15 @@ class FreqtradeBot(LoggingMixin):
                         f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
                     )
                     return True
-                else:
-                    # cancel open orders of this trade if order is different
-                    self.cancel_open_orders_of_trade(
-                        trade,
-                        [trade.entry_side, trade.exit_side],
-                        constants.CANCEL_REASON["REPLACE"],
-                        True,
-                    )
-                    Trade.commit()
-                    return False
+            # cancel open orders of this trade if order is different
+            self.cancel_open_orders_of_trade(
+                trade,
+                [trade.entry_side, trade.exit_side],
+                constants.CANCEL_REASON["REPLACE"],
+                True,
+            )
+            Trade.commit()
+            return False
 
         return False
 
