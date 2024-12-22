@@ -1230,8 +1230,8 @@ class Backtesting:
         for order in [o for o in trade.orders if o.ft_is_open]:
             if order.side == trade.entry_side:
                 self.canceled_entry_orders += 1
-            elif order.side == trade.exit_side:
-                self.canceled_exit_orders += 1
+            # elif order.side == trade.exit_side:
+            #     self.canceled_exit_orders += 1
             # canceled orders are removed from the trade
             del trade.orders[trade.orders.index(order)]
 
