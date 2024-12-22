@@ -5190,6 +5190,13 @@ def test_update_funding_fees(
     open_exit_order = limit_order_open[exit_side(is_short)]
     bid = 0.11
     enter_rate_mock = MagicMock(return_value=bid)
+    open_order.update(
+        {
+            "status": "closed",
+            "filled": open_order["amount"],
+            "remaining": 0,
+        }
+    )
     enter_mm = MagicMock(return_value=open_order)
     patch_RPCManager(mocker)
     patch_exchange(mocker)
