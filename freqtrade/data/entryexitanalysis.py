@@ -1,4 +1,5 @@
 import logging
+import zipfile
 from pathlib import Path
 
 import joblib
@@ -20,23 +21,52 @@ logger = logging.getLogger(__name__)
 
 
 def _load_backtest_analysis_data(backtest_dir: Path, name: str):
+    """
+    Load backtest analysis data either from a pickle file or from within a zip file
+    :param backtest_dir: Directory containing backtest results
+    :param name: Name of the analysis data to load (signals, rejected, exited)
+    :return: Analysis data
+    """
     if backtest_dir.is_dir():
-        scpf = Path(
-            backtest_dir,
-            Path(get_latest_backtest_filename(backtest_dir)).stem + "_" + name + ".pkl",
-        )
+        lbf = Path(get_latest_backtest_filename(backtest_dir))
+        zip_path = backtest_dir / lbf
     else:
-        scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
+        zip_path = backtest_dir
 
-    try:
-        with scpf.open("rb") as scp:
-            loaded_data = joblib.load(scp)
-            logger.info(f"Loaded {name} candles: {str(scpf)}")
-    except Exception:
-        logger.exception(f"Cannot load {name} data from pickled results.")
-        return None
+    if zip_path.suffix == ".zip":
+        # Load from zip file
+        try:
+            with zipfile.ZipFile(zip_path) as zipf:
+                # Files in zip are stored with just their base names
+                analysis_name = f"{zip_path.stem}_{name}.pkl"
+                try:
+                    with zipf.open(analysis_name) as analysis_file:
+                        loaded_data = joblib.load(analysis_file)
+                        logger.info(
+                            f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}"
+                        )
+                        return loaded_data
+                except KeyError:
+                    logger.exception(f"Cannot find {analysis_name} in {zip_path}")
+                    return None
+        except zipfile.BadZipFile:
+            logger.exception(f"Bad zip file: {zip_path}")
+            return None
+    else:
+        # Load from separate pickle file
+        if backtest_dir.is_dir():
+            scpf = Path(backtest_dir, f"{zip_path.stem}_{name}.pkl")
+        else:
+            scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
 
-    return loaded_data
+        try:
+            with scpf.open("rb") as scp:
+                loaded_data = joblib.load(scp)
+                logger.info(f"Loaded {name} candles: {str(scpf)}")
+                return loaded_data
+        except Exception:
+            logger.exception(f"Cannot load {name} data from pickled results.")
+            return None
 
 
 def _load_rejected_signals(backtest_dir: Path):
