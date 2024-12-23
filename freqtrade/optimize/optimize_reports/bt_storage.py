@@ -1,8 +1,8 @@
 import logging
-import zipfile
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any, TextIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from pandas import DataFrame
 
@@ -75,7 +75,7 @@ def store_backtest_results(
     file_dump_json(latest_filename, {"latest_backtest": str(zip_filename.name)}, log=False)
 
     # Create zip file and add the files
-    with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+    with ZipFile(zip_filename, "w", ZIP_DEFLATED) as zipf:
         # Store stats
         stats_copy = {
             "strategy": stats["strategy"],
