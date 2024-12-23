@@ -1197,7 +1197,7 @@ class FreqtradeBot(LoggingMixin):
             trade.pair, side="entry", is_short=trade.is_short, refresh=False
         )
         stake_amount = trade.stake_amount
-        if not fill:
+        if not fill and trade.nr_of_successful_entries > 0:
             # If we have open orders, we need to add the stake amount of the open orders
             # as it's not yet included in the trade.stake_amount
             stake_amount += sum(
