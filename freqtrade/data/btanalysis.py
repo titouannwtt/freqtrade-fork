@@ -279,7 +279,11 @@ def get_backtest_market_change(filename: Path, include_ts: bool = True) -> pd.Da
     """
     Read backtest market change file.
     """
-    df = pd.read_feather(filename)
+    if filename.suffix == ".zip":
+        data = load_file_from_zip(filename, f"{filename.stem}_market_change.feather")
+        df = pd.read_feather(BytesIO(data))
+    else:
+        df = pd.read_feather(filename)
     if include_ts:
         df.loc[:, "__date_ts"] = df.loc[:, "date"].astype(np.int64) // 1000 // 1000
     return df

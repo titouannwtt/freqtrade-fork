@@ -350,10 +350,17 @@ def api_update_backtest_history_entry(
 )
 def api_get_backtest_market_change(file: str, config=Depends(get_config)):
     bt_results_base: Path = config["user_data_dir"] / "backtest_results"
-    file_abs = (bt_results_base / f"{file}_market_change").with_suffix(".feather")
-    # Ensure file is in backtest_results directory
-    if not is_file_in_dir(file_abs, bt_results_base):
+    for fn in (
+        Path(file).with_suffix(".zip"),
+        Path(f"{file}_market_change").with_suffix(".feather"),
+    ):
+        file_abs = bt_results_base / fn
+        # Ensure file is in backtest_results directory
+        if is_file_in_dir(file_abs, bt_results_base):
+            break
+    else:
         raise HTTPException(status_code=404, detail="File not found.")
+
     df = get_backtest_market_change(file_abs)
 
     return {
