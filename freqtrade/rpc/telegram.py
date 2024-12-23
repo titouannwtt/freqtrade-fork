@@ -103,13 +103,20 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
         # Reject unauthorized messages
         if update.callback_query:
             cchat_id = int(update.callback_query.message.chat.id)
+            ctopic_id = update.callback_query.message.message_thread_id
         else:
             cchat_id = int(update.message.chat_id)
+            ctopic_id = update.message.message_thread_id
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
-            logger.info(f"Rejected unauthorized message from: {update.message.chat_id}")
+            logger.info(f"Rejected unauthorized message from: {cchat_id}")
             return None
+        if (topic_id := self._config["telegram"].get("topic_id")) is not None:
+            if str(ctopic_id) != topic_id:
+                logger.info(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
+                return None
+
         # Rollback session to avoid getting data stored in a transaction.
         Trade.rollback()
         logger.debug("Executing handler: %s for chat_id: %s", command_handler.__name__, chat_id)
@@ -2055,6 +2062,7 @@ class Telegram(RPCHandler):
                     parse_mode=parse_mode,
                     reply_markup=reply_markup,
                     disable_notification=disable_notification,
+                    message_thread_id=self._config["telegram"].get("topic_id"),
                 )
             except NetworkError as network_err:
                 # Sometimes the telegram server resets the current connection,
@@ -2068,6 +2076,7 @@ class Telegram(RPCHandler):
                     parse_mode=parse_mode,
                     reply_markup=reply_markup,
                     disable_notification=disable_notification,
+                    message_thread_id=self._config["telegram"].get("topic_id"),
                 )
         except TelegramError as telegram_err:
             logger.warning("TelegramError: %s! Giving up on that message.", telegram_err.message)
