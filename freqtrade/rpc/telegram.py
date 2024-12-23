@@ -90,6 +90,7 @@ class TimeunitMappings:
 def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
     """
     Decorator to check if the message comes from the correct chat_id
+    can only be used with Telegram Class to decorate instance methods.
     :param command_handler: Telegram CommandHandler
     :return: decorated function
     """
@@ -108,7 +109,7 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
             logger.info(f"Rejected unauthorized message from: {update.message.chat_id}")
-            return wrapper
+            return None
         # Rollback session to avoid getting data stored in a transaction.
         Trade.rollback()
         logger.debug("Executing handler: %s for chat_id: %s", command_handler.__name__, chat_id)
