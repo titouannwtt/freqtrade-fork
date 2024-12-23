@@ -6,7 +6,7 @@ import logging
 import zipfile
 from copy import copy
 from datetime import datetime, timezone
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any, Literal
 
@@ -169,18 +169,11 @@ def load_backtest_stats(filename: Path | str) -> BacktestResultType:
     logger.info(f"Loading backtest result from {filename}")
 
     if filename.suffix == ".zip":
-        try:
-            with zipfile.ZipFile(filename) as zipf:
-                json_filename = filename.with_suffix(".json")
-                try:
-                    with zipf.open(json_filename.name) as json_file:
-                        # Need to convert to StringIO since json_load expects a text stream
-                        data = json_load(StringIO(json_file.read().decode("utf-8")))
-                except KeyError:
-                    # File not found in zip
-                    raise ValueError(f"Could not find {json_filename.name} in {filename}")
-        except zipfile.BadZipFile:
-            raise ValueError(f"Bad zip file: {filename}")
+        data = json_load(
+            StringIO(
+                load_file_from_zip(filename, filename.with_suffix(".json").name).decode("utf-8")
+            )
+        )
     else:
         with filename.open() as file:
             data = json_load(file)
@@ -407,6 +400,22 @@ def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.
     return df
 
 
+def load_file_from_zip(zip_path: Path, filename: str) -> bytes | None:
+    """
+    Load a file from a zip file
+    :param zip_path: Path to the zip file
+    :param filename: Name of the file to load
+    :return: Bytes of the file
+    """
+    try:
+        with zipfile.ZipFile(zip_path) as zipf:
+            with zipf.open(filename) as file:
+                return file.read()
+    except zipfile.BadZipFile:
+        logger.exception(f"Bad zip file: {zip_path}")
+        return None
+
+
 def load_backtest_analysis_data(backtest_dir: Path, name: str):
     """
     Load backtest analysis data either from a pickle file or from within a zip file
@@ -424,23 +433,15 @@ def load_backtest_analysis_data(backtest_dir: Path, name: str):
 
     if zip_path.suffix == ".zip":
         # Load from zip file
-        try:
-            with zipfile.ZipFile(zip_path) as zipf:
-                # Files in zip are stored with just their base names
-                analysis_name = f"{zip_path.stem}_{name}.pkl"
-                try:
-                    with zipf.open(analysis_name) as analysis_file:
-                        loaded_data = joblib.load(analysis_file)
-                        logger.info(
-                            f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}"
-                        )
-                        return loaded_data
-                except KeyError:
-                    logger.exception(f"Cannot find {analysis_name} in {zip_path}")
-                    return None
-        except zipfile.BadZipFile:
-            logger.exception(f"Bad zip file: {zip_path}")
+        analysis_name = f"{zip_path.stem}_{name}.pkl"
+        data = load_file_from_zip(zip_path, analysis_name)
+        if not data:
             return None
+        loaded_data = joblib.load(BytesIO(data))
+
+        logger.info(f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}")
+        return loaded_data
+
     else:
         # Load from separate pickle file
         if backtest_dir.is_dir():
