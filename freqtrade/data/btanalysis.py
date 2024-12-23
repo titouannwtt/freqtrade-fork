@@ -211,8 +211,10 @@ def load_and_merge_backtest_result(strategy_name: str, filename: Path, results: 
 
 
 def _get_backtest_files(dirname: Path) -> list[Path]:
-    # Weird glob expression here avoids including .meta.json files.
-    return list(reversed(sorted(dirname.glob("backtest-result-*-[0-9][0-9].json"))))
+    # Get both json and zip files separately and combine the results
+    json_files = dirname.glob("backtest-result-*-[0-9][0-9]*.json")
+    zip_files = dirname.glob("backtest-result-*-[0-9][0-9]*.zip")
+    return list(reversed(sorted(list(json_files) + list(zip_files))))
 
 
 def _extract_backtest_result(filename: Path) -> list[BacktestHistoryEntryType]:
