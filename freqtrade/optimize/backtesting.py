@@ -1168,7 +1168,7 @@ class Backtesting:
             for trade in list(open_trades[pair]):
                 if (
                     trade.has_open_orders and trade.nr_of_successful_entries == 0
-                ) or not not trade.has_open_position:
+                ) or not trade.has_open_position:
                     # Ignore trade if entry-order did not fill yet
                     LocalTrade.remove_bt_trade(trade)
                     continue
