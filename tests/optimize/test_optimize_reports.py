@@ -3,6 +3,7 @@ import re
 from datetime import timedelta
 from pathlib import Path
 from shutil import copyfile
+from zipfile import ZipFile
 
 import joblib
 import pandas as pd
@@ -275,67 +276,33 @@ def test_store_backtest_results_real(tmp_path):
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
     store_backtest_results({"exportfilename": tmp_path}, data, "2022_01_01_15_05_13")
 
-    assert (tmp_path / "backtest-result-2022_01_01_15_05_13.json").is_file()
+    zip_file = tmp_path / "backtest-result-2022_01_01_15_05_13.zip"
+    assert zip_file.is_file()
     assert (tmp_path / "backtest-result-2022_01_01_15_05_13.meta.json").is_file()
     assert not (tmp_path / "backtest-result-2022_01_01_15_05_13_market_change.feather").is_file()
+    with ZipFile(zip_file, "r") as zipf:
+        assert "backtest-result-2022_01_01_15_05_13.json" in zipf.namelist()
+        assert "backtest-result-2022_01_01_15_05_13_market_change.feather" not in zipf.namelist()
     assert (tmp_path / LAST_BT_RESULT_FN).is_file()
     fn = get_latest_backtest_filename(tmp_path)
-    assert fn == "backtest-result-2022_01_01_15_05_13.json"
+    assert fn == "backtest-result-2022_01_01_15_05_13.zip"
 
     store_backtest_results(
         {"exportfilename": tmp_path}, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame()
     )
-    assert (tmp_path / "backtest-result-2024_01_01_15_05_25.json").is_file()
+    zip_file = tmp_path / "backtest-result-2024_01_01_15_05_25.zip"
+    assert zip_file.is_file()
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25.meta.json").is_file()
-    assert (tmp_path / "backtest-result-2024_01_01_15_05_25_market_change.feather").is_file()
+    assert not (tmp_path / "backtest-result-2024_01_01_15_05_25_market_change.feather").is_file()
+
+    with ZipFile(zip_file, "r") as zipf:
+        assert "backtest-result-2024_01_01_15_05_25.json" in zipf.namelist()
+        assert "backtest-result-2024_01_01_15_05_25_market_change.feather" in zipf.namelist()
     assert (tmp_path / LAST_BT_RESULT_FN).is_file()
 
     # Last file reference should be updated
     fn = get_latest_backtest_filename(tmp_path)
-    assert fn == "backtest-result-2024_01_01_15_05_25.json"
-
-
-def test_store_backtest_candles(tmp_path, mocker):
-    mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
-    dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_joblib")
-
-    candle_dict = {"DefStrat": {"UNITTEST/BTC": pd.DataFrame()}}
-    bt_results = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-
-    mock_conf = {
-        "exportfilename": tmp_path,
-        "export": "signals",
-        "runmode": "backtest",
-    }
-
-    # mock directory exporting
-    data = {
-        "signals": candle_dict,
-        "rejected": {},
-        "exited": {},
-    }
-
-    store_backtest_results(mock_conf, bt_results, "2022_01_01_15_05_13", analysis_results=data)
-
-    assert dump_mock.call_count == 3
-    assert isinstance(dump_mock.call_args_list[0][0][0], Path)
-    assert str(dump_mock.call_args_list[0][0][0]).endswith("_signals.pkl")
-    assert str(dump_mock.call_args_list[1][0][0]).endswith("_rejected.pkl")
-    assert str(dump_mock.call_args_list[2][0][0]).endswith("_exited.pkl")
-
-    dump_mock.reset_mock()
-    # mock file exporting
-    filename = Path(tmp_path / "testresult")
-    mock_conf["exportfilename"] = filename
-    store_backtest_results(mock_conf, bt_results, "2022_01_01_15_05_13", analysis_results=data)
-    assert dump_mock.call_count == 3
-    assert isinstance(dump_mock.call_args_list[0][0][0], Path)
-    # result will be tmp_path / testresult-<timestamp>_signals.pkl
-    assert str(dump_mock.call_args_list[0][0][0]).endswith("_signals.pkl")
-    assert str(dump_mock.call_args_list[1][0][0]).endswith("_rejected.pkl")
-    assert str(dump_mock.call_args_list[2][0][0]).endswith("_exited.pkl")
-
-    dump_mock.reset_mock()
+    assert fn == "backtest-result-2024_01_01_15_05_25.zip"
 
 
 def test_write_read_backtest_candles(tmp_path):
@@ -355,9 +322,21 @@ def test_write_read_backtest_candles(tmp_path):
         "exited": {},
     }
     store_backtest_results(mock_conf, bt_results, sample_date, analysis_results=data)
-    stored_file = tmp_path / f"backtest-result-{sample_date}_signals.pkl"
-    with stored_file.open("rb") as scp:
-        pickled_signal_candles = joblib.load(scp)
+    stored_file = tmp_path / f"backtest-result-{sample_date}.zip"
+    signals_pkl = f"backtest-result-{sample_date}_signals.pkl"
+    rejected_pkl = f"backtest-result-{sample_date}_rejected.pkl"
+    exited_pkl = f"backtest-result-{sample_date}_exited.pkl"
+    assert not (tmp_path / signals_pkl).is_file()
+    assert stored_file.is_file()
+
+    with ZipFile(stored_file, "r") as zipf:
+        assert signals_pkl in zipf.namelist()
+        assert rejected_pkl in zipf.namelist()
+        assert exited_pkl in zipf.namelist()
+
+        # open and read the file
+        with zipf.open(signals_pkl) as scp:
+            pickled_signal_candles = joblib.load(scp)
 
     assert pickled_signal_candles.keys() == candle_dict.keys()
     assert pickled_signal_candles["DefStrat"].keys() == pickled_signal_candles["DefStrat"].keys()
@@ -371,14 +350,25 @@ def test_write_read_backtest_candles(tmp_path):
     filename = tmp_path / "testresult"
     mock_conf["exportfilename"] = filename
     store_backtest_results(mock_conf, bt_results, sample_date, analysis_results=data)
-    stored_file = tmp_path / f"testresult-{sample_date}_signals.pkl"
-    with stored_file.open("rb") as scp:
-        pickled_signal_candles = joblib.load(scp)
+    stored_file = tmp_path / f"testresult-{sample_date}.zip"
+    signals_pkl = f"testresult-{sample_date}_signals.pkl"
+    rejected_pkl = f"testresult-{sample_date}_rejected.pkl"
+    exited_pkl = f"testresult-{sample_date}_exited.pkl"
+    assert not (tmp_path / signals_pkl).is_file()
+    assert stored_file.is_file()
 
-    assert pickled_signal_candles.keys() == candle_dict.keys()
-    assert pickled_signal_candles["DefStrat"].keys() == pickled_signal_candles["DefStrat"].keys()
-    assert pickled_signal_candles["DefStrat"]["UNITTEST/BTC"].equals(
-        pickled_signal_candles["DefStrat"]["UNITTEST/BTC"]
+    with ZipFile(stored_file, "r") as zipf:
+        assert signals_pkl in zipf.namelist()
+        assert rejected_pkl in zipf.namelist()
+        assert exited_pkl in zipf.namelist()
+
+        with zipf.open(signals_pkl) as scp:
+            pickled_signal_candles2 = joblib.load(scp)
+
+    assert pickled_signal_candles2.keys() == candle_dict.keys()
+    assert pickled_signal_candles2["DefStrat"].keys() == pickled_signal_candles2["DefStrat"].keys()
+    assert pickled_signal_candles2["DefStrat"]["UNITTEST/BTC"].equals(
+        pickled_signal_candles2["DefStrat"]["UNITTEST/BTC"]
     )
 
     _clean_test_file(stored_file)
