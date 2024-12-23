@@ -1,84 +1,23 @@
 import logging
-import zipfile
 from pathlib import Path
 
-import joblib
 import pandas as pd
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import Config
 from freqtrade.data.btanalysis import (
     BT_DATA_COLUMNS,
-    get_latest_backtest_filename,
     load_backtest_data,
     load_backtest_stats,
+    load_exit_signal_candles,
+    load_rejected_signals,
+    load_signal_candles,
 )
 from freqtrade.exceptions import OperationalException
 from freqtrade.util import print_df_rich_table
 
 
 logger = logging.getLogger(__name__)
-
-
-def _load_backtest_analysis_data(backtest_dir: Path, name: str):
-    """
-    Load backtest analysis data either from a pickle file or from within a zip file
-    :param backtest_dir: Directory containing backtest results
-    :param name: Name of the analysis data to load (signals, rejected, exited)
-    :return: Analysis data
-    """
-    if backtest_dir.is_dir():
-        lbf = Path(get_latest_backtest_filename(backtest_dir))
-        zip_path = backtest_dir / lbf
-    else:
-        zip_path = backtest_dir
-
-    if zip_path.suffix == ".zip":
-        # Load from zip file
-        try:
-            with zipfile.ZipFile(zip_path) as zipf:
-                # Files in zip are stored with just their base names
-                analysis_name = f"{zip_path.stem}_{name}.pkl"
-                try:
-                    with zipf.open(analysis_name) as analysis_file:
-                        loaded_data = joblib.load(analysis_file)
-                        logger.info(
-                            f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}"
-                        )
-                        return loaded_data
-                except KeyError:
-                    logger.exception(f"Cannot find {analysis_name} in {zip_path}")
-                    return None
-        except zipfile.BadZipFile:
-            logger.exception(f"Bad zip file: {zip_path}")
-            return None
-    else:
-        # Load from separate pickle file
-        if backtest_dir.is_dir():
-            scpf = Path(backtest_dir, f"{zip_path.stem}_{name}.pkl")
-        else:
-            scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
-
-        try:
-            with scpf.open("rb") as scp:
-                loaded_data = joblib.load(scp)
-                logger.info(f"Loaded {name} candles: {str(scpf)}")
-                return loaded_data
-        except Exception:
-            logger.exception(f"Cannot load {name} data from pickled results.")
-            return None
-
-
-def _load_rejected_signals(backtest_dir: Path):
-    return _load_backtest_analysis_data(backtest_dir, "rejected")
-
-
-def _load_signal_candles(backtest_dir: Path):
-    return _load_backtest_analysis_data(backtest_dir, "signals")
-
-
-def _load_exit_signal_candles(backtest_dir: Path) -> dict[str, dict[str, pd.DataFrame]]:
-    return _load_backtest_analysis_data(backtest_dir, "exited")
 
 
 def _process_candles_and_indicators(
@@ -411,12 +350,12 @@ def process_entry_exit_reasons(config: Config):
             trades = load_backtest_data(config["exportfilename"], strategy_name)
 
             if trades is not None and not trades.empty:
-                signal_candles = _load_signal_candles(config["exportfilename"])
-                exit_signals = _load_exit_signal_candles(config["exportfilename"])
+                signal_candles = load_signal_candles(config["exportfilename"])
+                exit_signals = load_exit_signal_candles(config["exportfilename"])
 
                 rej_df = None
                 if do_rejected:
-                    rejected_signals_dict = _load_rejected_signals(config["exportfilename"])
+                    rejected_signals_dict = load_rejected_signals(config["exportfilename"])
                     rej_df = prepare_results(
                         rejected_signals_dict,
                         strategy_name,

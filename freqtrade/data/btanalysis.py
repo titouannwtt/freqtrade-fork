@@ -405,6 +405,78 @@ def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.
     return df
 
 
+def load_backtest_analysis_data(backtest_dir: Path, name: str):
+    """
+    Load backtest analysis data either from a pickle file or from within a zip file
+    :param backtest_dir: Directory containing backtest results
+    :param name: Name of the analysis data to load (signals, rejected, exited)
+    :return: Analysis data
+    """
+    import joblib
+
+    if backtest_dir.is_dir():
+        lbf = Path(get_latest_backtest_filename(backtest_dir))
+        zip_path = backtest_dir / lbf
+    else:
+        zip_path = backtest_dir
+
+    if zip_path.suffix == ".zip":
+        # Load from zip file
+        try:
+            with zipfile.ZipFile(zip_path) as zipf:
+                # Files in zip are stored with just their base names
+                analysis_name = f"{zip_path.stem}_{name}.pkl"
+                try:
+                    with zipf.open(analysis_name) as analysis_file:
+                        loaded_data = joblib.load(analysis_file)
+                        logger.info(
+                            f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}"
+                        )
+                        return loaded_data
+                except KeyError:
+                    logger.exception(f"Cannot find {analysis_name} in {zip_path}")
+                    return None
+        except zipfile.BadZipFile:
+            logger.exception(f"Bad zip file: {zip_path}")
+            return None
+    else:
+        # Load from separate pickle file
+        if backtest_dir.is_dir():
+            scpf = Path(backtest_dir, f"{zip_path.stem}_{name}.pkl")
+        else:
+            scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
+
+        try:
+            with scpf.open("rb") as scp:
+                loaded_data = joblib.load(scp)
+                logger.info(f"Loaded {name} candles: {str(scpf)}")
+                return loaded_data
+        except Exception:
+            logger.exception(f"Cannot load {name} data from pickled results.")
+            return None
+
+
+def load_rejected_signals(backtest_dir: Path):
+    """
+    Load rejected signals from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "rejected")
+
+
+def load_signal_candles(backtest_dir: Path):
+    """
+    Load signal candles from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "signals")
+
+
+def load_exit_signal_candles(backtest_dir: Path) -> dict[str, dict[str, pd.DataFrame]]:
+    """
+    Load exit signal candles from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "exited")
+
+
 def analyze_trade_parallelism(results: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Find overlapping trades by expanding each trade once per period it was open
