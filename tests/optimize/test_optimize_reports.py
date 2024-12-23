@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -229,13 +230,14 @@ def test_generate_backtest_stats(default_conf, testdatadir, tmp_path):
 
     store_backtest_results(default_conf, stats, "2022_01_01_15_05_13")
 
-    # get real Filename (it's btresult-<date>.json)
+    # get real Filename (it's btresult-<date>.zip)
     last_fn = get_latest_backtest_filename(filename_last.parent)
-    assert re.match(r"btresult-.*\.json", last_fn)
+    assert re.match(r"btresult-.*\.zip", last_fn)
 
     filename1 = tmp_path / last_fn
     assert filename1.is_file()
-    content = filename1.read_text()
+
+    content = json.dumps(load_backtest_stats(filename1))
     assert "max_drawdown_account" in content
     assert "strategy" in content
     assert "pairlist" in content
@@ -248,19 +250,22 @@ def test_generate_backtest_stats(default_conf, testdatadir, tmp_path):
 
 def test_store_backtest_results(testdatadir, mocker):
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
-
+    zip_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.ZipFile")
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
 
     store_backtest_results({"exportfilename": testdatadir}, data, "2022_01_01_15_05_13")
 
-    assert dump_mock.call_count == 3
+    assert dump_mock.call_count == 2
+    assert zip_mock.call_count == 1
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
     assert str(dump_mock.call_args_list[0][0][0]).startswith(str(testdatadir / "backtest-result"))
 
     dump_mock.reset_mock()
+    zip_mock.reset_mock()
     filename = testdatadir / "testresult.json"
     store_backtest_results({"exportfilename": filename}, data, "2022_01_01_15_05_13")
-    assert dump_mock.call_count == 3
+    assert dump_mock.call_count == 2
+    assert zip_mock.call_count == 1
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
     # result will be testdatadir / testresult-<timestamp>.json
     assert str(dump_mock.call_args_list[0][0][0]).startswith(str(testdatadir / "testresult"))
