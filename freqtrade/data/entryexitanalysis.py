@@ -13,7 +13,7 @@ from freqtrade.data.btanalysis import (
     load_rejected_signals,
     load_signal_candles,
 )
-from freqtrade.exceptions import OperationalException
+from freqtrade.exceptions import ConfigurationError, OperationalException
 from freqtrade.util import print_df_rich_table
 
 
@@ -343,8 +343,10 @@ def process_entry_exit_reasons(config: Config):
         timerange = TimeRange.parse_timerange(
             None if config.get("timerange") is None else str(config.get("timerange"))
         )
-
-        backtest_stats = load_backtest_stats(config["exportfilename"])
+        try:
+            backtest_stats = load_backtest_stats(config["exportfilename"])
+        except ValueError as e:
+            raise ConfigurationError(e) from e
 
         for strategy_name, results in backtest_stats["strategy"].items():
             trades = load_backtest_data(config["exportfilename"], strategy_name)
