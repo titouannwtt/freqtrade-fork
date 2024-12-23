@@ -2660,7 +2660,7 @@ def test_get_backtest_metadata_filename():
 
     # Test with a string file path with no extension
     filename = "/path/to/backtest_results"
-    expected = Path("/path/to/backtest_results.meta")
+    expected = Path("/path/to/backtest_results.meta.json")
     assert get_backtest_metadata_filename(filename) == expected
 
     # Test with a string file path with multiple dots in the name
@@ -2671,4 +2671,9 @@ def test_get_backtest_metadata_filename():
     # Test with a string file path with no parent directory
     filename = "backtest_results.json"
     expected = Path("backtest_results.meta.json")
+    assert get_backtest_metadata_filename(filename) == expected
+    # Test with a string file path with no parent directory
+
+    filename = "backtest_results_zip.zip"
+    expected = Path("backtest_results_zip.meta.json")
     assert get_backtest_metadata_filename(filename) == expected
