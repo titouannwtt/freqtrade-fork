@@ -90,6 +90,7 @@ class TimeunitMappings:
 def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
     """
     Decorator to check if the message comes from the correct chat_id
+    can only be used with Telegram Class to decorate instance methods.
     :param command_handler: Telegram CommandHandler
     :return: decorated function
     """
@@ -102,13 +103,21 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
         # Reject unauthorized messages
         if update.callback_query:
             cchat_id = int(update.callback_query.message.chat.id)
+            ctopic_id = update.callback_query.message.message_thread_id
         else:
             cchat_id = int(update.message.chat_id)
+            ctopic_id = update.message.message_thread_id
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
-            logger.info(f"Rejected unauthorized message from: {update.message.chat_id}")
-            return wrapper
+            logger.info(f"Rejected unauthorized message from: {cchat_id}")
+            return None
+        if (topic_id := self._config["telegram"].get("topic_id")) is not None:
+            if str(ctopic_id) != topic_id:
+                # This can be quite common in multi-topic environments.
+                logger.debug(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
+                return None
+
         # Rollback session to avoid getting data stored in a transaction.
         Trade.rollback()
         logger.debug("Executing handler: %s for chat_id: %s", command_handler.__name__, chat_id)
@@ -291,6 +300,7 @@ class Telegram(RPCHandler):
             CommandHandler("marketdir", self._changemarketdir),
             CommandHandler("order", self._order),
             CommandHandler("list_custom_data", self._list_custom_data),
+            CommandHandler("tg_info", self._tg_info),
         ]
         callbacks = [
             CallbackQueryHandler(self._status_table, pattern="update_status_table"),
@@ -2054,6 +2064,7 @@ class Telegram(RPCHandler):
                     parse_mode=parse_mode,
                     reply_markup=reply_markup,
                     disable_notification=disable_notification,
+                    message_thread_id=self._config["telegram"].get("topic_id"),
                 )
             except NetworkError as network_err:
                 # Sometimes the telegram server resets the current connection,
@@ -2067,6 +2078,7 @@ class Telegram(RPCHandler):
                     parse_mode=parse_mode,
                     reply_markup=reply_markup,
                     disable_notification=disable_notification,
+                    message_thread_id=self._config["telegram"].get("topic_id"),
                 )
         except TelegramError as telegram_err:
             logger.warning("TelegramError: %s! Giving up on that message.", telegram_err.message)
@@ -2112,3 +2124,37 @@ class Telegram(RPCHandler):
                 "Invalid usage of command /marketdir. \n"
                 "Usage: */marketdir [short |  long | even | none]*"
             )
+
+    async def _tg_info(self, update: Update, context: CallbackContext) -> None:
+        """
+        Intentionally unauthenticated Handler for /tg_info.
+        Returns information about the current telegram chat - even if chat_id does not
+        correspond to this chat.
+
+        :param update: message update
+        :return: None
+        """
+        if not update.message:
+            return
+        chat_id = update.message.chat_id
+        topic_id = update.message.message_thread_id
+
+        msg = f"""Freqtrade Bot Info:
+        ```json
+            {{
+                "enabled": true,
+                "token": "********",
+                "chat_id": "{chat_id}",
+                {f'"topic_id": "{topic_id}"' if topic_id else ""}
+            }}
+        ```
+        """
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=msg,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                message_thread_id=topic_id,
+            )
+        except TelegramError as telegram_err:
+            logger.warning("TelegramError: %s! Giving up on that message.", telegram_err.message)
