@@ -62,6 +62,17 @@ For the Freqtrade configuration, you can then use the full value (including `-` 
 !!! Warning "Using telegram groups"
     When using telegram groups, you're giving every member of the telegram group access to your freqtrade bot and to all commands possible via telegram. Please make sure that you can trust everyone in the telegram group to avoid unpleasant surprises.
 
+##### Group Topic ID
+
+To use a specific topic in a group, you can use the `topic_id` parameter in the configuration. This will allow you to use the bot in a specific topic in a group.  
+Without this, the bot will always respond to the general channel in the group if topics are enabled for a group chat.
+
+```json
+   "chat_id": "-1001332619709",
+   "topic_id": "3"
+```
+
+
 ## Control telegram noise
 
 Freqtrade provides means to control the verbosity of your telegram bot.
