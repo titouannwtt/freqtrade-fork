@@ -114,7 +114,8 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
             return None
         if (topic_id := self._config["telegram"].get("topic_id")) is not None:
             if str(ctopic_id) != topic_id:
-                logger.info(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
+                # This can be quite common in multi-topic environments.
+                logger.debug(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
                 return None
 
         # Rollback session to avoid getting data stored in a transaction.
