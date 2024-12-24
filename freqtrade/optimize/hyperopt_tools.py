@@ -388,6 +388,8 @@ class HyperoptTools:
             "results_metrics.holding_avg",
             "results_metrics.trade_count_long",
             "results_metrics.trade_count_short",
+            "results_metrics.max_drawdown_abs",
+            "results_metrics.max_drawdown_account",
             "loss",
             "is_initial_point",
             "is_best",
@@ -409,6 +411,8 @@ class HyperoptTools:
             "Avg duration",
             "Trade count long",
             "Trade count short",
+            "Max drawdown",
+            "Max drawdown percent",
             "Objective",
             "is_initial_point",
             "is_best",
@@ -430,6 +434,9 @@ class HyperoptTools:
         )
         trials["Profit"] = trials["Profit"].apply(lambda x: f"{x:,.2f}" if not isna(x) else "")
         trials["Avg profit"] = trials["Avg profit"].apply(
+            lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
+        )
+        trials["Max drawdown percent"] = trials["Max drawdown percent"].apply(
             lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
         )
         trials["Objective"] = trials["Objective"].apply(
