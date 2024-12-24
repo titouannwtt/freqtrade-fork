@@ -2134,6 +2134,8 @@ class Telegram(RPCHandler):
         :param update: message update
         :return: None
         """
+        if not update.message:
+            return
         chat_id = update.message.chat_id
         topic_id = update.message.message_thread_id
 
