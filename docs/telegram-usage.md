@@ -55,7 +55,7 @@ The response will also contain the "topic_id" if necessary - both in a format re
  {
     "enabled": true,
     "token": "********",
-    "chat_id": "-1002403829695",
+    "chat_id": "-1001332619709",
     "topic_id": "122"
 }
 ```
