@@ -299,6 +299,7 @@ class Telegram(RPCHandler):
             CommandHandler("marketdir", self._changemarketdir),
             CommandHandler("order", self._order),
             CommandHandler("list_custom_data", self._list_custom_data),
+            CommandHandler("tg_info", self._tg_info),
         ]
         callbacks = [
             CallbackQueryHandler(self._status_table, pattern="update_status_table"),
@@ -2122,3 +2123,35 @@ class Telegram(RPCHandler):
                 "Invalid usage of command /marketdir. \n"
                 "Usage: */marketdir [short |  long | even | none]*"
             )
+
+    async def _tg_info(self, update: Update, context: CallbackContext) -> None:
+        """
+        Intentionally unauthenticated Handler for /tg_info.
+        Returns information about the current telegram chat - even if chat_id does not
+        correspond to this chat.
+
+        :param update: message update
+        :return: None
+        """
+        chat_id = update.message.chat_id
+        topic_id = update.message.message_thread_id
+
+        msg = f"""Freqtrade Bot Info:
+        ```json
+            {{
+                "enabled": true,
+                "token": "********",
+                "chat_id": "{chat_id}",
+                {f'"topic_id": "{topic_id}"' if topic_id else ""}
+            }}
+        ```
+        """
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=msg,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                message_thread_id=topic_id,
+            )
+        except TelegramError as telegram_err:
+            logger.warning("TelegramError: %s! Giving up on that message.", telegram_err.message)
