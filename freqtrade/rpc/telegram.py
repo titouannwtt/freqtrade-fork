@@ -858,11 +858,14 @@ class Telegram(RPCHandler):
         :return: None
         """
         fiat_currency = self._config.get("fiat_display_currency", "")
-        statlist, head, fiat_profit_sum = self._rpc._rpc_status_table(
+        statlist, head, fiat_profit_sum, fiat_total_profit_sum = self._rpc._rpc_status_table(
             self._config["stake_currency"], fiat_currency
         )
 
         show_total = not isnan(fiat_profit_sum) and len(statlist) > 1
+        show_total_realized = (
+            not isnan(fiat_total_profit_sum) and len(statlist) > 1 and fiat_profit_sum
+        ) != fiat_total_profit_sum
         max_trades_per_msg = 50
         """
         Calculate the number of messages of 50 trades per message
@@ -875,12 +878,22 @@ class Telegram(RPCHandler):
             if show_total and i == messages_count - 1:
                 # append total line
                 trades.append(["Total", "", "", f"{fiat_profit_sum:.2f} {fiat_currency}"])
+                if show_total_realized:
+                    trades.append(
+                        [
+                            "Total",
+                            "(incl. realized Profits)",
+                            "",
+                            f"{fiat_total_profit_sum:.2f} {fiat_currency}",
+                        ]
+                    )
 
             message = tabulate(trades, headers=head, tablefmt="simple")
             if show_total and i == messages_count - 1:
                 # insert separators line between Total
                 lines = message.split("\n")
-                message = "\n".join(lines[:-1] + [lines[1]] + [lines[-1]])
+                offset = 2 if show_total_realized else 1
+                message = "\n".join(lines[:-offset] + [lines[1]] + lines[-offset:])
             await self._send_msg(
                 f"<pre>{message}</pre>",
                 parse_mode=ParseMode.HTML,
@@ -1287,7 +1300,7 @@ class Telegram(RPCHandler):
         else:
             fiat_currency = self._config.get("fiat_display_currency", "")
             try:
-                statlist, _, _ = self._rpc._rpc_status_table(
+                statlist, _, _, _ = self._rpc._rpc_status_table(
                     self._config["stake_currency"], fiat_currency
                 )
             except RPCException:

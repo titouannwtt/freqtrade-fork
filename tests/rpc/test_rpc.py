@@ -251,18 +251,23 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=False)
     freqtradebot.enter_positions()
 
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
     assert "0.00% (0.00)" == result[0][3]
     assert "0.00" == f"{fiat_profit_sum:.2f}"
+    assert "0.00" == f"{total_sum:.2f}"
 
     mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=True)
     freqtradebot.process()
 
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert "now" == result[0][2]
@@ -273,7 +278,9 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     # Test with fiat convert
     rpc._config["fiat_display_currency"] = "USD"
     rpc._fiat_converter = CryptoToFiatConverter({})
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert len(result[0]) == 4
@@ -281,10 +288,13 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     assert "ETH/BTC" in result[0][1]
     assert "-0.41% (-0.06)" == result[0][3]
     assert "-0.06" == f"{fiat_profit_sum:.2f}"
+    assert "-0.06" == f"{total_sum:.2f}"
 
     rpc._config["position_adjustment_enable"] = True
     rpc._config["max_entry_position_adjustment"] = 3
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "# Entries" in headers
     assert len(result[0]) == 5
     # 4th column should be 1/4 - as 1 order filled (a total of 4 is possible)
@@ -294,7 +304,9 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     mocker.patch(
         f"{EXMS}.get_rate", MagicMock(side_effect=ExchangeError("Pair 'ETH/BTC' not available"))
     )
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
     assert "nan%" == result[0][3]

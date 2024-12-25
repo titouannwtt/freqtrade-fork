@@ -287,7 +287,7 @@ class RPC:
 
     def _rpc_status_table(
         self, stake_currency: str, fiat_display_currency: str
-    ) -> tuple[list, list, float]:
+    ) -> tuple[list, list, float, float]:
         """
         :return: list of trades, list of columns, sum of fiat profit
         """
@@ -297,16 +297,26 @@ class RPC:
 
         trades_list = []
         fiat_profit_sum = nan
+        fiat_total_profit_sum = nan
         for trade in self._rpc_trade_status():
             # Format profit as a string with the right sign
             profit = f"{trade['profit_ratio']:.2%}"
             fiat_profit = trade.get("profit_fiat", None)
             if fiat_profit is None or isnan(fiat_profit):
-                fiat_profit: float = trade.get("profit_abs", 0.0)
+                fiat_profit = trade.get("profit_abs", 0.0)
             if not isnan(fiat_profit):
                 profit += f" ({fiat_profit:.2f})"
                 fiat_profit_sum = (
                     fiat_profit if isnan(fiat_profit_sum) else fiat_profit_sum + fiat_profit
+                )
+            total_profit = trade.get("total_profit_fiat", None)
+            if total_profit is None or isnan(total_profit):
+                total_profit = trade.get("total_profit_abs", 0.0)
+            if not isnan(total_profit):
+                fiat_total_profit_sum = (
+                    total_profit
+                    if isnan(fiat_total_profit_sum)
+                    else fiat_total_profit_sum + total_profit
                 )
 
             # Format the active order side symbols
@@ -352,7 +362,7 @@ class RPC:
         if self._config.get("position_adjustment_enable", False):
             columns.append("# Entries")
 
-        return trades_list, columns, fiat_profit_sum
+        return trades_list, columns, fiat_profit_sum, fiat_total_profit_sum
 
     def _rpc_timeunit_profit(
         self,
