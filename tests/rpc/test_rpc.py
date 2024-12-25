@@ -99,6 +99,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         "precision_mode_price": 2,
         "contract_size": 1,
         "has_open_orders": False,
+        "nr_of_successful_entries": ANY,
         "orders": [
             {
                 "amount": 91.07468123,
@@ -255,7 +256,7 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     assert "Pair" in headers
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
-    assert "0.00 (0.00)" == result[0][3]
+    assert "0.00% (0.00)" == result[0][3]
     assert "0.00" == f"{fiat_profit_sum:.2f}"
 
     mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=True)

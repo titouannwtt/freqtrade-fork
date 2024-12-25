@@ -39,7 +39,14 @@ from freqtrade.persistence.models import PairLock
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
 from freqtrade.rpc.rpc_types import RPCSendMsg
-from freqtrade.util import decimals_per_coin, dt_now, dt_ts_def, format_date, shorten_date
+from freqtrade.util import (
+    decimals_per_coin,
+    dt_from_ts,
+    dt_now,
+    dt_ts_def,
+    format_date,
+    shorten_date,
+)
 from freqtrade.util.datetime_helpers import dt_humanize_delta
 from freqtrade.wallets import PositionWallet, Wallet
 
@@ -272,6 +279,7 @@ class RPC:
                         stoploss_entry_dist=stoploss_entry_dist,
                         stoploss_entry_dist_ratio=round(stoploss_entry_dist_ratio, 8),
                         open_orders=oo_details,
+                        nr_of_successful_entries=trade.nr_of_successful_entries,
                     )
                 )
                 results.append(trade_dict)
@@ -283,82 +291,70 @@ class RPC:
         """
         :return: list of trades, list of columns, sum of fiat profit
         """
-        trades: list[Trade] = Trade.get_open_trades()
         nonspot = self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
-        if not trades:
+        if not Trade.get_open_trades():
             raise RPCException("no active trade")
-        else:
-            trades_list = []
-            fiat_profit_sum = nan
-            for trade in trades:
-                # calculate profit and send message to user
-                try:
-                    current_rate = self._freqtrade.exchange.get_rate(
-                        trade.pair, side="exit", is_short=trade.is_short, refresh=False
-                    )
-                except (PricingError, ExchangeError):
-                    current_rate = nan
-                    trade_profit = nan
-                    profit_str = f"{nan:.2%}"
-                else:
-                    if trade.nr_of_successful_entries > 0:
-                        profit = trade.calculate_profit(current_rate)
-                        trade_profit = profit.profit_abs
-                        profit_str = f"{profit.profit_ratio:.2%}"
-                    else:
-                        trade_profit = 0.0
-                        profit_str = f"{0.0:.2f}"
-                leverage = f"{trade.leverage:.3g}"
-                direction_str = (
-                    (f"S {leverage}x" if trade.is_short else f"L {leverage}x") if nonspot else ""
+
+        trades_list = []
+        fiat_profit_sum = nan
+        for trade in self._rpc_trade_status():
+            # Format profit as a string with the right sign
+            profit = f"{trade['profit_ratio']:.2%}"
+            fiat_profit = trade.get("profit_fiat", None)
+            if isnan(fiat_profit):
+                fiat_profit: float = trade.get("profit_abs", 0.0)
+            if not isnan(fiat_profit):
+                profit += f" ({fiat_profit:.2f})"
+                fiat_profit_sum = (
+                    fiat_profit if isnan(fiat_profit_sum) else fiat_profit_sum + fiat_profit
                 )
-                if self._fiat_converter:
-                    fiat_profit = self._fiat_converter.convert_amount(
-                        trade_profit, stake_currency, fiat_display_currency
-                    )
-                    if not isnan(fiat_profit):
-                        profit_str += f" ({fiat_profit:.2f})"
-                        fiat_profit_sum = (
-                            fiat_profit if isnan(fiat_profit_sum) else fiat_profit_sum + fiat_profit
-                        )
-                else:
-                    profit_str += f" ({trade_profit:.2f})"
-                    fiat_profit_sum = (
-                        trade_profit if isnan(fiat_profit_sum) else fiat_profit_sum + trade_profit
-                    )
 
-                active_attempt_side_symbols = [
-                    "*" if (oo and oo.ft_order_side == trade.entry_side) else "**"
-                    for oo in trade.open_orders
-                ]
+            # Format the active order side symbols
+            active_order_side = ""
+            orders = trade.get("orders", [])
+            if orders:
+                active_order_side = ".".join(
+                    "*"
+                    if (o.get("ft_is_open") and o.get("ft_order_side") == trade.get("entry_side"))
+                    else "**"
+                    for o in orders
+                    if o.get("ft_is_open")
+                )
 
-                # example: '*.**.**' trying to enter, exit and exit with 3 different orders
-                active_attempt_side_symbols_str = ".".join(active_attempt_side_symbols)
+            # Direction string for non-spot
+            direction_str = ""
+            if nonspot:
+                leverage = trade.get("leverage", 1.0)
+                direction_str = f"{'S' if trade.get('is_short') else 'L'} {leverage:.3g}x"
 
-                detail_trade = [
-                    f"{trade.id} {direction_str}",
-                    trade.pair + active_attempt_side_symbols_str,
-                    shorten_date(dt_humanize_delta(trade.open_date_utc)),
-                    profit_str,
-                ]
+            detail_trade = [
+                f"{trade['trade_id']} {direction_str}",
+                f"{trade['pair']}{active_order_side}",
+                shorten_date(dt_humanize_delta(dt_from_ts(trade["open_timestamp"]))),
+                profit,
+            ]
 
-                if self._config.get("position_adjustment_enable", False):
-                    max_entry_str = ""
-                    if self._config.get("max_entry_position_adjustment", -1) > 0:
-                        max_entry_str = f"/{self._config['max_entry_position_adjustment'] + 1}"
-                    filled_entries = trade.nr_of_successful_entries
-                    detail_trade.append(f"{filled_entries}{max_entry_str}")
-                trades_list.append(detail_trade)
-            profitcol = "Profit"
-            if self._fiat_converter:
-                profitcol += " (" + fiat_display_currency + ")"
-            else:
-                profitcol += " (" + stake_currency + ")"
-
-            columns = ["ID L/S" if nonspot else "ID", "Pair", "Since", profitcol]
+            # Add number of entries if position adjustment is enabled
             if self._config.get("position_adjustment_enable", False):
-                columns.append("# Entries")
-            return trades_list, columns, fiat_profit_sum
+                max_entry_str = ""
+                if self._config.get("max_entry_position_adjustment", -1) > 0:
+                    max_entry_str = f"/{self._config['max_entry_position_adjustment'] + 1}"
+                filled_entries = trade.get("nr_of_successful_entries", 0)
+                detail_trade.append(f"{filled_entries}{max_entry_str}")
+
+            trades_list.append(detail_trade)
+
+        columns = [
+            "ID L/S" if nonspot else "ID",
+            "Pair",
+            "Since",
+            f"Profit ({fiat_display_currency if self._fiat_converter else stake_currency})",
+        ]
+
+        if self._config.get("position_adjustment_enable", False):
+            columns.append("# Entries")
+
+        return trades_list, columns, fiat_profit_sum
 
     def _rpc_timeunit_profit(
         self,
