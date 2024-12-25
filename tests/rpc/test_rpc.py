@@ -270,6 +270,7 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     assert "-0.00" == f"{fiat_profit_sum:.2f}"
 
     # Test with fiat convert
+    rpc._config["fiat_display_currency"] = "USD"
     rpc._fiat_converter = CryptoToFiatConverter({})
     result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
     assert "Since" in headers
