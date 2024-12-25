@@ -301,7 +301,7 @@ class RPC:
             # Format profit as a string with the right sign
             profit = f"{trade['profit_ratio']:.2%}"
             fiat_profit = trade.get("profit_fiat", None)
-            if isnan(fiat_profit):
+            if fiat_profit is None or isnan(fiat_profit):
                 fiat_profit: float = trade.get("profit_abs", 0.0)
             if not isnan(fiat_profit):
                 profit += f" ({fiat_profit:.2f})"
@@ -314,11 +314,9 @@ class RPC:
             orders = trade.get("orders", [])
             if orders:
                 active_order_side = ".".join(
-                    "*"
-                    if (o.get("ft_is_open") and o.get("ft_order_side") == trade.get("entry_side"))
-                    else "**"
+                    "*" if (o.get("is_open") and o.get("ft_is_entry")) else "**"
                     for o in orders
-                    if o.get("ft_is_open")
+                    if o.get("is_open")
                 )
 
             # Direction string for non-spot
