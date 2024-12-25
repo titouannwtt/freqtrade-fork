@@ -280,6 +280,9 @@ class RPC:
     def _rpc_status_table(
         self, stake_currency: str, fiat_display_currency: str
     ) -> tuple[list, list, float]:
+        """
+        :return: list of trades, list of columns, sum of fiat profit
+        """
         trades: list[Trade] = Trade.get_open_trades()
         nonspot = self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT
         if not trades:
