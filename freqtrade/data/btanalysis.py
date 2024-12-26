@@ -414,11 +414,17 @@ def load_file_from_zip(zip_path: Path, filename: str) -> bytes:
     """
     try:
         with zipfile.ZipFile(zip_path) as zipf:
-            with zipf.open(filename) as file:
-                return file.read()
+            try:
+                with zipf.open(filename) as file:
+                    return file.read()
+            except KeyError:
+                logger.error(f"File {filename} not found in zip: {zip_path}")
+                raise ValueError(f"File {filename} not found in zip: {zip_path}") from None
+    except FileNotFoundError:
+        raise ValueError(f"Zip file {zip_path} not found.")
     except zipfile.BadZipFile:
-        logger.exception(f"Bad zip file: {zip_path}")
-        raise ValueError(f"Bad zip file: {zip_path}") from None
+        logger.error(f"Bad zip file: {zip_path}.")
+        raise ValueError(f"Bad zip file: {zip_path}.") from None
 
 
 def load_backtest_analysis_data(backtest_dir: Path, name: str):
