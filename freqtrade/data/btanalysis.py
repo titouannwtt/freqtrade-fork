@@ -404,12 +404,13 @@ def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.
     return df
 
 
-def load_file_from_zip(zip_path: Path, filename: str) -> bytes | None:
+def load_file_from_zip(zip_path: Path, filename: str) -> bytes:
     """
     Load a file from a zip file
     :param zip_path: Path to the zip file
     :param filename: Name of the file to load
     :return: Bytes of the file
+    :raises: ValueError if loading goes wrong.
     """
     try:
         with zipfile.ZipFile(zip_path) as zipf:
@@ -417,7 +418,7 @@ def load_file_from_zip(zip_path: Path, filename: str) -> bytes | None:
                 return file.read()
     except zipfile.BadZipFile:
         logger.exception(f"Bad zip file: {zip_path}")
-        return None
+        raise ValueError(f"Bad zip file: {zip_path}") from None
 
 
 def load_backtest_analysis_data(backtest_dir: Path, name: str):

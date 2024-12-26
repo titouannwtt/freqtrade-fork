@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pandas import DataFrame
@@ -16,7 +16,7 @@ from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename
 logger = logging.getLogger(__name__)
 
 
-def file_dump_joblib(file_obj: TextIO, data: Any, log: bool = True) -> None:
+def file_dump_joblib(file_obj: BytesIO, data: Any, log: bool = True) -> None:
     """
     Dump object data into a file
     :param filename: file to create
