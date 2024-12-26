@@ -162,6 +162,7 @@ class FreqtradeBot(LoggingMixin):
 
             def update():
                 self.update_funding_fees()
+                self.update_all_liquidation_prices()
                 self.wallets.update()
 
             # This would be more efficient if scheduled in utc time, and performed at each
