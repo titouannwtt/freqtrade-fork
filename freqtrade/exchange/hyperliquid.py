@@ -177,5 +177,6 @@ class Hyperliquid(Exchange):
                     if total_amount
                     else None
                 )
+            self._log_exchange_response("fetch_order2", order)
 
         return order
