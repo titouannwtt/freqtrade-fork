@@ -47,7 +47,8 @@ Please read the [exchange specific notes](exchanges.md) to learn about eventual,
 - [X] [HTX](https://www.htx.com/) (Former Huobi)
 - [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
 - [X] [Kraken](https://kraken.com/)
-- [X] [OKX](https://okx.com/) (Former OKEX)
+- [X] [OKX](https://okx.com/)
+- [X] [MyOKX](https://okx.com/) (OKX EEA)
 - [ ] [potentially many others through <img alt="ccxt" width="30px" src="assets/ccxt-logo.svg" />](https://github.com/ccxt/ccxt/). _(We cannot guarantee they will work)_
 
 ### Supported Futures Exchanges (experimental)
