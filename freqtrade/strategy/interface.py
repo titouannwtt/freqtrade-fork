@@ -26,6 +26,7 @@ from freqtrade.enums import (
 )
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_next_date, timeframe_to_seconds
+from freqtrade.ft_types import MarkArea
 from freqtrade.misc import remove_entry_exit_signals
 from freqtrade.persistence import Order, PairLocks, Trade
 from freqtrade.strategy.hyper import HyperStrategyMixin
@@ -733,6 +734,23 @@ class IStrategy(ABC, HyperStrategyMixin):
         Returns version of the strategy.
         """
         return None
+
+    def plot_annotations(
+        self, pair: str, start_date: datetime, end_date: datetime, dataframe: DataFrame, **kwargs
+    ) -> list[MarkArea]:
+        """
+        Retrieve area annotations for a chart.
+        Must be returned as array, with label, start, end, y_start, y_end and color.
+        All settings are optional - though it usually makes sense to include either "start and end"
+        or "y_start and y_end" for either horizontal or vertical plots (or all 4 for boxes).
+        :param pair: Pair that's currently analyzed
+        :param start_date: Start date of the chart data being requested
+        :param end_date: End date of the chart data being requested
+        :param dataframe: DataFrame with the analyzed data for the chart
+        :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
+        :return: List of MarkArea objects
+        """
+        return []
 
     def populate_any_indicators(
         self,
@@ -1669,3 +1687,16 @@ class IStrategy(ABC, HyperStrategyMixin):
         if "exit_long" not in df.columns:
             df = df.rename({"sell": "exit_long"}, axis="columns")
         return df
+
+    def ft_plot_annotations(self, pair: str, dataframe: DataFrame) -> list[MarkArea]:
+        """
+        Internal wrapper around plot_dataframe
+        """
+        if len(dataframe) > 0:
+            return strategy_safe_wrapper(self.plot_annotations)(
+                pair=pair,
+                dataframe=dataframe,
+                start_date=dataframe.iloc[0]["date"].to_pydatetime(),
+                end_date=dataframe.iloc[-1]["date"].to_pydatetime(),
+            )
+        return []
