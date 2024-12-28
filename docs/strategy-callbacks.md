@@ -1109,10 +1109,11 @@ class AwesomeStrategy(IStrategy):
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         :return: List of AnnotationType objects
         """
+        annotations = []
         while start_dt < end_date:
             start_dt += timedelta(hours=1)
             if start_dt.hour in (8, 15):
-                mark_areas.append(
+                annotations.append(
                     {
                         "type": "area",
                         "label": "Trade open and close hours",
@@ -1123,6 +1124,6 @@ class AwesomeStrategy(IStrategy):
                     }
                 )
 
-        return mark_areas
+        return annotations
 
 ```

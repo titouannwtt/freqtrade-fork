@@ -537,7 +537,7 @@ class PairHistory(BaseModel):
     columns: list[str]
     all_columns: list[str] = []
     data: SerializeAsAny[list[Any]]
-    mark_areas: list[AnnotationType] | None = None
+    annotations: list[AnnotationType] | None = None
     length: int
     buy_signals: int
     sell_signals: int
