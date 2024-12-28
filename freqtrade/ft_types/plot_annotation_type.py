@@ -5,7 +5,7 @@ from typing_extensions import NotRequired, TypedDict
 
 
 class AnnotationType(TypedDict):
-    type: Literal["area"] = "area"
+    type: Literal["area"]
     start: NotRequired[str | datetime]
     end: NotRequired[str | datetime]
     y_start: NotRequired[float]

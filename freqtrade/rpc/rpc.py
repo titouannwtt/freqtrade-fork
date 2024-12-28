@@ -33,6 +33,7 @@ from freqtrade.enums import (
 from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_utils import price_to_precision
+from freqtrade.ft_types import AnnotationType
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
@@ -1299,8 +1300,8 @@ class RPC:
         timeframe: str,
         dataframe: DataFrame,
         last_analyzed: datetime,
-        selected_cols: list[str],
-        annotations: list[dict[str, Any]] = None,
+        selected_cols: list[str] | None,
+        annotations: list[AnnotationType],
     ) -> dict[str, Any]:
         has_content = len(dataframe) != 0
         dataframe_columns = list(dataframe.columns)
