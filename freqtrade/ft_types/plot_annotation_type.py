@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from typing_extensions import NotRequired, TypedDict
 
 
-class MarkArea(TypedDict):
+class AnnotationType(TypedDict):
+    type: Literal["area"] = "area"
     start: NotRequired[str | datetime]
     end: NotRequired[str | datetime]
     y_start: NotRequired[float]

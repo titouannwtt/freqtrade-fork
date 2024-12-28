@@ -26,7 +26,7 @@ from freqtrade.enums import (
 )
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_next_date, timeframe_to_seconds
-from freqtrade.ft_types import MarkArea
+from freqtrade.ft_types import AnnotationType
 from freqtrade.misc import remove_entry_exit_signals
 from freqtrade.persistence import Order, PairLocks, Trade
 from freqtrade.strategy.hyper import HyperStrategyMixin
@@ -737,7 +737,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
     def plot_annotations(
         self, pair: str, start_date: datetime, end_date: datetime, dataframe: DataFrame, **kwargs
-    ) -> list[MarkArea]:
+    ) -> list[AnnotationType]:
         """
         Retrieve area annotations for a chart.
         Must be returned as array, with label, start, end, y_start, y_end and color.
@@ -748,7 +748,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         :param end_date: End date of the chart data being requested
         :param dataframe: DataFrame with the analyzed data for the chart
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
-        :return: List of MarkArea objects
+        :return: List of AnnotationType objects
         """
         return []
 
@@ -1688,7 +1688,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             df = df.rename({"sell": "exit_long"}, axis="columns")
         return df
 
-    def ft_plot_annotations(self, pair: str, dataframe: DataFrame) -> list[MarkArea]:
+    def ft_plot_annotations(self, pair: str, dataframe: DataFrame) -> list[AnnotationType]:
         """
         Internal wrapper around plot_dataframe
         """
