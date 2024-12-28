@@ -32,7 +32,7 @@ Please read the [exchange specific notes](docs/exchanges.md) to learn about even
 - [X] [BingX](https://bingx.com/invite/0EM9RX)
 - [X] [Bybit](https://bybit.com/)
 - [X] [Gate.io](https://www.gate.io/ref/6266643)
-- [X] [HTX](https://www.htx.com/) (Former Huobi)
+- [X] [HTX](https://www.htx.com/)
 - [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
 - [X] [Kraken](https://kraken.com/)
 - [X] [OKX](https://okx.com/)
