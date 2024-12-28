@@ -1070,6 +1070,8 @@ class AwesomeStrategy(IStrategy):
 ## Plot annotations callback
 
 The plot annotations callback is called whenever freqUI requests data to display a chart.
+This callback has no meaning in the trade cycle context and is only used for charting purposes.
+
 The strategy can then return a list of `AnnotationType` objects to be displayed on the chart.
 Depending on the content returned - the chart can display horizontal areas, vertical areas, or boxes.
 
