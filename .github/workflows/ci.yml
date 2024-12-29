@@ -297,7 +297,7 @@ jobs:
 
     - name: Tests
       run: |
-        pytest --random-order
+        pytest --random-order --durations 20 -n auto
 
     - name: Check for repository changes
       run: |
