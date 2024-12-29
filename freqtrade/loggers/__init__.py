@@ -22,7 +22,7 @@ LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 bufferHandler = FTBufferingHandler(1000)
 bufferHandler.setFormatter(Formatter(LOGFORMAT))
 
-error_console = Console(stderr=True)
+error_console = Console(stderr=True, color_system=None)
 
 
 def get_existing_handlers(handlertype):
@@ -60,6 +60,9 @@ def setup_logging(config: Config) -> None:
     # Log level
     verbosity = config["verbosity"]
     logging.root.addHandler(bufferHandler)
+    if config.get("print_colorized", True):
+        logger.info("Enabling colorized output")
+        error_console._color_system = "auto"
 
     logfile = config.get("logfile")
 

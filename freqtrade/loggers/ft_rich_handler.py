@@ -16,9 +16,9 @@ class FtRichHandler(Handler):
             # Format log message
             log_time = Text(
                 datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3],
-                style="gray46",
+                style="gray78",
             )
-            name = Text(record.name)
+            name = Text(record.name, style="violet")
             log_level = Text(record.levelname, style=f"logging.level.{record.levelname.lower()}")
             gray_sep = Text(" - ", style="gray46")
 
