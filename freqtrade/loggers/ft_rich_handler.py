@@ -3,6 +3,7 @@ from logging import Handler
 
 from rich.console import Console
 from rich.text import Text
+from rich.traceback import Traceback
 
 
 class FtRichHandler(Handler):
@@ -20,10 +21,16 @@ class FtRichHandler(Handler):
             name = Text(record.name, style="violet")
             log_level = Text(record.levelname, style=f"logging.level.{record.levelname.lower()}")
             gray_sep = Text(" - ", style="gray46")
-
-            self._console.print(
-                Text() + log_time + gray_sep + name + gray_sep + log_level + gray_sep + msg
-            )
+            if record.exc_info:
+                exc_type, exc_value, exc_traceback = record.exc_info
+                tb = Traceback.from_exception(exc_type, exc_value, exc_traceback)
+                self._console.print(Text() + log_time + gray_sep + name + gray_sep + log_level)
+                self._console.print(tb)
+            else:
+                # pass
+                self._console.print(
+                    Text() + log_time + gray_sep + name + gray_sep + log_level + gray_sep + msg
+                )
 
             self.flush()
         except RecursionError:
