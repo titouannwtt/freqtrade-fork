@@ -33,7 +33,7 @@ class FtRichHandler(Handler):
             tb = None
             if record.exc_info:
                 exc_type, exc_value, exc_traceback = record.exc_info
-                tb = Traceback.from_exception(exc_type, exc_value, exc_traceback)
+                tb = Traceback.from_exception(exc_type, exc_value, exc_traceback, extra_lines=1)
                 self._console.print(tb)
 
             self.flush()
