@@ -16,11 +16,11 @@ from typing import Any
 import rapidjson
 from joblib import Parallel, cpu_count, delayed, wrap_non_picklable_objects
 from joblib.externals import cloudpickle
-from rich.console import Console
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
+from freqtrade.loggers import error_console
 from freqtrade.misc import file_dump_json, plural
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
 from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
@@ -281,13 +281,13 @@ class Hyperopt:
             with Parallel(n_jobs=config_jobs) as parallel:
                 jobs = parallel._effective_n_jobs()
                 logger.info(f"Effective number of parallel workers used: {jobs}")
-                console = Console(
-                    color_system="auto" if self.print_colorized else None,
-                )
+                # console = Console(
+                #     color_system="auto" if self.print_colorized else None,
+                # )
 
                 # Define progressbar
                 with get_progress_tracker(
-                    console=console,
+                    console=error_console,
                     cust_callables=[self._hyper_out],
                 ) as pbar:
                     task = pbar.add_task("Epochs", total=self.total_epochs)
