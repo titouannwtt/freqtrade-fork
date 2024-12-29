@@ -1,12 +1,12 @@
 from datetime import datetime
 from logging import Handler
-from typing import Any
 
+from rich.console import Console
 from rich.text import Text
 
 
 class FtRichHandler(Handler):
-    def __init__(self, console, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, console: Console, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._console = console
 
