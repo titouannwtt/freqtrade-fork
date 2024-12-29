@@ -1,6 +1,7 @@
 from datetime import datetime
 from logging import Handler
 
+from rich._null_file import NullFile
 from rich.console import Console
 from rich.text import Text
 from rich.traceback import Traceback
@@ -27,6 +28,13 @@ class FtRichHandler(Handler):
             log_level = Text(record.levelname, style=f"logging.level.{record.levelname.lower()}")
             gray_sep = Text(" - ", style="gray46")
 
+            if isinstance(self._console.file, NullFile):
+                # Handles pythonw, where stdout/stderr are null, and we return NullFile
+                # instance from Console.file. In this case, we still want to make a log record
+                # even though we won't be writing anything to a file.
+                self.handleError(record)
+                return
+
             self._console.print(
                 Text() + log_time + gray_sep + name + gray_sep + log_level + gray_sep + msg
             )
@@ -36,7 +44,6 @@ class FtRichHandler(Handler):
                 tb = Traceback.from_exception(exc_type, exc_value, exc_traceback, extra_lines=1)
                 self._console.print(tb)
 
-            self.flush()
         except RecursionError:
             raise
         except Exception:
