@@ -93,7 +93,6 @@ class Hyperopt:
 
         self.print_all = self.config.get("print_all", False)
         self.hyperopt_table_header = 0
-        self.print_colorized = self.config.get("print_colorized", False)
         self.print_json = self.config.get("print_json", False)
 
         self.hyperopter = HyperOptimizer(self.config)
@@ -281,9 +280,6 @@ class Hyperopt:
             with Parallel(n_jobs=config_jobs) as parallel:
                 jobs = parallel._effective_n_jobs()
                 logger.info(f"Effective number of parallel workers used: {jobs}")
-                # console = Console(
-                #     color_system="auto" if self.print_colorized else None,
-                # )
 
                 # Define progressbar
                 with get_progress_tracker(
