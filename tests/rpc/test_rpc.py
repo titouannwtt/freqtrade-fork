@@ -99,6 +99,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         "precision_mode_price": 2,
         "contract_size": 1,
         "has_open_orders": False,
+        "nr_of_successful_entries": ANY,
         "orders": [
             {
                 "amount": 91.07468123,
@@ -250,18 +251,23 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=False)
     freqtradebot.enter_positions()
 
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
-    assert "0.00 (0.00)" == result[0][3]
+    assert "0.00% (0.00)" == result[0][3]
     assert "0.00" == f"{fiat_profit_sum:.2f}"
+    assert "0.00" == f"{total_sum:.2f}"
 
     mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=True)
     freqtradebot.process()
 
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert "now" == result[0][2]
@@ -270,8 +276,11 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     assert "-0.00" == f"{fiat_profit_sum:.2f}"
 
     # Test with fiat convert
+    rpc._config["fiat_display_currency"] = "USD"
     rpc._fiat_converter = CryptoToFiatConverter({})
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "Since" in headers
     assert "Pair" in headers
     assert len(result[0]) == 4
@@ -279,10 +288,13 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     assert "ETH/BTC" in result[0][1]
     assert "-0.41% (-0.06)" == result[0][3]
     assert "-0.06" == f"{fiat_profit_sum:.2f}"
+    assert "-0.06" == f"{total_sum:.2f}"
 
     rpc._config["position_adjustment_enable"] = True
     rpc._config["max_entry_position_adjustment"] = 3
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "# Entries" in headers
     assert len(result[0]) == 5
     # 4th column should be 1/4 - as 1 order filled (a total of 4 is possible)
@@ -292,7 +304,9 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker) -> None:
     mocker.patch(
         f"{EXMS}.get_rate", MagicMock(side_effect=ExchangeError("Pair 'ETH/BTC' not available"))
     )
-    result, headers, fiat_profit_sum = rpc._rpc_status_table(default_conf["stake_currency"], "USD")
+    result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
+        default_conf["stake_currency"], "USD"
+    )
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
     assert "nan%" == result[0][3]
@@ -514,8 +528,13 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
-    with pytest.raises(RPCException, match="Error getting current tickers."):
-        rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
+    res = rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
+    assert res["stake"] == "BTC"
+
+    assert len(res["currencies"]) == 1
+    assert res["currencies"][0]["currency"] == "BTC"
+    # ETH has not been converted.
+    assert all(currency["currency"] != "ETH" for currency in res["currencies"])
 
 
 def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
@@ -529,6 +548,13 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "free": 1.0,
             "total": 5.0,
             "used": 4.0,
+        },
+        # Invalid coin not in tickers list.
+        # This triggers a 2nd call to get_tickers
+        "NotACoin": {
+            "free": 0.0,
+            "total": 2.0,
+            "used": 0.0,
         },
         "USDT": {
             "free": 50.0,
@@ -574,7 +600,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         fetch_positions=MagicMock(return_value=mock_pos),
         get_tickers=tickers,
         get_valid_pair_combination=MagicMock(
-            side_effect=lambda a, b: f"{b}/{a}" if a == "USDT" else f"{a}/{b}"
+            side_effect=lambda a, b: [f"{b}/{a}" if a == "USDT" else f"{a}/{b}"]
         ),
     )
     default_conf_usdt["dry_run"] = False
@@ -590,8 +616,10 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
 
     assert pytest.approx(result["total"]) == 2824.83464
     assert pytest.approx(result["value"]) == 2824.83464 * 1.2
-    assert tickers.call_count == 1
+    assert tickers.call_count == 4
     assert tickers.call_args_list[0][1]["cached"] is True
+    # Testing futures - so we should get spot tickers
+    assert tickers.call_args_list[-1][1]["market_type"] == "spot"
     assert "USD" == result["symbol"]
     assert result["currencies"] == [
         {
@@ -623,6 +651,20 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "is_position": False,
         },
         {
+            "currency": "NotACoin",
+            "balance": 2.0,
+            "bot_owned": 0,
+            "est_stake": 0,
+            "est_stake_bot": 0,
+            "free": 0.0,
+            "is_bot_managed": False,
+            "is_position": False,
+            "position": 0,
+            "side": "long",
+            "stake": "USDT",
+            "used": 0.0,
+        },
+        {
             "currency": "USDT",
             "free": 50.0,
             "balance": 100.0,
@@ -652,8 +694,8 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
     ]
     assert pytest.approx(result["total_bot"]) == 69.5
     assert pytest.approx(result["total"]) == 2824.83464  # ETH stake is missing.
-    assert result["starting_capital"] == 50
-    assert result["starting_capital_ratio"] == pytest.approx(0.3899999)
+    assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
+    assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
 
 
 def test_rpc_start(mocker, default_conf) -> None:

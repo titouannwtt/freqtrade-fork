@@ -40,6 +40,10 @@ This could be caused by the following reasons:
 * The installation did not complete successfully.
   * Please check the [Installation documentation](installation.md).
 
+### The bot starts, but in STOPPED mode
+
+Make sure you set the `initial_state` config option to `"running"` in your config.json
+
 ### I have waited 5 minutes, why hasn't the bot made any trades yet?
 
 * Depending on the buy strategy, the amount of whitelisted coins, the
@@ -128,6 +132,10 @@ Irrespectively of the reason, Freqtrade will fill up these candles with "empty" 
 This message is a warning that the candles had a price jump of > 30%.
 This might be a sign that the pair stopped trading, and some token exchange took place (e.g. COCOS in 2021 - where price jumped from 0.0000154 to 0.01621).
 This message is often accompanied by ["Missing data fillup"](#im-getting-missing-data-fillup-messages-in-the-log) - as trading on such pairs is often stopped for some time.
+
+### I want to reset the bot's database
+
+To reset the bot's database, you can either delete the database (by default `tradesv3.sqlite` or `tradesv3.dryrun.sqlite`), or use a different database url via `--db-url` (e.g. `sqlite:///mynewdatabase.sqlite`).
 
 ### I'm getting "Outdated history for pair xxx" in the log
 

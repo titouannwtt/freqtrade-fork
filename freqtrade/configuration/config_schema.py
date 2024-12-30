@@ -85,8 +85,10 @@ CONF_SCHEMA = {
         },
         "dry_run_wallet": {
             "description": "Initial wallet balance for dry run mode.",
-            "type": "number",
+            "type": ["number", "object"],
             "default": DRY_RUN_WALLET,
+            "patternProperties": {r"^[a-zA-Z0-9]+$": {"type": "number"}},
+            "additionalProperties": False,
         },
         "cancel_open_orders_on_exit": {
             "description": "Cancel open orders when exiting.",
@@ -458,7 +460,11 @@ CONF_SCHEMA = {
                 },
                 "token": {"description": "Telegram bot token.", "type": "string"},
                 "chat_id": {
-                    "description": "Telegram chat ID",
+                    "description": "Telegram chat or group ID",
+                    "type": "string",
+                },
+                "topic_id": {
+                    "description": "Telegram topic ID - only applicable for group chats",
                     "type": "string",
                 },
                 "allow_custom_messages": {

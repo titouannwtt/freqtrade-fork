@@ -4,19 +4,30 @@ Functions to convert orderflow data from public_trades
 
 import logging
 import time
-import typing
-from collections import OrderedDict
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from freqtrade.constants import DEFAULT_ORDERFLOW_COLUMNS, Config
-from freqtrade.enums import RunMode
 from freqtrade.exceptions import DependencyException
 
 
 logger = logging.getLogger(__name__)
+
+ORDERFLOW_ADDED_COLUMNS = [
+    "trades",
+    "orderflow",
+    "imbalances",
+    "stacked_imbalances_bid",
+    "stacked_imbalances_ask",
+    "max_delta",
+    "min_delta",
+    "bid",
+    "ask",
+    "delta",
+    "total_trades",
+]
 
 
 def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
@@ -25,53 +36,73 @@ def _init_dataframe_with_trades_columns(dataframe: pd.DataFrame):
     :param dataframe: Dataframe to populate
     """
     # Initialize columns with appropriate dtypes
-    dataframe["trades"] = np.nan
-    dataframe["orderflow"] = np.nan
-    dataframe["imbalances"] = np.nan
-    dataframe["stacked_imbalances_bid"] = np.nan
-    dataframe["stacked_imbalances_ask"] = np.nan
-    dataframe["max_delta"] = np.nan
-    dataframe["min_delta"] = np.nan
-    dataframe["bid"] = np.nan
-    dataframe["ask"] = np.nan
-    dataframe["delta"] = np.nan
-    dataframe["total_trades"] = np.nan
+    for column in ORDERFLOW_ADDED_COLUMNS:
+        dataframe[column] = np.nan
 
-    # Ensure the 'trades' column is of object type
-    dataframe["trades"] = dataframe["trades"].astype(object)
-    dataframe["orderflow"] = dataframe["orderflow"].astype(object)
-    dataframe["imbalances"] = dataframe["imbalances"].astype(object)
-    dataframe["stacked_imbalances_bid"] = dataframe["stacked_imbalances_bid"].astype(object)
-    dataframe["stacked_imbalances_ask"] = dataframe["stacked_imbalances_ask"].astype(object)
+    # Set columns to object type
+    for column in (
+        "trades",
+        "orderflow",
+        "imbalances",
+        "stacked_imbalances_bid",
+        "stacked_imbalances_ask",
+    ):
+        dataframe[column] = dataframe[column].astype(object)
+
+
+def timeframe_to_DateOffset(timeframe: str) -> pd.DateOffset:
+    """
+    Translates the timeframe interval value written in the human readable
+    form ('1m', '5m', '1h', '1d', '1w', etc.) to the number
+    of seconds for one timeframe interval.
+    """
+    from freqtrade.exchange import timeframe_to_seconds
+
+    timeframe_seconds = timeframe_to_seconds(timeframe)
+    timeframe_minutes = timeframe_seconds // 60
+    if timeframe_minutes < 1:
+        return pd.DateOffset(seconds=timeframe_seconds)
+    elif 59 < timeframe_minutes < 1440:
+        return pd.DateOffset(hours=timeframe_minutes // 60)
+    elif 1440 <= timeframe_minutes < 10080:
+        return pd.DateOffset(days=timeframe_minutes // 1440)
+    elif 10000 < timeframe_minutes < 43200:
+        return pd.DateOffset(weeks=1)
+    elif timeframe_minutes >= 43200 and timeframe_minutes < 525600:
+        return pd.DateOffset(months=1)
+    elif timeframe == "1y":
+        return pd.DateOffset(years=1)
+    else:
+        return pd.DateOffset(minutes=timeframe_minutes)
 
 
 def _calculate_ohlcv_candle_start_and_end(df: pd.DataFrame, timeframe: str):
-    from freqtrade.exchange import timeframe_to_next_date, timeframe_to_resample_freq
+    from freqtrade.exchange import timeframe_to_resample_freq
 
-    timeframe_frequency = timeframe_to_resample_freq(timeframe)
-    # calculate ohlcv candle start and end
     if df is not None and not df.empty:
+        timeframe_frequency = timeframe_to_resample_freq(timeframe)
+        dofs = timeframe_to_DateOffset(timeframe)
+        # calculate ohlcv candle start and end
         df["datetime"] = pd.to_datetime(df["date"], unit="ms")
         df["candle_start"] = df["datetime"].dt.floor(timeframe_frequency)
         # used in _now_is_time_to_refresh_trades
-        df["candle_end"] = df["candle_start"].apply(
-            lambda candle_start: timeframe_to_next_date(timeframe, candle_start)
-        )
+        df["candle_end"] = df["candle_start"] + dofs
         df.drop(columns=["datetime"], inplace=True)
 
 
 def populate_dataframe_with_trades(
-    cached_grouped_trades: OrderedDict[tuple[datetime, datetime], pd.DataFrame],
+    cached_grouped_trades: pd.DataFrame | None,
     config: Config,
     dataframe: pd.DataFrame,
     trades: pd.DataFrame,
-) -> tuple[pd.DataFrame, OrderedDict[tuple[datetime, datetime], pd.DataFrame]]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Populates a dataframe with trades
     :param dataframe: Dataframe to populate
     :param trades: Trades to populate with
     :return: Dataframe with trades populated
     """
+
     timeframe = config["timeframe"]
     config_orderflow = config["orderflow"]
 
@@ -94,71 +125,52 @@ def populate_dataframe_with_trades(
 
         # group trades by candle start
         trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
-        # Create Series to hold complex data
-        trades_series = pd.Series(index=dataframe.index, dtype=object)
-        orderflow_series = pd.Series(index=dataframe.index, dtype=object)
-        imbalances_series = pd.Series(index=dataframe.index, dtype=object)
-        stacked_imbalances_bid_series = pd.Series(index=dataframe.index, dtype=object)
-        stacked_imbalances_ask_series = pd.Series(index=dataframe.index, dtype=object)
 
-        trades_grouped_by_candle_start = trades.groupby("candle_start", group_keys=False)
+        candle_start: datetime
         for candle_start, trades_grouped_df in trades_grouped_by_candle_start:
             is_between = candle_start == dataframe["date"]
             if is_between.any():
-                from freqtrade.exchange import timeframe_to_next_date
+                # there can only be one row with the same date
+                index = dataframe.index[is_between][0]
 
-                candle_next = timeframe_to_next_date(timeframe, typing.cast(datetime, candle_start))
-                if candle_next not in trades_grouped_by_candle_start.groups:
-                    logger.warning(
-                        f"candle at {candle_start} with {len(trades_grouped_df)} trades "
-                        f"might be unfinished, because no finished trades at {candle_next}"
-                    )
-
-                indices = dataframe.index[is_between].tolist()
-                # Add trades to each candle
-                trades_series.loc[indices] = [
-                    trades_grouped_df.drop(columns=["candle_start", "candle_end"]).to_dict(
-                        orient="records"
-                    )
-                ]
-                # Use caching mechanism
-                if (candle_start, candle_next) in cached_grouped_trades:
-                    cache_entry = cached_grouped_trades[
-                        (typing.cast(datetime, candle_start), candle_next)
-                    ]
-                    # dataframe.loc[is_between] = cache_entry # doesn't take, so we need workaround:
-                    # Create a dictionary of the column values to be assigned
-                    update_dict = {c: cache_entry[c].iat[0] for c in cache_entry.columns}
-                    # Assign the values using the update_dict
-                    dataframe.loc[is_between, update_dict.keys()] = pd.DataFrame(
-                        [update_dict], index=dataframe.loc[is_between].index
-                    )
+                if (
+                    cached_grouped_trades is not None
+                    and (candle_start == cached_grouped_trades["date"]).any()
+                ):
+                    # Check if the trades are already in the cache
+                    cache_idx = cached_grouped_trades.index[
+                        cached_grouped_trades["date"] == candle_start
+                    ][0]
+                    for col in ORDERFLOW_ADDED_COLUMNS:
+                        dataframe.at[index, col] = cached_grouped_trades.at[cache_idx, col]
                     continue
+
+                dataframe.at[index, "trades"] = trades_grouped_df.drop(
+                    columns=["candle_start", "candle_end"]
+                ).to_dict(orient="records")
 
                 # Calculate orderflow for each candle
                 orderflow = trades_to_volumeprofile_with_total_delta_bid_ask(
                     trades_grouped_df, scale=config_orderflow["scale"]
                 )
-                orderflow_series.loc[indices] = [orderflow.to_dict(orient="index")]
+                dataframe.at[index, "orderflow"] = orderflow.to_dict(orient="index")
+                # orderflow_series.loc[[index]] = [orderflow.to_dict(orient="index")]
                 # Calculate imbalances for each candle's orderflow
                 imbalances = trades_orderflow_to_imbalances(
                     orderflow,
                     imbalance_ratio=config_orderflow["imbalance_ratio"],
                     imbalance_volume=config_orderflow["imbalance_volume"],
                 )
-                imbalances_series.loc[indices] = [imbalances.to_dict(orient="index")]
+                dataframe.at[index, "imbalances"] = imbalances.to_dict(orient="index")
 
                 stacked_imbalance_range = config_orderflow["stacked_imbalance_range"]
-                stacked_imbalances_bid_series.loc[indices] = [
-                    stacked_imbalance_bid(
-                        imbalances, stacked_imbalance_range=stacked_imbalance_range
-                    )
-                ]
-                stacked_imbalances_ask_series.loc[indices] = [
-                    stacked_imbalance_ask(
-                        imbalances, stacked_imbalance_range=stacked_imbalance_range
-                    )
-                ]
+                dataframe.at[index, "stacked_imbalances_bid"] = stacked_imbalance_bid(
+                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                )
+
+                dataframe.at[index, "stacked_imbalances_ask"] = stacked_imbalance_ask(
+                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                )
 
                 bid = np.where(
                     trades_grouped_df["side"].str.contains("sell"), trades_grouped_df["amount"], 0
@@ -168,39 +180,20 @@ def populate_dataframe_with_trades(
                     trades_grouped_df["side"].str.contains("buy"), trades_grouped_df["amount"], 0
                 )
                 deltas_per_trade = ask - bid
-                min_delta = deltas_per_trade.cumsum().min()
-                max_delta = deltas_per_trade.cumsum().max()
-                dataframe.loc[indices, "max_delta"] = max_delta
-                dataframe.loc[indices, "min_delta"] = min_delta
+                dataframe.at[index, "max_delta"] = deltas_per_trade.cumsum().max()
+                dataframe.at[index, "min_delta"] = deltas_per_trade.cumsum().min()
 
-                dataframe.loc[indices, "bid"] = bid.sum()
-                dataframe.loc[indices, "ask"] = ask.sum()
-                dataframe.loc[indices, "delta"] = (
-                    dataframe.loc[indices, "ask"] - dataframe.loc[indices, "bid"]
+                dataframe.at[index, "bid"] = bid.sum()
+                dataframe.at[index, "ask"] = ask.sum()
+                dataframe.at[index, "delta"] = (
+                    dataframe.at[index, "ask"] - dataframe.at[index, "bid"]
                 )
-                dataframe.loc[indices, "total_trades"] = len(trades_grouped_df)
+                dataframe.at[index, "total_trades"] = len(trades_grouped_df)
 
-                # Cache the result
-                cached_grouped_trades[(typing.cast(datetime, candle_start), candle_next)] = (
-                    dataframe.loc[is_between].copy()
-                )
-
-                # Maintain cache size
-                if (
-                    config.get("runmode") in (RunMode.DRY_RUN, RunMode.LIVE)
-                    and len(cached_grouped_trades) > config_orderflow["cache_size"]
-                ):
-                    cached_grouped_trades.popitem(last=False)
-            else:
-                logger.debug(f"Found NO candles for trades starting with {candle_start}")
         logger.debug(f"trades.groups_keys in {time.time() - start_time} seconds")
 
-        # Merge the complex data Series back into the DataFrame
-        dataframe["trades"] = trades_series
-        dataframe["orderflow"] = orderflow_series
-        dataframe["imbalances"] = imbalances_series
-        dataframe["stacked_imbalances_bid"] = stacked_imbalances_bid_series
-        dataframe["stacked_imbalances_ask"] = stacked_imbalances_ask_series
+        # Cache the entire dataframe
+        cached_grouped_trades = dataframe.tail(config_orderflow["cache_size"]).copy()
 
     except Exception as e:
         logger.exception("Error populating dataframe with trades")

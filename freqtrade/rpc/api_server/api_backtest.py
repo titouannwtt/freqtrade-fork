@@ -43,7 +43,7 @@ router = APIRouter()
 
 def __run_backtest_bg(btconfig: Config):
     from freqtrade.data.metrics import combined_dataframes_with_rel_mean
-    from freqtrade.optimize.optimize_reports import generate_backtest_stats, store_backtest_stats
+    from freqtrade.optimize.optimize_reports import generate_backtest_stats, store_backtest_results
     from freqtrade.resolvers import StrategyResolver
 
     asyncio.set_event_loop(asyncio.new_event_loop())
@@ -101,8 +101,8 @@ def __run_backtest_bg(btconfig: Config):
 
         if btconfig.get("export", "none") == "trades":
             combined_res = combined_dataframes_with_rel_mean(ApiBG.bt["data"], min_date, max_date)
-            fn = store_backtest_stats(
-                btconfig["exportfilename"],
+            fn = store_backtest_results(
+                btconfig,
                 ApiBG.bt["bt"].results,
                 datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
                 market_change_data=combined_res,
