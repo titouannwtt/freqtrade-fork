@@ -1249,10 +1249,10 @@ class Backtesting:
             oo = trade.select_order(side, True)
             if oo:
                 if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
-                    logger.info(
-                        f"A similar open order was found for {trade.pair}. "
-                        f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
-                    )
+                    # logger.info(
+                    #     f"A similar open order was found for {trade.pair}. "
+                    #     f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
+                    # )
                     return True
             self.cancel_open_orders(trade, current_time)
 
