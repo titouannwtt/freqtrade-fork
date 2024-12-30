@@ -689,9 +689,10 @@ class RPC:
     ) -> tuple[float, float]:
         est_stake = 0.0
         est_bot_stake = 0.0
-        if coin == stake_currency:
+        is_futures = self._config.get("trading_mode", TradingMode.SPOT) == TradingMode.FUTURES
+        if coin == self._freqtrade.exchange.get_proxy_coin():
             est_stake = balance.total
-            if self._config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT:
+            if is_futures:
                 # in Futures, "total" includes the locked stake, and therefore all positions
                 est_stake = balance.free
             est_bot_stake = amount
@@ -701,7 +702,7 @@ class RPC:
                     coin, stake_currency
                 )
                 if rate:
-                    est_stake = rate * balance.total
+                    est_stake = rate * (balance.free if is_futures else balance.total)
                     est_bot_stake = rate * amount
 
                 return est_stake, est_bot_stake
@@ -733,10 +734,15 @@ class RPC:
             if not balance.total and not balance.free:
                 continue
 
-            trade = open_assets.get(coin, None)
-            is_bot_managed = coin == stake_currency or trade is not None
+            trade = (
+                open_assets.get(coin, None)
+                if self._freqtrade.trading_mode != TradingMode.FUTURES
+                else None
+            )
+            is_stake_currency = coin == self._freqtrade.exchange.get_proxy_coin()
+            is_bot_managed = is_stake_currency or trade is not None
             trade_amount = trade.amount if trade else 0
-            if coin == stake_currency:
+            if is_stake_currency:
                 trade_amount = self._freqtrade.wallets.get_available_stake_amount()
 
             try:

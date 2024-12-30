@@ -3980,7 +3980,7 @@ def test_get_real_amount_multi(
     markets["BNB/ETH"] = markets["ETH/USDT"]
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
     mocker.patch(f"{EXMS}.markets", PropertyMock(return_value=markets))
-    mocker.patch(f"{EXMS}.fetch_ticker", return_value={"ask": 0.19, "last": 0.2})
+    mocker.patch(f"{EXMS}.get_conversion_rate", return_value=0.2)
 
     # Amount is reduced by "fee"
     expected_amount = amount * fee_reduction_amount

@@ -41,7 +41,8 @@ class Wallets:
         self._wallets: dict[str, Wallet] = {}
         self._positions: dict[str, PositionWallet] = {}
         self._start_cap: dict[str, float] = {}
-        self._stake_currency = config["stake_currency"]
+
+        self._stake_currency = self._exchange.get_proxy_coin()
 
         if isinstance(_start_cap := config["dry_run_wallet"], float | int):
             self._start_cap[self._stake_currency] = _start_cap

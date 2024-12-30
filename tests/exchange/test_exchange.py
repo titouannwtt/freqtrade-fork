@@ -2028,6 +2028,7 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
     mocker.patch(f"{EXMS}.exchange_has", return_value=True)
     api_mock.fetch_tickers = MagicMock(side_effect=[tick, tick2])
     api_mock.fetch_bids_asks = MagicMock(return_value={})
+    default_conf_usdt["trading_mode"] = "futures"
 
     exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange=exchange_name)
     # retrieve original ticker
@@ -2044,6 +2045,13 @@ def test_get_conversion_rate(default_conf_usdt, mocker, exchange_name):
     assert exchange.get_conversion_rate("ADA", "USDT") == 2.5
     # Only the call to the "others" market
     assert api_mock.fetch_tickers.call_count == 1
+
+    if exchange_name == "binance":
+        # Special binance case of BNFCR matching USDT.
+        assert exchange.get_conversion_rate("BNFCR", "USDT") is None
+        assert exchange.get_conversion_rate("BNFCR", "USDC") == 1
+        assert exchange.get_conversion_rate("USDT", "BNFCR") is None
+        assert exchange.get_conversion_rate("USDC", "BNFCR") == 1
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
@@ -4721,7 +4729,7 @@ def test_extract_cost_curr_rate(mocker, default_conf, order, expected) -> None:
     ],
 )
 def test_calculate_fee_rate(mocker, default_conf, order, expected, unknown_fee_rate) -> None:
-    mocker.patch(f"{EXMS}.fetch_ticker", return_value={"last": 0.081})
+    mocker.patch(f"{EXMS}.get_tickers", return_value={"NEO/BTC": {"last": 0.081}})
     if unknown_fee_rate:
         default_conf["exchange"]["unknown_fee_rate"] = unknown_fee_rate
 
@@ -4898,7 +4906,7 @@ def test_set_margin_mode(mocker, default_conf, margin_mode):
         ("okx", TradingMode.FUTURES, MarginMode.ISOLATED, False),
         # * Remove once implemented
         ("binance", TradingMode.MARGIN, MarginMode.CROSS, True),
-        ("binance", TradingMode.FUTURES, MarginMode.CROSS, True),
+        ("binance", TradingMode.FUTURES, MarginMode.CROSS, False),
         ("kraken", TradingMode.MARGIN, MarginMode.CROSS, True),
         ("kraken", TradingMode.FUTURES, MarginMode.CROSS, True),
         ("gate", TradingMode.MARGIN, MarginMode.CROSS, True),

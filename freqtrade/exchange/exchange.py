@@ -156,6 +156,7 @@ class Exchange:
         # Override createMarketBuyOrderRequiresPrice where ccxt has it wrong
         "marketOrderRequiresPrice": False,
         "exchange_has_overrides": {},  # Dictionary overriding ccxt's "has".
+        "proxy_coin_mapping": {},  # Mapping for proxy coins
         # Expected to be in the format {"fetchOHLCV": True} or {"fetchOHLCV": False}
         "ws_enabled": False,  # Set to true for exchanges with tested websocket support
     }
@@ -1863,6 +1864,14 @@ class Exchange:
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
+    def get_proxy_coin(self) -> str:
+        """
+        Get the proxy coin for the given coin
+        Falls back to the stake currency if no proxy coin is found
+        :return: Proxy coin or stake currency
+        """
+        return self._config["stake_currency"]
+
     def get_conversion_rate(self, coin: str, currency: str) -> float | None:
         """
         Quick and cached way to get conversion rate one currency to the other.
@@ -1872,6 +1881,11 @@ class Exchange:
         :returns: Conversion rate from coin to currency
         :raises: ExchangeErrors
         """
+
+        if (proxy_coin := self._ft_has["proxy_coin_mapping"].get(coin, None)) is not None:
+            coin = proxy_coin
+        if (proxy_currency := self._ft_has["proxy_coin_mapping"].get(currency, None)) is not None:
+            currency = proxy_currency
         if coin == currency:
             return 1.0
         tickers = self.get_tickers(cached=True)
@@ -1889,7 +1903,7 @@ class Exchange:
                     )
                     ticker = tickers_other.get(pair, None)
                 if ticker:
-                    rate: float | None = ticker.get("last", None)
+                    rate: float | None = safe_value_fallback2(ticker, ticker, "last", "ask", None)
                     if rate and pair.startswith(currency) and not pair.endswith(currency):
                         rate = 1.0 / rate
                     return rate
@@ -2251,13 +2265,11 @@ class Exchange:
                 # If cost is None or 0.0 -> falsy, return None
                 return None
             try:
-                for comb in self.get_valid_pair_combination(
+                fee_to_quote_rate = self.get_conversion_rate(
                     fee_curr, self._config["stake_currency"]
-                ):
-                    tick = self.fetch_ticker(comb)
-                    fee_to_quote_rate = safe_value_fallback2(tick, tick, "last", "ask")
-                    if tick:
-                        break
+                )
+                if not fee_to_quote_rate:
+                    raise ValueError("Conversion rate not found.")
             except (ValueError, ExchangeError):
                 fee_to_quote_rate = self._config["exchange"].get("unknown_fee_rate", None)
                 if not fee_to_quote_rate:
