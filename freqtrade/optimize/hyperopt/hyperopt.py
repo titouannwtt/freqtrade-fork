@@ -20,7 +20,6 @@ from joblib.externals import cloudpickle
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
-from freqtrade.loggers import error_console
 from freqtrade.misc import file_dump_json, plural
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
 from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
@@ -282,10 +281,7 @@ class Hyperopt:
                 logger.info(f"Effective number of parallel workers used: {jobs}")
 
                 # Define progressbar
-                with get_progress_tracker(
-                    console=error_console,
-                    cust_callables=[self._hyper_out],
-                ) as pbar:
+                with get_progress_tracker(cust_callables=[self._hyper_out]) as pbar:
                     task = pbar.add_task("Epochs", total=self.total_epochs)
 
                     start = 0
