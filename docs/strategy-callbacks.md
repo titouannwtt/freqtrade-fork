@@ -767,6 +767,8 @@ Adjustment orders can be assigned with a tag by returning a 2 element Tuple, wit
 
 Modifications to leverage are not possible, and the stake-amount returned is assumed to be before applying leverage.
 
+The combined stake currently allocated to the position is held in `trade.stake_amount`. Therefore `trade.stake_amount` will always be updated on every additional entry and partial exit made through `adjust_trade_position()`.
+
 !!! Danger "Loose Logic"
     On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run out of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
 
