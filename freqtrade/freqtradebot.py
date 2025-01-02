@@ -1974,7 +1974,11 @@ class FreqtradeBot(LoggingMixin):
             return amount
 
         trade_base_currency = self.exchange.get_pair_base_currency(pair)
-        wallet_amount = self.wallets.get_free(trade_base_currency)
+        # Free + Used - open orders will eventually still be canceled.
+        wallet_amount = self.wallets.get_free(trade_base_currency) + self.wallets.get_used(
+            trade_base_currency
+        )
+
         logger.debug(f"{pair} - Wallet: {wallet_amount} - Trade-amount: {amount}")
         if wallet_amount >= amount:
             return amount
