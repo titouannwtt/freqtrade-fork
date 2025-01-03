@@ -193,8 +193,8 @@ def test_public_trades_mock_populate_dataframe_with_trades__check_orderflow(
     assert pytest.approx(results["delta"]) == -20.862
     assert pytest.approx(results["min_delta"]) == -54.559999
     assert 82.842 == results["max_delta"]
-    assert results["stacked_imbalances_bid"] == [234.99]
-    assert results["stacked_imbalances_ask"] == [234.96]
+    assert results["stacked_imbalances_bid"] == [234.97]
+    assert results["stacked_imbalances_ask"] == [234.94]
 
     # Repeat assertions for the last row
     results = df.iloc[-1]
@@ -586,22 +586,22 @@ def test_stacked_imbalances_multiple_prices():
     # Create a sample DataFrame with known imbalances
     df = pd.DataFrame(
         {
-            'bid_imbalance': [True, True, True, False, False, True, True, False],
-            'ask_imbalance': [False, False, True, True, True, False, False, True]
+            'bid_imbalance': [True, True, True, False, False, True, True, False, True],
+            'ask_imbalance': [False, False, True, True, True, False, False, True, True]
         },
-        index=[234.95, 234.96, 234.97, 234.98, 234.99, 235.00, 235.01, 235.02]
+        index=[234.95, 234.96, 234.97, 234.98, 234.99, 235.00, 235.01, 235.02, 235.03]
     )
     # Test bid imbalances (should return prices in ascending order)
     bid_prices = stacked_imbalance(df, "bid", stacked_imbalance_range=2, should_reverse=False)
-    assert bid_prices == [234.95, 234.96, 234.97, 235.00, 235.01]
+    assert bid_prices == [234.95, 234.96, 235.00]
     
     # Test ask imbalances (should return prices in descending order)
     ask_prices = stacked_imbalance(df, "ask", stacked_imbalance_range=2, should_reverse=True)
-    assert ask_prices == [235.02, 234.99, 234.98, 234.97]
+    assert ask_prices == [235.02, 234.98, 234.97]
     
     # Test with higher stacked_imbalance_range
     bid_prices_higher = stacked_imbalance(df, "bid", stacked_imbalance_range=3, should_reverse=False)
-    assert bid_prices_higher == [234.95, 234.96, 234.97]
+    assert bid_prices_higher == [234.95]
     
 
 

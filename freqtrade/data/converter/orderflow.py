@@ -265,20 +265,23 @@ def stacked_imbalance(
     """
     imbalance = df[f"{label}_imbalance"]
     int_series = pd.Series(np.where(imbalance, 1, 0))
-    stacked = int_series * (
-        int_series.groupby((int_series != int_series.shift()).cumsum()).cumcount() + 1
-    )
-
-    stacked_imbalance_idx = stacked.index[stacked >= stacked_imbalance_range]
-    stacked_imbalance_prices = []
+    # Group consecutive True values and get their counts
+    groups = (int_series != int_series.shift()).cumsum()
+    counts = int_series.groupby(groups).cumsum()
     
-    if not stacked_imbalance_idx.empty:
-        indices = (
-            stacked_imbalance_idx
+    # Find indices where count meets or exceeds the range requirement
+    valid_indices = counts[counts >= stacked_imbalance_range].index
+    
+    stacked_imbalance_prices = []
+    if not valid_indices.empty:
+        # Get all prices from valid indices from beginning of the range
+        valid_prices = [imbalance.index.values[idx-(stacked_imbalance_range-1)] for idx in valid_indices]
+        # Sort prices according to direction
+        stacked_imbalance_prices = (
+            sorted(valid_prices)
             if not should_reverse
-            else np.flipud(stacked_imbalance_idx)
+            else sorted(valid_prices, reverse=True)
         )
-        stacked_imbalance_prices = [float(imbalance.index[idx]) for idx in indices]
     
     return stacked_imbalance_prices if stacked_imbalance_prices else [np.nan]
 
