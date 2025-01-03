@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -185,24 +184,24 @@ def test_public_trades_mock_populate_dataframe_with_trades__check_orderflow(
     assert results["max_delta"] == 17.298
 
     # Assert that stacked imbalances are NaN (not applicable in this test)
-    assert np.isnan(results["stacked_imbalances_bid"])
-    assert np.isnan(results["stacked_imbalances_ask"])
+    assert results["stacked_imbalances_bid"] == [np.nan]
+    assert results["stacked_imbalances_ask"] == [np.nan]
 
     # Repeat assertions for the third from last row
     results = df.iloc[-2]
     assert pytest.approx(results["delta"]) == -20.862
     assert pytest.approx(results["min_delta"]) == -54.559999
     assert 82.842 == results["max_delta"]
-    assert 234.99 == results["stacked_imbalances_bid"]
-    assert 234.96 == results["stacked_imbalances_ask"]
+    assert results["stacked_imbalances_bid"] == [234.99]
+    assert results["stacked_imbalances_ask"] == [234.96]
 
     # Repeat assertions for the last row
     results = df.iloc[-1]
     assert pytest.approx(results["delta"]) == -49.302
     assert results["min_delta"] == -70.222
     assert pytest.approx(results["max_delta"]) == 11.213
-    assert np.isnan(results["stacked_imbalances_bid"])
-    assert np.isnan(results["stacked_imbalances_ask"])
+    assert results["stacked_imbalances_bid"] == [np.nan]
+    assert results["stacked_imbalances_ask"] == [np.nan]
 
 
 def test_public_trades_trades_mock_populate_dataframe_with_trades__check_trades(
@@ -358,7 +357,8 @@ def test_public_trades_binned_big_sample_list(public_trades_list):
     assert 197.512 == df["bid_amount"].iloc[0]  # total bid amount
     assert 88.98 == df["ask_amount"].iloc[0]  # total ask amount
     assert 26 == df["ask"].iloc[0]  # ask price
-    assert -108.532 == pytest.approx(df["delta"].iloc[0])  # delta (bid amount - ask amount)
+    # delta (bid amount - ask amount)
+    assert -108.532 == pytest.approx(df["delta"].iloc[0])
 
     assert 3 == df["bid"].iloc[-1]  # bid price
     assert 50.659 == df["bid_amount"].iloc[-1]  # total bid amount
@@ -534,7 +534,8 @@ def test_analyze_with_orderflow(
         assert col in df1.columns, f"Column {col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
-            assert df1[col].count() == 5, f"Column {col} has {df1[col].count()} non-NaN values"
+            assert df1[col].count() == 5, f"Column {col} has {
+                df1[col].count()} non-NaN values"
 
     assert len(strategy._cached_grouped_trades_per_pair[pair]) == 5
 
@@ -552,7 +553,8 @@ def test_analyze_with_orderflow(
     assert "open" in df2.columns
     assert spy.call_count == 0
     for col in ORDERFLOW_ADDED_COLUMNS:
-        assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
+        assert col in df2.columns, f"Round2: Column {
+            col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
             assert (
