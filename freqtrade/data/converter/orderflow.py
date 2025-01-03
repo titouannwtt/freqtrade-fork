@@ -164,12 +164,12 @@ def populate_dataframe_with_trades(
                 dataframe.at[index, "imbalances"] = imbalances.to_dict(orient="index")
 
                 stacked_imbalance_range = config_orderflow["stacked_imbalance_range"]
-                dataframe.at[index, "stacked_imbalances_bid"] = stacked_imbalance_bid(
-                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                dataframe.at[index, "stacked_imbalances_bid"] = stacked_imbalance(
+                    imbalances, label="bid", stacked_imbalance_range=stacked_imbalance_range
                 )
 
-                dataframe.at[index, "stacked_imbalances_ask"] = stacked_imbalance_ask(
-                    imbalances, stacked_imbalance_range=stacked_imbalance_range
+                dataframe.at[index, "stacked_imbalances_ask"] = stacked_imbalance(
+                    imbalances, label="ask", stacked_imbalance_range=stacked_imbalance_range
                 )
 
                 bid = np.where(
@@ -256,9 +256,7 @@ def trades_orderflow_to_imbalances(df: pd.DataFrame, imbalance_ratio: int, imbal
     return dataframe
 
 
-def stacked_imbalance(
-    df: pd.DataFrame, label: str, stacked_imbalance_range: int, should_reverse: bool
-):
+def stacked_imbalance(df: pd.DataFrame, label: str, stacked_imbalance_range: int):
     """
     y * (y.groupby((y != y.shift()).cumsum()).cumcount() + 1)
     https://stackoverflow.com/questions/27626542/counting-consecutive-positive-values-in-python-pandas-array
@@ -268,27 +266,14 @@ def stacked_imbalance(
     # Group consecutive True values and get their counts
     groups = (int_series != int_series.shift()).cumsum()
     counts = int_series.groupby(groups).cumsum()
-    
+
     # Find indices where count meets or exceeds the range requirement
     valid_indices = counts[counts >= stacked_imbalance_range].index
-    
+
     stacked_imbalance_prices = []
     if not valid_indices.empty:
         # Get all prices from valid indices from beginning of the range
-        valid_prices = [imbalance.index.values[idx-(stacked_imbalance_range-1)] for idx in valid_indices]
-        # Sort prices according to direction
-        stacked_imbalance_prices = (
-            sorted(valid_prices)
-            if not should_reverse
-            else sorted(valid_prices, reverse=True)
-        )
-    
-    return stacked_imbalance_prices if stacked_imbalance_prices else [np.nan]
-
-
-def stacked_imbalance_ask(df: pd.DataFrame, stacked_imbalance_range: int):
-    return stacked_imbalance(df, "ask", stacked_imbalance_range, should_reverse=True)
-
-
-def stacked_imbalance_bid(df: pd.DataFrame, stacked_imbalance_range: int):
-    return stacked_imbalance(df, "bid", stacked_imbalance_range, should_reverse=False)
+        stacked_imbalance_prices = [
+            imbalance.index.values[idx - (stacked_imbalance_range - 1)] for idx in valid_indices
+        ]
+    return stacked_imbalance_prices if stacked_imbalance_prices else []
