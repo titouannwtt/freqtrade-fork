@@ -269,16 +269,18 @@ def stacked_imbalance(
         int_series.groupby((int_series != int_series.shift()).cumsum()).cumcount() + 1
     )
 
-    max_stacked_imbalance_idx = stacked.index[stacked >= stacked_imbalance_range]
-    stacked_imbalance_price = np.nan
-    if not max_stacked_imbalance_idx.empty:
-        idx = (
-            max_stacked_imbalance_idx[0]
+    stacked_imbalance_idx = stacked.index[stacked >= stacked_imbalance_range]
+    stacked_imbalance_prices = []
+    
+    if not stacked_imbalance_idx.empty:
+        indices = (
+            stacked_imbalance_idx
             if not should_reverse
-            else np.flipud(max_stacked_imbalance_idx)[0]
+            else np.flipud(stacked_imbalance_idx)
         )
-        stacked_imbalance_price = imbalance.index[idx]
-    return stacked_imbalance_price
+        stacked_imbalance_prices = [float(imbalance.index[idx]) for idx in indices]
+    
+    return stacked_imbalance_prices if stacked_imbalance_prices else [np.nan]
 
 
 def stacked_imbalance_ask(df: pd.DataFrame, stacked_imbalance_range: int):
