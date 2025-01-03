@@ -7,6 +7,7 @@ from freqtrade.data.converter.orderflow import (
     ORDERFLOW_ADDED_COLUMNS,
     timeframe_to_DateOffset,
     trades_to_volumeprofile_with_total_delta_bid_ask,
+    stacked_imbalance,
 )
 from freqtrade.data.converter.trade_converter import trades_list_to_df
 from freqtrade.data.dataprovider import DataProvider
@@ -567,6 +568,41 @@ def test_analyze_with_orderflow(
 
     lastval_of2 = df2.at[len(df2) - 1, "orderflow"]
     assert isinstance(lastval_of2, dict)
+
+
+def test_stacked_imbalances_multiple_prices():
+    """Test that stacked imbalances correctly returns multiple price levels when present"""
+    # Test with empty result
+    df_no_stacks = pd.DataFrame(
+        {
+            'bid_imbalance': [False, False, True, False],
+            'ask_imbalance': [False, True, False, False]
+        },
+        index=[234.95, 234.96, 234.97, 234.98]
+    )
+    no_stacks = stacked_imbalance(df_no_stacks, "bid", stacked_imbalance_range=2, should_reverse=False)
+    assert no_stacks == [np.nan]
+    
+    # Create a sample DataFrame with known imbalances
+    df = pd.DataFrame(
+        {
+            'bid_imbalance': [True, True, True, False, False, True, True, False],
+            'ask_imbalance': [False, False, True, True, True, False, False, True]
+        },
+        index=[234.95, 234.96, 234.97, 234.98, 234.99, 235.00, 235.01, 235.02]
+    )
+    # Test bid imbalances (should return prices in ascending order)
+    bid_prices = stacked_imbalance(df, "bid", stacked_imbalance_range=2, should_reverse=False)
+    assert bid_prices == [234.95, 234.96, 234.97, 235.00, 235.01]
+    
+    # Test ask imbalances (should return prices in descending order)
+    ask_prices = stacked_imbalance(df, "ask", stacked_imbalance_range=2, should_reverse=True)
+    assert ask_prices == [235.02, 234.99, 234.98, 234.97]
+    
+    # Test with higher stacked_imbalance_range
+    bid_prices_higher = stacked_imbalance(df, "bid", stacked_imbalance_range=3, should_reverse=False)
+    assert bid_prices_higher == [234.95, 234.96, 234.97]
+    
 
 
 def test_timeframe_to_DateOffset():
