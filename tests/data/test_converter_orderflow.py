@@ -535,8 +535,7 @@ def test_analyze_with_orderflow(
         assert col in df1.columns, f"Column {col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
-            assert df1[col].count() == 5, f"Column {col} has {
-                df1[col].count()} non-NaN values"
+            assert df1[col].count() == 5, f"Column {col} has {df1[col].count()} non-NaN values"
 
     assert len(strategy._cached_grouped_trades_per_pair[pair]) == 5
 
@@ -554,8 +553,7 @@ def test_analyze_with_orderflow(
     assert "open" in df2.columns
     assert spy.call_count == 0
     for col in ORDERFLOW_ADDED_COLUMNS:
-        assert col in df2.columns, f"Round2: Column {
-            col} not found in df.columns"
+        assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
 
         if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
             assert (
