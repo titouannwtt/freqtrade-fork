@@ -936,7 +936,10 @@ class DigDeeperStrategy(IStrategy):
 
 ## Adjust Entry Price
 
-The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.
+The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.  
+This callback is called once every iteration unless the order has been (re)placed within the current candle - limiting the maximum (re)placement of each order to once per candle.
+This also means that the first call will be at the start of the next candle after the initial order was placed.
+
 Be aware that `custom_entry_price()` is still the one dictating initial entry limit order price target at the time of entry trigger.
 
 Orders can be cancelled out of this callback by returning `None`.
