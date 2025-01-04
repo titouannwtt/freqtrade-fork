@@ -147,7 +147,7 @@ class ExchangeWS:
                 self.klines_last_refresh[(pair, timeframe, candle_type)] = dt_ts()
                 logger.debug(
                     f"watch done {pair}, {timeframe}, data {len(data)} "
-                    f"in {dt_ts() - start:.2f}s"
+                    f"in {(dt_ts() - start) / 1000:.3f}s"
                 )
         except ccxt.ExchangeClosedByUser:
             logger.debug("Exchange connection closed by user")
