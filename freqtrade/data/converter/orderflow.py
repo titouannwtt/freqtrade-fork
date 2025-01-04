@@ -276,4 +276,4 @@ def stacked_imbalance(df: pd.DataFrame, label: str, stacked_imbalance_range: int
         stacked_imbalance_prices = [
             imbalance.index.values[idx - (stacked_imbalance_range - 1)] for idx in valid_indices
         ]
-    return stacked_imbalance_prices if stacked_imbalance_prices else []
+    return stacked_imbalance_prices
