@@ -215,7 +215,7 @@ class Order(ModelBase):
         self.stop_price = safe_value_fallback(order, "stopPrice", default_value=self.stop_price)
         order_date = safe_value_fallback(order, "timestamp")
         if order_date:
-            self.order_date = datetime.fromtimestamp(order_date / 1000, tz=timezone.utc)
+            self.order_date = dt_from_ts(order_date)
         elif not self.order_date:
             self.order_date = dt_now()
 

@@ -64,7 +64,7 @@ from freqtrade.rpc.rpc_types import (
 )
 from freqtrade.strategy.interface import IStrategy
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
-from freqtrade.util import FtPrecise, MeasureTime
+from freqtrade.util import FtPrecise, MeasureTime, dt_from_ts
 from freqtrade.util.migrations.binance_mig import migrate_binance_futures_names
 from freqtrade.wallets import Wallets
 
@@ -533,9 +533,8 @@ class FreqtradeBot(LoggingMixin):
                     logger.info(f"Found previously unknown order {order['id']} for {trade.pair}.")
 
                     order_obj = Order.parse_from_ccxt_object(order, trade.pair, order["side"])
-                    order_obj.order_filled_date = datetime.fromtimestamp(
-                        safe_value_fallback(order, "lastTradeTimestamp", "timestamp") // 1000,
-                        tz=timezone.utc,
+                    order_obj.order_filled_date = dt_from_ts(
+                        safe_value_fallback(order, "lastTradeTimestamp", "timestamp")
                     )
                     trade.orders.append(order_obj)
                     Trade.commit()
