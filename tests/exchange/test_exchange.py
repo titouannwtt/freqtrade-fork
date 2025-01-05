@@ -1686,6 +1686,7 @@ def test_get_balances_prod(default_conf, mocker, exchange_name):
     api_mock.fetch_balance = MagicMock(
         return_value={"1ST": balance_item, "2ND": balance_item, "3RD": balance_item}
     )
+    api_mock.commonCurrencies = {}
     default_conf["dry_run"] = False
     exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange=exchange_name)
     assert len(exchange.get_balances()) == 3
