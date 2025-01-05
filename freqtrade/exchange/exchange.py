@@ -2391,7 +2391,7 @@ class Exchange:
 
         if cache and (pair, timeframe, candle_type) in self._klines:
             candle_limit = self.ohlcv_candle_limit(timeframe, candle_type)
-            min_date = int(date_minus_candles(timeframe, candle_limit - 5).timestamp())
+            min_ts = dt_ts(date_minus_candles(timeframe, candle_limit - 5))
 
             if self._exchange_ws:
                 candle_ts = dt_ts(timeframe_to_prev_date(timeframe))
@@ -2419,7 +2419,7 @@ class Exchange:
                 )
 
             # Check if 1 call can get us updated candles without hole in the data.
-            if min_date < self._pairs_last_refresh_time.get((pair, timeframe, candle_type), 0):
+            if min_ts < self._pairs_last_refresh_time.get((pair, timeframe, candle_type), 0):
                 # Cache can be used - do one-off call.
                 not_all_data = False
             else:
@@ -2497,7 +2497,7 @@ class Exchange:
         # keeping last candle time as last refreshed time of the pair
         if ticks and cache:
             idx = -2 if drop_incomplete and len(ticks) > 1 else -1
-            self._pairs_last_refresh_time[(pair, timeframe, c_type)] = ticks[idx][0] // 1000
+            self._pairs_last_refresh_time[(pair, timeframe, c_type)] = ticks[idx][0]
         # keeping parsed dataframe in cache
         ohlcv_df = ohlcv_to_dataframe(
             ticks, timeframe, pair=pair, fill_missing=True, drop_incomplete=drop_incomplete
@@ -2610,10 +2610,10 @@ class Exchange:
 
     def _now_is_time_to_refresh(self, pair: str, timeframe: str, candle_type: CandleType) -> bool:
         # Timeframe in seconds
-        interval_in_sec = timeframe_to_seconds(timeframe)
+        interval_in_sec = timeframe_to_msecs(timeframe)
         plr = self._pairs_last_refresh_time.get((pair, timeframe, candle_type), 0) + interval_in_sec
         # current,active candle open date
-        now = int(timeframe_to_prev_date(timeframe).timestamp())
+        now = dt_ts(timeframe_to_prev_date(timeframe))
         return plr < now
 
     @retrier_async
