@@ -2394,8 +2394,8 @@ class Exchange:
             min_date = int(date_minus_candles(timeframe, candle_limit - 5).timestamp())
 
             if self._exchange_ws:
-                candle_date = int(timeframe_to_prev_date(timeframe).timestamp() * 1000)
-                prev_candle_date = int(date_minus_candles(timeframe, 1).timestamp() * 1000)
+                candle_date = dt_ts(timeframe_to_prev_date(timeframe))
+                prev_candle_date = dt_ts(date_minus_candles(timeframe, 1))
                 candles = self._exchange_ws.ccxt_object.ohlcvs.get(pair, {}).get(timeframe)
                 half_candle = int(candle_date - (candle_date - prev_candle_date) * 0.5)
                 last_refresh_time = int(
