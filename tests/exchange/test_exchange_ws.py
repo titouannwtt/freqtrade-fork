@@ -1,10 +1,12 @@
 import asyncio
 import threading
+from datetime import timedelta
 from time import sleep
 from unittest.mock import AsyncMock, MagicMock
 
 from freqtrade.enums import CandleType
 from freqtrade.exchange.exchange_ws import ExchangeWS
+from ft_client.test_client.test_rest_client import log_has_re
 
 
 def test_exchangews_init(mocker):
@@ -24,6 +26,23 @@ def test_exchangews_init(mocker):
     assert exchange_ws.klines_last_refresh == {}
     assert exchange_ws.klines_last_request == {}
     # Cleanup
+    exchange_ws.cleanup()
+
+
+def test_exchangews_cleanup_error(mocker, caplog):
+    config = MagicMock()
+    ccxt_object = MagicMock()
+    ccxt_object.close = AsyncMock(side_effect=Exception("Test"))
+    mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
+
+    exchange_ws = ExchangeWS(config, ccxt_object)
+    patch_eventloop_threading(exchange_ws)
+
+    sleep(0.1)
+    exchange_ws.reset_connections()
+
+    assert log_has_re("Exception in _cleanup_async", caplog)
+
     exchange_ws.cleanup()
 
 
