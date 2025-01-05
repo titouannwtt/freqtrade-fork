@@ -2394,28 +2394,28 @@ class Exchange:
             min_date = int(date_minus_candles(timeframe, candle_limit - 5).timestamp())
 
             if self._exchange_ws:
-                candle_date = dt_ts(timeframe_to_prev_date(timeframe))
-                prev_candle_date = dt_ts(date_minus_candles(timeframe, 1))
+                candle_ts = dt_ts(timeframe_to_prev_date(timeframe))
+                prev_candle_ts = dt_ts(date_minus_candles(timeframe, 1))
                 candles = self._exchange_ws.ccxt_object.ohlcvs.get(pair, {}).get(timeframe)
-                half_candle = int(candle_date - (candle_date - prev_candle_date) * 0.5)
+                half_candle = int(candle_ts - (candle_ts - prev_candle_ts) * 0.5)
                 last_refresh_time = int(
                     self._exchange_ws.klines_last_refresh.get((pair, timeframe, candle_type), 0)
                 )
 
                 if (
                     candles
-                    and candles[-1][0] >= prev_candle_date
+                    and candles[-1][0] >= prev_candle_ts
                     and last_refresh_time >= half_candle
                 ):
                     # Usable result, candle contains the previous candle.
                     # Also, we check if the last refresh time is no more than half the candle ago.
                     logger.debug(f"reuse watch result for {pair}, {timeframe}, {last_refresh_time}")
 
-                    return self._exchange_ws.get_ohlcv(pair, timeframe, candle_type, candle_date)
+                    return self._exchange_ws.get_ohlcv(pair, timeframe, candle_type, candle_ts)
                 logger.info(
-                    f"Failed to reuse watch {pair}, {timeframe}, {candle_date < last_refresh_time},"
-                    f" {candle_date}, {last_refresh_time}, "
-                    f"{format_ms_time(candle_date)}, {format_ms_time(last_refresh_time)} "
+                    f"Failed to reuse watch {pair}, {timeframe}, {candle_ts < last_refresh_time},"
+                    f" {candle_ts}, {last_refresh_time}, "
+                    f"{format_ms_time(candle_ts)}, {format_ms_time(last_refresh_time)} "
                 )
 
             # Check if 1 call can get us updated candles without hole in the data.
