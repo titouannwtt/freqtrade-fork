@@ -113,3 +113,73 @@ async def test_exchangews_ohlcv(mocker, time_machine):
     finally:
         # Cleanup
         exchange_ws.cleanup()
+
+
+async def test_exchangews_get_ohlcv(mocker, caplog):
+    config = MagicMock()
+    ccxt_object = MagicMock()
+    ccxt_object.ohlcvs = {
+        "ETH/USDT": {
+            "1m": [
+                [1635840000000, 100, 200, 300, 400, 500],
+                [1635840060000, 101, 201, 301, 401, 501],
+                [1635840120000, 102, 202, 302, 402, 502],
+            ],
+            "5m": [
+                [1635840000000, 100, 200, 300, 400, 500],
+                [1635840300000, 105, 201, 301, 401, 501],
+                [1635840600000, 102, 202, 302, 402, 502],
+            ],
+        }
+    }
+    mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
+
+    exchange_ws = ExchangeWS(config, ccxt_object)
+    exchange_ws.klines_last_refresh = {
+        ("ETH/USDT", "1m", CandleType.SPOT): 1635840120000,
+        ("ETH/USDT", "5m", CandleType.SPOT): 1635840600000,
+    }
+
+    # Matching last candle time - drop hint is true
+    resp = await exchange_ws.get_ohlcv("ETH/USDT", "1m", CandleType.SPOT, 1635840120000)
+    assert resp[0] == "ETH/USDT"
+    assert resp[1] == "1m"
+    assert resp[3] == [
+        [1635840000000, 100, 200, 300, 400, 500],
+        [1635840060000, 101, 201, 301, 401, 501],
+        [1635840120000, 102, 202, 302, 402, 502],
+    ]
+    assert resp[4] is True
+
+    # expected time > last candle time - drop hint is false
+    resp = await exchange_ws.get_ohlcv("ETH/USDT", "1m", CandleType.SPOT, 1635840180000)
+    assert resp[0] == "ETH/USDT"
+    assert resp[1] == "1m"
+    assert resp[3] == [
+        [1635840000000, 100, 200, 300, 400, 500],
+        [1635840060000, 101, 201, 301, 401, 501],
+        [1635840120000, 102, 202, 302, 402, 502],
+    ]
+    assert resp[4] is False
+
+    # Change "received" times to be before the candle starts.
+    # This should trigger the "time sync" warning.
+    exchange_ws.klines_last_refresh = {
+        ("ETH/USDT", "1m", CandleType.SPOT): 1635840110000,
+        ("ETH/USDT", "5m", CandleType.SPOT): 1635840600000,
+    }
+    msg = r".*Candle date > last refresh.*"
+    assert not log_has_re(msg, caplog)
+    resp = await exchange_ws.get_ohlcv("ETH/USDT", "1m", CandleType.SPOT, 1635840120000)
+    assert resp[0] == "ETH/USDT"
+    assert resp[1] == "1m"
+    assert resp[3] == [
+        [1635840000000, 100, 200, 300, 400, 500],
+        [1635840060000, 101, 201, 301, 401, 501],
+        [1635840120000, 102, 202, 302, 402, 502],
+    ]
+    assert resp[4] is True
+
+    assert log_has_re(msg, caplog)
+
+    exchange_ws.cleanup()
