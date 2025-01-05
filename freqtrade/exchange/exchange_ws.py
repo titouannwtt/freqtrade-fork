@@ -171,24 +171,24 @@ class ExchangeWS:
         pair: str,
         timeframe: str,
         candle_type: CandleType,
-        candle_date: int,
+        candle_ts: int,
     ) -> OHLCVResponse:
         """
         Returns cached klines from ccxt's "watch" cache.
-        :param candle_date: timestamp of the end-time of the candle.
+        :param candle_ts: timestamp of the end-time of the candle we expect.
         """
         # Deepcopy the response - as it might be modified in the background as new messages arrive
         candles = deepcopy(self.ccxt_object.ohlcvs.get(pair, {}).get(timeframe))
         refresh_date = self.klines_last_refresh[(pair, timeframe, candle_type)]
         drop_hint = False
-        if refresh_date > candle_date:
+        if refresh_date > candle_ts:
             # Refreshed after candle was complete.
             # logger.info(f"{candles[-1][0]} >= {candle_date}")
-            drop_hint = candles[-1][0] >= candle_date
+            drop_hint = candles[-1][0] >= candle_ts
         logger.debug(
             f"watch result for {pair}, {timeframe} with length {len(candles)}, "
             f"{format_ms_time(candles[-1][0])}, "
             f"lref={format_ms_time(refresh_date)}, "
-            f"candle_date={format_ms_time(candle_date)}, {drop_hint=}"
+            f"candle_ts={format_ms_time(candle_ts)}, {drop_hint=}"
         )
         return pair, timeframe, candle_type, candles, drop_hint
