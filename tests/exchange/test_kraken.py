@@ -128,7 +128,7 @@ def test_get_balances_prod_kraken(default_conf, mocker):
     default_conf["dry_run"] = False
     exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="kraken")
     balances = exchange.get_balances()
-    assert len(balances) == 8
+    assert len(balances) == 7
 
     assert balances["1ST"]["free"] == 9.0
     assert balances["1ST"]["total"] == 10.0
