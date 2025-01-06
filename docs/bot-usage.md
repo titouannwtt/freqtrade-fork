@@ -63,48 +63,7 @@ options:
 
 ### Bot trading commands
 
-```
-usage: freqtrade trade [-h] [-v] [--logfile FILE] [-V] [-c PATH] [-d PATH]
-                       [--userdir PATH] [-s NAME] [--strategy-path PATH]
-                       [--db-url PATH] [--sd-notify] [--dry-run]
-                       [--dry-run-wallet DRY_RUN_WALLET]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --db-url PATH         Override trades database URL, this is useful in custom
-                        deployments (default: `sqlite:///tradesv3.sqlite` for
-                        Live Run mode, `sqlite:///tradesv3.dryrun.sqlite` for
-                        Dry Run).
-  --sd-notify           Notify systemd service manager.
-  --dry-run             Enforce dry-run for trading (removes Exchange secrets
-                        and simulates trades).
-  --dry-run-wallet DRY_RUN_WALLET, --starting-balance DRY_RUN_WALLET
-                        Starting balance, used for backtesting / hyperopt and
-                        dry-runs.
-
-Common arguments:
-  -v, --verbose         Verbose mode (-vv for more, -vvv to get all messages).
-  --logfile FILE        Log to the file specified. Special values are:
-                        'syslog', 'journald'. See the documentation for more
-                        details.
-  -V, --version         show program's version number and exit
-  -c PATH, --config PATH
-                        Specify configuration file (default:
-                        `userdir/config.json` or `config.json` whichever
-                        exists). Multiple --config options may be used. Can be
-                        set to `-` to read config from stdin.
-  -d PATH, --datadir PATH
-                        Path to directory with historical backtesting data.
-  --userdir PATH, --user-data-dir PATH
-                        Path to userdata directory.
-
-Strategy arguments:
-  -s NAME, --strategy NAME
-                        Specify strategy class name which will be used by the
-                        bot.
-  --strategy-path PATH  Specify additional strategy lookup path.
-
-```
+--8<-- "commands/trade.md"
 
 ### How to specify which configuration file be used?
 
