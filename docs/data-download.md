@@ -93,7 +93,6 @@ Freqtrade currently supports the following data-formats:
 * `feather` - a dataformat based on Apache Arrow
 * `json` -  plain "text" json files
 * `jsongz` - a gzip-zipped version of json files
-* `hdf5` - a high performance datastore (deprecated)
 * `parquet` - columnar datastore (OHLCV only)
 
 By default, both OHLCV data and trades data are stored in the `feather` format.
@@ -103,8 +102,8 @@ To persist this change, you should also add the following snippet to your config
 
 ``` jsonc
     // ...
-    "dataformat_ohlcv": "hdf5",
-    "dataformat_trades": "hdf5",
+    "dataformat_ohlcv": "feather",
+    "dataformat_trades": "feather",
     // ...
 ```
 
@@ -142,7 +141,6 @@ time freqtrade list-data --show-timerange --data-format-ohlcv <dataformat>
 | `feather` | 72Mb | 3.5s |
 | `json` | 149Mb | 25.6s |
 | `jsongz` | 39Mb | 27s |
-| `hdf5` | 145Mb | 3.9s |
 | `parquet` | 83Mb | 3.8s |
 
 Size has been taken from the BTC/USDT 1m spot combination for the timerange specified above.
