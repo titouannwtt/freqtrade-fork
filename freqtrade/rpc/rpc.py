@@ -1283,6 +1283,7 @@ class RPC:
                 r.message + ("\n" + r.exc_text if r.exc_text else ""),
             ]
             for r in buffer
+            if hasattr(r, "message")
         ]
 
         # Log format:
