@@ -548,6 +548,7 @@ class Exchange:
             and (
                 self.precisionMode != TICK_SIZE
                 # Too low precision will falsify calculations
+                or market.get("precision", {}).get("price") is None
                 or market.get("precision", {}).get("price") > 1e-11
             )
             and (
