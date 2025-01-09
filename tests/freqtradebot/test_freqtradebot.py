@@ -2053,7 +2053,7 @@ def test_adjust_entry_replace_fail(
     assert len(trades) == 0
     assert len(Order.session.scalars(select(Order)).all()) == 0
     assert fetch_order_mock.call_count == 4
-    assert log_has_re(r"Could not cancel order.*, therefore not replacing\.", caplog)
+    assert log_has_re(r"Could not fully cancel order.*, therefore not replacing\.", caplog)
 
     # Entry adjustment is called
     assert freqtrade.strategy.adjust_entry_price.call_count == 1
