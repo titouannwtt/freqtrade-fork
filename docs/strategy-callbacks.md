@@ -758,7 +758,7 @@ For performance reasons, it's disabled by default and freqtrade will show a warn
 
 Additional orders also result in additional fees and those orders don't count towards `max_open_trades`.
 
-This callback is **not** called when there is an open order (either buy or sell) waiting for execution.
+This callback is also called when there is an open order (either buy or sell) waiting for execution - and will cancel the existing open order to place a new order if the amount, price or direction is different.
 
 `adjust_trade_position()` is called very frequently for the duration of a trade, so you must keep your implementation as performant as possible.
 
