@@ -746,6 +746,7 @@ def test_dca_handle_similar_open_order(
     freqtrade.strategy.ft_check_timed_out = MagicMock(return_value=False)
 
     assert len(trade.orders) == 2
+    assert len(trade.open_orders) == 1
 
     # Adjust with new amount, should cancel and replace existing order
     freqtrade.strategy.adjust_trade_position = MagicMock(
@@ -755,6 +756,7 @@ def test_dca_handle_similar_open_order(
     trade = Trade.get_trades().first()
 
     assert len(trade.orders) == 3
+    assert len(trade.open_orders) == 1
 
     # Fill entry order
     assert freqtrade.strategy.custom_exit.call_count == 0
@@ -780,6 +782,7 @@ def test_dca_handle_similar_open_order(
     assert trade.orders[-1].status == "open"
     assert trade.orders[-1].side == trade.exit_side
     assert len(trade.orders) == 5
+    assert len(trade.open_orders) == 1
     assert freqtrade.strategy.custom_exit.call_count == 1
     freqtrade.strategy.custom_exit.reset_mock()
 
@@ -794,6 +797,7 @@ def test_dca_handle_similar_open_order(
 
     assert trade.orders[-2].status == "canceled"
     assert len(trade.orders) == 6
+    assert len(trade.open_orders) == 1
 
     # Adjust with new exit price, should cancel and replace existing exit order
     freqtrade.strategy.custom_exit_price = MagicMock(return_value=1.95)
@@ -806,6 +810,7 @@ def test_dca_handle_similar_open_order(
 
     assert trade.orders[-2].status == "canceled"
     assert len(trade.orders) == 7
+    assert len(trade.open_orders) == 1
     similar_msg = r"A similar open order was found for.*"
 
     assert not log_has_re(similar_msg, caplog)
@@ -817,3 +822,4 @@ def test_dca_handle_similar_open_order(
     assert log_has_re(similar_msg, caplog)
 
     assert len(trade.orders) == 7
+    assert len(trade.open_orders) == 1
