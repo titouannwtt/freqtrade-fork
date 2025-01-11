@@ -48,7 +48,6 @@ AVAILABLE_CLI_OPTIONS = {
         "--verbose",
         help="Verbose mode (-vv for more, -vvv to get all messages).",
         action="count",
-        default=0,
     ),
     "logfile": Arg(
         "--logfile",
