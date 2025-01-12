@@ -1417,6 +1417,8 @@ class Backtesting:
     ):
         """
         Backtest time and pair generator
+        :returns: generator of (current_time, pair, is_first)
+            where is_first is True for the first pair of each new candle
         """
         current_time = start_date + increment
         self.progress.init_step(
