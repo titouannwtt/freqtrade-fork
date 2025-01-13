@@ -2598,7 +2598,7 @@ def test_backtest_start_multi_strat_caching(
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
-        "Loading data from 2017-11-14 20:57:00 " "up to 2017-11-14 22:59:00 (0 days).",
+        "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
         "Parameter --enable-position-stacking detected ...",
     ]
 
