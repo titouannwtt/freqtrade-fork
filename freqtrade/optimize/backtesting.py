@@ -1470,7 +1470,6 @@ class Backtesting:
                 yield current_time, pair
 
             self.progress.increment()
-            current_time += increment
 
     def backtest(self, processed: dict, start_date: datetime, end_date: datetime) -> dict[str, Any]:
         """
