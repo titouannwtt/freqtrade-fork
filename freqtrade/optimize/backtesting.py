@@ -1412,6 +1412,27 @@ class Backtesting:
             return exiting_dir
         return None
 
+    def get_detail_data(self, pair: str, row: tuple) -> DataFrame | None:
+        """
+        Spread into detail data
+        """
+        current_detail_time: datetime = row[DATE_IDX].to_pydatetime()
+        exit_candle_end = current_detail_time + self.timeframe_td
+        detail_data = self.detail_data[pair]
+        detail_data = detail_data.loc[
+            (detail_data["date"] >= current_detail_time) & (detail_data["date"] < exit_candle_end)
+        ].copy()
+
+        if len(detail_data) == 0:
+            return None
+        detail_data.loc[:, "enter_long"] = row[LONG_IDX]
+        detail_data.loc[:, "exit_long"] = row[ELONG_IDX]
+        detail_data.loc[:, "enter_short"] = row[SHORT_IDX]
+        detail_data.loc[:, "exit_short"] = row[ESHORT_IDX]
+        detail_data.loc[:, "enter_tag"] = row[ENTER_TAG_IDX]
+        detail_data.loc[:, "exit_tag"] = row[EXIT_TAG_IDX]
+        return detail_data
+
     def time_pair_generator(
         self, start_date: datetime, end_date: datetime, increment: timedelta, pairs: list[str]
     ):
@@ -1483,7 +1504,6 @@ class Backtesting:
             is_last_row = current_time == end_date
             self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
             self.dataprovider._set_dataframe_max_date(current_time)
-            current_detail_time: datetime = row[DATE_IDX].to_pydatetime()
             trade_dir: LongShort | None = self.check_for_trade_entry(row)
 
             pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
@@ -1495,24 +1515,13 @@ class Backtesting:
                 # Spread out into detail timeframe.
                 # Should only happen when we are either in a trade for this pair
                 # or when we got the signal for a new trade.
-                exit_candle_end = current_detail_time + self.timeframe_td
+                detail_data = self.get_detail_data(pair, row)
 
-                detail_data = self.detail_data[pair]
-                detail_data = detail_data.loc[
-                    (detail_data["date"] >= current_detail_time)
-                    & (detail_data["date"] < exit_candle_end)
-                ].copy()
-                if len(detail_data) == 0:
+                if detail_data is None or len(detail_data) == 0:
                     # Fall back to "regular" data if no detail data was found for this candle
                     self.dataprovider._set_dataframe_max_date(current_time)
                     self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
                     continue
-                detail_data.loc[:, "enter_long"] = row[LONG_IDX]
-                detail_data.loc[:, "exit_long"] = row[ELONG_IDX]
-                detail_data.loc[:, "enter_short"] = row[SHORT_IDX]
-                detail_data.loc[:, "exit_short"] = row[ESHORT_IDX]
-                detail_data.loc[:, "enter_tag"] = row[ENTER_TAG_IDX]
-                detail_data.loc[:, "exit_tag"] = row[EXIT_TAG_IDX]
                 is_first = True
                 current_time_det = current_time
                 for det_row in detail_data[HEADERS].values.tolist():
