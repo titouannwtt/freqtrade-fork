@@ -1486,8 +1486,9 @@ class Backtesting:
             current_detail_time: datetime = row[DATE_IDX].to_pydatetime()
             trade_dir: LongShort | None = self.check_for_trade_entry(row)
 
+            pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
             if (
-                (trade_dir is not None or len(LocalTrade.bt_trades_open_pp[pair]) > 0)
+                (trade_dir is not None or pair_has_open_trades)
                 and self.timeframe_detail
                 and pair in self.detail_data
             ):
@@ -1525,6 +1526,9 @@ class Backtesting:
                     )
                     current_time_det += self.timeframe_detail_td
                     is_first = False
+                    if pair_has_open_trades and not len(LocalTrade.bt_trades_open_pp[pair]) > 0:
+                        # Auto-lock pair for the rest of the candle if the trade has been closed.
+                        break
             else:
                 self.dataprovider._set_dataframe_max_date(current_time)
                 self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
