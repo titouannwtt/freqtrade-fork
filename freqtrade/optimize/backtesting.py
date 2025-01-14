@@ -1481,8 +1481,8 @@ class Backtesting:
             strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
                 current_time=current_time
             )
-            pair_detail_cache = {}
-            pair_tradedir_cache: dict[LongShort | None] = {}
+            pair_detail_cache: dict[str, list[tuple]] = {}
+            pair_tradedir_cache: dict[str, LongShort | None] = {}
             for current_time_det, is_first, has_detail, idx in self.time_generator_det(
                 current_time, current_time + increment
             ):
@@ -1530,11 +1530,14 @@ class Backtesting:
                         and has_detail
                         and pair not in pair_detail_cache
                         and pair in self.detail_data
+                        and row
                     ):
                         # Spread candle into detail timeframe and cache that -
                         # only once per main candle
                         # and only if we can expect activity.
-                        pair_detail_cache[pair] = self.get_detail_data(pair, row)
+                        pair_detail = self.get_detail_data(pair, row)
+                        if pair_detail is not None:
+                            pair_detail_cache[pair] = pair_detail
                         row = pair_detail_cache[pair][idx]
 
                     is_last_row = current_time_det == end_date
