@@ -1412,7 +1412,7 @@ class Backtesting:
             return exiting_dir
         return None
 
-    def get_detail_data(self, pair: str, row: tuple) -> DataFrame | None:
+    def get_detail_data(self, pair: str, row: tuple) -> list[tuple] | None:
         """
         Spread into detail data
         """
@@ -1431,13 +1431,25 @@ class Backtesting:
         detail_data.loc[:, "exit_short"] = row[ESHORT_IDX]
         detail_data.loc[:, "enter_tag"] = row[ENTER_TAG_IDX]
         detail_data.loc[:, "exit_tag"] = row[EXIT_TAG_IDX]
-        return detail_data
+        return detail_data[HEADERS].values.tolist()
 
     def time_generator(self, start_date: datetime, end_date: datetime):
         current_time = start_date + self.timeframe_td
         while current_time <= end_date:
             yield current_time
             current_time += self.timeframe_td
+
+    def time_generator_det(self, start_date: datetime, end_date: datetime):
+        if not self.timeframe_detail_td:
+            yield start_date, True, False, 0
+            return
+
+        current_time = start_date
+        i = 0
+        while current_time <= end_date:
+            yield current_time, i == 0, True, i
+            i += 1
+            current_time += self.timeframe_detail_td
 
     def time_pair_generator(
         self,
@@ -1469,28 +1481,71 @@ class Backtesting:
             strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
                 current_time=current_time
             )
+            pair_detail_cache = {}
+            pair_tradedir_cache: dict[LongShort | None] = {}
+            for current_time_det, is_first, has_detail, idx in self.time_generator_det(
+                current_time, current_time + increment
+            ):
+                # Loop for each detail candle.
+                # Yields only the start date if no detail timeframe is set.
 
-            # Pairs that have open trades should be processed first
-            new_pairlist = list(dict.fromkeys([t.pair for t in LocalTrade.bt_trades_open] + pairs))
+                # Pairs that have open trades should be processed first
+                new_pairlist = list(
+                    dict.fromkeys([t.pair for t in LocalTrade.bt_trades_open] + pairs)
+                )
+                for pair in new_pairlist:
+                    trade_dir: LongShort | None = None
+                    if is_first:
+                        # Main candle
+                        row_index = indexes[pair]
+                        row = self.validate_row(data, pair, row_index, current_time)
+                        if not row:
+                            continue
 
-            for pair in new_pairlist:
-                row_index = indexes[pair]
-                row = self.validate_row(data, pair, row_index, current_time)
-                if not row:
-                    continue
+                        row_index += 1
+                        indexes[pair] = row_index
+                        is_last_row = current_time == end_date
+                        self.dataprovider._set_dataframe_max_index(
+                            self.required_startup + row_index
+                        )
+                        trade_dir = self.check_for_trade_entry(row)
+                        pair_tradedir_cache[pair] = trade_dir
 
-                row_index += 1
-                indexes[pair] = row_index
-                is_last_row = current_time == end_date
-                self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
-                self.dataprovider._set_dataframe_max_date(current_time)
+                    else:
+                        # Detail candle - from cache.
+                        detail_data = pair_detail_cache.get(pair)
+                        if detail_data is None or len(detail_data) <= idx:
+                            # logger.info(f"skipping {pair}, {current_time_det}, {trade_dir}")
+                            continue
+                        row = detail_data[idx]
+                        trade_dir = pair_tradedir_cache.get(pair)
 
-                trade_dir: LongShort | None = self.check_for_trade_entry(row)
+                    self.dataprovider._set_dataframe_max_date(current_time_det)
 
-                pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
+                    pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
 
-                yield current_time, pair, row, is_last_row, trade_dir, pair_has_open_trades
+                    if (
+                        is_first
+                        and (trade_dir is not None or pair_has_open_trades)
+                        and has_detail
+                        and pair not in pair_detail_cache
+                        and pair in self.detail_data
+                    ):
+                        # Spread candle into detail timeframe and cache that -
+                        # only once per main candle
+                        # and only if we can expect activity.
+                        pair_detail_cache[pair] = self.get_detail_data(pair, row)
+                        row = pair_detail_cache[pair][idx]
 
+                    is_last_row = current_time_det == end_date
+
+                    yield (
+                        current_time_det,
+                        pair,
+                        row,
+                        is_last_row,
+                        trade_dir,
+                    )
             self.progress.increment()
 
     def backtest(self, processed: dict, start_date: datetime, end_date: datetime) -> dict[str, Any]:
@@ -1521,44 +1576,10 @@ class Backtesting:
             row,
             is_last_row,
             trade_dir,
-            pair_has_open_trades,
         ) in self.time_pair_generator(
             start_date, end_date, self.timeframe_td, list(data.keys()), data
         ):
-            if (
-                (trade_dir is not None or pair_has_open_trades)
-                and self.timeframe_detail
-                and pair in self.detail_data
-            ):
-                # Spread out into detail timeframe.
-                # Should only happen when we are either in a trade for this pair
-                # or when we got the signal for a new trade.
-                detail_data = self.get_detail_data(pair, row)
-
-                if detail_data is None or len(detail_data) == 0:
-                    # Fall back to "regular" data if no detail data was found for this candle
-                    self.dataprovider._set_dataframe_max_date(current_time)
-                    self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
-                    continue
-                is_first = True
-                current_time_det = current_time
-                for det_row in detail_data[HEADERS].values.tolist():
-                    self.dataprovider._set_dataframe_max_date(current_time_det)
-                    self.backtest_loop(
-                        det_row,
-                        pair,
-                        current_time_det,
-                        trade_dir,
-                        is_first and not is_last_row,
-                    )
-                    current_time_det += self.timeframe_detail_td
-                    is_first = False
-                    if pair_has_open_trades and not len(LocalTrade.bt_trades_open_pp[pair]) > 0:
-                        # Auto-lock pair for the rest of the candle if the trade has been closed.
-                        break
-            else:
-                self.dataprovider._set_dataframe_max_date(current_time)
-                self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
+            self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
 
         self.handle_left_open(LocalTrade.bt_trades_open_pp, data=data)
         self.wallets.update()
