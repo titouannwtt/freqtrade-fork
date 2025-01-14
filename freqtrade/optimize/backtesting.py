@@ -1485,7 +1485,11 @@ class Backtesting:
                 self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
                 self.dataprovider._set_dataframe_max_date(current_time)
 
-                yield current_time, pair, row, is_last_row
+                trade_dir: LongShort | None = self.check_for_trade_entry(row)
+
+                pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
+
+                yield current_time, pair, row, is_last_row, trade_dir, pair_has_open_trades
 
             self.progress.increment()
 
@@ -1511,12 +1515,16 @@ class Backtesting:
         data: dict = self._get_ohlcv_as_lists(processed)
 
         # Loop timerange and get candle for each pair at that point in time
-        for current_time, pair, row, is_last_row in self.time_pair_generator(
+        for (
+            current_time,
+            pair,
+            row,
+            is_last_row,
+            trade_dir,
+            pair_has_open_trades,
+        ) in self.time_pair_generator(
             start_date, end_date, self.timeframe_td, list(data.keys()), data
         ):
-            trade_dir: LongShort | None = self.check_for_trade_entry(row)
-
-            pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
             if (
                 (trade_dir is not None or pair_has_open_trades)
                 and self.timeframe_detail
