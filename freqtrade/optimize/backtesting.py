@@ -1433,13 +1433,13 @@ class Backtesting:
         detail_data.loc[:, "exit_tag"] = row[EXIT_TAG_IDX]
         return detail_data[HEADERS].values.tolist()
 
-    def time_generator(self, start_date: datetime, end_date: datetime):
+    def _time_generator(self, start_date: datetime, end_date: datetime):
         current_time = start_date + self.timeframe_td
         while current_time <= end_date:
             yield current_time
             current_time += self.timeframe_td
 
-    def time_generator_det(self, start_date: datetime, end_date: datetime):
+    def _time_generator_det(self, start_date: datetime, end_date: datetime):
         if not self.timeframe_detail_td:
             yield start_date, True, False, 0
             return
@@ -1451,8 +1451,8 @@ class Backtesting:
             i += 1
             current_time += self.timeframe_detail_td
 
-    def time_pair_generator_det(self, current_time: datetime, pairs: list[str]):
-        for current_time_det, is_first, has_detail, idx in self.time_generator_det(
+    def _time_pair_generator_det(self, current_time: datetime, pairs: list[str]):
+        for current_time_det, is_first, has_detail, idx in self._time_generator_det(
             current_time, current_time + self.timeframe_td
         ):
             # Loop for each detail candle.
@@ -1482,7 +1482,7 @@ class Backtesting:
         # Indexes per pair, so some pairs are allowed to have a missing start.
         indexes: dict = defaultdict(int)
 
-        for current_time in self.time_generator(start_date, end_date):
+        for current_time in self._time_generator(start_date, end_date):
             # Loop for each main candle.
             self.check_abort()
             # Reset open trade count for this candle
@@ -1496,11 +1496,11 @@ class Backtesting:
             pair_tradedir_cache: dict[str, LongShort | None] = {}
             pairs_with_open_trades = [t.pair for t in LocalTrade.bt_trades_open]
 
-            for current_time_det, is_first, has_detail, idx, pair in self.time_pair_generator_det(
+            for current_time_det, is_first, has_detail, idx, pair in self._time_pair_generator_det(
                 current_time, pairs
             ):
                 # Loop for each detail candle (if necessary) and pair
-                # Yields only the start date if no detail timeframe is set.
+                # Yields only the main date if no detail timeframe is set.
 
                 # Pairs that have open trades should be processed first
                 trade_dir: LongShort | None = None
