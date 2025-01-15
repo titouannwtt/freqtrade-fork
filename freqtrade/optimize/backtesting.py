@@ -1534,6 +1534,11 @@ class Backtesting:
                     # Pair has had open trades which closed in the current main candle.
                     # Skip this pair for this timeframe
                     continue
+                if pair_has_open_trades and pair not in pairs_with_open_trades:
+                    # auto-lock for pairs that have open trades
+                    # Necessary for detail - to capture trades that open and close within
+                    # the same main candle
+                    pairs_with_open_trades.append(pair)
 
                 if (
                     is_first
