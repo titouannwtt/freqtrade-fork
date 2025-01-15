@@ -1455,7 +1455,6 @@ class Backtesting:
         self,
         start_date: datetime,
         end_date: datetime,
-        increment: timedelta,
         pairs: list[str],
         data: dict[str, list[tuple]],
     ):
@@ -1464,7 +1463,7 @@ class Backtesting:
         :returns: generator of (current_time, pair, is_first)
             where is_first is True for the first pair of each new candle
         """
-        current_time = start_date + increment
+        current_time = start_date + self.timeframe_td
         self.progress.init_step(
             BacktestState.BACKTEST, int((end_date - start_date) / self.timeframe_td)
         )
@@ -1484,8 +1483,9 @@ class Backtesting:
             pair_detail_cache: dict[str, list[tuple]] = {}
             pair_tradedir_cache: dict[str, LongShort | None] = {}
             pairs_with_open_trades = [t.pair for t in LocalTrade.bt_trades_open]
+
             for current_time_det, is_first, has_detail, idx in self.time_generator_det(
-                current_time, current_time + increment
+                current_time, current_time + self.timeframe_td
             ):
                 # Loop for each detail candle.
                 # Yields only the start date if no detail timeframe is set.
@@ -1584,9 +1584,7 @@ class Backtesting:
             row,
             is_last_row,
             trade_dir,
-        ) in self.time_pair_generator(
-            start_date, end_date, self.timeframe_td, list(data.keys()), data
-        ):
+        ) in self.time_pair_generator(start_date, end_date, list(data.keys()), data):
             self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
 
         self.handle_left_open(LocalTrade.bt_trades_open_pp, data=data)
