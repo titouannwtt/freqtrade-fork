@@ -1483,6 +1483,7 @@ class Backtesting:
             )
             pair_detail_cache: dict[str, list[tuple]] = {}
             pair_tradedir_cache: dict[str, LongShort | None] = {}
+            pairs_with_open_trades = [t.pair for t in LocalTrade.bt_trades_open]
             for current_time_det, is_first, has_detail, idx in self.time_generator_det(
                 current_time, current_time + increment
             ):
@@ -1523,6 +1524,10 @@ class Backtesting:
                     self.dataprovider._set_dataframe_max_date(current_time_det)
 
                     pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0
+                    if pair in pairs_with_open_trades and not pair_has_open_trades:
+                        # Pair has had open trades which closed in the current main candle.
+                        # Skip this pair for this timeframe
+                        continue
 
                     if (
                         is_first
