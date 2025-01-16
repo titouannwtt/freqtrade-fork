@@ -1901,7 +1901,7 @@ def test_backtest_multi_pair_long_short_switch(
 
     if use_detail:
         # Backtest loop is called once per candle per pair
-        assert bl_spy.call_count == 1484
+        assert bl_spy.call_count == 1482
     else:
         assert bl_spy.call_count == 479
 
