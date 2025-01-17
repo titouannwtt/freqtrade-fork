@@ -1488,7 +1488,6 @@ class Backtesting:
             # Reset open trade count for this candle
             # Critical to avoid exceeding max_open_trades in backtesting
             # when timeframe-detail is used and trades close within the opening candle.
-            LocalTrade.bt_open_open_trade_count_candle = LocalTrade.bt_open_open_trade_count
             strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
                 current_time=current_time
             )
