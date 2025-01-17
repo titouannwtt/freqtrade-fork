@@ -1386,7 +1386,7 @@ class Backtesting:
             and (self._position_stacking or len(LocalTrade.bt_trades_open_pp[pair]) == 0)
             and not PairLocks.is_pair_locked(pair, row[DATE_IDX], trade_dir)
         ):
-            if self.trade_slot_available(LocalTrade.bt_open_open_trade_count_candle):
+            if self.trade_slot_available(LocalTrade.bt_open_open_trade_count):
                 trade = self._enter_trade(pair, row, trade_dir)
                 if trade:
                     self.wallets.update()

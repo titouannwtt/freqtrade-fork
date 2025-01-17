@@ -1773,16 +1773,18 @@ def test_backtest_multi_pair_detail_simplified(
     if use_detail:
         # Backtest loop is called once per candle per pair
         # Exact numbers depend on trade state - but should be around 3_800
-        assert bl_spy.call_count > 2_250
+        assert bl_spy.call_count > 2_170
         assert bl_spy.call_count < 2_800
+        assert len(evaluate_result_multi(results["results"], "1h", 3)) > 0
     else:
         assert bl_spy.call_count < 995
+        assert len(evaluate_result_multi(results["results"], "1h", 3)) == 0
 
     # Make sure we have parallel trades
     assert len(evaluate_result_multi(results["results"], "1h", 2)) > 0
+    assert len(evaluate_result_multi(results["results"], "5m", 2)) > 0
     # make sure we don't have trades with more than configured max_open_trades
     # This must evaluate on detail timeframe - as we can have entries within the candle.
-    assert len(evaluate_result_multi(results["results"], "1h", 3)) == 0
     assert len(evaluate_result_multi(results["results"], "5m", 3)) == 0
     assert len(evaluate_result_multi(results["results"], "1m", 3)) == 0
 
@@ -1803,7 +1805,10 @@ def test_backtest_multi_pair_detail_simplified(
         "end_date": max_date,
     }
     results = backtesting.backtest(**backtest_conf)
-    assert len(evaluate_result_multi(results["results"], "1h", 1)) == 0
+    if use_detail:
+        assert len(evaluate_result_multi(results["results"], "1h", 1)) > 0
+    else:
+        assert len(evaluate_result_multi(results["results"], "1h", 1)) == 0
     assert len(evaluate_result_multi(results["results"], "5m", 1)) == 0
     assert len(evaluate_result_multi(results["results"], "1m", 1)) == 0
 
