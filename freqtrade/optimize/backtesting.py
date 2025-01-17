@@ -1527,6 +1527,15 @@ class Backtesting:
                     row = detail_data[idx]
                     trade_dir = pair_tradedir_cache.get(pair)
 
+                    if self.strategy.ignore_expired_candle(
+                        current_time - self.timeframe_td,  # last closed candle is 1 timeframe away.
+                        current_time_det,
+                        self.timeframe_secs,
+                        trade_dir is not None,
+                    ):
+                        # Ignore late entries eventually
+                        trade_dir = None
+
                 self.dataprovider._set_dataframe_max_date(current_time_det)
 
                 pair_has_open_trades = len(LocalTrade.bt_trades_open_pp[pair]) > 0

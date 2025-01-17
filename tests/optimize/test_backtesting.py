@@ -866,6 +866,7 @@ def test_backtest_one_detail(default_conf_usdt, mocker, testdatadir, use_detail)
     backtesting = Backtesting(default_conf_usdt)
     backtesting._set_strategy(backtesting.strategylist[0])
     backtesting.strategy.populate_entry_trend = advise_entry
+    backtesting.strategy.ignore_buying_expired_candle_after = 59
     backtesting.strategy.custom_entry_price = custom_entry_price
     pair = "XRP/ETH"
     # Pick a timerange adapted to the pair we use to test
