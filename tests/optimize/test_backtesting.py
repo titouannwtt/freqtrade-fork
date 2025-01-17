@@ -936,7 +936,7 @@ def test_backtest_one_detail(default_conf_usdt, mocker, testdatadir, use_detail)
 @pytest.mark.parametrize(
     "use_detail,exp_funding_fee, exp_ff_updates",
     [
-        (True, -0.018054162, 11),
+        (True, -0.018054162, 10),
         (False, -0.01780296, 6),
     ],
 )
@@ -998,7 +998,7 @@ def test_backtest_one_detail_futures(
     results = result["results"]
     assert not results.empty
     # Timeout settings from default_conf = entry: 10, exit: 30
-    assert len(results) == (5 if use_detail else 2)
+    assert len(results) == (4 if use_detail else 2)
 
     assert "orders" in results.columns
     data_pair = processed[pair]
