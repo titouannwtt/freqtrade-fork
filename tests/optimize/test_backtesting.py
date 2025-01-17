@@ -1772,7 +1772,7 @@ def test_backtest_multi_pair_detail_simplified(
 
     if use_detail:
         # Backtest loop is called once per candle per pair
-        # Exact numbers depend on trade state - but should be around 3_800
+        # Exact numbers depend on trade state - but should be around 2_600
         assert bl_spy.call_count > 2_170
         assert bl_spy.call_count < 2_800
         assert len(evaluate_result_multi(results["results"], "1h", 3)) > 0
