@@ -1418,6 +1418,10 @@ class Backtesting:
             current_time += self.timeframe_td
 
     def _time_generator_det(self, start_date: datetime, end_date: datetime):
+        """
+        Loop for each detail candle.
+        Yields only the start date if no detail timeframe is set.
+        """
         if not self.timeframe_detail_td:
             yield start_date, True, False, 0
             return
@@ -1433,9 +1437,6 @@ class Backtesting:
         for current_time_det, is_first, has_detail, idx in self._time_generator_det(
             current_time, current_time + self.timeframe_td
         ):
-            # Loop for each detail candle.
-            # Yields only the start date if no detail timeframe is set.
-
             # Pairs that have open trades should be processed first
             new_pairlist = list(dict.fromkeys([t.pair for t in LocalTrade.bt_trades_open] + pairs))
             for pair in new_pairlist:
@@ -1450,8 +1451,8 @@ class Backtesting:
     ):
         """
         Backtest time and pair generator
-        :returns: generator of (current_time, pair, is_first)
-            where is_first is True for the first pair of each new candle
+        :returns: generator of (current_time, pair, row, is_last_row, trade_dir)
+            where is_last_row is a boolean indicating if this is the data end date.
         """
         current_time = start_date + self.timeframe_td
         self.progress.init_step(
