@@ -1335,28 +1335,6 @@ class Backtesting:
         current_time: datetime,
         trade_dir: LongShort | None,
         can_enter: bool,
-    ) -> None:
-        """
-        Conditionally call backtest_loop_inner a 2nd time if shorting is enabled,
-         a position closed and a new signal in the other direction is available.
-        """
-        if not self._can_short or trade_dir is None:
-            # No need to reverse position if shorting is disabled or there's no new signal
-            self.backtest_loop_inner(row, pair, current_time, trade_dir, can_enter)
-        else:
-            for _ in (0, 1):
-                a = self.backtest_loop_inner(row, pair, current_time, trade_dir, can_enter)
-                if not a or a == trade_dir:
-                    # the trade didn't close or position change is in the same direction
-                    break
-
-    def backtest_loop_inner(
-        self,
-        row: tuple,
-        pair: str,
-        current_time: datetime,
-        trade_dir: LongShort | None,
-        can_enter: bool,
     ) -> LongShort | None:
         """
         NOTE: This method is used by Hyperopt at each iteration. Please keep it optimized.
@@ -1598,7 +1576,18 @@ class Backtesting:
             is_last_row,
             trade_dir,
         ) in self.time_pair_generator(start_date, end_date, list(data.keys()), data):
-            self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
+            if not self._can_short or trade_dir is None:
+                # No need to reverse position if shorting is disabled or there's no new signal
+                self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
+            else:
+                # Conditionally call backtest_loop a 2nd time if shorting is enabled,
+                # a position closed and a new signal in the other direction is available.
+
+                for _ in (0, 1):
+                    a = self.backtest_loop(row, pair, current_time, trade_dir, not is_last_row)
+                    if not a or a == trade_dir:
+                        # the trade didn't close or position change is in the same direction
+                        break
 
         self.handle_left_open(LocalTrade.bt_trades_open_pp, data=data)
         self.wallets.update()

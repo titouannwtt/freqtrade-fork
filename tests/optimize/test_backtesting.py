@@ -1907,9 +1907,9 @@ def test_backtest_multi_pair_long_short_switch(
 
     if use_detail:
         # Backtest loop is called once per candle per pair
-        assert bl_spy.call_count == 1482
+        assert bl_spy.call_count == 1511
     else:
-        assert bl_spy.call_count == 479
+        assert bl_spy.call_count == 508
 
     # Make sure we have parallel trades
     assert len(evaluate_result_multi(results["results"], "5m", 0)) > 0
