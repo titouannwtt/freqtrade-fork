@@ -19,6 +19,7 @@ from sqlalchemy import (
     Select,
     String,
     UniqueConstraint,
+    case,
     desc,
     func,
     select,
@@ -1937,11 +1938,15 @@ class Trade(ModelBase, LocalTrade):
         pair_costs = (
             select(
                 Trade.pair,
-                func.sum(Order.filled * Order.average).label("cost_per_pair"),
+                func.sum(
+                    func.coalesce(Order.filled, Order.amount)
+                    * func.coalesce(Order.average, Order.price, Order.ft_price)
+                ).label("cost_per_pair"),
             )
             .join(Order, Trade.id == Order.ft_trade_id)
             .filter(
                 *filters,
+                Order.ft_order_side == case((Trade.is_short.is_(True), "sell"), else_="buy"),
             )
             # Order.filled.gt > 0
             .group_by(Trade.pair)
