@@ -832,6 +832,10 @@ class Backtesting:
         amount = amount_to_contract_precision(
             amount or trade.amount, trade.amount_precision, self.precision_mode, trade.contract_size
         )
+
+        if self.handle_similar_order(trade, close_rate, amount, trade.exit_side, exit_candle_time):
+            return None
+
         order = Order(
             id=self.order_id_counter,
             ft_trade_id=trade.id,
@@ -1117,6 +1121,10 @@ class Backtesting:
                     orders=[],
                 )
                 LocalTrade.add_bt_trade(trade)
+            elif self.handle_similar_order(
+                trade, propose_rate, amount, trade.entry_side, current_time
+            ):
+                return None
 
             trade.adjust_stop_loss(trade.open_rate, self.strategy.stoploss, initial=True)
 
@@ -1158,9 +1166,13 @@ class Backtesting:
         """
         for pair in open_trades.keys():
             for trade in list(open_trades[pair]):
-                if trade.has_open_orders and trade.nr_of_successful_entries == 0:
+                if (
+                    trade.has_open_orders and trade.nr_of_successful_entries == 0
+                ) or not trade.has_open_position:
                     # Ignore trade if entry-order did not fill yet
+                    LocalTrade.remove_bt_trade(trade)
                     continue
+
                 exit_row = data[pair][-1]
                 self._exit_trade(
                     trade, exit_row, exit_row[OPEN_IDX], trade.amount, ExitType.FORCE_EXIT.value
@@ -1213,6 +1225,37 @@ class Backtesting:
                 self.canceled_trade_entries += 1
                 return True
         # default maintain trade
+        return False
+
+    def cancel_open_orders(self, trade: LocalTrade, current_time: datetime):
+        """
+        Cancel all open orders for the given trade.
+        """
+        for order in [o for o in trade.orders if o.ft_is_open]:
+            if order.side == trade.entry_side:
+                self.canceled_entry_orders += 1
+            # elif order.side == trade.exit_side:
+            #     self.canceled_exit_orders += 1
+            # canceled orders are removed from the trade
+            del trade.orders[trade.orders.index(order)]
+
+    def handle_similar_order(
+        self, trade: LocalTrade, price: float, amount: float, side: str, current_time: datetime
+    ) -> bool:
+        """
+        Handle similar order for the given trade.
+        """
+        if trade.has_open_orders:
+            oo = trade.select_order(side, True)
+            if oo:
+                if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
+                    # logger.info(
+                    #     f"A similar open order was found for {trade.pair}. "
+                    #     f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
+                    # )
+                    return True
+            self.cancel_open_orders(trade, current_time)
+
         return False
 
     def check_order_cancel(
@@ -1400,7 +1443,7 @@ class Backtesting:
                 self.wallets.update()
 
             # 4. Create exit orders (if any)
-            if not trade.has_open_orders:
+            if trade.has_open_position:
                 self._check_trade_exit(trade, row, current_time)  # Place exit order if necessary
 
             # 5. Process exit orders.
