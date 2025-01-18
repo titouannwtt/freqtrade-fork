@@ -1257,7 +1257,7 @@ def test_enter_positions(
 def test_exit_positions(mocker, default_conf_usdt, limit_order, is_short, caplog) -> None:
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
 
-    mocker.patch("freqtrade.freqtradebot.FreqtradeBot.handle_trade", MagicMock(return_value=False))
+    mocker.patch("freqtrade.freqtradebot.FreqtradeBot.handle_trade", MagicMock(return_value=True))
     mocker.patch(f"{EXMS}.fetch_order", return_value=limit_order[entry_side(is_short)])
     mocker.patch(f"{EXMS}.get_trades_for_order", return_value=[])
 
@@ -1289,14 +1289,14 @@ def test_exit_positions(mocker, default_conf_usdt, limit_order, is_short, caplog
     trades = [trade]
     freqtrade.wallets.update()
     n = freqtrade.exit_positions(trades)
-    assert n == 0
+    assert n == 1
     # Test amount not modified by fee-logic
     assert not log_has_re(r"Applying fee to amount for Trade .*", caplog)
 
     gra = mocker.patch("freqtrade.freqtradebot.FreqtradeBot.get_real_amount", return_value=0.0)
     # test amount modified by fee-logic
     n = freqtrade.exit_positions(trades)
-    assert n == 0
+    assert n == 1
     assert gra.call_count == 0
 
 
