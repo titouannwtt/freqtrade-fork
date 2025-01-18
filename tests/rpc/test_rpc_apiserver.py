@@ -1156,39 +1156,7 @@ def test_api_performance(botclient, fee):
     ftbot, client = botclient
     patch_get_signal(ftbot)
 
-    trade = Trade(
-        pair="LTC/ETH",
-        amount=1,
-        exchange="binance",
-        stake_amount=1,
-        open_rate=0.245441,
-        is_open=False,
-        fee_close=fee.return_value,
-        fee_open=fee.return_value,
-        close_rate=0.265441,
-        leverage=1.0,
-    )
-    trade.close_profit = trade.calc_profit_ratio(trade.close_rate)
-    trade.close_profit_abs = trade.calc_profit(trade.close_rate)
-    Trade.session.add(trade)
-
-    trade = Trade(
-        pair="XRP/ETH",
-        amount=5,
-        stake_amount=1,
-        exchange="binance",
-        open_rate=0.412,
-        is_open=False,
-        fee_close=fee.return_value,
-        fee_open=fee.return_value,
-        close_rate=0.391,
-        leverage=1.0,
-    )
-    trade.close_profit = trade.calc_profit_ratio(trade.close_rate)
-    trade.close_profit_abs = trade.calc_profit(trade.close_rate)
-
-    Trade.session.add(trade)
-    Trade.commit()
+    create_mock_trades(fee)
 
     rc = client_get(client, f"{BASE_URI}/performance")
     assert_response(rc)
@@ -1196,19 +1164,19 @@ def test_api_performance(botclient, fee):
     assert rc.json() == [
         {
             "count": 1,
-            "pair": "LTC/ETH",
-            "profit": 7.61,
-            "profit_pct": 7.61,
-            "profit_ratio": 0.07609203,
-            "profit_abs": 0.0187228,
+            "pair": "ETC/BTC",
+            "profit": 0.5,
+            "profit_pct": 0.5,
+            "profit_ratio": 0.005,
+            "profit_abs": 0.000584127,
         },
         {
             "count": 1,
-            "pair": "XRP/ETH",
-            "profit": -5.57,
-            "profit_pct": -5.57,
-            "profit_ratio": -0.05570419,
-            "profit_abs": -0.1150375,
+            "pair": "XRP/BTC",
+            "profit": 1.0,
+            "profit_pct": 1.0,
+            "profit_ratio": 0.01,
+            "profit_abs": 0.000155,
         },
     ]
 
