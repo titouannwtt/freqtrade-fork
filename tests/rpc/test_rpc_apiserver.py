@@ -35,6 +35,7 @@ from tests.conftest import (
     CURRENT_TEST_STRATEGY,
     EXMS,
     create_mock_trades,
+    create_mock_trades_usdt,
     get_mock_coro,
     get_patched_freqtradebot,
     log_has,
@@ -1156,27 +1157,35 @@ def test_api_performance(botclient, fee):
     ftbot, client = botclient
     patch_get_signal(ftbot)
 
-    create_mock_trades(fee)
+    create_mock_trades_usdt(fee)
 
     rc = client_get(client, f"{BASE_URI}/performance")
     assert_response(rc)
-    assert len(rc.json()) == 2
+    assert len(rc.json()) == 3
     assert rc.json() == [
         {
             "count": 1,
-            "pair": "ETC/BTC",
-            "profit": 0.5,
-            "profit_pct": 0.5,
-            "profit_ratio": 0.005,
-            "profit_abs": 0.000584127,
+            "pair": "NEO/USDT",
+            "profit": 5.0,
+            "profit_pct": 5,
+            "profit_ratio": 0.05,
+            "profit_abs": 3.9875,
         },
         {
             "count": 1,
-            "pair": "XRP/BTC",
-            "profit": 1.0,
-            "profit_pct": 1.0,
-            "profit_ratio": 0.01,
-            "profit_abs": 0.000155,
+            "pair": "XRP/USDT",
+            "profit": 10.0,
+            "profit_abs": 2.8425,
+            "profit_pct": 10.0,
+            "profit_ratio": 0.1,
+        },
+        {
+            "count": 1,
+            "pair": "LTC/USDT",
+            "profit": -20.0,
+            "profit_abs": -4.09,
+            "profit_pct": -20.0,
+            "profit_ratio": -0.2,
         },
     ]
 
