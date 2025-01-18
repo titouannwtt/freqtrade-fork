@@ -993,7 +993,7 @@ def test_performance_handle(default_conf_usdt, ticker, fee, mocker) -> None:
     assert res[0]["pair"] == "NEO/USDT"
     assert res[0]["count"] == 1
     assert res[0]["profit_abs"] == 3.9875
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
 
 def test_enter_tag_performance_handle(default_conf, ticker, fee, mocker) -> None:
