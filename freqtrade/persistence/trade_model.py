@@ -1934,17 +1934,43 @@ class Trade(ModelBase, LocalTrade):
             start_date = datetime.now(timezone.utc) - timedelta(minutes=minutes)
             filters.append(Trade.close_date >= start_date)
 
-        pair_rates = Trade.session.execute(
+        pair_costs = (
             select(
                 Trade.pair,
-                func.sum(Trade.close_profit).label("profit_sum"),
+                func.sum(Order.filled * Order.average).label("cost_per_pair"),
+            )
+            .join(Order, Trade.id == Order.ft_trade_id)
+            .filter(
+                *filters,
+            )
+            # Order.filled.gt > 0
+            .group_by(Trade.pair)
+            .cte("pair_costs")
+        )
+        trades_grouped = (
+            select(
+                Trade.pair,
                 func.sum(Trade.close_profit_abs).label("profit_sum_abs"),
                 func.count(Trade.pair).label("count"),
             )
             .filter(*filters)
             .group_by(Trade.pair)
+            .cte("trades_grouped")
+        )
+        q = (
+            select(
+                trades_grouped.c.pair,
+                (trades_grouped.c.profit_sum_abs / pair_costs.c.cost_per_pair).label(
+                    "profit_ratio"
+                ),
+                trades_grouped.c.profit_sum_abs,
+                trades_grouped.c.count,
+                # pair_costs.c.cost_per_pair,
+            )
+            .join(pair_costs, trades_grouped.c.pair == pair_costs.c.pair)
             .order_by(desc("profit_sum_abs"))
-        ).all()
+        )
+        pair_rates = Trade.session.execute(q).all()
 
         return [
             {
