@@ -1973,7 +1973,6 @@ class Trade(ModelBase, LocalTrade):
                 ),
                 trades_grouped.c.profit_sum_abs,
                 trades_grouped.c.count,
-                # pair_costs.c.cost_per_pair,
             )
             .join(pair_costs, trades_grouped.c.pair == pair_costs.c.pair)
             .order_by(desc("profit_sum_abs"))
