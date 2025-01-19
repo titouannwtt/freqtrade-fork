@@ -1939,8 +1939,11 @@ class Trade(ModelBase, LocalTrade):
             select(
                 Trade.pair,
                 func.sum(
-                    func.coalesce(Order.filled, Order.amount)
-                    * func.coalesce(Order.average, Order.price, Order.ft_price)
+                    (
+                        func.coalesce(Order.filled, Order.amount)
+                        * func.coalesce(Order.average, Order.price, Order.ft_price)
+                    )
+                    / func.coalesce(Trade.leverage, 1)
                 ).label("cost_per_pair"),
             )
             .join(Order, Trade.id == Order.ft_trade_id)
