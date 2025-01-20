@@ -107,8 +107,9 @@ async def test_exchangews_ohlcv(mocker, time_machine):
             ("ETH/BTC", "1m", CandleType.SPOT),
         }
         # Cleanup happened.
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
         exchange_ws.schedule_ohlcv("ETH/BTC", "1m", CandleType.SPOT)
+        await asyncio.sleep(0.1)
         assert exchange_ws._klines_watching == {
             ("ETH/BTC", "1m", CandleType.SPOT),
         }
