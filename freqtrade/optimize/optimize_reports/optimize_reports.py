@@ -368,7 +368,7 @@ def generate_strategy_stats(
     :param market_change: float indicating the market change
     :return: Dictionary containing results per strategy and a strategy summary.
     """
-    results: dict[str, DataFrame] = content["results"]
+    results: DataFrame = content["results"]
     if not isinstance(results, DataFrame):
         return {}
     config = content["config"]
