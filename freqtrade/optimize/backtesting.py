@@ -855,7 +855,7 @@ class Backtesting:
             amount=amount,
             filled=0,
             remaining=amount,
-            cost=amount * close_rate,
+            cost=amount * close_rate * (1 + self.fee),
             ft_order_tag=exit_reason,
         )
         order._trade_bt = trade
