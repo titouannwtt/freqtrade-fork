@@ -270,6 +270,7 @@ class Order(ModelBase):
             "order_filled_timestamp": dt_ts_none(self.order_filled_utc),
             "ft_is_entry": self.ft_order_side == entry_side,
             "ft_order_tag": self.ft_order_tag,
+            "cost": self.cost if self.cost else 0,
         }
         if not minified:
             resp.update(
@@ -278,7 +279,6 @@ class Order(ModelBase):
                     "order_id": self.order_id,
                     "status": self.status,
                     "average": round(self.average, 8) if self.average else 0,
-                    "cost": self.cost if self.cost else 0,
                     "filled": self.filled,
                     "is_open": self.ft_is_open,
                     "order_date": (

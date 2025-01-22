@@ -5,7 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import ANY, MagicMock, PropertyMock
 
 import numpy as np
 import pandas as pd
@@ -795,6 +795,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517251200000,
                         "ft_is_entry": True,
                         "ft_order_tag": "",
+                        "cost": ANY,
                     },
                     {
                         "amount": 0.00957442,
@@ -803,6 +804,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517265300000,
                         "ft_is_entry": False,
                         "ft_order_tag": "roi",
+                        "cost": ANY,
                     },
                 ],
                 [
@@ -813,6 +815,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517283000000,
                         "ft_is_entry": True,
                         "ft_order_tag": "",
+                        "cost": ANY,
                     },
                     {
                         "amount": 0.0097064,
@@ -821,6 +824,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517285400000,
                         "ft_is_entry": False,
                         "ft_order_tag": "roi",
+                        "cost": ANY,
                     },
                 ],
             ],
