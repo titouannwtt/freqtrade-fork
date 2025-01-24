@@ -59,8 +59,13 @@ AVAILABLE_CLI_OPTIONS = {
     "version": Arg(
         "-V",
         "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
+        action="store_true",
+    ),
+    "version_main": Arg(
+        # Copy of version - used to have -V available with and without subcommand.
+        "-V",
+        "--version",
+        action="store_true",
     ),
     "config": Arg(
         "-c",
