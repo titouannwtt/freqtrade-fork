@@ -59,12 +59,14 @@ AVAILABLE_CLI_OPTIONS = {
     "version": Arg(
         "-V",
         "--version",
+        help="show program's version number and exit",
         action="store_true",
     ),
     "version_main": Arg(
         # Copy of version - used to have -V available with and without subcommand.
         "-V",
         "--version",
+        help="show program's version number and exit",
         action="store_true",
     ),
     "config": Arg(
