@@ -4,7 +4,7 @@ Definition of cli arguments used in arguments.py
 
 from argparse import SUPPRESS, ArgumentTypeError
 
-from freqtrade import __version__, constants
+from freqtrade import constants
 from freqtrade.constants import HYPEROPT_LOSS_BUILTIN
 from freqtrade.enums import CandleType
 
