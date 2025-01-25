@@ -18,7 +18,7 @@ def test_exchangews_init(mocker):
     sleep(0.1)
 
     assert exchange_ws.config == config
-    assert exchange_ws.ccxt_object == ccxt_object
+    assert exchange_ws._ccxt_object == ccxt_object
     assert exchange_ws._thread.name == "ccxt_ws"
     assert exchange_ws._background_tasks == set()
     assert exchange_ws._klines_watching == set()
