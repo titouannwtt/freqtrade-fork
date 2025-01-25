@@ -1036,7 +1036,6 @@ class FreqtradeBot(LoggingMixin):
             # This is additional entry, we reset fee_open_currency so timeout checking can work
             trade.is_open = True
             trade.fee_open_currency = None
-            trade.open_rate_requested = enter_limit_requested
             trade.set_funding_fees(funding_fees)
 
         trade.orders.append(order_obj)
