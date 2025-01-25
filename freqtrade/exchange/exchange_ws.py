@@ -83,12 +83,13 @@ class ExchangeWS:
         """
         self._ccxt_object.ohlcvs.get(paircomb[0], {}).pop(paircomb[1], None)
 
-    @property
-    def ohlcvs(self) -> dict[str, dict[str, list[list]]]:
+    def ohlcvs(self, pair: str, timeframe: str) -> list[list]:
         """
-        Returns the ccxt cache for OHLCV data
+        Returns a copy of the klines for a pair/timeframe combination
+        Note: this will only contain the data received from the websocket
+            so the data will build up over time.
         """
-        return self._ccxt_object.ohlcvs
+        return deepcopy(self._ccxt_object.ohlcvs.get(pair, {}).get(timeframe, []))
 
     def cleanup_expired(self) -> None:
         """
@@ -185,7 +186,7 @@ class ExchangeWS:
         :param candle_ts: timestamp of the end-time of the candle we expect.
         """
         # Deepcopy the response - as it might be modified in the background as new messages arrive
-        candles = deepcopy(self._ccxt_object.ohlcvs.get(pair, {}).get(timeframe))
+        candles = self.ohlcvs(pair, timeframe)
         refresh_date = self.klines_last_refresh[(pair, timeframe, candle_type)]
         received_ts = candles[-1][0] if candles else 0
         drop_hint = received_ts >= candle_ts
