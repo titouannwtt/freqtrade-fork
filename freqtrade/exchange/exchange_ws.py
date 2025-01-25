@@ -83,6 +83,13 @@ class ExchangeWS:
         """
         self.ccxt_object.ohlcvs.get(paircomb[0], {}).pop(paircomb[1], None)
 
+    @property
+    def ohlcvs(self) -> dict[str, dict[str, list[list]]]:
+        """
+        Returns the ccxt cache for OHLCV data
+        """
+        return self.ccxt_object.ohlcvs
+
     def cleanup_expired(self) -> None:
         """
         Remove pairs from watchlist if they've not been requested within

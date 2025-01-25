@@ -2397,7 +2397,7 @@ class Exchange:
             if self._exchange_ws:
                 candle_ts = dt_ts(timeframe_to_prev_date(timeframe))
                 prev_candle_ts = dt_ts(date_minus_candles(timeframe, 1))
-                candles = self._exchange_ws.ccxt_object.ohlcvs.get(pair, {}).get(timeframe)
+                candles = self._exchange_ws.ohlcvs.get(pair, {}).get(timeframe)
                 half_candle = int(candle_ts - (candle_ts - prev_candle_ts) * 0.5)
                 last_refresh_time = int(
                     self._exchange_ws.klines_last_refresh.get((pair, timeframe, candle_type), 0)
