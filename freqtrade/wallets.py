@@ -3,7 +3,7 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from freqtrade.constants import UNLIMITED_STAKE_AMOUNT, Config, IntOrInf
 from freqtrade.enums import RunMode, TradingMode
@@ -227,8 +227,7 @@ class Wallets:
                 self._update_live()
             else:
                 self._update_dry()
-            if not self._is_backtest:
-                logger.info("Wallets synced.")
+            self._local_log("Wallets synced.")
             self._last_wallet_refresh = dt_now()
 
     def get_all_balances(self) -> dict[str, Wallet]:
@@ -392,7 +391,10 @@ class Wallets:
         trade_amount: float | None,
     ):
         if not stake_amount:
-            logger.debug(f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.")
+            self._local_log(
+                f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.",
+                level="debug",
+            )
             return 0
 
         max_allowed_stake = min(max_stake_amount, self.get_available_stake_amount())
@@ -402,34 +404,43 @@ class Wallets:
             max_allowed_stake = min(max_allowed_stake, max_stake_amount - trade_amount)
 
         if min_stake_amount is not None and min_stake_amount > max_allowed_stake:
-            if not self._is_backtest:
-                logger.warning(
-                    "Minimum stake amount > available balance. "
-                    f"{min_stake_amount} > {max_allowed_stake}"
-                )
+            self._local_log(
+                "Minimum stake amount > available balance. "
+                f"{min_stake_amount} > {max_allowed_stake}",
+                level="warning",
+            )
             return 0
         if min_stake_amount is not None and stake_amount < min_stake_amount:
-            if not self._is_backtest:
-                logger.info(
-                    f"Stake amount for pair {pair} is too small "
-                    f"({stake_amount} < {min_stake_amount}), adjusting to {min_stake_amount}."
-                )
+            self._local_log(
+                f"Stake amount for pair {pair} is too small "
+                f"({stake_amount} < {min_stake_amount}), adjusting to {min_stake_amount}."
+            )
             if stake_amount * 1.3 < min_stake_amount:
                 # Top-cap stake-amount adjustments to +30%.
-                if not self._is_backtest:
-                    logger.info(
-                        f"Adjusted stake amount for pair {pair} is more than 30% bigger than "
-                        f"the desired stake amount of ({stake_amount:.8f} * 1.3 = "
-                        f"{stake_amount * 1.3:.8f}) < {min_stake_amount}), ignoring trade."
-                    )
+                self._local_log(
+                    f"Adjusted stake amount for pair {pair} is more than 30% bigger than "
+                    f"the desired stake amount of ({stake_amount:.8f} * 1.3 = "
+                    f"{stake_amount * 1.3:.8f}) < {min_stake_amount}), ignoring trade."
+                )
                 return 0
             stake_amount = min_stake_amount
 
         if stake_amount > max_allowed_stake:
-            if not self._is_backtest:
-                logger.info(
-                    f"Stake amount for pair {pair} is too big "
-                    f"({stake_amount} > {max_allowed_stake}), adjusting to {max_allowed_stake}."
-                )
+            self._local_log(
+                f"Stake amount for pair {pair} is too big "
+                f"({stake_amount} > {max_allowed_stake}), adjusting to {max_allowed_stake}."
+            )
             stake_amount = max_allowed_stake
         return stake_amount
+
+    def _local_log(self, msg: str, level: Literal["info", "warning", "debug"] = "info") -> None:
+        """
+        Log a message to the local log.
+        """
+        if not self._is_backtest:
+            if level == "warning":
+                logger.warning(msg)
+            elif level == "debug":
+                logger.debug(msg)
+            else:
+                logger.info(msg)
