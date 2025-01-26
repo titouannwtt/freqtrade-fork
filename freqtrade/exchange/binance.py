@@ -398,7 +398,7 @@ class Binance(Exchange):
                 )
                 listing_date = trades[0]["timestamp"]
                 since = max(since, listing_date)
-            logger.info("downloading fast")
+
             _, res = await download_archive_trades(
                 CandleType.SPOT,
                 pair,
@@ -407,13 +407,17 @@ class Binance(Exchange):
                 markets=self.markets,
             )
 
-            end_time = res[-1][0]
-            end_id = res[-1][1]
-            logger.info(f"downloaded fast {len(res)}")
-            if end_time < until:
+            if not res:
+                end_time = since
+                end_id = from_id
+            else:
+                end_time = res[-1][0]
+                end_id = res[-1][1]
+            if end_time >= until:
                 return pair, res
             else:
                 # continue
+                logger.info(f"downloaded fast {len(res)}, {end_time=}, {end_id=}")
                 _, res2 = await super()._async_get_trade_history_id(pair, until, end_time, end_id)
                 res.extend(res2)
                 return pair, res
