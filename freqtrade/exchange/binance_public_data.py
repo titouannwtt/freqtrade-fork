@@ -316,7 +316,7 @@ async def download_archive_trades(
         end = dt_from_ts(until_ms) if until_ms else dt_now()
         end = min(end, last_available_date)
         if start >= end:
-            return DataFrame()
+            return pair, []
         result_list = await _download_archive_trades(
             asset_type_url_segment, symbol, pair, start, end, stop_on_404
         )
