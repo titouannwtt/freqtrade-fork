@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from math import isclose
 from typing import Any, ClassVar, Optional, cast
 
@@ -1914,14 +1914,13 @@ class Trade(ModelBase, LocalTrade):
         return total_open_stake_amount or 0
 
     @staticmethod
-    def get_overall_performance(minutes=None) -> list[dict[str, Any]]:
+    def get_overall_performance(start_date: datetime | None = None) -> list[dict[str, Any]]:
         """
         Returns List of dicts containing all Trades, including profit and trade count
         NOTE: Not supported in Backtesting.
         """
         filters: list = [Trade.is_open.is_(False)]
-        if minutes:
-            start_date = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+        if start_date:
             filters.append(Trade.close_date >= start_date)
 
         pair_costs = (
