@@ -462,7 +462,6 @@ def _download_trades_history(
     )
     logger.info(f"Current Amount of trades: {len(trades)}")
 
-    # Default since_ms to 30 days if nothing is given
     new_trades = exchange.get_historic_trades(
         pair=pair,
         since=since,
