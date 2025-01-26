@@ -19,6 +19,7 @@ from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.plugins.pairlist.pairlist_helpers import dynamic_expand_pairlist
 from freqtrade.util import dt_now, dt_ts, format_ms_time
+from freqtrade.util.datetime_helpers import format_ms_time_det
 from freqtrade.util.migrations import migrate_data
 from freqtrade.util.progress_tracker import CustomProgress, retrieve_progress_tracker
 
@@ -431,11 +432,11 @@ def _download_trades_history(
     # DEFAULT_TRADES_COLUMNS: 0 -> timestamp
     # DEFAULT_TRADES_COLUMNS: 1 -> id
 
-    if not trades.empty and since > 0 and since < trades.iloc[0]["timestamp"]:
+    if not trades.empty and since > 0 and (since + 1000) < trades.iloc[0]["timestamp"]:
         # since is before the first trade
         raise ValueError(
-            f"Start {format_ms_time(since)} earlier than "
-            f"available data ({trades.iloc[0]['date']:{DATETIME_PRINT_FORMAT}}). "
+            f"Start {format_ms_time_det(since)} earlier than "
+            f"available data ({format_ms_time_det(trades.iloc[0]['timestamp'])}). "
             f"Please use `--erase` if you'd like to redownload {pair}."
         )
 
