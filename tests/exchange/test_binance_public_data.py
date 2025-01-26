@@ -16,6 +16,7 @@ from freqtrade.exchange.binance_public_data import (
     Http404,
     binance_vision_zip_name,
     download_archive_ohlcv,
+    download_archive_trades,
     get_daily_ohlcv,
 )
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
@@ -337,3 +338,22 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
         with pytest.raises(zipfile.BadZipFile):
             df = await get_daily_ohlcv(symbol, timeframe, CandleType.SPOT, date, session)
         assert get.call_count == 4  # 1 + 3 default retries
+
+
+async def test_download_archive_trades_exception(mocker):
+    pair = "BTC/USDT"
+
+    since_ms = dt_ts(dt_utc(2020, 1, 1))
+    until_ms = dt_ts(dt_utc(2020, 1, 2))
+
+    markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.aiohttp.ClientSession.get", side_effect=RuntimeError
+    )
+
+    pair1, res = await download_archive_trades(
+        CandleType.SPOT, pair, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
+
+    assert pair1 == pair
+    assert res == []
