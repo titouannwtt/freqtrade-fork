@@ -63,8 +63,6 @@ async def download_archive_ohlcv(
         available in the time range
     """
     try:
-        asset_type_url_segment = candle_type_to_url_segment(candle_type)
-
         symbol = markets[pair]["id"]
 
         start = dt_from_ts(since_ms)
@@ -77,7 +75,7 @@ async def download_archive_ohlcv(
         if start >= end:
             return DataFrame()
         df = await _download_archive_ohlcv(
-            asset_type_url_segment, symbol, pair, timeframe, start, end, stop_on_404
+            symbol, pair, timeframe, candle_type, start, end, stop_on_404
         )
         logger.debug(
             f"Downloaded data for {pair} from https://data.binance.vision with length {len(df)}."
@@ -105,10 +103,10 @@ def concat_safe(dfs) -> DataFrame:
 
 
 async def _download_archive_ohlcv(
-    asset_type_url_segment: str,
     symbol: str,
     pair: str,
     timeframe: str,
+    candle_type: CandleType,
     start: date,
     end: date,
     stop_on_404: bool,
@@ -123,9 +121,7 @@ async def _download_archive_ohlcv(
         # the HTTP connections has been throttled by TCPConnector
         for dates in chunks(list(date_range(start, end)), 1000):
             tasks = [
-                asyncio.create_task(
-                    get_daily_ohlcv(asset_type_url_segment, symbol, timeframe, date, session)
-                )
+                asyncio.create_task(get_daily_ohlcv(symbol, timeframe, candle_type, date, session))
                 for date in dates
             ]
             for task in tasks:
@@ -171,15 +167,6 @@ async def _download_archive_ohlcv(
     return concat_safe(dfs)
 
 
-def candle_type_to_url_segment(candle_type: CandleType) -> str:
-    if candle_type == CandleType.SPOT:
-        return "spot"
-    elif candle_type == CandleType.FUTURES:
-        return "futures/um"
-    else:
-        raise ValueError(f"Unsupported CandleType: {candle_type}")
-
-
 async def cancel_and_await_tasks(unawaited_tasks):
     """Cancel and await the tasks"""
     logger.debug("Try to cancel uncompleted download tasks.")
@@ -200,14 +187,24 @@ def binance_vision_zip_name(symbol: str, timeframe: str, date: date) -> str:
     return f"{symbol}-{timeframe}-{date.strftime('%Y-%m-%d')}.zip"
 
 
+def candle_type_to_url_segment(candle_type: CandleType) -> str:
+    if candle_type == CandleType.SPOT:
+        return "spot"
+    elif candle_type == CandleType.FUTURES:
+        return "futures/um"
+    else:
+        raise ValueError(f"Unsupported CandleType: {candle_type}")
+
+
 def binance_vision_ohlcv_zip_url(
-    asset_type_url_segment: str, symbol: str, timeframe: str, date: date
+    symbol: str, timeframe: str, candle_type: CandleType, date: date
 ) -> str:
     """
     example urls:
     https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2023-10-27.zip
     https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2023-10-27.zip
     """
+    asset_type_url_segment = candle_type_to_url_segment(candle_type)
     url = (
         f"https://data.binance.vision/data/{asset_type_url_segment}/daily/klines/{symbol}"
         f"/{timeframe}/{binance_vision_zip_name(symbol, timeframe, date)}"
@@ -216,9 +213,9 @@ def binance_vision_ohlcv_zip_url(
 
 
 async def get_daily_ohlcv(
-    asset_type_url_segment: str,
     symbol: str,
     timeframe: str,
+    candle_type: CandleType,
     date: date,
     session: aiohttp.ClientSession,
     retry_count: int = 3,
@@ -228,9 +225,9 @@ async def get_daily_ohlcv(
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
 
-    :asset_type_url_segment: `spot` or `futures/um`
     :symbol: binance symbol name, e.g. BTCUSDT
     :timeframe: e.g. 1m, 1h
+    :candle_type: SPOT or FUTURES
     :date: the returned DataFrame will cover the entire day of `date` in UTC
     :session: an aiohttp.ClientSession instance
     :retry_count: times to retry before returning the exceptions
@@ -238,7 +235,7 @@ async def get_daily_ohlcv(
     :return: A dataframe containing columns date,open,high,low,close,volume
     """
 
-    url = binance_vision_ohlcv_zip_url(asset_type_url_segment, symbol, timeframe, date)
+    url = binance_vision_ohlcv_zip_url(symbol, timeframe, candle_type, date)
 
     logger.debug(f"download data from binance: {url}")
 
