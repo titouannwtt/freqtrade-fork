@@ -468,12 +468,12 @@ async def _download_archive_trades(
                                 f"{e.url}. Falling back to the slower REST API, "
                                 "which may take more time."
                             )
-                            # if pair in ["BTC/USDT:USDT", "ETH/USDT:USDT", "BCH/USDT:USDT"]:
-                            #     logger.warning(
-                            #         f"To avoid the delay, you can first download {pair} using "
-                            #         "`--timerange <start date>-20200101`, and then download the "
-                            #         "remaining data with `--timerange 20200101-<end date>`."
-                            #     )
+                            if pair in ["BTC/USDT:USDT", "ETH/USDT:USDT", "BCH/USDT:USDT"]:
+                                logger.warning(
+                                    f"To avoid the delay, you can first download {pair} using "
+                                    "`--timerange <start date>-20200101`, and then download the "
+                                    "remaining data with `--timerange 20200101-<end date>`."
+                                )
                         else:
                             logger.warning(
                                 f"Binance fast download for {pair} stopped at {e.date} due to "
