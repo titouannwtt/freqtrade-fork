@@ -200,7 +200,7 @@ def binance_vision_zip_name(symbol: str, timeframe: str, date: date) -> str:
     return f"{symbol}-{timeframe}-{date.strftime('%Y-%m-%d')}.zip"
 
 
-def binance_vision_zip_url(
+def binance_vision_ohlcv_zip_url(
     asset_type_url_segment: str, symbol: str, timeframe: str, date: date
 ) -> str:
     """
@@ -238,7 +238,7 @@ async def get_daily_ohlcv(
     :return: A dataframe containing columns date,open,high,low,close,volume
     """
 
-    url = binance_vision_zip_url(asset_type_url_segment, symbol, timeframe, date)
+    url = binance_vision_ohlcv_zip_url(asset_type_url_segment, symbol, timeframe, date)
 
     logger.debug(f"download data from binance: {url}")
 
