@@ -1002,6 +1002,7 @@ def test_get_maintenance_ratio_and_amt_binance(
 
 
 async def test__async_get_trade_history_id_binance(default_conf_usdt, mocker, fetch_trades_result):
+    default_conf_usdt["exchange"]["only_from_ccxt"] = True
     exchange = get_patched_exchange(mocker, default_conf_usdt, exchange="binance")
 
     async def mock_get_trade_hist(pair, *args, **kwargs):
