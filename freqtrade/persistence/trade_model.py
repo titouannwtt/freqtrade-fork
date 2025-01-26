@@ -2111,13 +2111,9 @@ class Trade(ModelBase, LocalTrade):
         if start_date:
             filters.append(Trade.close_date >= start_date)
 
-        best_pair = Trade.session.execute(
-            select(Trade.pair, func.sum(Trade.close_profit).label("profit_sum"))
-            .filter(*filters)
-            .group_by(Trade.pair)
-            .order_by(desc("profit_sum"))
-        ).first()
-
+        pair_rates_query = Trade._generic_performance_query([Trade.pair], filters)
+        best_pair = Trade.session.execute(pair_rates_query).first()
+        # returns pair, profit_ratio, abs_profit, count
         return best_pair
 
     @staticmethod
