@@ -918,7 +918,7 @@ async def test_telegram_profit_handle(
     )
     assert "∙ `6.253 USD`" in msg_mock.call_args_list[-1][0][0]
 
-    assert "*Best Performing:* `ETH/USDT: 9.45%`" in msg_mock.call_args_list[-1][0][0]
+    assert "*Best Performing:* `ETH/USDT: 5.685 USDT (9.47%)`" in msg_mock.call_args_list[-1][0][0]
     assert "*Max Drawdown:*" in msg_mock.call_args_list[-1][0][0]
     assert "*Profit factor:*" in msg_mock.call_args_list[-1][0][0]
     assert "*Winrate:*" in msg_mock.call_args_list[-1][0][0]

@@ -480,8 +480,8 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
     assert stats["first_trade_humanized"] == "2 days ago"
     assert stats["latest_trade_humanized"] == "17 minutes ago"
     assert stats["avg_duration"] in ("0:17:40")
-    assert stats["best_pair"] == "XRP/USDT"
-    assert stats["best_rate"] == 10.0
+    assert stats["best_pair"] == "NEO/USDT"
+    assert stats["best_rate"] == 1.99
 
     # Test non-available pair
     mocker.patch(
@@ -492,8 +492,8 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
     assert stats["first_trade_humanized"] == "2 days ago"
     assert stats["latest_trade_humanized"] == "17 minutes ago"
     assert stats["avg_duration"] in ("0:17:40")
-    assert stats["best_pair"] == "XRP/USDT"
-    assert stats["best_rate"] == 10.0
+    assert stats["best_pair"] == "NEO/USDT"
+    assert stats["best_rate"] == 1.99
     assert isnan(stats["profit_all_coin"])
 
 
