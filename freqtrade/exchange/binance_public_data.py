@@ -1,5 +1,6 @@
 """
 Fetch daily-archived OHLCV data from https://data.binance.vision/
+Documentation can be found in https://github.com/binance/binance-public-data
 """
 
 import asyncio
