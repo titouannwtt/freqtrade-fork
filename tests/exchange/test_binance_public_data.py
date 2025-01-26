@@ -14,6 +14,7 @@ from freqtrade.enums import CandleType
 from freqtrade.exchange.binance_public_data import (
     BadHttpStatus,
     Http404,
+    binance_vision_trades_zip_url,
     binance_vision_zip_name,
     download_archive_ohlcv,
     download_archive_trades,
@@ -357,3 +358,17 @@ async def test_download_archive_trades_exception(mocker):
 
     assert pair1 == pair
     assert res == []
+
+
+async def test_binance_vision_trades_zip_url():
+    url = binance_vision_trades_zip_url("BTCUSDT", CandleType.SPOT, dt_utc(2023, 10, 27))
+    assert (
+        url == "https://data.binance.vision/data/spot/daily/aggTrades/"
+        "BTCUSDT/BTCUSDT-aggTrades-2023-10-27.zip"
+    )
+
+    url = binance_vision_trades_zip_url("BTCUSDT", CandleType.FUTURES, dt_utc(2023, 10, 28))
+    assert (
+        url == "https://data.binance.vision/data/futures/um/daily/aggTrades/"
+        "BTCUSDT/BTCUSDT-aggTrades-2023-10-28.zip"
+    )
