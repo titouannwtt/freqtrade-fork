@@ -1206,7 +1206,8 @@ def test_api_entries(botclient, fee):
     resp = response[0]
     assert resp["enter_tag"] == "TEST1"
     assert resp["count"] == 1
-    assert resp["profit_pct"] == 0.5
+    assert resp["profit_pct"] == 0.0
+    assert pytest.approx(resp["profit_ratio"]) == 0.000038609756
 
 
 def test_api_exits(botclient, fee):
@@ -1225,7 +1226,8 @@ def test_api_exits(botclient, fee):
     resp = response[0]
     assert resp["exit_reason"] == "sell_signal"
     assert resp["count"] == 1
-    assert resp["profit_pct"] == 0.5
+    assert resp["profit_pct"] == 0.0
+    assert pytest.approx(resp["profit_ratio"]) == 0.000038609756
 
 
 def test_api_mix_tag(botclient, fee):
