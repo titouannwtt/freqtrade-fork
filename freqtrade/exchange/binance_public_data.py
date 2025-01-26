@@ -215,12 +215,13 @@ def binance_vision_ohlcv_zip_url(
     return url
 
 
-def binance_vision_trades_zip_url(asset_type_url_segment: str, symbol: str, date: date) -> str:
+def binance_vision_trades_zip_url(symbol: str, candle_type: CandleType, date: date) -> str:
     """
     example urls:
     https://data.binance.vision/data/spot/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2023-10-27.zip
     https://data.binance.vision/data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2023-10-27.zip
     """
+    asset_type_url_segment = candle_type_to_url_segment(candle_type)
     url = (
         f"https://data.binance.vision/data/{asset_type_url_segment}/daily/aggTrades/{symbol}"
         f"/{symbol}-aggTrades-{date.strftime('%Y-%m-%d')}.zip"
@@ -308,7 +309,6 @@ async def download_archive_trades(
     stop_on_404: bool = True,
 ) -> tuple[str, list[list]]:
     try:
-        asset_type_url_segment = candle_type_to_url_segment(candle_type)
         symbol = markets[pair]["id"]
 
         last_available_date = dt_now() - timedelta(days=2)
@@ -319,7 +319,7 @@ async def download_archive_trades(
         if start >= end:
             return pair, []
         result_list = await _download_archive_trades(
-            asset_type_url_segment, symbol, pair, start, end, stop_on_404
+            symbol, pair, candle_type, start, end, stop_on_404
         )
         return pair, result_list
 
@@ -333,8 +333,8 @@ async def download_archive_trades(
 
 
 async def get_daily_trades(
-    asset_type_url_segment: str,
     symbol: str,
+    candle_type: CandleType,
     date: date,
     session: aiohttp.ClientSession,
     retry_count: int = 3,
@@ -344,8 +344,8 @@ async def get_daily_trades(
     Get daily OHLCV from https://data.binance.vision
     See https://github.com/binance/binance-public-data
 
-    :asset_type_url_segment: `spot` or `futures/um`
     :symbol: binance symbol name, e.g. BTCUSDT
+    :candle_type: SPOT or FUTURES
     :date: the returned DataFrame will cover the entire day of `date` in UTC
     :session: an aiohttp.ClientSession instance
     :retry_count: times to retry before returning the exceptions
@@ -353,7 +353,7 @@ async def get_daily_trades(
     :return: a list containing trades in DEFAULT_TRADES_COLUMNS format
     """
 
-    url = binance_vision_trades_zip_url(asset_type_url_segment, symbol, date)
+    url = binance_vision_trades_zip_url(symbol, candle_type, date)
 
     logger.debug(f"download trades data from binance: {url}")
 
@@ -427,9 +427,9 @@ async def get_daily_trades(
 
 
 async def _download_archive_trades(
-    asset_type_url_segment: str,
     symbol: str,
     pair: str,
+    candle_type: CandleType,
     start: date,
     end: date,
     stop_on_404: bool,
@@ -444,7 +444,7 @@ async def _download_archive_trades(
         # the HTTP connections has been throttled by TCPConnector
         for dates in chunks(list(date_range(start, end)), 1000):
             tasks = [
-                asyncio.create_task(get_daily_trades(asset_type_url_segment, symbol, date, session))
+                asyncio.create_task(get_daily_trades(symbol, candle_type, date, session))
                 for date in dates
             ]
             for task in tasks:
