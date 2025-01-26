@@ -1934,6 +1934,7 @@ class Trade(ModelBase, LocalTrade):
             .filter(
                 *filters,
                 Order.ft_order_side == case((Trade.is_short.is_(True), "sell"), else_="buy"),
+                Order.filled > 0,
             )
             .group_by(*columns)
             .cte("pair_costs")
