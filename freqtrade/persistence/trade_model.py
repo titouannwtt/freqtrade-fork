@@ -1914,18 +1914,14 @@ class Trade(ModelBase, LocalTrade):
         return total_open_stake_amount or 0
 
     @staticmethod
-    def get_overall_performance(start_date: datetime | None = None) -> list[dict[str, Any]]:
+    def _generic_performance_query(columns: list, filters: list, fallback: str = "") -> Select:
         """
-        Returns List of dicts containing all Trades, including profit and trade count
-        NOTE: Not supported in Backtesting.
+        Retrieve a generic select object to calculate performance grouped on `columns`.
         """
-        filters: list = [Trade.is_open.is_(False)]
-        if start_date:
-            filters.append(Trade.close_date >= start_date)
-
+        columns_coal = [func.coalesce(c, fallback).label(c.name) for c in columns]
         pair_costs = (
             select(
-                Trade.pair,
+                *columns_coal,
                 func.sum(
                     (
                         func.coalesce(Order.filled, Order.amount)
@@ -1939,34 +1935,44 @@ class Trade(ModelBase, LocalTrade):
                 *filters,
                 Order.ft_order_side == case((Trade.is_short.is_(True), "sell"), else_="buy"),
             )
-            # Order.filled.gt > 0
-            .group_by(Trade.pair)
+            .group_by(*columns)
             .cte("pair_costs")
         )
         trades_grouped = (
             select(
-                Trade.pair,
+                *columns_coal,
                 func.sum(Trade.close_profit_abs).label("profit_sum_abs"),
-                func.count(Trade.pair).label("count"),
+                func.count(*columns_coal).label("count"),
             )
             .filter(*filters)
-            .group_by(Trade.pair)
+            .group_by(*columns_coal)
             .cte("trades_grouped")
         )
         q = (
             select(
-                trades_grouped.c.pair,
+                *[trades_grouped.c[x.name] for x in columns],
                 (trades_grouped.c.profit_sum_abs / pair_costs.c.cost_per_pair).label(
                     "profit_ratio"
                 ),
                 trades_grouped.c.profit_sum_abs,
                 trades_grouped.c.count,
             )
-            .join(pair_costs, trades_grouped.c.pair == pair_costs.c.pair)
+            .join(pair_costs, *[trades_grouped.c[x.name] == pair_costs.c[x.name] for x in columns])
             .order_by(desc("profit_sum_abs"))
         )
-        pair_rates = Trade.session.execute(q).all()
+        return q
 
+    @staticmethod
+    def get_overall_performance(start_date: datetime | None = None) -> list[dict[str, Any]]:
+        """
+        Returns List of dicts containing all Trades, including profit and trade count
+        NOTE: Not supported in Backtesting.
+        """
+        filters: list = [Trade.is_open.is_(False)]
+        if start_date:
+            filters.append(Trade.close_date >= start_date)
+        pair_rates_query = Trade._generic_performance_query([Trade.pair], filters)
+        pair_rates = Trade.session.execute(pair_rates_query).all()
         return [
             {
                 "pair": pair,
