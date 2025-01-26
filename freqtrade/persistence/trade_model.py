@@ -1997,17 +1997,8 @@ class Trade(ModelBase, LocalTrade):
         if pair is not None:
             filters.append(Trade.pair == pair)
 
-        enter_tag_perf = Trade.session.execute(
-            select(
-                Trade.enter_tag,
-                func.sum(Trade.close_profit).label("profit_sum"),
-                func.sum(Trade.close_profit_abs).label("profit_sum_abs"),
-                func.count(Trade.pair).label("count"),
-            )
-            .filter(*filters)
-            .group_by(Trade.enter_tag)
-            .order_by(desc("profit_sum_abs"))
-        ).all()
+        pair_rates_query = Trade._generic_performance_query([Trade.enter_tag], filters, "Other")
+        enter_tag_perf = Trade.session.execute(pair_rates_query).all()
 
         return [
             {
@@ -2031,17 +2022,9 @@ class Trade(ModelBase, LocalTrade):
         filters: list = [Trade.is_open.is_(False)]
         if pair is not None:
             filters.append(Trade.pair == pair)
-        sell_tag_perf = Trade.session.execute(
-            select(
-                Trade.exit_reason,
-                func.sum(Trade.close_profit).label("profit_sum"),
-                func.sum(Trade.close_profit_abs).label("profit_sum_abs"),
-                func.count(Trade.pair).label("count"),
-            )
-            .filter(*filters)
-            .group_by(Trade.exit_reason)
-            .order_by(desc("profit_sum_abs"))
-        ).all()
+
+        pair_rates_query = Trade._generic_performance_query([Trade.exit_reason], filters, "Other")
+        sell_tag_perf = Trade.session.execute(pair_rates_query).all()
 
         return [
             {
