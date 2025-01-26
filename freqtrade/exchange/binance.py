@@ -11,7 +11,11 @@ from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
 from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.binance_public_data import concat_safe, download_archive_ohlcv
+from freqtrade.exchange.binance_public_data import (
+    concat_safe,
+    download_archive_ohlcv,
+    download_archive_trades,
+)
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
@@ -377,3 +381,41 @@ class Binance(Exchange):
         if not t:
             return [], "0"
         return t, from_id
+
+    async def _async_get_trade_history_id(
+        self, pair: str, until: int, since: int | None = None, from_id: str | None = None
+    ) -> tuple[str, list[list]]:
+        logger.info(f"Fetching trades from Binance, {from_id=}, {since=}")
+
+        if not self._config["exchange"].get("only_from_ccxt", False):
+            if from_id is None:
+                trades = await self._api_async.fetch_trades(
+                    pair,
+                    params={
+                        self._trades_pagination_arg: "0",
+                    },
+                    limit=5,
+                )
+                listing_date = trades[0]["timestamp"]
+                since = max(since, listing_date)
+            logger.info("downloading fast")
+            _, res = await download_archive_trades(
+                CandleType.SPOT,
+                pair,
+                since_ms=since,
+                until_ms=None,
+                markets=self.markets,
+            )
+
+            end_time = res[-1][0]
+            end_id = res[-1][1]
+            logger.info(f"downloaded fast {len(res)}")
+            if end_time < until:
+                return pair, res
+            else:
+                # continue
+                _, res2 = await super()._async_get_trade_history_id(pair, until, end_time, end_id)
+                res.extend(res2)
+                return pair, res
+
+        return await super()._async_get_trade_history_id(pair, until, since, from_id)
