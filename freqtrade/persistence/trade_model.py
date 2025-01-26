@@ -1917,6 +1917,11 @@ class Trade(ModelBase, LocalTrade):
     def _generic_performance_query(columns: list, filters: list, fallback: str = "") -> Select:
         """
         Retrieve a generic select object to calculate performance grouped on `columns`.
+        Returns the following columns:
+        - columns
+        - profit_ratio
+        - profit_sum_abs
+        - count
         """
         columns_coal = [func.coalesce(c, fallback).label(c.name) for c in columns]
         pair_costs = (
