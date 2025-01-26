@@ -1922,6 +1922,7 @@ class Trade(ModelBase, LocalTrade):
         - profit_ratio
         - profit_sum_abs
         - count
+        NOTE: Not supported in Backtesting.
         """
         columns_coal = [func.coalesce(c, fallback).label(c.name) for c in columns]
         pair_costs = (
