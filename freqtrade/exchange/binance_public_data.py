@@ -63,12 +63,7 @@ async def download_archive_ohlcv(
         available in the time range
     """
     try:
-        if candle_type == CandleType.SPOT:
-            asset_type_url_segment = "spot"
-        elif candle_type == CandleType.FUTURES:
-            asset_type_url_segment = "futures/um"
-        else:
-            raise ValueError(f"Unsupported CandleType: {candle_type}")
+        asset_type_url_segment = candle_type_to_url_segment(candle_type)
 
         symbol = markets[pair]["id"]
 
@@ -174,6 +169,15 @@ async def _download_archive_ohlcv(
                 else:
                     dfs.append(df)
     return concat_safe(dfs)
+
+
+def candle_type_to_url_segment(candle_type: CandleType) -> str:
+    if candle_type == CandleType.SPOT:
+        return "spot"
+    elif candle_type == CandleType.FUTURES:
+        return "futures/um"
+    else:
+        raise ValueError(f"Unsupported CandleType: {candle_type}")
 
 
 async def cancel_and_await_tasks(unawaited_tasks):
