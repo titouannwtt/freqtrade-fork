@@ -1018,14 +1018,14 @@ def test_enter_tag_performance_handle(default_conf, ticker, fee, mocker) -> None
     assert len(res) == 3
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
     res = rpc._rpc_enter_tag_performance(None)
 
     assert len(res) == 3
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
 
 def test_enter_tag_performance_handle_2(mocker, default_conf, markets, fee):
@@ -1041,17 +1041,20 @@ def test_enter_tag_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
     assert res[1]["enter_tag"] == "Other"
     assert res[1]["count"] == 1
-    assert pytest.approx(res[1]["profit_pct"]) == 1.0
+    assert pytest.approx(res[1]["profit_pct"]) == 0.0
+    assert pytest.approx(res[1]["profit_ratio"]) == 0.00002520325
 
     # Test for a specific pair
     res = rpc._rpc_enter_tag_performance("ETC/BTC")
     assert len(res) == 1
     assert res[0]["count"] == 1
     assert res[0]["enter_tag"] == "TEST1"
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
 
 
 def test_exit_reason_performance_handle(default_conf_usdt, ticker, fee, mocker) -> None:
@@ -1075,7 +1078,7 @@ def test_exit_reason_performance_handle(default_conf_usdt, ticker, fee, mocker) 
     assert len(res) == 3
     assert res[0]["exit_reason"] == "exit_signal"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
     assert res[1]["exit_reason"] == "roi"
     assert res[2]["exit_reason"] == "Other"
@@ -1094,17 +1097,20 @@ def test_exit_reason_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]["exit_reason"] == "sell_signal"
     assert res[0]["count"] == 1
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
     assert res[1]["exit_reason"] == "roi"
     assert res[1]["count"] == 1
-    assert pytest.approx(res[1]["profit_pct"]) == 1.0
+    assert pytest.approx(res[1]["profit_pct"]) == 0.0
+    assert pytest.approx(res[1]["profit_ratio"]) == 0.000025203252
 
     # Test for a specific pair
     res = rpc._rpc_exit_reason_performance("ETC/BTC")
     assert len(res) == 1
     assert res[0]["count"] == 1
     assert res[0]["exit_reason"] == "sell_signal"
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
 
 
 def test_mix_tag_performance_handle(default_conf, ticker, fee, mocker) -> None:
