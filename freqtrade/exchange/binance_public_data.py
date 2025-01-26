@@ -411,8 +411,12 @@ async def get_daily_trades(
                             # based on ccxt parseTrade logic.
                             df["side"] = np.where(df["is_buyer_maker"], "sell", "buy")
                             df["type"] = None
-                            if header is None:
-                                df["timestamp"] = df["timestamp"] // 1000
+                            # Convert timestamp to ms
+                            df["timestamp"] = np.where(
+                                df["timestamp"] > 10000000000000,
+                                df["timestamp"] // 1000,
+                                df["timestamp"],
+                            )
                             return df[DEFAULT_TRADES_COLUMNS].to_records(index=False).tolist()
                 elif resp.status == 404:
                     logger.debug(f"Failed to download {url}")
