@@ -413,7 +413,8 @@ class Binance(Exchange):
             else:
                 end_time = res[-1][0]
                 end_id = res[-1][1]
-            if end_time >= until:
+
+            if end_time and end_time >= until:
                 return pair, res
             else:
                 # continue
