@@ -444,7 +444,7 @@ def _download_trades_history(
     if not trades.empty and since < trades.iloc[-1]["timestamp"]:
         # Reset since to the last available point
         # - 5 seconds (to ensure we're getting all trades)
-        since = trades.iloc[-1]["timestamp"] - (5 * 1000)
+        since = int(trades.iloc[-1]["timestamp"] - (5 * 1000))
         logger.info(
             f"Using last trade date -5s - Downloading trades for {pair} "
             f"since: {format_ms_time(since)}."
