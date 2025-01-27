@@ -383,12 +383,12 @@ class Binance(Exchange):
         return t, from_id
 
     async def _async_get_trade_history_id(
-        self, pair: str, until: int, since: int | None = None, from_id: str | None = None
+        self, pair: str, until: int, since: int, from_id: str | None = None
     ) -> tuple[str, list[list]]:
         logger.info(f"Fetching trades from Binance, {from_id=}, {since=}")
 
         if not self._config["exchange"].get("only_from_ccxt", False):
-            if from_id is None:
+            if from_id is None or not since:
                 trades = await self._api_async.fetch_trades(
                     pair,
                     params={
@@ -396,7 +396,7 @@ class Binance(Exchange):
                     },
                     limit=5,
                 )
-                listing_date = trades[0]["timestamp"]
+                listing_date: int = trades[0]["timestamp"]
                 since = max(since, listing_date)
 
             _, res = await download_archive_trades(
@@ -417,10 +417,12 @@ class Binance(Exchange):
             if end_time and end_time >= until:
                 return pair, res
             else:
-                # continue
-                logger.info(f"downloaded fast {len(res)}, {end_time=}, {end_id=}")
-                _, res2 = await super()._async_get_trade_history_id(pair, until, end_time, end_id)
+                _, res2 = await super()._async_get_trade_history_id(
+                    pair, until=until, since=end_time, from_id=end_id
+                )
                 res.extend(res2)
                 return pair, res
 
-        return await super()._async_get_trade_history_id(pair, until, since, from_id)
+        return await super()._async_get_trade_history_id(
+            pair, until=until, since=since, from_id=from_id
+        )
