@@ -645,7 +645,7 @@ def test_reload_markets(default_conf, mocker, caplog, time_machine):
     # Tried once, failed
 
     lam_spy.reset_mock()
-    # When forceing (bot startup), it should retry 3 times.
+    # When forcing (bot startup), it should retry 3 times.
     exchange.reload_markets(force=True)
     assert lam_spy.call_count == 4
     assert exchange.markets == updated_markets
