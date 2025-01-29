@@ -4,7 +4,6 @@ from logging import Handler
 from rich._null_file import NullFile
 from rich.console import Console
 from rich.text import Text
-from rich.traceback import Traceback
 
 
 class FtRichHandler(Handler):
