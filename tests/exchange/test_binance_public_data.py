@@ -22,6 +22,7 @@ from freqtrade.exchange.binance_public_data import (
     get_daily_trades,
 )
 from freqtrade.util.datetime_helpers import dt_ts, dt_utc
+from ft_client.test_client.test_rest_client import log_has_re
 
 
 @pytest.fixture(scope="module")
@@ -340,6 +341,58 @@ async def test_get_daily_ohlcv(mocker, testdatadir):
         with pytest.raises(zipfile.BadZipFile):
             df = await get_daily_ohlcv(symbol, timeframe, CandleType.SPOT, date, session)
         assert get.call_count == 4  # 1 + 3 default retries
+
+
+async def test_download_archive_trades(mocker, caplog):
+    pair = "BTC/USDT"
+
+    since_ms = dt_ts(dt_utc(2020, 1, 1))
+    until_ms = dt_ts(dt_utc(2020, 1, 2))
+    markets = {"BTC/USDT": {"id": "BTCUSDT"}, "BTC/USDT:USDT": {"id": "BTCUSDT"}}
+
+    mocker.patch("freqtrade.exchange.binance_public_data.get_daily_trades", return_value=[[2, 3]])
+
+    pair1, res = await download_archive_trades(
+        CandleType.SPOT, pair, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
+    assert pair1 == pair
+    assert res == [[2, 3], [2, 3]]
+
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.get_daily_trades",
+        side_effect=Http404("xxx", dt_utc(2020, 1, 1), "http://example.com/something"),
+    )
+
+    pair1, res = await download_archive_trades(
+        CandleType.SPOT, pair, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
+
+    assert pair1 == pair
+    assert res == []
+    # exit on day 1
+    assert log_has_re("Fast download is unavailable", caplog)
+
+    # Test fail on day 2
+    caplog.clear()
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data.get_daily_trades",
+        side_effect=[
+            [[2, 3]],
+            [[2, 3]],
+            Http404("xxx", dt_utc(2020, 1, 2), "http://example.com/something"),
+            [[2, 3]],
+        ],
+    )
+    # Download 3 days
+    until_ms = dt_ts(dt_utc(2020, 1, 3))
+
+    pair1, res = await download_archive_trades(
+        CandleType.SPOT, pair, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
+
+    assert pair1 == pair
+    assert res == [[2, 3], [2, 3]]
+    assert log_has_re(r"Binance fast download .*stopped", caplog)
 
 
 async def test_download_archive_trades_exception(mocker):
