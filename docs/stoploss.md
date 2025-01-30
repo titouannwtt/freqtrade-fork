@@ -208,6 +208,7 @@ Before this, `stoploss` is used for the trailing stoploss.
 
 You can also keep a static stoploss until the offset is reached, and then trail the trade to take profits once the market turns.
 
+With `trailing_stop_positive_offset`, the stop-loss is still trailing before reaching the offset with the `stoploss` value. If we want to prevent that, `trailing_only_offset_is_reached` can be set to `True`
 If `trailing_only_offset_is_reached = True` then the trailing stoploss is only activated once the offset is reached. Until then, the stoploss remains at the configured `stoploss`.
 This option can be used with or without `trailing_stop_positive`, but uses `trailing_stop_positive_offset` as offset.
 
