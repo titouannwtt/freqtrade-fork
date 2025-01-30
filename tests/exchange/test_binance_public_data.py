@@ -395,7 +395,7 @@ async def test_download_archive_trades(mocker, caplog):
     assert log_has_re(r"Binance fast download .*stopped", caplog)
 
 
-async def test_download_archive_trades_exception(mocker):
+async def test_download_archive_trades_exception(mocker, caplog):
     pair = "BTC/USDT"
 
     since_ms = dt_ts(dt_utc(2020, 1, 1))
@@ -412,6 +412,16 @@ async def test_download_archive_trades_exception(mocker):
 
     assert pair1 == pair
     assert res == []
+    mocker.patch(
+        "freqtrade.exchange.binance_public_data._download_archive_trades", side_effect=RuntimeError
+    )
+
+    await download_archive_trades(
+        CandleType.SPOT, pair, since_ms=since_ms, until_ms=until_ms, markets=markets
+    )
+    assert pair1 == pair
+    assert res == []
+    assert log_has_re("An exception occurred during fast trades download", caplog)
 
 
 async def test_binance_vision_trades_zip_url():

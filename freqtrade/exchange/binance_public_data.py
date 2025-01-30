@@ -325,7 +325,7 @@ async def download_archive_trades(
 
     except Exception as e:
         logger.warning(
-            "An exception occurred during fast traes download from Binance, falling back to "
+            "An exception occurred during fast trades download from Binance, falling back to "
             "the slower REST API, this can take a lot more time.",
             exc_info=e,
         )
