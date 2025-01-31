@@ -112,6 +112,7 @@ from freqtrade.util.periodic_cache import PeriodicCache
 
 
 logger = logging.getLogger(__name__)
+
 T = TypeVar("T")
 
 

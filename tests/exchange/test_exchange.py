@@ -6259,3 +6259,26 @@ def test_price_to_precision_with_default_conf(default_conf, mocker):
     prec_price = patched_ex.price_to_precision("XRP/USDT", 1.0000000101)
     assert prec_price == 1.00000001
     assert prec_price == 1.00000001
+
+
+def test_exchange_features(default_conf, mocker):
+    conf = copy.deepcopy(default_conf)
+    exchange = get_patched_exchange(mocker, conf)
+    exchange._api_async.features = {
+        "spot": {
+            "fetchOHLCV": {
+                "limit": 995,
+            }
+        },
+        "swap": {
+            "linear": {
+                "fetchOHLCV": {
+                    "limit": 997,
+                }
+            }
+        },
+    }
+    assert exchange.features("spot", "fetchOHLCV", "limit", 500) == 995
+    assert exchange.features("futures", "fetchOHLCV", "limit", 500) == 997
+    # Fall back to default
+    assert exchange.features("futures", "fetchOHLCV_else", "limit", 601) == 601
