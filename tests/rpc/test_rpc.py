@@ -480,8 +480,8 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
     assert stats["first_trade_humanized"] == "2 days ago"
     assert stats["latest_trade_humanized"] == "17 minutes ago"
     assert stats["avg_duration"] in ("0:17:40")
-    assert stats["best_pair"] == "XRP/USDT"
-    assert stats["best_rate"] == 10.0
+    assert stats["best_pair"] == "NEO/USDT"
+    assert stats["best_rate"] == 1.99
 
     # Test non-available pair
     mocker.patch(
@@ -492,8 +492,8 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
     assert stats["first_trade_humanized"] == "2 days ago"
     assert stats["latest_trade_humanized"] == "17 minutes ago"
     assert stats["avg_duration"] in ("0:17:40")
-    assert stats["best_pair"] == "XRP/USDT"
-    assert stats["best_rate"] == 10.0
+    assert stats["best_pair"] == "NEO/USDT"
+    assert stats["best_rate"] == 1.99
     assert isnan(stats["profit_all_coin"])
 
 
@@ -537,7 +537,9 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     assert all(currency["currency"] != "ETH" for currency in res["currencies"])
 
 
-def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
+@pytest.mark.parametrize("proxy_coin", [None, "BNFCR"])
+@pytest.mark.parametrize("margin_mode", ["isolated", "cross"])
+def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, margin_mode):
     mock_balance = {
         "BTC": {
             "free": 0.01,
@@ -562,6 +564,14 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "used": 5.0,
         },
     }
+    if proxy_coin:
+        default_conf_usdt["proxy_coin"] = proxy_coin
+        mock_balance[proxy_coin] = {
+            "free": 1500.0,
+            "total": 0.0,
+            "used": 0.0,
+        }
+
     mock_pos = [
         {
             "symbol": "ETH/USDT:USDT",
@@ -605,6 +615,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
     )
     default_conf_usdt["dry_run"] = False
     default_conf_usdt["trading_mode"] = "futures"
+    default_conf_usdt["margin_mode"] = margin_mode
     freqtradebot = get_patched_freqtradebot(mocker, default_conf_usdt)
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
@@ -614,21 +625,19 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
         default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
     )
 
-    assert pytest.approx(result["total"]) == 2824.83464
-    assert pytest.approx(result["value"]) == 2824.83464 * 1.2
-    assert tickers.call_count == 4
+    assert tickers.call_count == 4 if not proxy_coin else 6
     assert tickers.call_args_list[0][1]["cached"] is True
     # Testing futures - so we should get spot tickers
     assert tickers.call_args_list[-1][1]["market_type"] == "spot"
     assert "USD" == result["symbol"]
-    assert result["currencies"] == [
+    expected_curr = [
         {
             "currency": "BTC",
             "free": 0.01,
             "balance": 0.012,
             "used": 0.002,
             "bot_owned": 0,
-            "est_stake": 103.78464,
+            "est_stake": 86.4872,
             "est_stake_bot": 0,
             "stake": "USDT",
             "side": "long",
@@ -642,7 +651,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "balance": 5.0,
             "used": 4.0,
             "bot_owned": 0,
-            "est_stake": 2651.05,
+            "est_stake": 530.21,
             "est_stake_bot": 0,
             "stake": "USDT",
             "side": "long",
@@ -692,10 +701,71 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers):
             "is_position": True,
         },
     ]
-    assert pytest.approx(result["total_bot"]) == 69.5
-    assert pytest.approx(result["total"]) == 2824.83464  # ETH stake is missing.
-    assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
-    assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
+    if proxy_coin:
+        if margin_mode == "cross":
+            # Insert before ETH - as positions are always last.
+            expected_curr.insert(
+                len(expected_curr) - 1,
+                {
+                    "currency": proxy_coin,
+                    "free": 1500.0,
+                    "balance": 0.0,
+                    "used": 0.0,
+                    "bot_owned": 1485.0,
+                    "est_stake": 1500.0,
+                    "est_stake_bot": 1485.0,
+                    "stake": "USDT",
+                    "side": "long",
+                    "position": 0,
+                    "is_bot_managed": True,
+                    "is_position": False,
+                },
+            )
+            expected_curr[-3] = {
+                "currency": "USDT",
+                "free": 50.0,
+                "balance": 100.0,
+                "used": 5.0,
+                "bot_owned": 0,
+                "est_stake": 50.0,
+                "est_stake_bot": 0,
+                "stake": "USDT",
+                "side": "long",
+                "position": 0,
+                "is_bot_managed": False,
+                "is_position": False,
+            }
+        else:
+            expected_curr.insert(
+                len(expected_curr) - 1,
+                {
+                    "currency": proxy_coin,
+                    "free": 1500.0,
+                    "balance": 0.0,
+                    "used": 0.0,
+                    "bot_owned": 0.0,
+                    "est_stake": 0,
+                    "est_stake_bot": 0,
+                    "stake": "USDT",
+                    "side": "long",
+                    "position": 0,
+                    "is_bot_managed": False,
+                    "is_position": False,
+                },
+            )
+
+    assert result["currencies"] == expected_curr
+    if proxy_coin and margin_mode == "cross":
+        assert pytest.approx(result["total_bot"]) == 1505.0
+        assert pytest.approx(result["total"]) == 2186.6972  # ETH stake is missing.
+        assert result["starting_capital"] == 1500 * default_conf_usdt["tradable_balance_ratio"]
+        assert result["starting_capital_ratio"] == pytest.approx(0.013468013468013407)
+    else:
+        assert pytest.approx(result["total_bot"]) == 69.5
+        assert pytest.approx(result["total"]) == 686.6972  # ETH stake is missing.
+        assert result["starting_capital"] == 50 * default_conf_usdt["tradable_balance_ratio"]
+        assert result["starting_capital_ratio"] == pytest.approx(0.4040404)
+    assert pytest.approx(result["value"]) == result["total"] * 1.2
 
 
 def test_rpc_start(mocker, default_conf) -> None:
@@ -922,7 +992,8 @@ def test_performance_handle(default_conf_usdt, ticker, fee, mocker) -> None:
     assert len(res) == 3
     assert res[0]["pair"] == "NEO/USDT"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_abs"] == 3.9875
+    assert res[0]["profit_pct"] == 1.99
 
 
 def test_enter_tag_performance_handle(default_conf, ticker, fee, mocker) -> None:
@@ -947,14 +1018,14 @@ def test_enter_tag_performance_handle(default_conf, ticker, fee, mocker) -> None
     assert len(res) == 3
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
     res = rpc._rpc_enter_tag_performance(None)
 
     assert len(res) == 3
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
 
 def test_enter_tag_performance_handle_2(mocker, default_conf, markets, fee):
@@ -970,17 +1041,20 @@ def test_enter_tag_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]["enter_tag"] == "TEST1"
     assert res[0]["count"] == 1
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
     assert res[1]["enter_tag"] == "Other"
     assert res[1]["count"] == 1
-    assert pytest.approx(res[1]["profit_pct"]) == 1.0
+    assert pytest.approx(res[1]["profit_pct"]) == 0.0
+    assert pytest.approx(res[1]["profit_ratio"]) == 0.00002520325
 
     # Test for a specific pair
     res = rpc._rpc_enter_tag_performance("ETC/BTC")
     assert len(res) == 1
     assert res[0]["count"] == 1
     assert res[0]["enter_tag"] == "TEST1"
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
 
 
 def test_exit_reason_performance_handle(default_conf_usdt, ticker, fee, mocker) -> None:
@@ -1004,7 +1078,7 @@ def test_exit_reason_performance_handle(default_conf_usdt, ticker, fee, mocker) 
     assert len(res) == 3
     assert res[0]["exit_reason"] == "exit_signal"
     assert res[0]["count"] == 1
-    assert res[0]["profit_pct"] == 5.0
+    assert res[0]["profit_pct"] == 1.99
 
     assert res[1]["exit_reason"] == "roi"
     assert res[2]["exit_reason"] == "Other"
@@ -1023,17 +1097,20 @@ def test_exit_reason_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]["exit_reason"] == "sell_signal"
     assert res[0]["count"] == 1
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
     assert res[1]["exit_reason"] == "roi"
     assert res[1]["count"] == 1
-    assert pytest.approx(res[1]["profit_pct"]) == 1.0
+    assert pytest.approx(res[1]["profit_pct"]) == 0.0
+    assert pytest.approx(res[1]["profit_ratio"]) == 0.000025203252
 
     # Test for a specific pair
     res = rpc._rpc_exit_reason_performance("ETC/BTC")
     assert len(res) == 1
     assert res[0]["count"] == 1
     assert res[0]["exit_reason"] == "sell_signal"
-    assert pytest.approx(res[0]["profit_pct"]) == 0.5
+    assert pytest.approx(res[0]["profit_pct"]) == 0.0
+    assert pytest.approx(res[0]["profit_ratio"]) == 0.00003860975
 
 
 def test_mix_tag_performance_handle(default_conf, ticker, fee, mocker) -> None:

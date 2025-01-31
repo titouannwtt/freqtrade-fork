@@ -1,6 +1,6 @@
 from sklearn.multioutput import MultiOutputRegressor, _fit_estimator
 from sklearn.utils.parallel import Parallel, delayed
-from sklearn.utils.validation import has_fit_parameter
+from sklearn.utils.validation import has_fit_parameter, validate_data
 
 
 class FreqaiMultiOutputRegressor(MultiOutputRegressor):
@@ -31,12 +31,11 @@ class FreqaiMultiOutputRegressor(MultiOutputRegressor):
         if not hasattr(self.estimator, "fit"):
             raise ValueError("The base estimator should implement a fit method")
 
-        y = self._validate_data(X="no_validation", y=y, multi_output=True)
+        y = validate_data(self, X="no_validation", y=y, multi_output=True)
 
         if y.ndim == 1:
             raise ValueError(
-                "y must have at least two dimensions for "
-                "multi-output regression but has only one."
+                "y must have at least two dimensions for multi-output regression but has only one."
             )
 
         if sample_weight is not None and not has_fit_parameter(self.estimator, "sample_weight"):

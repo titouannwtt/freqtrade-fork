@@ -114,6 +114,19 @@ class TestCCXTExchange:
         else:
             pytest.skip(f"No sample Trades available for exchange {exchange_name}")
 
+    def test_ccxt_balances_parse(self, exchange: EXCHANGE_FIXTURE_TYPE):
+        exch, exchange_name = exchange
+        if balance_response := EXCHANGES[exchange_name].get("sample_balances"):
+            balances = exch._api.parse_balance(balance_response["exchange_response"])
+            expected = balance_response["expected"]
+            for currency, balance in expected.items():
+                assert currency in balances
+                assert isinstance(balance, dict)
+                assert balance == balances[currency]
+            pass
+        else:
+            pytest.skip(f"No sample Balances available for exchange {exchange_name}")
+
     def test_ccxt_fetch_tickers(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange
         pair = EXCHANGES[exchangename]["pair"]
@@ -262,9 +275,9 @@ class TestCCXTExchange:
             candles = res[3]
             candle_count = exchange.ohlcv_candle_limit(timeframe, candle_type, since_ms) * factor
             candle_count1 = (now.timestamp() * 1000 - since_ms) // timeframe_ms * factor
-            assert len(candles) >= min(
-                candle_count, candle_count1
-            ), f"{len(candles)} < {candle_count} in {timeframe}, Offset: {offset} {factor}"
+            assert len(candles) >= min(candle_count, candle_count1), (
+                f"{len(candles)} < {candle_count} in {timeframe}, Offset: {offset} {factor}"
+            )
             # Check if first-timeframe is either the start, or start + 1
             assert candles[0][0] == since_ms or (since_ms + timeframe_ms)
 
