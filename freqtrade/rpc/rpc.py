@@ -1450,6 +1450,7 @@ class RPC:
         from freqtrade.resolvers.strategy_resolver import StrategyResolver
 
         strategy_name = ""
+        startup_candles = 0
         if config.get("strategy"):
             strategy = StrategyResolver.load_strategy(config)
             startup_candles = strategy.startup_candle_count

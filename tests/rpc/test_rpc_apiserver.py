@@ -2034,6 +2034,28 @@ def test_api_pair_history(botclient, tmp_path, mocker):
         assert_response(rc, 502)
         assert rc.json()["detail"] == ("No data for UNITTEST/BTC, 5m in 20200111-20200112 found.")
 
+    # No strategy
+    rc = client_post(
+        client,
+        f"{BASE_URI}/pair_history",
+        data={
+            "pair": "UNITTEST/BTC",
+            "timeframe": timeframe,
+            "timerange": "20180111-20180112",
+            # "strategy": CURRENT_TEST_STRATEGY,
+            "columns": ["rsi", "fastd", "fastk"],
+        },
+    )
+    assert_response(rc, 200)
+    result = rc.json()
+    assert result["length"] == 289
+    assert len(result["data"]) == result["length"]
+    assert "columns" in result
+    assert "data" in result
+    # Result without strategy won't have enter_long assigned.
+    assert "enter_long" not in result["columns"]
+    assert result["columns"] == ["date", "open", "high", "low", "close", "volume", "__date_ts"]
+
 
 def test_api_plot_config(botclient, mocker, tmp_path):
     ftbot, client = botclient
