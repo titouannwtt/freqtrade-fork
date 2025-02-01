@@ -470,6 +470,8 @@ class Exchange:
         ccxt_val = self.features(
             "spot" if candle_type == CandleType.SPOT else "futures", "fetchOHLCV", "limit", 500
         )
+        if not isinstance(ccxt_val, float | int):
+            ccxt_val = 500
         fallback_val = self._ft_has.get("ohlcv_candle_limit", ccxt_val)
         if candle_type == CandleType.FUNDING_RATE:
             fallback_val = self._ft_has.get("funding_fee_candle_limit", fallback_val)
