@@ -83,7 +83,8 @@ logger = logging.getLogger(__name__)
 # 2.35: pair_candles and pair_history endpoints as Post variant
 # 2.40: Add hyperopt-loss endpoint
 # 2.41: Add download-data endpoint
-API_VERSION = 2.41
+# 2.42: Add /pair_history endpoint with live data
+API_VERSION = 2.42
 
 # Public API, requires no auth.
 router_public = APIRouter()
