@@ -526,7 +526,7 @@ class PairCandlesRequest(BaseModel):
 
 class PairHistoryRequest(PairCandlesRequest, ExchangeModePayloadMixin):
     timerange: str
-    strategy: str
+    strategy: str | None = None
     freqaimodel: str | None = None
     live_mode: bool = False
 

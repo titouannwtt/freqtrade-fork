@@ -1449,8 +1449,11 @@ class RPC:
         from freqtrade.data.dataprovider import DataProvider
         from freqtrade.resolvers.strategy_resolver import StrategyResolver
 
-        strategy = StrategyResolver.load_strategy(config)
-        startup_candles = strategy.startup_candle_count
+        strategy_name = ""
+        if config.get("strategy"):
+            strategy = StrategyResolver.load_strategy(config)
+            startup_candles = strategy.startup_candle_count
+            strategy_name = strategy.get_strategy_name()
 
         if live:
             data = exchange.get_historic_ohlcv(
@@ -1477,14 +1480,19 @@ class RPC:
                 )
             data = _data[pair]
 
-        strategy.dp = DataProvider(config, exchange=exchange, pairlists=None)
-        strategy.ft_bot_start()
+        if config.get("strategy"):
+            strategy.dp = DataProvider(config, exchange=exchange, pairlists=None)
+            strategy.ft_bot_start()
 
-        df_analyzed = strategy.analyze_ticker(data, {"pair": pair})
-        df_analyzed = trim_dataframe(df_analyzed, timerange_parsed, startup_candles=startup_candles)
+            df_analyzed = strategy.analyze_ticker(data, {"pair": pair})
+            df_analyzed = trim_dataframe(
+                df_analyzed, timerange_parsed, startup_candles=startup_candles
+            )
+        else:
+            df_analyzed = data
 
         return RPC._convert_dataframe_to_dict(
-            strategy.get_strategy_name(),
+            strategy_name,
             pair,
             timeframe,
             df_analyzed.copy(),
