@@ -528,6 +528,7 @@ class PairHistoryRequest(PairCandlesRequest, ExchangeModePayloadMixin):
     timerange: str
     strategy: str
     freqaimodel: str | None = None
+    live_mode: bool = False
 
 
 class PairHistory(BaseModel):

@@ -60,7 +60,12 @@ def pair_history_filtered(payload: PairHistoryRequest, config=Depends(get_config
     exchange = get_exchange(config_loc)
     try:
         return RPC._rpc_analysed_history_full(
-            config_loc, payload.pair, payload.timeframe, exchange, payload.columns, False
+            config_loc,
+            payload.pair,
+            payload.timeframe,
+            exchange,
+            payload.columns,
+            payload.live_mode,
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
