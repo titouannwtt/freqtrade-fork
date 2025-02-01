@@ -35,7 +35,7 @@ def pair_history(
         }
     )
     try:
-        return RPC._rpc_analysed_history_full(config, pair, timeframe, exchange, None)
+        return RPC._rpc_analysed_history_full(config, pair, timeframe, exchange, None, False)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -59,7 +59,7 @@ def pair_history_filtered(
     )
     try:
         return RPC._rpc_analysed_history_full(
-            config, payload.pair, payload.timeframe, exchange, payload.columns
+            config, payload.pair, payload.timeframe, exchange, payload.columns, False
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))

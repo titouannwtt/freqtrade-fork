@@ -31,7 +31,7 @@ from freqtrade.enums import (
     TradingMode,
 )
 from freqtrade.exceptions import ExchangeError, PricingError
-from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
+from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
@@ -1436,7 +1436,12 @@ class RPC:
 
     @staticmethod
     def _rpc_analysed_history_full(
-        config: Config, pair: str, timeframe: str, exchange, selected_cols: list[str] | None
+        config: Config,
+        pair: str,
+        timeframe: str,
+        exchange: Exchange,
+        selected_cols: list[str] | None,
+        live: bool,
     ) -> dict[str, Any]:
         timerange_parsed = TimeRange.parse_timerange(config.get("timerange"))
 
@@ -1447,24 +1452,35 @@ class RPC:
         strategy = StrategyResolver.load_strategy(config)
         startup_candles = strategy.startup_candle_count
 
-        _data = load_data(
-            datadir=config["datadir"],
-            pairs=[pair],
-            timeframe=timeframe,
-            timerange=timerange_parsed,
-            data_format=config["dataformat_ohlcv"],
-            candle_type=config.get("candle_type_def", CandleType.SPOT),
-            startup_candles=startup_candles,
-        )
-        if pair not in _data:
-            raise RPCException(
-                f"No data for {pair}, {timeframe} in {config.get('timerange')} found."
+        if live:
+            data = exchange.get_historic_ohlcv(
+                pair=pair,
+                timeframe=timeframe,
+                since_ms=timerange_parsed.startts * 1000 if timerange_parsed.startts else None,
+                is_new_pair=True,  # history is never available - so always treat as new pair
+                candle_type=config.get("candle_type_def", CandleType.SPOT),
+                until_ms=timerange_parsed.stopts,
             )
+        else:
+            _data = load_data(
+                datadir=config["datadir"],
+                pairs=[pair],
+                timeframe=timeframe,
+                timerange=timerange_parsed,
+                data_format=config["dataformat_ohlcv"],
+                candle_type=config.get("candle_type_def", CandleType.SPOT),
+                startup_candles=startup_candles,
+            )
+            if pair not in _data:
+                raise RPCException(
+                    f"No data for {pair}, {timeframe} in {config.get('timerange')} found."
+                )
+            data = _data[pair]
 
         strategy.dp = DataProvider(config, exchange=exchange, pairlists=None)
         strategy.ft_bot_start()
 
-        df_analyzed = strategy.analyze_ticker(_data[pair], {"pair": pair})
+        df_analyzed = strategy.analyze_ticker(data, {"pair": pair})
         df_analyzed = trim_dataframe(df_analyzed, timerange_parsed, startup_candles=startup_candles)
 
         return RPC._convert_dataframe_to_dict(
