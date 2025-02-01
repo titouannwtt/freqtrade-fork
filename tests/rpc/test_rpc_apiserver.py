@@ -1914,6 +1914,15 @@ def test_api_pair_history(botclient, tmp_path, mocker):
 
     timeframe = "5m"
     lfm = mocker.patch("freqtrade.strategy.interface.IStrategy.load_freqAI_model")
+    # Wrong mode
+    rc = client_get(
+        client,
+        f"{BASE_URI}/pair_history?timeframe={timeframe}"
+        f"&timerange=20180111-20180112&strategy={CURRENT_TEST_STRATEGY}",
+    )
+    assert_response(rc, 503)
+    _ftbot.config["runmode"] = RunMode.WEBSERVER
+
     # No pair
     rc = client_get(
         client,
