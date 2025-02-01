@@ -36,6 +36,7 @@ from tests.conftest import (
     EXMS,
     create_mock_trades,
     create_mock_trades_usdt,
+    generate_test_data,
     get_mock_coro,
     get_patched_freqtradebot,
     log_has,
@@ -2055,6 +2056,65 @@ def test_api_pair_history(botclient, tmp_path, mocker):
     # Result without strategy won't have enter_long assigned.
     assert "enter_long" not in result["columns"]
     assert result["columns"] == ["date", "open", "high", "low", "close", "volume", "__date_ts"]
+
+
+def test_api_pair_history_live_mode(botclient, tmp_path, mocker):
+    _ftbot, client = botclient
+    _ftbot.config["user_data_dir"] = tmp_path
+    _ftbot.config["runmode"] = RunMode.WEBSERVER
+
+    mocker.patch("freqtrade.strategy.interface.IStrategy.load_freqAI_model")
+    # no strategy, live data
+    gho = mocker.patch(
+        "freqtrade.exchange.binance.Binance.get_historic_ohlcv",
+        return_value=generate_test_data("1h", 100),
+    )
+    rc = client_post(
+        client,
+        f"{BASE_URI}/pair_history",
+        data={
+            "pair": "UNITTEST/BTC",
+            "timeframe": "1h",
+            "timerange": "20240101-",
+            # "strategy": CURRENT_TEST_STRATEGY,
+            "columns": ["rsi", "fastd", "fastk"],
+            "live_mode": True,
+        },
+    )
+
+    assert_response(rc, 200)
+    result = rc.json()
+    # 100 candles - as in the generate_test_data call above
+    assert result["length"] == 100
+    assert len(result["data"]) == result["length"]
+    assert result["columns"] == ["date", "open", "high", "low", "close", "volume", "__date_ts"]
+    assert gho.call_count == 1
+
+    gho.reset_mock()
+    rc = client_post(
+        client,
+        f"{BASE_URI}/pair_history",
+        data={
+            "pair": "UNITTEST/BTC",
+            "timeframe": "1h",
+            "timerange": "20240101-",
+            "strategy": CURRENT_TEST_STRATEGY,
+            "columns": ["rsi", "fastd", "fastk"],
+            "live_mode": True,
+        },
+    )
+
+    assert_response(rc, 200)
+    result = rc.json()
+    # 80 candles - as in the generate_test_data call above - 20 startup candles
+    assert result["length"] == 100 - 20
+    assert len(result["data"]) == result["length"]
+
+    assert "rsi" in result["columns"]
+    assert "enter_long" in result["columns"]
+    assert "fastd" in result["columns"]
+    assert "date" in result["columns"]
+    assert gho.call_count == 1
 
 
 def test_api_plot_config(botclient, mocker, tmp_path):
