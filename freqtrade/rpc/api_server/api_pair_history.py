@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import PairHistory, PairHistoryRequest
 from freqtrade.rpc.api_server.deps import get_config, get_exchange
 from freqtrade.rpc.rpc import RPC
@@ -41,25 +42,25 @@ def pair_history(
 
 
 @router.post("/pair_history", response_model=PairHistory, tags=["candle data"])
-def pair_history_filtered(
-    payload: PairHistoryRequest, config=Depends(get_config), exchange=Depends(get_exchange)
-):
+def pair_history_filtered(payload: PairHistoryRequest, config=Depends(get_config)):
     # The initial call to this endpoint can be slow, as it may need to initialize
     # the exchange class.
-    config = deepcopy(config)
-    config.update(
+    config_loc = deepcopy(config)
+    config_loc.update(
         {
             "timeframe": payload.timeframe,
             "strategy": payload.strategy,
             "timerange": payload.timerange,
             "freqaimodel": (
-                payload.freqaimodel if payload.freqaimodel else config.get("freqaimodel")
+                payload.freqaimodel if payload.freqaimodel else config_loc.get("freqaimodel")
             ),
         }
     )
+    handleExchangePayload(payload, config_loc)
+    exchange = get_exchange(config_loc)
     try:
         return RPC._rpc_analysed_history_full(
-            config, payload.pair, payload.timeframe, exchange, payload.columns, False
+            config_loc, payload.pair, payload.timeframe, exchange, payload.columns, False
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))

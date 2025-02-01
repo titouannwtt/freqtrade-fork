@@ -524,7 +524,7 @@ class PairCandlesRequest(BaseModel):
     columns: list[str] | None = None
 
 
-class PairHistoryRequest(PairCandlesRequest):
+class PairHistoryRequest(PairCandlesRequest, ExchangeModePayloadMixin):
     timerange: str
     strategy: str
     freqaimodel: str | None = None
