@@ -29,7 +29,6 @@ class Binance(Exchange):
         "stop_price_prop": "stopPrice",
         "stoploss_order_types": {"limit": "stop_loss_limit"},
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
-        "ohlcv_candle_limit": 1000,
         "trades_pagination": "id",
         "trades_pagination_arg": "fromId",
         "trades_has_history": True,
