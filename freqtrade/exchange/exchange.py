@@ -133,7 +133,6 @@ class Exchange:
         "stoploss_order_types": {},
         "order_time_in_force": ["GTC"],
         "ohlcv_params": {},
-        "ohlcv_candle_limit": 500,
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
         "ohlcv_partial_candle": True,
         "ohlcv_require_since": False,
@@ -468,7 +467,10 @@ class Exchange:
         :return: Candle limit as integer
         """
 
-        fallback_val = self._ft_has.get("ohlcv_candle_limit")
+        ccxt_val = self.features(
+            "spot" if candle_type == CandleType.SPOT else "futures", "fetchOHLCV", "limit", 500
+        )
+        fallback_val = self._ft_has.get("ohlcv_candle_limit", ccxt_val)
         if candle_type == CandleType.FUNDING_RATE:
             fallback_val = self._ft_has.get("funding_fee_candle_limit", fallback_val)
         return int(
