@@ -68,4 +68,5 @@ def pair_history_filtered(payload: PairHistoryRequest, config=Depends(get_config
             payload.live_mode,
         )
     except Exception as e:
+        logger.exception("Error in pair_history_filtered")
         raise HTTPException(status_code=502, detail=str(e))
