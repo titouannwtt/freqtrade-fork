@@ -489,13 +489,14 @@ def markets(
         handleExchangePayload(query, config_loc)
         exchange = get_exchange(config_loc)
     else:
-        exchange = rpc._exchange
+        exchange = rpc._freqtrade.exchange
 
     return {
         "markets": exchange.get_markets(
             base_currencies=[query.base] if query.base else None,
             quote_currencies=[query.quote] if query.quote else None,
-        )
+        ),
+        "exchange_id": exchange.id,
     }
 
 

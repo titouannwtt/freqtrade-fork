@@ -622,6 +622,7 @@ class MarketModel(BaseModel):
 
 class MarketResponse(BaseModel):
     markets: dict[str, MarketModel]
+    exchange_id: str
 
 
 class SysInfo(BaseModel):
