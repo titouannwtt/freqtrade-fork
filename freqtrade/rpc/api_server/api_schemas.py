@@ -607,6 +607,23 @@ class BacktestMarketChange(BaseModel):
     data: list[list[Any]]
 
 
+class MarketRequest(ExchangeModePayloadMixin, BaseModel):
+    base: str | None = None
+    quote: str | None = None
+
+
+class MarketModel(BaseModel):
+    symbol: str
+    base: str
+    quote: str
+    spot: bool
+    swap: bool
+
+
+class MarketResponse(BaseModel):
+    markets: dict[str, MarketModel]
+
+
 class SysInfo(BaseModel):
     cpu_pct: list[float]
     ram_pct: float

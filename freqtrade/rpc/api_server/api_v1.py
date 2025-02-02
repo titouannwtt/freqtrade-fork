@@ -1,5 +1,6 @@
 import logging
 from copy import deepcopy
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.exceptions import HTTPException
@@ -9,6 +10,7 @@ from freqtrade.data.history import get_datahandler
 from freqtrade.enums import CandleType, State, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.rpc import RPC
+from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import (
     AvailablePairs,
     Balances,
@@ -30,6 +32,8 @@ from freqtrade.rpc.api_server.api_schemas import (
     Locks,
     LocksPayload,
     Logs,
+    MarketRequest,
+    MarketResponse,
     MixTag,
     OpenTradeSchema,
     PairCandlesRequest,
@@ -48,7 +52,7 @@ from freqtrade.rpc.api_server.api_schemas import (
     Version,
     WhitelistResponse,
 )
-from freqtrade.rpc.api_server.deps import get_config, get_rpc, get_rpc_optional
+from freqtrade.rpc.api_server.deps import get_config, get_exchange, get_rpc, get_rpc_optional
 from freqtrade.rpc.rpc import RPCException
 
 
@@ -471,6 +475,28 @@ def list_available_pairs(
         "pair_interval": pair_interval,
     }
     return result
+
+
+@router.get("/markets", response_model=MarketResponse, tags=["candle data", "webserver"])
+def markets(
+    query: Annotated[MarketRequest, Query()],
+    config=Depends(get_config),
+    rpc: RPC | None = Depends(get_rpc_optional),
+):
+    if not rpc:
+        # webserver mode
+        config_loc = deepcopy(config)
+        handleExchangePayload(query, config_loc)
+        exchange = get_exchange(config_loc)
+    else:
+        exchange = rpc._exchange
+
+    return {
+        "markets": exchange.get_markets(
+            base_currencies=[query.base] if query.base else None,
+            quote_currencies=[query.quote] if query.quote else None,
+        )
+    }
 
 
 @router.get("/sysinfo", response_model=SysInfo, tags=["info"])
