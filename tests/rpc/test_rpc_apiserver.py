@@ -3009,3 +3009,55 @@ def test_api_download_data(botclient, mocker, tmp_path):
     assert response["job_category"] == "download_data"
     assert response["status"] == "failed"
     assert response["error"] == "Download error"
+
+
+def test_api_markets_live(botclient):
+    ftbot, client = botclient
+
+    rc = client_get(client, f"{BASE_URI}/markets")
+    assert_response(rc, 200)
+    response = rc.json()
+    assert "markets" in response
+    assert len(response["markets"]) >= 0
+    assert response["markets"]["XRP/USDT"] == {
+        "base": "XRP",
+        "quote": "USDT",
+        "symbol": "XRP/USDT",
+        "spot": True,
+        "swap": False,
+    }
+
+    assert "BTC/USDT" in response["markets"]
+    assert "XRP/BTC" in response["markets"]
+
+    rc = client_get(
+        client,
+        f"{BASE_URI}/markets?base=XRP",
+    )
+    assert_response(rc, 200)
+    response = rc.json()
+    assert "XRP/USDT" in response["markets"]
+    assert "XRP/BTC" in response["markets"]
+
+    assert "BTC/USDT" not in response["markets"]
+
+
+def test_api_markets_webserver(botclient):
+    # Ensure webserver exchanges are reset
+    ApiBG.exchanges = {}
+    ftbot, client = botclient
+    # Test in webserver mode
+    ftbot.config["runmode"] = RunMode.WEBSERVER
+
+    rc = client_get(client, f"{BASE_URI}/markets?exchange=binance")
+    assert_response(rc, 200)
+    response = rc.json()
+    assert "markets" in response
+    assert len(response["markets"]) >= 0
+    assert response["exchange_id"] == "binance"
+
+    rc = client_get(client, f"{BASE_URI}/markets?exchange=hyperliquid")
+    assert_response(rc, 200)
+
+    assert "hyperliquid_spot" in ApiBG.exchanges
+    assert "binance_spot" in ApiBG.exchanges

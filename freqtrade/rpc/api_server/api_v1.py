@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException
 
 from freqtrade import __version__
 from freqtrade.data.history import get_datahandler
-from freqtrade.enums import CandleType, State, TradingMode
+from freqtrade.enums import CandleType, RunMode, State, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.rpc import RPC
 from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
@@ -483,7 +483,7 @@ def markets(
     config=Depends(get_config),
     rpc: RPC | None = Depends(get_rpc_optional),
 ):
-    if not rpc:
+    if not rpc or config["runmode"] == RunMode.WEBSERVER:
         # webserver mode
         config_loc = deepcopy(config)
         handleExchangePayload(query, config_loc)
