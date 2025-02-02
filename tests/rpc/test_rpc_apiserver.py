@@ -2940,7 +2940,7 @@ def test_api_ws_send_msg(default_conf, mocker, caplog):
         ApiServer.shutdown()
 
 
-def test_api_download_data(botclient, mocker, tmp_path, caplog):
+def test_api_download_data(botclient, mocker, tmp_path):
     ftbot, client = botclient
 
     rc = client_post(client, f"{BASE_URI}/download_data", data={})
