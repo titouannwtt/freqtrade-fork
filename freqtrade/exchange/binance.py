@@ -36,6 +36,7 @@ class Binance(Exchange):
         "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
+        "funding_fee_candle_limit": 1000,
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
         "order_time_in_force": ["GTC", "FOK", "IOC"],
         "tickers_have_price": False,
