@@ -140,9 +140,10 @@ class Binance(Exchange):
         :param candle_type: Any of the enum CandleType (must match trading mode!)
         """
         if is_new_pair:
-            x = self.loop.run_until_complete(
-                self._async_get_candle_history(pair, timeframe, candle_type, 0)
-            )
+            with self._loop_lock:
+                x = self.loop.run_until_complete(
+                    self._async_get_candle_history(pair, timeframe, candle_type, 0)
+                )
             if x and x[3] and x[3][0] and x[3][0][0] > since_ms:
                 # Set starting date to first available candle.
                 since_ms = x[3][0][0]
@@ -201,16 +202,17 @@ class Binance(Exchange):
         """
         Fastly fetch OHLCV data by leveraging https://data.binance.vision.
         """
-        df = self.loop.run_until_complete(
-            download_archive_ohlcv(
-                candle_type=candle_type,
-                pair=pair,
-                timeframe=timeframe,
-                since_ms=since_ms,
-                until_ms=until_ms,
-                markets=self.markets,
+        with self._loop_lock:
+            df = self.loop.run_until_complete(
+                download_archive_ohlcv(
+                    candle_type=candle_type,
+                    pair=pair,
+                    timeframe=timeframe,
+                    since_ms=since_ms,
+                    until_ms=until_ms,
+                    markets=self.markets,
+                )
             )
-        )
 
         # download the remaining data from rest API
         if df.empty:

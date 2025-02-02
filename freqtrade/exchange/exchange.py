@@ -648,7 +648,8 @@ class Exchange:
 
     def _load_async_markets(self, reload: bool = False) -> dict[str, Any]:
         try:
-            markets = self.loop.run_until_complete(self._api_reload_markets(reload=reload))
+            with self._loop_lock:
+                markets = self.loop.run_until_complete(self._api_reload_markets(reload=reload))
 
             if isinstance(markets, Exception):
                 raise markets
@@ -2342,15 +2343,16 @@ class Exchange:
         :param until_ms: Timestamp in milliseconds to get history up to
         :return: Dataframe with candle (OHLCV) data
         """
-        pair, _, _, data, _ = self.loop.run_until_complete(
-            self._async_get_historic_ohlcv(
-                pair=pair,
-                timeframe=timeframe,
-                since_ms=since_ms,
-                until_ms=until_ms,
-                candle_type=candle_type,
+        with self._loop_lock:
+            pair, _, _, data, _ = self.loop.run_until_complete(
+                self._async_get_historic_ohlcv(
+                    pair=pair,
+                    timeframe=timeframe,
+                    since_ms=since_ms,
+                    until_ms=until_ms,
+                    candle_type=candle_type,
+                )
             )
-        )
         logger.debug(f"Downloaded data for {pair} from ccxt with length {len(data)}.")
         return ohlcv_to_dataframe(data, timeframe, pair, fill_missing=False, drop_incomplete=True)
 
