@@ -42,12 +42,13 @@ from freqtrade.rpc.rpc_types import RPCSendMsg
 from freqtrade.util import (
     decimals_per_coin,
     dt_from_ts,
+    dt_humanize_delta,
     dt_now,
+    dt_ts,
     dt_ts_def,
     format_date,
     shorten_date,
 )
-from freqtrade.util.datetime_helpers import dt_humanize_delta
 from freqtrade.wallets import PositionWallet, Wallet
 
 
@@ -1460,7 +1461,9 @@ class RPC:
             data = exchange.get_historic_ohlcv(
                 pair=pair,
                 timeframe=timeframe,
-                since_ms=timerange_parsed.startts * 1000 if timerange_parsed.startts else None,
+                since_ms=timerange_parsed.startts * 1000
+                if timerange_parsed.startts
+                else dt_ts(dt_now() - timedelta(days=30)),
                 is_new_pair=True,  # history is never available - so always treat as new pair
                 candle_type=config.get("candle_type_def", CandleType.SPOT),
                 until_ms=timerange_parsed.stopts,
