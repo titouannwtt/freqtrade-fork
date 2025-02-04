@@ -277,6 +277,11 @@ class Exchange:
 
         logger.info(f'Using Exchange "{self.name}"')
         self.required_candle_call_count = 1
+        # Converts the interval provided in minutes in config to seconds
+        self.markets_refresh_interval: int = (
+            exchange_conf.get("markets_refresh_interval", 60) * 60 * 1000
+        )
+
         if validate:
             # Initial markets load
             self.reload_markets(True, load_leverage_tiers=False)
@@ -285,11 +290,6 @@ class Exchange:
             self.required_candle_call_count = self.validate_required_startup_candles(
                 self._startup_candle_count, config.get("timeframe", "")
             )
-
-        # Converts the interval provided in minutes in config to seconds
-        self.markets_refresh_interval: int = (
-            exchange_conf.get("markets_refresh_interval", 60) * 60 * 1000
-        )
 
         if self.trading_mode != TradingMode.SPOT and load_leverage_tiers:
             self.fill_leverage_tiers()
