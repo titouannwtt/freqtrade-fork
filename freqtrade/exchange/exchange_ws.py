@@ -9,6 +9,8 @@ import ccxt
 
 from freqtrade.constants import Config, PairWithTimeframe
 from freqtrade.enums.candletype import CandleType
+from freqtrade.exceptions import TemporaryError
+from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import timeframe_to_seconds
 from freqtrade.exchange.exchange_types import OHLCVResponse
 from freqtrade.util import dt_ts, format_ms_time, format_ms_time_det
@@ -83,13 +85,18 @@ class ExchangeWS:
         """
         self._ccxt_object.ohlcvs.get(paircomb[0], {}).pop(paircomb[1], None)
 
+    @retrier(retries=3)
     def ohlcvs(self, pair: str, timeframe: str) -> list[list]:
         """
         Returns a copy of the klines for a pair/timeframe combination
         Note: this will only contain the data received from the websocket
             so the data will build up over time.
         """
-        return deepcopy(self._ccxt_object.ohlcvs.get(pair, {}).get(timeframe, []))
+        try:
+            return deepcopy(self._ccxt_object.ohlcvs.get(pair, {}).get(timeframe, []))
+        except RuntimeError as e:
+            # Capture runtime errors and retry
+            raise TemporaryError(f"Error deepcopying: {e}") from e
 
     def cleanup_expired(self) -> None:
         """
