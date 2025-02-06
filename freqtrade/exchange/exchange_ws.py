@@ -96,6 +96,7 @@ class ExchangeWS:
             return deepcopy(self._ccxt_object.ohlcvs.get(pair, {}).get(timeframe, []))
         except RuntimeError as e:
             # Capture runtime errors and retry
+            # TemporaryError does not cause backoff - so we're essentially retrying immediately
             raise TemporaryError(f"Error deepcopying: {e}") from e
 
     def cleanup_expired(self) -> None:
