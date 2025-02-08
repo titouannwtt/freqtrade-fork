@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from freqtrade.configuration import validate_config_consistency
 from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import PairHistory, PairHistoryRequest
 from freqtrade.rpc.api_server.deps import get_config, get_exchange
@@ -26,17 +27,18 @@ def pair_history(
 ):
     # The initial call to this endpoint can be slow, as it may need to initialize
     # the exchange class.
-    config = deepcopy(config)
-    config.update(
+    config_loc = deepcopy(config)
+    config_loc.update(
         {
             "timeframe": timeframe,
             "strategy": strategy,
             "timerange": timerange,
-            "freqaimodel": freqaimodel if freqaimodel else config.get("freqaimodel"),
+            "freqaimodel": freqaimodel if freqaimodel else config_loc.get("freqaimodel"),
         }
     )
+    validate_config_consistency(config_loc)
     try:
-        return RPC._rpc_analysed_history_full(config, pair, timeframe, exchange, None, False)
+        return RPC._rpc_analysed_history_full(config_loc, pair, timeframe, exchange, None, False)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -58,6 +60,9 @@ def pair_history_filtered(payload: PairHistoryRequest, config=Depends(get_config
     )
     handleExchangePayload(payload, config_loc)
     exchange = get_exchange(config_loc)
+
+    validate_config_consistency(config_loc)
+
     try:
         return RPC._rpc_analysed_history_full(
             config_loc,
