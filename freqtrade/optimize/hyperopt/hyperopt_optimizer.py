@@ -122,7 +122,8 @@ class HyperOptimizer:
         """
         for modules in bases:
             if modules.__name__ != "IStrategy":
-                cloudpickle.register_pickle_by_value(sys.modules[modules.__module__])
+                if mod := sys.modules.get(modules.__module__):
+                    cloudpickle.register_pickle_by_value(mod)
                 self.hyperopt_pickle_magic(modules.__bases__)
 
     def _get_params_dict(
