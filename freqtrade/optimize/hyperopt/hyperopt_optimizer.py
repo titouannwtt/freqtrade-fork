@@ -114,7 +114,7 @@ class HyperOptimizer:
     def get_strategy_name(self) -> str:
         return self.backtesting.strategy.get_strategy_name()
 
-    def hyperopt_pickle_magic(self, bases) -> None:
+    def hyperopt_pickle_magic(self, bases: tuple[type, ...]) -> None:
         """
         Hyperopt magic to allow strategy inheritance across files.
         For this to properly work, we need to register the module of the imported class
