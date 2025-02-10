@@ -29,7 +29,6 @@ class Binance(Exchange):
         "stop_price_prop": "stopPrice",
         "stoploss_order_types": {"limit": "stop_loss_limit"},
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
-        "ohlcv_candle_limit": 1000,
         "trades_pagination": "id",
         "trades_pagination_arg": "fromId",
         "trades_has_history": True,
@@ -37,6 +36,7 @@ class Binance(Exchange):
         "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
+        "funding_fee_candle_limit": 1000,
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
         "order_time_in_force": ["GTC", "FOK", "IOC"],
         "tickers_have_price": False,
@@ -48,14 +48,28 @@ class Binance(Exchange):
             PriceType.MARK: "MARK_PRICE",
         },
         "ws_enabled": False,
+        "proxy_coin_mapping": {
+            "BNFCR": "USDC",
+            "BFUSD": "USDT",
+        },
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
         # TradingMode.SPOT always supported and not required in this list
         # (TradingMode.MARGIN, MarginMode.CROSS),
-        # (TradingMode.FUTURES, MarginMode.CROSS),
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
+        (TradingMode.FUTURES, MarginMode.CROSS),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
+
+    def get_proxy_coin(self) -> str:
+        """
+        Get the proxy coin for the given coin
+        Falls back to the stake currency if no proxy coin is found
+        :return: Proxy coin or stake currency
+        """
+        if self.margin_mode == MarginMode.CROSS:
+            return self._config.get("proxy_coin", self._config["stake_currency"])
+        return self._config["stake_currency"]
 
     def get_tickers(
         self,
@@ -126,9 +140,10 @@ class Binance(Exchange):
         :param candle_type: Any of the enum CandleType (must match trading mode!)
         """
         if is_new_pair:
-            x = self.loop.run_until_complete(
-                self._async_get_candle_history(pair, timeframe, candle_type, 0)
-            )
+            with self._loop_lock:
+                x = self.loop.run_until_complete(
+                    self._async_get_candle_history(pair, timeframe, candle_type, 0)
+                )
             if x and x[3] and x[3][0] and x[3][0][0] > since_ms:
                 # Set starting date to first available candle.
                 since_ms = x[3][0][0]
@@ -187,16 +202,17 @@ class Binance(Exchange):
         """
         Fastly fetch OHLCV data by leveraging https://data.binance.vision.
         """
-        df = self.loop.run_until_complete(
-            download_archive_ohlcv(
-                candle_type=candle_type,
-                pair=pair,
-                timeframe=timeframe,
-                since_ms=since_ms,
-                until_ms=until_ms,
-                markets=self.markets,
+        with self._loop_lock:
+            df = self.loop.run_until_complete(
+                download_archive_ohlcv(
+                    candle_type=candle_type,
+                    pair=pair,
+                    timeframe=timeframe,
+                    since_ms=since_ms,
+                    until_ms=until_ms,
+                    markets=self.markets,
+                )
             )
-        )
 
         # download the remaining data from rest API
         if df.empty:
@@ -349,7 +365,7 @@ class Binance(Exchange):
             return {}
 
     async def _async_get_trade_history_id_startup(
-        self, pair: str, since: int | None
+        self, pair: str, since: int
     ) -> tuple[list[list], str]:
         """
         override for initial call

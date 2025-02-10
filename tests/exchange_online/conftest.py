@@ -21,6 +21,7 @@ EXCHANGES = {
         "use_ci_proxy": True,
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1000,
         "futures": True,
         "futures_pair": "BTC/USDT:USDT",
         "hasQuoteVolumeFutures": True,
@@ -96,6 +97,7 @@ EXCHANGES = {
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1000,
         "futures": False,
         "skip_ws_tests": True,
         "sample_order": [
@@ -136,15 +138,34 @@ EXCHANGES = {
         "stake_currency": "USD",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 720,
         "leverage_tiers_public": False,
         "leverage_in_spot_market": True,
         "trades_lookback_hours": 12,
+        "sample_balances": {
+            "exchange_response": {
+                "result": {
+                    "ADA": {"balance": "0.00000000", "hold_trade": "0.00000000"},
+                    "ADA.F": {"balance": "2.00000000", "hold_trade": "0.00000000"},
+                    "XBT": {"balance": "0.00060000", "hold_trade": "0.00000000"},
+                    "XBT.F": {"balance": "0.00100000", "hold_trade": "0.00000000"},
+                }
+            },
+            "expected": {
+                "ADA": {"free": 0.0, "total": 0.0, "used": 0.0},
+                "ADA.F": {"free": 2.0, "total": 2.0, "used": 0.0},
+                "BTC": {"free": 0.0006, "total": 0.0006, "used": 0.0},
+                # XBT.F should be mapped to BTC.F
+                "XBT.F": {"free": 0.001, "total": 0.001, "used": 0.0},
+            },
+        },
     },
     "kucoin": {
         "pair": "XRP/USDT",
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1500,
         "leverage_tiers_public": False,
         "leverage_in_spot_market": True,
         "sample_order": [
@@ -212,6 +233,7 @@ EXCHANGES = {
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1000,
         "futures": True,
         "futures_pair": "BTC/USDT:USDT",
         "hasQuoteVolumeFutures": True,
@@ -328,6 +350,7 @@ EXCHANGES = {
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 300,
         "futures": True,
         "futures_pair": "BTC/USDT:USDT",
         "hasQuoteVolumeFutures": False,
@@ -341,6 +364,7 @@ EXCHANGES = {
         "hasQuoteVolume": True,
         "use_ci_proxy": True,
         "timeframe": "1h",
+        "candle_count": 1000,
         "futures_pair": "BTC/USDT:USDT",
         "futures": True,
         "orderbook_max_entries": 50,
@@ -381,6 +405,7 @@ EXCHANGES = {
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 200,
         "orderbook_max_entries": 50,
     },
     "htx": {
@@ -388,13 +413,14 @@ EXCHANGES = {
         "stake_currency": "BTC",
         "hasQuoteVolume": True,
         "timeframe": "1h",
-        "futures": False,
+        "candle_count": 1000,
     },
     "bitvavo": {
         "pair": "BTC/EUR",
         "stake_currency": "EUR",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1440,
         "leverage_tiers_public": False,
         "leverage_in_spot_market": False,
     },
@@ -403,6 +429,7 @@ EXCHANGES = {
         "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
+        "candle_count": 1000,
         "futures": False,
         "sample_order": [
             {
@@ -465,6 +492,7 @@ EXCHANGES = {
         "hasQuoteVolume": False,
         "timeframe": "1h",
         "futures": True,
+        "candle_count": 5000,
         "orderbook_max_entries": 20,
         "futures_pair": "BTC/USDC:USDC",
         "hasQuoteVolumeFutures": True,

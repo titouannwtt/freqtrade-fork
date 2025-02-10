@@ -988,6 +988,29 @@ def get_markets():
             },
             "info": {},
         },
+        "ETC/BTC": {
+            "id": "ETCBTC",
+            "symbol": "ETC/BTC",
+            "base": "ETC",
+            "quote": "BTC",
+            "active": True,
+            "spot": True,
+            "swap": False,
+            "linear": None,
+            "type": "spot",
+            "contractSize": None,
+            "precision": {"base": 8, "quote": 8, "amount": 2, "price": 7},
+            "limits": {
+                "amount": {"min": 0.01, "max": 90000000.0},
+                "price": {"min": 1e-07, "max": 1000.0},
+                "cost": {"min": 0.0001, "max": 9000000.0},
+                "leverage": {
+                    "min": None,
+                    "max": None,
+                },
+            },
+            "info": {},
+        },
         "ETH/USDT": {
             "id": "USDT-ETH",
             "symbol": "ETH/USDT",
@@ -1754,15 +1777,6 @@ def limit_buy_order_open():
         "remaining": 90.99181073,
         "status": "open",
     }
-
-
-@pytest.fixture(scope="function")
-def limit_buy_order(limit_buy_order_open):
-    order = deepcopy(limit_buy_order_open)
-    order["status"] = "closed"
-    order["filled"] = order["amount"]
-    order["remaining"] = 0.0
-    return order
 
 
 @pytest.fixture

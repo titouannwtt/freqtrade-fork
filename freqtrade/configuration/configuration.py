@@ -26,7 +26,7 @@ from freqtrade.enums import (
 )
 from freqtrade.exceptions import OperationalException
 from freqtrade.loggers import setup_logging
-from freqtrade.misc import deep_merge_dicts, parse_db_uri_for_logging
+from freqtrade.misc import deep_merge_dicts, parse_db_uri_for_logging, safe_value_fallback
 
 
 logger = logging.getLogger(__name__)
@@ -130,10 +130,19 @@ class Configuration:
         the -v/--verbose, --logfile options
         """
         # Log level
-        config.update({"verbosity": self.args.get("verbosity", 0)})
+        if "verbosity" not in config or self.args.get("verbosity") is not None:
+            config.update(
+                {"verbosity": safe_value_fallback(self.args, "verbosity", default_value=0)}
+            )
 
         if "logfile" in self.args and self.args["logfile"]:
             config.update({"logfile": self.args["logfile"]})
+
+        if "print_colorized" in self.args and not self.args["print_colorized"]:
+            logger.info("Parameter --no-color detected ...")
+            config.update({"print_colorized": False})
+        else:
+            config.update({"print_colorized": True})
 
         setup_logging(config)
 
@@ -325,12 +334,6 @@ class Configuration:
             ("print_all", "Parameter --print-all detected ..."),
         ]
         self._args_to_config_loop(config, configurations)
-
-        if "print_colorized" in self.args and not self.args["print_colorized"]:
-            logger.info("Parameter --no-color detected ...")
-            config.update({"print_colorized": False})
-        else:
-            config.update({"print_colorized": True})
 
         configurations = [
             ("print_json", "Parameter --print-json detected ..."),

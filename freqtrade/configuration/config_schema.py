@@ -40,6 +40,10 @@ CONF_SCHEMA = {
             ),
             "type": "string",
         },
+        "proxy_coin": {
+            "description": "Proxy coin - must be used for specific futures modes (e.g. BNFCR)",
+            "type": "string",
+        },
         "stake_currency": {
             "description": "Currency used for staking.",
             "type": "string",
@@ -649,7 +653,7 @@ CONF_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
-                "x": {
+                "verbosity": {
                     "description": "Logging verbosity level.",
                     "type": "string",
                     "enum": ["error", "info"],
