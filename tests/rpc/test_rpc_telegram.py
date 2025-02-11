@@ -67,7 +67,7 @@ def default_conf(default_conf) -> dict:
 
 @pytest.fixture
 def update():
-    message = Message(0, datetime.now(timezone.utc), Chat(0, 0))
+    message = Message(0, datetime.now(timezone.utc), Chat(1235, 0))
     _update = Update(0, message=message)
 
     return _update
@@ -167,7 +167,7 @@ def test_telegram_init(default_conf, mocker, caplog) -> None:
         "['stopbuy', 'stopentry'], ['whitelist'], ['blacklist'], "
         "['bl_delete', 'blacklist_delete'], "
         "['logs'], ['edge'], ['health'], ['help'], ['version'], ['marketdir'], "
-        "['order'], ['list_custom_data']]"
+        "['order'], ['list_custom_data'], ['tg_info']]"
     )
 
     assert log_has(message_str, caplog)
@@ -224,8 +224,8 @@ async def test_authorized_only(default_conf, mocker, caplog, update) -> None:
     patch_get_signal(bot)
     await dummy.dummy_handler(update=update, context=MagicMock())
     assert dummy.state["called"] is True
-    assert log_has("Executing handler: dummy_handler for chat_id: 0", caplog)
-    assert not log_has("Rejected unauthorized message from: 0", caplog)
+    assert log_has("Executing handler: dummy_handler for chat_id: 1235", caplog)
+    assert not log_has("Rejected unauthorized message from: 1235", caplog)
     assert not log_has("Exception occurred within Telegram module", caplog)
 
 
@@ -918,7 +918,7 @@ async def test_telegram_profit_handle(
     )
     assert "∙ `6.253 USD`" in msg_mock.call_args_list[-1][0][0]
 
-    assert "*Best Performing:* `ETH/USDT: 9.45%`" in msg_mock.call_args_list[-1][0][0]
+    assert "*Best Performing:* `ETH/USDT: 5.685 USDT (9.47%)`" in msg_mock.call_args_list[-1][0][0]
     assert "*Max Drawdown:*" in msg_mock.call_args_list[-1][0][0]
     assert "*Profit factor:*" in msg_mock.call_args_list[-1][0][0]
     assert "*Winrate:*" in msg_mock.call_args_list[-1][0][0]
@@ -1591,7 +1591,7 @@ async def test_telegram_performance_handle(default_conf_usdt, update, ticker, fe
     await telegram._performance(update=update, context=MagicMock())
     assert msg_mock.call_count == 1
     assert "Performance" in msg_mock.call_args_list[0][0][0]
-    assert "<code>XRP/USDT\t2.842 USDT (10.00%) (1)</code>" in msg_mock.call_args_list[0][0][0]
+    assert "<code>XRP/USDT\t2.842 USDT (9.47%) (1)</code>" in msg_mock.call_args_list[0][0][0]
 
 
 async def test_telegram_entry_tag_performance_handle(
@@ -1611,7 +1611,7 @@ async def test_telegram_entry_tag_performance_handle(
     await telegram._enter_tag_performance(update=update, context=context)
     assert msg_mock.call_count == 1
     assert "Entry Tag Performance" in msg_mock.call_args_list[0][0][0]
-    assert "`TEST1\t3.987 USDT (5.00%) (1)`" in msg_mock.call_args_list[0][0][0]
+    assert "`TEST1\t3.987 USDT (1.99%) (1)`" in msg_mock.call_args_list[0][0][0]
 
     context.args = ["XRP/USDT"]
     await telegram._enter_tag_performance(update=update, context=context)
@@ -1644,7 +1644,7 @@ async def test_telegram_exit_reason_performance_handle(
     await telegram._exit_reason_performance(update=update, context=context)
     assert msg_mock.call_count == 1
     assert "Exit Reason Performance" in msg_mock.call_args_list[0][0][0]
-    assert "`roi\t2.842 USDT (10.00%) (1)`" in msg_mock.call_args_list[0][0][0]
+    assert "`roi\t2.842 USDT (9.47%) (1)`" in msg_mock.call_args_list[0][0][0]
     context.args = ["XRP/USDT"]
 
     await telegram._exit_reason_performance(update=update, context=context)
@@ -2876,8 +2876,7 @@ async def test_telegram_list_custom_data(default_conf_usdt, update, ticker, fee,
     assert msg_mock.call_count == 3
     assert "Found custom-data entries: " in msg_mock.call_args_list[0][0][0]
     assert (
-        "*Key:* `test_int`\n*ID:* `1`\n*Trade ID:* `1`\n*Type:* `int`\n"
-        "*Value:* `1`\n*Create Date:*"
+        "*Key:* `test_int`\n*ID:* `1`\n*Trade ID:* `1`\n*Type:* `int`\n*Value:* `1`\n*Create Date:*"
     ) in msg_mock.call_args_list[1][0][0]
     assert (
         "*Key:* `test_dict`\n*ID:* `2`\n*Trade ID:* `1`\n*Type:* `dict`\n"
@@ -2967,3 +2966,15 @@ def test_noficiation_settings(default_conf_usdt, mocker):
     assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "roi"}) == "off"
     assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "partial_exit"}) == "off"
     assert loudness({"type": RPCMessageType.EXIT, "exit_reason": "cust_exit112"}) == "off"
+
+
+async def test__tg_info(default_conf_usdt, mocker, update):
+    (telegram, _, _) = get_telegram_testobject(mocker, default_conf_usdt)
+    context = AsyncMock()
+
+    await telegram._tg_info(update, context)
+
+    assert context.bot.send_message.call_count == 1
+    content = context.bot.send_message.call_args[1]["text"]
+    assert "Freqtrade Bot Info:\n" in content
+    assert '"chat_id": "1235"' in content

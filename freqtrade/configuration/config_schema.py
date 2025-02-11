@@ -40,6 +40,10 @@ CONF_SCHEMA = {
             ),
             "type": "string",
         },
+        "proxy_coin": {
+            "description": "Proxy coin - must be used for specific futures modes (e.g. BNFCR)",
+            "type": "string",
+        },
         "stake_currency": {
             "description": "Currency used for staking.",
             "type": "string",
@@ -460,7 +464,11 @@ CONF_SCHEMA = {
                 },
                 "token": {"description": "Telegram bot token.", "type": "string"},
                 "chat_id": {
-                    "description": "Telegram chat ID",
+                    "description": "Telegram chat or group ID",
+                    "type": "string",
+                },
+                "topic_id": {
+                    "description": "Telegram topic ID - only applicable for group chats",
                     "type": "string",
                 },
                 "allow_custom_messages": {
@@ -645,7 +653,7 @@ CONF_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
-                "x": {
+                "verbosity": {
                     "description": "Logging verbosity level.",
                     "type": "string",
                     "enum": ["error", "info"],

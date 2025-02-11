@@ -8,6 +8,7 @@ from sqlalchemy import select
 from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH, DATETIME_PRINT_FORMAT
 from freqtrade.enums import TradingMode
 from freqtrade.exceptions import DependencyException
+from freqtrade.exchange.exchange_utils import TICK_SIZE
 from freqtrade.persistence import LocalTrade, Order, Trade, init_db
 from freqtrade.util import dt_now
 from tests.conftest import (
@@ -1930,9 +1931,9 @@ def test_get_overall_performance(fee):
 @pytest.mark.parametrize(
     "is_short,pair,profit",
     [
-        (True, "ETC/BTC", -0.005),
-        (False, "XRP/BTC", 0.01),
-        (None, "XRP/BTC", 0.01),
+        (True, "XRP/BTC", -0.00018780487),
+        (False, "ETC/BTC", 0.00003860975),
+        (None, "XRP/BTC", 0.000025203252),
     ],
 )
 def test_get_best_pair(fee, is_short, pair, profit):
@@ -1941,9 +1942,9 @@ def test_get_best_pair(fee, is_short, pair, profit):
 
     create_mock_trades(fee, is_short)
     res = Trade.get_best_pair()
-    assert len(res) == 2
+    assert len(res) == 4
     assert res[0] == pair
-    assert res[1] == profit
+    assert pytest.approx(res[1]) == profit
 
 
 @pytest.mark.usefixtures("init_persistence")
@@ -1953,9 +1954,9 @@ def test_get_best_pair_lev(fee):
 
     create_mock_trades_with_leverage(fee)
     res = Trade.get_best_pair()
-    assert len(res) == 2
-    assert res[0] == "DOGE/BTC"
-    assert res[1] == 0.1713156134055116
+    assert len(res) == 4
+    assert res[0] == "ETC/BTC"
+    assert pytest.approx(res[1]) == 0.00003860975
 
 
 @pytest.mark.usefixtures("init_persistence")
@@ -2144,7 +2145,6 @@ def test_Trade_object_idem():
         "bt_trades_open",
         "bt_trades_open_pp",
         "bt_open_open_trade_count",
-        "bt_open_open_trade_count_candle",
         "bt_total_profit",
         "from_json",
     )
@@ -2833,6 +2833,8 @@ def test_recalc_trade_from_orders_dca(data) -> None:
         is_short=False,
         leverage=1.0,
         trading_mode=TradingMode.SPOT,
+        price_precision=0.001,
+        precision_mode_price=TICK_SIZE,
     )
     Trade.session.add(trade)
 
