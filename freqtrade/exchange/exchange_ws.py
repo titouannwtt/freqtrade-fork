@@ -84,6 +84,7 @@ class ExchangeWS:
         Remove history for a pair/timeframe combination from ccxt cache
         """
         self._ccxt_object.ohlcvs.get(paircomb[0], {}).pop(paircomb[1], None)
+        self.klines_last_refresh.pop(paircomb, None)
 
     @retrier(retries=3)
     def ohlcvs(self, pair: str, timeframe: str) -> list[list]:
@@ -140,10 +141,12 @@ class ExchangeWS:
 
     async def _unwatch_ohlcv(self, pair: str, timeframe: str, candle_type: CandleType) -> None:
         try:
-            await self.ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
+            await self._ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
         except ccxt.NotSupported as e:
             logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
             pass
+        except Exception:
+            logger.exception("Exception in _unwatch_ohlcv")
 
     def _continuous_stopped(
         self, task: asyncio.Task, pair: str, timeframe: str, candle_type: CandleType
