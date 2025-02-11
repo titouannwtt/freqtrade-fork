@@ -138,6 +138,13 @@ class ExchangeWS:
                     )
                 )
 
+    async def _unwatch_ohlcv(self, pair: str, timeframe: str, candle_type: CandleType) -> None:
+        try:
+            await self.ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
+        except ccxt.NotSupported as e:
+            logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
+            pass
+
     def _continuous_stopped(
         self, task: asyncio.Task, pair: str, timeframe: str, candle_type: CandleType
     ):
@@ -150,6 +157,10 @@ class ExchangeWS:
                 result = str(result1)
 
         logger.info(f"{pair}, {timeframe}, {candle_type} - Task finished - {result}")
+        asyncio.run_coroutine_threadsafe(
+            self._unwatch_ohlcv(pair, timeframe, candle_type), loop=self._loop
+        )
+
         self._klines_scheduled.discard((pair, timeframe, candle_type))
         self._pop_history((pair, timeframe, candle_type))
 
