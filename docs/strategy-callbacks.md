@@ -758,7 +758,7 @@ For performance reasons, it's disabled by default and freqtrade will show a warn
 
 Additional orders also result in additional fees and those orders don't count towards `max_open_trades`.
 
-This callback is **not** called when there is an open order (either buy or sell) waiting for execution.
+This callback is also called when there is an open order (either buy or sell) waiting for execution - and will cancel the existing open order to place a new order if the amount, price or direction is different.
 
 `adjust_trade_position()` is called very frequently for the duration of a trade, so you must keep your implementation as performant as possible.
 
@@ -767,10 +767,17 @@ Adjustment orders can be assigned with a tag by returning a 2 element Tuple, wit
 
 Modifications to leverage are not possible, and the stake-amount returned is assumed to be before applying leverage.
 
+The combined stake currently allocated to the position is held in `trade.stake_amount`. Therefore `trade.stake_amount` will always be updated on every additional entry and partial exit made through `adjust_trade_position()`.
+
 !!! Danger "Loose Logic"
     On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run out of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
 
     Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order.
+
+!!! Warning "Performance with many position adjustments"
+    Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
+    Each of the orders will be attached to the trade object for the duration of the trade - hence increasing memory usage.
+    Trades with long duration and 10s or even 100ds of position adjustments are therefore not recommended, and should be closed at regular intervals to not affect performance.
 
 !!! Warning "Backtesting"
     During backtesting this callback is called for each candle in `timeframe` or `timeframe_detail`, so run-time performance will be affected.
@@ -807,11 +814,6 @@ Back to the example above, since current rate is 200, the current USDT value of 
     Regular stoploss rules still apply (cannot move down).
 
     While `/stopentry` command stops the bot from entering new trades, the position adjustment feature will continue buying new orders on existing trades.
-
-!!! Warning "Performance with many position adjustments"
-    Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
-    Each of the orders will be attached to the trade object for the duration of the trade - hence increasing memory usage.
-    Trades with long duration and 10s or even 100ds of position adjustments are therefore not recommended, and should be closed at regular intervals to not affect performance.
 
 ``` python
 # Default imports
@@ -934,7 +936,10 @@ class DigDeeperStrategy(IStrategy):
 
 ## Adjust Entry Price
 
-The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.
+The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.  
+This callback is called once every iteration unless the order has been (re)placed within the current candle - limiting the maximum (re)placement of each order to once per candle.
+This also means that the first call will be at the start of the next candle after the initial order was placed.
+
 Be aware that `custom_entry_price()` is still the one dictating initial entry limit order price target at the time of entry trigger.
 
 Orders can be cancelled out of this callback by returning `None`.
@@ -945,7 +950,8 @@ Returning any other price will cancel the existing order, and replace it with a 
 The trade open-date (`trade.open_date_utc`) will remain at the time of the very first order placed.
 Please make sure to be aware of this - and eventually adjust your logic in other callbacks to account for this, and use the date of the first filled order instead.
 
-If the cancellation of the original order fails, then the order will not be replaced - though the order will most likely have been canceled on exchange. Having this happen on initial entries will result in the deletion of the order, while on position adjustment orders, it'll result in the trade size remaining as is.
+If the cancellation of the original order fails, then the order will not be replaced - though the order will most likely have been canceled on exchange. Having this happen on initial entries will result in the deletion of the order, while on position adjustment orders, it'll result in the trade size remaining as is.  
+If the order has been partially filled, the order will not be replaced. You can however use [`adjust_trade_position()`](#adjust-trade-position) to adjust the trade size to the full, expected position size, should this be necessary / desired.
 
 !!! Warning "Regular timeout"
     Entry `unfilledtimeout` mechanism (as well as `check_entry_timeout()`) takes precedence over this.

@@ -150,6 +150,7 @@ class Profit(BaseModel):
     best_pair: str
     best_rate: float
     best_pair_profit_ratio: float
+    best_pair_profit_abs: float
     winning_trades: int
     losing_trades: int
     profit_factor: float
@@ -523,10 +524,11 @@ class PairCandlesRequest(BaseModel):
     columns: list[str] | None = None
 
 
-class PairHistoryRequest(PairCandlesRequest):
+class PairHistoryRequest(PairCandlesRequest, ExchangeModePayloadMixin):
     timerange: str
-    strategy: str
+    strategy: str | None = None
     freqaimodel: str | None = None
+    live_mode: bool = False
 
 
 class PairHistory(BaseModel):
@@ -603,6 +605,24 @@ class BacktestMarketChange(BaseModel):
     columns: list[str]
     length: int
     data: list[list[Any]]
+
+
+class MarketRequest(ExchangeModePayloadMixin, BaseModel):
+    base: str | None = None
+    quote: str | None = None
+
+
+class MarketModel(BaseModel):
+    symbol: str
+    base: str
+    quote: str
+    spot: bool
+    swap: bool
+
+
+class MarketResponse(BaseModel):
+    markets: dict[str, MarketModel]
+    exchange_id: str
 
 
 class SysInfo(BaseModel):

@@ -26,7 +26,6 @@ class Kraken(Exchange):
         "stop_price_prop": "stopLossPrice",
         "stoploss_order_types": {"limit": "limit", "market": "market"},
         "order_time_in_force": ["GTC", "IOC", "PO"],
-        "ohlcv_candle_limit": 720,
         "ohlcv_has_history": False,
         "trades_pagination": "id",
         "trades_pagination_arg": "since",
@@ -70,6 +69,7 @@ class Kraken(Exchange):
         consolidated: CcxtBalances = {}
         for currency, balance in balances.items():
             base_currency = currency[:-2] if currency.endswith(".F") else currency
+            base_currency = self._api.commonCurrencies.get(base_currency, base_currency)
             if base_currency in consolidated:
                 consolidated[base_currency]["free"] += balance["free"]
                 consolidated[base_currency]["used"] += balance["used"]

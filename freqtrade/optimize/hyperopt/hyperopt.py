@@ -6,7 +6,6 @@ This module contains the hyperopt logic
 
 import logging
 import random
-import sys
 from datetime import datetime
 from math import ceil
 from multiprocessing import Manager
@@ -15,8 +14,6 @@ from typing import Any
 
 import rapidjson
 from joblib import Parallel, cpu_count, delayed, wrap_non_picklable_objects
-from joblib.externals import cloudpickle
-from rich.console import Console
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
@@ -93,7 +90,6 @@ class Hyperopt:
 
         self.print_all = self.config.get("print_all", False)
         self.hyperopt_table_header = 0
-        self.print_colorized = self.config.get("print_colorized", False)
         self.print_json = self.config.get("print_json", False)
 
         self.hyperopter = HyperOptimizer(self.config)
@@ -111,17 +107,6 @@ class Hyperopt:
             if p.is_file():
                 logger.info(f"Removing `{p}`.")
                 p.unlink()
-
-    def hyperopt_pickle_magic(self, bases) -> None:
-        """
-        Hyperopt magic to allow strategy inheritance across files.
-        For this to properly work, we need to register the module of the imported class
-        to pickle as value.
-        """
-        for modules in bases:
-            if modules.__name__ != "IStrategy":
-                cloudpickle.register_pickle_by_value(sys.modules[modules.__module__])
-                self.hyperopt_pickle_magic(modules.__bases__)
 
     def _save_result(self, epoch: dict) -> None:
         """
@@ -281,15 +266,9 @@ class Hyperopt:
             with Parallel(n_jobs=config_jobs) as parallel:
                 jobs = parallel._effective_n_jobs()
                 logger.info(f"Effective number of parallel workers used: {jobs}")
-                console = Console(
-                    color_system="auto" if self.print_colorized else None,
-                )
 
                 # Define progressbar
-                with get_progress_tracker(
-                    console=console,
-                    cust_callables=[self._hyper_out],
-                ) as pbar:
+                with get_progress_tracker(cust_callables=[self._hyper_out]) as pbar:
                     task = pbar.add_task("Epochs", total=self.total_epochs)
 
                     start = 0

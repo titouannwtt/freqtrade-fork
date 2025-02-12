@@ -1,14 +1,16 @@
 import logging
 from copy import deepcopy
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.exceptions import HTTPException
 
 from freqtrade import __version__
 from freqtrade.data.history import get_datahandler
-from freqtrade.enums import CandleType, TradingMode
+from freqtrade.enums import CandleType, RunMode, State, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.rpc import RPC
+from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import (
     AvailablePairs,
     Balances,
@@ -31,11 +33,12 @@ from freqtrade.rpc.api_server.api_schemas import (
     Locks,
     LocksPayload,
     Logs,
+    MarketRequest,
+    MarketResponse,
     MixTag,
     OpenTradeSchema,
     PairCandlesRequest,
     PairHistory,
-    PairHistoryRequest,
     PerformanceEntry,
     Ping,
     PlotConfig,
@@ -85,7 +88,8 @@ logger = logging.getLogger(__name__)
 # 2.35: pair_candles and pair_history endpoints as Post variant
 # 2.40: Add hyperopt-loss endpoint
 # 2.41: Add download-data endpoint
-API_VERSION = 2.41
+# 2.42: Add /pair_history endpoint with live data
+API_VERSION = 2.42
 
 # Public API, requires no auth.
 router_public = APIRouter()
@@ -218,7 +222,7 @@ def edge(rpc: RPC = Depends(get_rpc)):
 
 @router.get("/show_config", response_model=ShowConfig, tags=["info"])
 def show_config(rpc: RPC | None = Depends(get_rpc_optional), config=Depends(get_config)):
-    state = ""
+    state: State | str = ""
     strategy_version = None
     if rpc:
         state = rpc._freqtrade.state
@@ -341,58 +345,6 @@ def pair_candles_filtered(payload: PairCandlesRequest, rpc: RPC = Depends(get_rp
     return rpc._rpc_analysed_dataframe(
         payload.pair, payload.timeframe, payload.limit, payload.columns
     )
-
-
-@router.get("/pair_history", response_model=PairHistory, tags=["candle data"])
-def pair_history(
-    pair: str,
-    timeframe: str,
-    timerange: str,
-    strategy: str,
-    freqaimodel: str | None = None,
-    config=Depends(get_config),
-    exchange=Depends(get_exchange),
-):
-    # The initial call to this endpoint can be slow, as it may need to initialize
-    # the exchange class.
-    config = deepcopy(config)
-    config.update(
-        {
-            "timeframe": timeframe,
-            "strategy": strategy,
-            "timerange": timerange,
-            "freqaimodel": freqaimodel if freqaimodel else config.get("freqaimodel"),
-        }
-    )
-    try:
-        return RPC._rpc_analysed_history_full(config, pair, timeframe, exchange, None)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
-
-
-@router.post("/pair_history", response_model=PairHistory, tags=["candle data"])
-def pair_history_filtered(
-    payload: PairHistoryRequest, config=Depends(get_config), exchange=Depends(get_exchange)
-):
-    # The initial call to this endpoint can be slow, as it may need to initialize
-    # the exchange class.
-    config = deepcopy(config)
-    config.update(
-        {
-            "timeframe": payload.timeframe,
-            "strategy": payload.strategy,
-            "timerange": payload.timerange,
-            "freqaimodel": (
-                payload.freqaimodel if payload.freqaimodel else config.get("freqaimodel")
-            ),
-        }
-    )
-    try:
-        return RPC._rpc_analysed_history_full(
-            config, payload.pair, payload.timeframe, exchange, payload.columns
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.get("/plot_config", response_model=PlotConfig, tags=["candle data"])
@@ -524,6 +476,29 @@ def list_available_pairs(
         "pair_interval": pair_interval,
     }
     return result
+
+
+@router.get("/markets", response_model=MarketResponse, tags=["candle data", "webserver"])
+def markets(
+    query: Annotated[MarketRequest, Query()],
+    config=Depends(get_config),
+    rpc: RPC | None = Depends(get_rpc_optional),
+):
+    if not rpc or config["runmode"] == RunMode.WEBSERVER:
+        # webserver mode
+        config_loc = deepcopy(config)
+        handleExchangePayload(query, config_loc)
+        exchange = get_exchange(config_loc)
+    else:
+        exchange = rpc._freqtrade.exchange
+
+    return {
+        "markets": exchange.get_markets(
+            base_currencies=[query.base] if query.base else None,
+            quote_currencies=[query.quote] if query.quote else None,
+        ),
+        "exchange_id": exchange.id,
+    }
 
 
 @router.get("/sysinfo", response_model=SysInfo, tags=["info"])

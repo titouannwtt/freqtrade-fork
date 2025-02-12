@@ -45,7 +45,7 @@ def test__get_params_binance(default_conf, mocker, side, order_type, time_in_for
 )
 def test_create_stoploss_order_binance(default_conf, mocker, limitratio, expected, side, trademode):
     api_mock = MagicMock()
-    order_id = f"test_prod_buy_{randint(0, 10 ** 6)}"
+    order_id = f"test_prod_buy_{randint(0, 10**6)}"
     order_type = "stop_loss_limit" if trademode == TradingMode.SPOT else "stop"
 
     api_mock.create_order = MagicMock(return_value={"id": order_id, "info": {"foo": "bar"}})
@@ -1053,3 +1053,6 @@ async def test__async_get_trade_history_id_binance(default_conf_usdt, mocker, fe
 
     assert fetch_trades_cal[2][1]["params"][pagination_arg] != "0"
     assert fetch_trades_cal[3][1]["params"][pagination_arg] != "0"
+
+    # Clean up event loop to avoid warnings
+    exchange.close()
