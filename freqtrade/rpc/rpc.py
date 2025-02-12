@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from math import isnan
-from typing import Any
+from typing import Any, Optional
 
 import psutil
 from dateutil.relativedelta import relativedelta
@@ -1097,9 +1097,11 @@ class RPC:
                 "cancel_order_count": c_count,
             }
 
-    def _rpc_list_custom_data(self, trade_id: int) -> list[dict[str, Any]]:
-        # Query trades based on trade_id
-        if trade_id == -1:
+    def _rpc_list_custom_data(self, trade_id: Optional[int] = None) -> list[dict[str, Any]]:
+        """
+        Fetch custom data for a specific trade, or all open trades if `trade_id` is not provided.
+        """
+        if trade_id is None:
             #get all open trades
             trades = Trade.get_open_trades()
         else:
