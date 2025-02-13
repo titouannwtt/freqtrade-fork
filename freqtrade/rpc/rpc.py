@@ -1132,7 +1132,7 @@ class RPC:
         # Collect custom data
         custom_data = []
         if key:
-            data = trade.get_custom_data(key=key)
+            data = trades.get_custom_data(key=key)
             if data:
                 custom_data = [data]
         else:

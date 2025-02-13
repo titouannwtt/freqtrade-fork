@@ -496,5 +496,5 @@ class FtRestClient:
         trade_id = -1
         if trade_id is not None:
             params["trade_id"] = trade_id
-        
+
         return self._get("trades/{tradeid}/custom_data", params=params)

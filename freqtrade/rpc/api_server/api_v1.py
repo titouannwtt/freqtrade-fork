@@ -518,7 +518,7 @@ def list_open_trades_custom_data(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_list_custom_data()
 
 @router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["info"])
-def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):     
+def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):
     """
     Fetch custom data for a specific trade.
     """
