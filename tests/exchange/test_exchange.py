@@ -645,7 +645,7 @@ def test_reload_markets(default_conf, mocker, caplog, time_machine):
     # Tried once, failed
 
     lam_spy.reset_mock()
-    # When forceing (bot startup), it should retry 3 times.
+    # When forcing (bot startup), it should retry 3 times.
     exchange.reload_markets(force=True)
     assert lam_spy.call_count == 4
     assert exchange.markets == updated_markets
@@ -4439,7 +4439,7 @@ def test_ohlcv_candle_limit(default_conf, mocker, exchange_name):
         pytest.skip("Tested separately for okx")
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
     timeframes = ("1m", "5m", "1h")
-    expected = exchange._ft_has["ohlcv_candle_limit"]
+    expected = exchange._ft_has.get("ohlcv_candle_limit", 500)
     for timeframe in timeframes:
         # if 'ohlcv_candle_limit_per_timeframe' in exchange._ft_has:
         # expected = exchange._ft_has['ohlcv_candle_limit_per_timeframe'][timeframe]
@@ -6262,3 +6262,26 @@ def test_price_to_precision_with_default_conf(default_conf, mocker):
     prec_price = patched_ex.price_to_precision("XRP/USDT", 1.0000000101)
     assert prec_price == 1.00000001
     assert prec_price == 1.00000001
+
+
+def test_exchange_features(default_conf, mocker):
+    conf = copy.deepcopy(default_conf)
+    exchange = get_patched_exchange(mocker, conf)
+    exchange._api_async.features = {
+        "spot": {
+            "fetchOHLCV": {
+                "limit": 995,
+            }
+        },
+        "swap": {
+            "linear": {
+                "fetchOHLCV": {
+                    "limit": 997,
+                }
+            }
+        },
+    }
+    assert exchange.features("spot", "fetchOHLCV", "limit", 500) == 995
+    assert exchange.features("futures", "fetchOHLCV", "limit", 500) == 997
+    # Fall back to default
+    assert exchange.features("futures", "fetchOHLCV_else", "limit", 601) == 601
