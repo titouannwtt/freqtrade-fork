@@ -1117,12 +1117,13 @@ class RPC:
             }
 
     def _rpc_list_custom_data(
-        self, trade_id: int | None = None, key: str | None = None) -> list[dict[str, Any]]:
+        self, trade_id: int | None = None, key: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Fetch custom data for a specific trade, or all open trades if `trade_id` is not provided.
         """
         if trade_id is None:
-            #get all open trades
+            # get all open trades
             trades = Trade.get_open_trades()
         else:
             trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
