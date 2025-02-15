@@ -387,7 +387,7 @@ class Binance(Exchange):
     async def _async_get_trade_history_id(
         self, pair: str, until: int, since: int, from_id: str | None = None
     ) -> tuple[str, list[list]]:
-        logger.info(f"Fetching trades from Binance, {from_id=}, {since=}")
+        logger.info(f"Fetching trades from Binance, {from_id=}, {since=}, {until=}")
 
         if not self._config["exchange"].get("only_from_ccxt", False):
             if from_id is None or not since:
@@ -405,7 +405,7 @@ class Binance(Exchange):
                 CandleType.SPOT,
                 pair,
                 since_ms=since,
-                until_ms=None,
+                until_ms=until,
                 markets=self.markets,
             )
 
