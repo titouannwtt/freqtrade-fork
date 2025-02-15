@@ -53,18 +53,63 @@ def setup_logging_pre() -> None:
     )
 
 
+logging_config = {
+    "version": 1,
+    # "incremental": True,
+    # "disable_existing_loggers": False,
+    "formatters": {
+        "basic": {"format": "%(message)s"},
+        "standard": {
+            "format": LOGFORMAT,
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "freqtrade.loggers.ft_rich_handler.FtRichHandler",
+            "console": error_console,
+            "formatter": "basic",
+            # "class": "logging.StreamHandler",
+            # "formatter": "standard",
+            # "stream": "ext://sys.stdout",
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "standard",
+            "filename": "whatever.log",
+            "maxBytes": 1024 * 1024 * 10,  # 10Mb
+            "backupCount": 10,
+        },
+    },
+    "loggers": {
+        "freqtrade": {
+            #     "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
+    },
+}
+
+
 def setup_logging(config: Config) -> None:
     """
     Process -v/--verbose, --logfile options
     """
     # Log level
     verbosity = config["verbosity"]
+
+    logging.config.dictConfig(logging_config)
+
     logging.root.addHandler(bufferHandler)
     if config.get("print_colorized", True):
         logger.info("Enabling colorized output.")
         error_console._color_system = error_console._detect_color_system()
 
     logfile = config.get("logfile")
+    logging.info("Logfile configured")
 
     if logfile:
         s = logfile.split(":")
