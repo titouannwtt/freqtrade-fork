@@ -451,7 +451,7 @@ async def _download_archive_trades(
     connector = aiohttp.TCPConnector(limit=100)
     async with aiohttp.ClientSession(connector=connector, trust_env=True) as session:
         # the HTTP connections has been throttled by TCPConnector
-        for dates in chunks(list(date_range(start, end)), 5):
+        for dates in chunks(list(date_range(start, end)), 30):
             tasks = [
                 asyncio.create_task(get_daily_trades(symbol, candle_type, date, session))
                 for date in dates
