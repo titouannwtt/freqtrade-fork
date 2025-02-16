@@ -655,7 +655,9 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Available platforms
-      run: echo ${{ steps.buildx.outputs.platforms }}
+      run: echo ${PLATFORMS}
+      env:
+        PLATFORMS: ${{ steps.buildx.outputs.platforms }}
 
     - name: Build and test and push docker images
       env:
