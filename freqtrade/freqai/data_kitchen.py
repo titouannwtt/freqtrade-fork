@@ -776,7 +776,7 @@ class FreqaiDataKitchen:
         corr_dataframes: dict = {},
         base_dataframes: dict = {},
         pair: str = "",
-        prediction_dataframe: Optional[DataFrame] = None,
+        prediction_dataframe: DataFrame | None = None,
         do_corr_pairs: bool = True,
     ) -> DataFrame:
         """
