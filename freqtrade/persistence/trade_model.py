@@ -1681,7 +1681,7 @@ class Trade(ModelBase, LocalTrade):
     stake_amount: Mapped[float] = mapped_column(Float(), nullable=False)  # type: ignore
     max_stake_amount: Mapped[float | None] = mapped_column(Float())  # type: ignore
     amount: Mapped[float] = mapped_column(Float())  # type: ignore
-    equested: Mapped[float | None] = mapped_column(Float())  # type: ignore
+    amount_requested: Mapped[float | None] = mapped_column(Float())  # type: ignore
     open_date: Mapped[datetime] = mapped_column(  # type: ignore
         nullable=False, default=datetime.now
     )
