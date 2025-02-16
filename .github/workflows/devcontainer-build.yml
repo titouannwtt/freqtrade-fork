@@ -17,11 +17,11 @@ concurrency:
   group: "${{ github.workflow }}"
   cancel-in-progress: true
 
-permissions:
-  packages: write
 
 jobs:
   build-and-push:
+    permissions:
+      packages: write
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
