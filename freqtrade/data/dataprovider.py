@@ -8,7 +8,7 @@ Common Interface for bot and strategy to access data.
 import logging
 from collections import deque
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from pandas import DataFrame, Timedelta, Timestamp, to_timedelta
 
@@ -23,7 +23,7 @@ from freqtrade.data.history import get_datahandler, load_pair_history
 from freqtrade.enums import CandleType, RPCMessageType, RunMode, TradingMode
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.exchange import Exchange, timeframe_to_prev_date, timeframe_to_seconds
-from freqtrade.exchange.types import OrderBook
+from freqtrade.exchange.exchange_types import OrderBook
 from freqtrade.misc import append_candles_to_dataframe
 from freqtrade.rpc import RPCManager
 from freqtrade.rpc.rpc_types import RPCAnalyzedDFMsg
@@ -40,23 +40,23 @@ class DataProvider:
     def __init__(
         self,
         config: Config,
-        exchange: Optional[Exchange],
+        exchange: Exchange | None,
         pairlists=None,
-        rpc: Optional[RPCManager] = None,
+        rpc: RPCManager | None = None,
     ) -> None:
         self._config = config
         self._exchange = exchange
         self._pairlists = pairlists
         self.__rpc = rpc
-        self.__cached_pairs: Dict[PairWithTimeframe, Tuple[DataFrame, datetime]] = {}
-        self.__slice_index: Optional[int] = None
-        self.__slice_date: Optional[datetime] = None
+        self.__cached_pairs: dict[PairWithTimeframe, tuple[DataFrame, datetime]] = {}
+        self.__slice_index: int | None = None
+        self.__slice_date: datetime | None = None
 
-        self.__cached_pairs_backtesting: Dict[PairWithTimeframe, DataFrame] = {}
-        self.__producer_pairs_df: Dict[
-            str, Dict[PairWithTimeframe, Tuple[DataFrame, datetime]]
+        self.__cached_pairs_backtesting: dict[PairWithTimeframe, DataFrame] = {}
+        self.__producer_pairs_df: dict[
+            str, dict[PairWithTimeframe, tuple[DataFrame, datetime]]
         ] = {}
-        self.__producer_pairs: Dict[str, List[str]] = {}
+        self.__producer_pairs: dict[str, list[str]] = {}
         self._msg_queue: deque = deque()
 
         self._default_candle_type = self._config.get("candle_type_def", CandleType.SPOT)
@@ -79,7 +79,7 @@ class DataProvider:
 
     def _set_dataframe_max_date(self, limit_date: datetime):
         """
-        Limit infomrative dataframe to max specified index.
+        Limit informative dataframe to max specified index.
         Only relevant in backtesting.
         :param limit_date: "current date"
         """
@@ -101,7 +101,7 @@ class DataProvider:
         self.__cached_pairs[pair_key] = (dataframe, datetime.now(timezone.utc))
 
     # For multiple producers we will want to merge the pairlists instead of overwriting
-    def _set_producer_pairs(self, pairlist: List[str], producer_name: str = "default"):
+    def _set_producer_pairs(self, pairlist: list[str], producer_name: str = "default"):
         """
         Set the pairs received to later be used.
 
@@ -109,7 +109,7 @@ class DataProvider:
         """
         self.__producer_pairs[producer_name] = pairlist
 
-    def get_producer_pairs(self, producer_name: str = "default") -> List[str]:
+    def get_producer_pairs(self, producer_name: str = "default") -> list[str]:
         """
         Get the pairs cached from the producer
 
@@ -177,7 +177,7 @@ class DataProvider:
         timeframe: str,
         candle_type: CandleType,
         producer_name: str = "default",
-    ) -> Tuple[bool, int]:
+    ) -> tuple[bool, int]:
         """
         Append a candle to the existing external dataframe. The incoming dataframe
         must have at least 1 candle.
@@ -255,10 +255,10 @@ class DataProvider:
     def get_producer_df(
         self,
         pair: str,
-        timeframe: Optional[str] = None,
-        candle_type: Optional[CandleType] = None,
+        timeframe: str | None = None,
+        candle_type: CandleType | None = None,
         producer_name: str = "default",
-    ) -> Tuple[DataFrame, datetime]:
+    ) -> tuple[DataFrame, datetime]:
         """
         Get the pair data from producers.
 
@@ -349,7 +349,7 @@ class DataProvider:
         return total_candles
 
     def get_pair_dataframe(
-        self, pair: str, timeframe: Optional[str] = None, candle_type: str = ""
+        self, pair: str, timeframe: str | None = None, candle_type: str = ""
     ) -> DataFrame:
         """
         Return pair candle (OHLCV) data, either live or cached historical -- depending
@@ -377,7 +377,7 @@ class DataProvider:
             logger.warning(f"No data found for ({pair}, {timeframe}, {candle_type}).")
         return data
 
-    def get_analyzed_dataframe(self, pair: str, timeframe: str) -> Tuple[DataFrame, datetime]:
+    def get_analyzed_dataframe(self, pair: str, timeframe: str) -> tuple[DataFrame, datetime]:
         """
         Retrieve the analyzed dataframe. Returns the full dataframe in trade mode (live / dry),
         and the last 1000 candles (up to the time evaluated at this moment) in all other modes.
@@ -408,7 +408,7 @@ class DataProvider:
         """
         return RunMode(self._config.get("runmode", RunMode.OTHER))
 
-    def current_whitelist(self) -> List[str]:
+    def current_whitelist(self) -> list[str]:
         """
         fetch latest available whitelist.
 
@@ -437,7 +437,7 @@ class DataProvider:
     def refresh(
         self,
         pairlist: ListPairsWithTimeframes,
-        helping_pairs: Optional[ListPairsWithTimeframes] = None,
+        helping_pairs: ListPairsWithTimeframes | None = None,
     ) -> None:
         """
         Refresh data, called with each cycle
@@ -471,7 +471,7 @@ class DataProvider:
         return list(self._exchange._klines.keys())
 
     def ohlcv(
-        self, pair: str, timeframe: Optional[str] = None, copy: bool = True, candle_type: str = ""
+        self, pair: str, timeframe: str | None = None, copy: bool = True, candle_type: str = ""
     ) -> DataFrame:
         """
         Get candle (OHLCV) data for the given pair as DataFrame
@@ -497,7 +497,7 @@ class DataProvider:
             return DataFrame()
 
     def trades(
-        self, pair: str, timeframe: Optional[str] = None, copy: bool = True, candle_type: str = ""
+        self, pair: str, timeframe: str | None = None, copy: bool = True, candle_type: str = ""
     ) -> DataFrame:
         """
         Get candle (TRADES) data for the given pair as DataFrame
@@ -520,7 +520,7 @@ class DataProvider:
             return self._exchange.trades(
                 (pair, timeframe or self._config["timeframe"], _candle_type), copy=copy
             )
-        elif self.runmode in (RunMode.BACKTEST, RunMode.HYPEROPT):
+        else:
             data_handler = get_datahandler(
                 self._config["datadir"], data_format=self._config["dataformat_trades"]
             )
@@ -529,10 +529,7 @@ class DataProvider:
             )
             return trades_df
 
-        else:
-            return DataFrame()
-
-    def market(self, pair: str) -> Optional[Dict[str, Any]]:
+    def market(self, pair: str) -> dict[str, Any] | None:
         """
         Return market data for the pair
         :param pair: Pair to get the data for

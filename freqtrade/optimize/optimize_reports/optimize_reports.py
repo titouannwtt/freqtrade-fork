@@ -1,7 +1,7 @@
 import logging
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Literal, Tuple, Union
+from typing import Any, Literal
 
 import numpy as np
 from pandas import DataFrame, Series, concat, to_datetime
@@ -17,16 +17,16 @@ from freqtrade.data.metrics import (
     calculate_sharpe,
     calculate_sortino,
 )
-from freqtrade.types import BacktestResultType
-from freqtrade.util import decimals_per_coin, fmt_coin
+from freqtrade.ft_types import BacktestResultType
+from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
 
 
 def generate_trade_signal_candles(
-    preprocessed_df: Dict[str, DataFrame], bt_results: Dict[str, Any]
-) -> DataFrame:
+    preprocessed_df: dict[str, DataFrame], bt_results: dict[str, Any], date_col: str
+) -> dict[str, DataFrame]:
     signal_candles_only = {}
     for pair in preprocessed_df.keys():
         signal_candles_only_df = DataFrame()
@@ -36,8 +36,8 @@ def generate_trade_signal_candles(
         pairresults = resdf.loc[(resdf["pair"] == pair)]
 
         if pairdf.shape[0] > 0:
-            for t, v in pairresults.open_date.items():
-                allinds = pairdf.loc[(pairdf["date"] < v)]
+            for t, v in pairresults.iterrows():
+                allinds = pairdf.loc[(pairdf["date"] < v[date_col])]
                 signal_inds = allinds.iloc[[-1]]
                 signal_candles_only_df = concat(
                     [signal_candles_only_df.infer_objects(), signal_inds.infer_objects()]
@@ -48,8 +48,8 @@ def generate_trade_signal_candles(
 
 
 def generate_rejected_signals(
-    preprocessed_df: Dict[str, DataFrame], rejected_dict: Dict[str, DataFrame]
-) -> Dict[str, DataFrame]:
+    preprocessed_df: dict[str, DataFrame], rejected_dict: dict[str, DataFrame]
+) -> dict[str, DataFrame]:
     rejected_candles_only = {}
     for pair, signals in rejected_dict.items():
         rejected_signals_only_df = DataFrame()
@@ -69,8 +69,8 @@ def generate_rejected_signals(
 
 
 def _generate_result_line(
-    result: DataFrame, starting_balance: int, first_column: Union[str, List[str]]
-) -> Dict:
+    result: DataFrame, starting_balance: float, first_column: str | list[str]
+) -> dict:
     """
     Generate one result dict, with "first_column" as key.
     """
@@ -108,13 +108,20 @@ def _generate_result_line(
     }
 
 
-def generate_pair_metrics(
-    pairlist: List[str],
+def calculate_trade_volume(trades_dict: list[dict[str, Any]]) -> float:
+    # Aggregate the total volume traded from orders.cost.
+    # Orders is a nested dictionary within the trades list.
+
+    return sum(sum(order["cost"] for order in trade.get("orders", [])) for trade in trades_dict)
+
+
+def generate_pair_metrics(  #
+    pairlist: list[str],
     stake_currency: str,
-    starting_balance: int,
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """
     Generates and returns a list  for the given backtest data and the results dataframe
     :param pairlist: Pairlist used
@@ -143,11 +150,11 @@ def generate_pair_metrics(
 
 
 def generate_tag_metrics(
-    tag_type: Union[Literal["enter_tag", "exit_reason"], List[Literal["enter_tag", "exit_reason"]]],
-    starting_balance: int,
+    tag_type: Literal["enter_tag", "exit_reason"] | list[Literal["enter_tag", "exit_reason"]],
+    starting_balance: float,
     results: DataFrame,
     skip_nan: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """
     Generates and returns a list of metrics for the given tag trades and the results dataframe
     :param starting_balance: Starting balance
@@ -177,7 +184,7 @@ def generate_tag_metrics(
         return []
 
 
-def generate_strategy_comparison(bt_stats: Dict) -> List[Dict]:
+def generate_strategy_comparison(bt_stats: dict) -> list[dict]:
     """
     Generate summary per strategy
     :param bt_stats: Dict of <Strategyname: DataFrame> containing results for all strategies
@@ -208,8 +215,8 @@ def _get_resample_from_period(period: str) -> str:
 
 
 def generate_periodic_breakdown_stats(
-    trade_list: Union[List, DataFrame], period: str
-) -> List[Dict[str, Any]]:
+    trade_list: list | DataFrame, period: str
+) -> list[dict[str, Any]]:
     results = trade_list if not isinstance(trade_list, list) else DataFrame.from_records(trade_list)
     if len(results) == 0:
         return []
@@ -237,14 +244,14 @@ def generate_periodic_breakdown_stats(
     return stats
 
 
-def generate_all_periodic_breakdown_stats(trade_list: List) -> Dict[str, List]:
+def generate_all_periodic_breakdown_stats(trade_list: list) -> dict[str, list]:
     result = {}
     for period in BACKTEST_BREAKDOWNS:
         result[period] = generate_periodic_breakdown_stats(trade_list, period)
     return result
 
 
-def calc_streak(dataframe: DataFrame) -> Tuple[int, int]:
+def calc_streak(dataframe: DataFrame) -> tuple[int, int]:
     """
     Calculate consecutive win and loss streaks
     :param dataframe: Dataframe containing the trades dataframe, with profit_ratio column
@@ -261,7 +268,7 @@ def calc_streak(dataframe: DataFrame) -> Tuple[int, int]:
     return cons_wins, cons_losses
 
 
-def generate_trading_stats(results: DataFrame) -> Dict[str, Any]:
+def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
     """Generate overall trade statistics"""
     if len(results) == 0:
         return {
@@ -313,7 +320,7 @@ def generate_trading_stats(results: DataFrame) -> Dict[str, Any]:
     }
 
 
-def generate_daily_stats(results: DataFrame) -> Dict[str, Any]:
+def generate_daily_stats(results: DataFrame) -> dict[str, Any]:
     """Generate daily statistics"""
     if len(results) == 0:
         return {
@@ -350,14 +357,14 @@ def generate_daily_stats(results: DataFrame) -> Dict[str, Any]:
 
 
 def generate_strategy_stats(
-    pairlist: List[str],
+    pairlist: list[str],
     strategy: str,
-    content: Dict[str, Any],
+    content: dict[str, Any],
     min_date: datetime,
     max_date: datetime,
     market_change: float,
     is_hyperopt: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     :param pairlist: List of pairs to backtest
     :param strategy: Strategy name
@@ -368,12 +375,12 @@ def generate_strategy_stats(
     :param market_change: float indicating the market change
     :return: Dictionary containing results per strategy and a strategy summary.
     """
-    results: Dict[str, DataFrame] = content["results"]
+    results: DataFrame = content["results"]
     if not isinstance(results, DataFrame):
         return {}
     config = content["config"]
     max_open_trades = min(config["max_open_trades"], len(pairlist))
-    start_balance = config["dry_run_wallet"]
+    start_balance = get_dry_run_wallet(config)
     stake_currency = config["stake_currency"]
 
     pair_results = generate_pair_metrics(
@@ -431,8 +438,9 @@ def generate_strategy_stats(
 
     expectancy, expectancy_ratio = calculate_expectancy(results)
     backtest_days = (max_date - min_date).days or 1
+    trades_dict = results.to_dict(orient="records")
     strat_stats = {
-        "trades": results.to_dict(orient="records"),
+        "trades": trades_dict,
         "locks": [lock.to_json() for lock in content["locks"]],
         "best_pair": best_pair,
         "worst_pair": worst_pair,
@@ -444,7 +452,7 @@ def generate_strategy_stats(
         "total_trades": len(results),
         "trade_count_long": len(results.loc[~results["is_short"]]),
         "trade_count_short": len(results.loc[results["is_short"]]),
-        "total_volume": float(results["stake_amount"].sum()),
+        "total_volume": calculate_trade_volume(trades_dict),
         "avg_stake_amount": results["stake_amount"].mean() if len(results) > 0 else 0,
         "profit_mean": results["profit_ratio"].mean() if len(results) > 0 else 0,
         "profit_median": results["profit_ratio"].median() if len(results) > 0 else 0,
@@ -504,6 +512,8 @@ def generate_strategy_stats(
         "exit_profit_only": config["exit_profit_only"],
         "exit_profit_offset": config["exit_profit_offset"],
         "ignore_roi_if_entry_signal": config["ignore_roi_if_entry_signal"],
+        "trading_mode": config["trading_mode"],
+        "margin_mode": config["margin_mode"],
         **periodic_breakdown,
         **daily_stats,
         **trade_stats,
@@ -556,8 +566,8 @@ def generate_strategy_stats(
 
 
 def generate_backtest_stats(
-    btdata: Dict[str, DataFrame],
-    all_results: Dict[str, Dict[str, Union[DataFrame, Dict]]],
+    btdata: dict[str, DataFrame],
+    all_results: dict[str, dict[str, DataFrame | dict]],
     min_date: datetime,
     max_date: datetime,
 ) -> BacktestResultType:

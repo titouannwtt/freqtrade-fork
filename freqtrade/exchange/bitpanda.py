@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
 
 from freqtrade.exchange import Exchange
 
@@ -17,8 +16,8 @@ class Bitpanda(Exchange):
     """
 
     def get_trades_for_order(
-        self, order_id: str, pair: str, since: datetime, params: Optional[Dict] = None
-    ) -> List:
+        self, order_id: str, pair: str, since: datetime, params: dict | None = None
+    ) -> list:
         """
         Fetch Orders using the "fetch_my_trades" endpoint and filter them by order-id.
         The "since" argument passed in is coming from the database and is in UTC,

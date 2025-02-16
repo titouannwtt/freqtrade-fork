@@ -1,9 +1,9 @@
-from typing import Any, Tuple, Union
+from typing import Any
 
 from fastapi import WebSocket as FastAPIWebSocket
-from websockets.client import WebSocketClientProtocol as WebSocket
+from websockets.asyncio.client import ClientConnection as WebSocket
 
-from freqtrade.rpc.api_server.ws.types import WebSocketType
+from freqtrade.rpc.api_server.ws.ws_types import WebSocketType
 
 
 class WebSocketProxy:
@@ -13,14 +13,14 @@ class WebSocketProxy:
     """
 
     def __init__(self, websocket: WebSocketType):
-        self._websocket: Union[FastAPIWebSocket, WebSocket] = websocket
+        self._websocket: FastAPIWebSocket | WebSocket = websocket
 
     @property
     def raw_websocket(self):
         return self._websocket
 
     @property
-    def remote_addr(self) -> Tuple[Any, ...]:
+    def remote_addr(self) -> tuple[Any, ...]:
         if isinstance(self._websocket, WebSocket):
             return self._websocket.remote_address
         elif isinstance(self._websocket, FastAPIWebSocket):

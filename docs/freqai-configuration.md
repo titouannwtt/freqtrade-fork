@@ -293,10 +293,10 @@ class MyCoolPyTorchClassifier(BasePyTorchClassifier):
         super().__init__(**kwargs)
         config = self.freqai_info.get("model_training_parameters", {})
         self.learning_rate: float = config.get("learning_rate",  3e-4)
-        self.model_kwargs: Dict[str, Any] = config.get("model_kwargs",  {})
-        self.trainer_kwargs: Dict[str, Any] = config.get("trainer_kwargs",  {})
+        self.model_kwargs: dict[str, Any] = config.get("model_kwargs",  {})
+        self.trainer_kwargs: dict[str, Any] = config.get("trainer_kwargs",  {})
 
-    def fit(self, data_dictionary: Dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
+    def fit(self, data_dictionary: dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
         """
         User sets up the training and test data to fit their desired model here
         :param data_dictionary: the dictionary holding all data for train, test,
@@ -359,10 +359,10 @@ class PyTorchMLPRegressor(BasePyTorchRegressor):
         super().__init__(**kwargs)
         config = self.freqai_info.get("model_training_parameters", {})
         self.learning_rate: float = config.get("learning_rate",  3e-4)
-        self.model_kwargs: Dict[str, Any] = config.get("model_kwargs",  {})
-        self.trainer_kwargs: Dict[str, Any] = config.get("trainer_kwargs",  {})
+        self.model_kwargs: dict[str, Any] = config.get("model_kwargs",  {})
+        self.trainer_kwargs: dict[str, Any] = config.get("trainer_kwargs",  {})
 
-    def fit(self, data_dictionary: Dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
+    def fit(self, data_dictionary: dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
         n_features = data_dictionary["train_features"].shape[-1]
         model = PyTorchMLPModel(
             input_dim=n_features,
@@ -393,7 +393,7 @@ Here we create a `PyTorchMLPRegressor` class that implements the `fit` method. T
     
     For example, if you are using a binary classifier to predict price movements as up or down, you can set the class names as follows:
     ```python
-    def set_freqai_targets(self, dataframe: DataFrame, metadata: Dict, **kwargs) -> DataFrame:
+    def set_freqai_targets(self, dataframe: DataFrame, metadata: dict, **kwargs) -> DataFrame:
         self.freqai.class_names = ["down", "up"]
         dataframe['&s-up_or_down'] = np.where(dataframe["close"].shift(-100) >
                                                   dataframe["close"], 'up', 'down')

@@ -1,8 +1,7 @@
-import platform
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,30 +17,6 @@ from tests.conftest import get_patched_exchange
 
 def is_py12() -> bool:
     return sys.version_info >= (3, 12)
-
-
-def is_mac() -> bool:
-    machine = platform.system()
-    return "Darwin" in machine
-
-
-def is_arm() -> bool:
-    machine = platform.machine()
-    return "arm" in machine or "aarch64" in machine
-
-
-@pytest.fixture(autouse=True)
-def patch_torch_initlogs(mocker) -> None:
-    if is_mac():
-        # Mock torch import completely
-        import sys
-        import types
-
-        module_name = "torch"
-        mocked_module = types.ModuleType(module_name)
-        sys.modules[module_name] = mocked_module
-    else:
-        mocker.patch("torch._logging._init_logs")
 
 
 @pytest.fixture(scope="function")
@@ -112,7 +87,7 @@ def make_rl_config(conf):
     return conf
 
 
-def mock_pytorch_mlp_model_training_parameters() -> Dict[str, Any]:
+def mock_pytorch_mlp_model_training_parameters() -> dict[str, Any]:
     return {
         "learning_rate": 3e-4,
         "trainer_kwargs": {

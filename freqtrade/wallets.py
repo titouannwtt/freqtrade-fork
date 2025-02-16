@@ -2,9 +2,8 @@
 """Wallet"""
 
 import logging
-from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import Dict, NamedTuple, Optional
+from typing import Literal, NamedTuple
 
 from freqtrade.constants import UNLIMITED_STAKE_AMOUNT, Config, IntOrInf
 from freqtrade.enums import RunMode, TradingMode
@@ -29,7 +28,7 @@ class Wallet(NamedTuple):
 class PositionWallet(NamedTuple):
     symbol: str
     position: float = 0
-    leverage: Optional[float] = 0  # Don't use this - it's not guaranteed to be set
+    leverage: float | None = 0  # Don't use this - it's not guaranteed to be set
     collateral: float = 0
     side: str = "long"
 
@@ -39,10 +38,18 @@ class Wallets:
         self._config = config
         self._is_backtest = is_backtest
         self._exchange = exchange
-        self._wallets: Dict[str, Wallet] = {}
-        self._positions: Dict[str, PositionWallet] = {}
-        self.start_cap = config["dry_run_wallet"]
-        self._last_wallet_refresh: Optional[datetime] = None
+        self._wallets: dict[str, Wallet] = {}
+        self._positions: dict[str, PositionWallet] = {}
+        self._start_cap: dict[str, float] = {}
+
+        self._stake_currency = self._exchange.get_proxy_coin()
+
+        if isinstance(_start_cap := config["dry_run_wallet"], float | int):
+            self._start_cap[self._stake_currency] = _start_cap
+        else:
+            self._start_cap = _start_cap
+
+        self._last_wallet_refresh: datetime | None = None
         self.update()
 
     def get_free(self, currency: str) -> float:
@@ -65,6 +72,18 @@ class Wallets:
             return balance.total
         else:
             return 0
+
+    def get_collateral(self) -> float:
+        """
+        Get total collateral for liquidation price calculation.
+        """
+        if self._config.get("margin_mode") == "cross":
+            # free includes all balances and, combined with position collateral,
+            # is used as "wallet balance".
+            return self.get_free(self._stake_currency) + sum(
+                pos.collateral for pos in self._positions.values()
+            )
+        return self.get_total(self._stake_currency)
 
     def get_owned(self, pair: str, base_currency: str) -> float:
         """
@@ -99,54 +118,76 @@ class Wallets:
         used_stake = 0.0
 
         if self._config.get("trading_mode", "spot") != TradingMode.FUTURES:
-            current_stake = self.start_cap + tot_profit - tot_in_trades
-            total_stake = current_stake
             for trade in open_trades:
                 curr = self._exchange.get_pair_base_currency(trade.pair)
-                _wallets[curr] = Wallet(curr, trade.amount, 0, trade.amount)
+                used_stake += sum(
+                    o.stake_amount for o in trade.open_orders if o.ft_order_side == trade.entry_side
+                )
+                pending = sum(
+                    o.amount
+                    for o in trade.open_orders
+                    if o.amount and o.ft_order_side == trade.exit_side
+                )
+                curr_wallet_bal = self._start_cap.get(curr, 0)
+
+                _wallets[curr] = Wallet(
+                    curr,
+                    curr_wallet_bal + trade.amount - pending,
+                    pending,
+                    trade.amount + curr_wallet_bal,
+                )
         else:
-            tot_in_trades = 0
             for position in open_trades:
-                # size = self._exchange._contracts_to_amount(position.pair, position['contracts'])
-                size = position.amount
-                collateral = position.stake_amount
-                leverage = position.leverage
-                tot_in_trades += collateral
                 _positions[position.pair] = PositionWallet(
                     position.pair,
-                    position=size,
-                    leverage=leverage,
-                    collateral=collateral,
+                    position=position.amount,
+                    leverage=position.leverage,
+                    collateral=position.stake_amount,
                     side=position.trade_direction,
                 )
-            current_stake = self.start_cap + tot_profit - tot_in_trades
-            used_stake = tot_in_trades
-            total_stake = current_stake + tot_in_trades
 
-        _wallets[self._config["stake_currency"]] = Wallet(
-            currency=self._config["stake_currency"],
-            free=current_stake,
+            used_stake = tot_in_trades
+
+        cross_margin = 0.0
+        if self._config.get("margin_mode") == "cross":
+            # In cross-margin mode, the total balance is used as collateral.
+            # This is moved as "free" into the stake currency balance.
+            # strongly tied to the get_collateral() implementation.
+            for curr, bal in self._start_cap.items():
+                if curr == self._stake_currency:
+                    continue
+                rate = self._exchange.get_conversion_rate(curr, self._stake_currency)
+                if rate:
+                    cross_margin += bal * rate
+
+        current_stake = self._start_cap.get(self._stake_currency, 0) + tot_profit - tot_in_trades
+        total_stake = current_stake + used_stake
+
+        _wallets[self._stake_currency] = Wallet(
+            currency=self._stake_currency,
+            free=current_stake + cross_margin,
             used=used_stake,
             total=total_stake,
         )
+        for currency, bal in self._start_cap.items():
+            if currency not in _wallets:
+                _wallets[currency] = Wallet(currency, bal, 0, bal)
+
         self._wallets = _wallets
         self._positions = _positions
 
     def _update_live(self) -> None:
         balances = self._exchange.get_balances()
+        _wallets = {}
 
         for currency in balances:
             if isinstance(balances[currency], dict):
-                self._wallets[currency] = Wallet(
+                _wallets[currency] = Wallet(
                     currency,
                     balances[currency].get("free", 0),
                     balances[currency].get("used", 0),
                     balances[currency].get("total", 0),
                 )
-        # Remove currencies no longer in get_balances output
-        for currency in deepcopy(self._wallets):
-            if currency not in balances:
-                del self._wallets[currency]
 
         positions = self._exchange.fetch_positions()
         _parsed_positions = {}
@@ -166,6 +207,7 @@ class Wallets:
                 side=position["side"],
             )
         self._positions = _parsed_positions
+        self._wallets = _wallets
 
     def update(self, require_update: bool = True) -> None:
         """
@@ -185,14 +227,13 @@ class Wallets:
                 self._update_live()
             else:
                 self._update_dry()
-            if not self._is_backtest:
-                logger.info("Wallets synced.")
+            self._local_log("Wallets synced.")
             self._last_wallet_refresh = dt_now()
 
-    def get_all_balances(self) -> Dict[str, Wallet]:
+    def get_all_balances(self) -> dict[str, Wallet]:
         return self._wallets
 
-    def get_all_positions(self) -> Dict[str, PositionWallet]:
+    def get_all_positions(self) -> dict[str, PositionWallet]:
         return self._positions
 
     def _check_exit_amount(self, trade: Trade) -> bool:
@@ -234,8 +275,10 @@ class Wallets:
         else:
             tot_profit = Trade.get_total_closed_profit()
             open_stakes = Trade.total_open_trades_stakes()
-            available_balance = self.get_free(self._config["stake_currency"])
-            return available_balance - tot_profit + open_stakes
+            available_balance = self.get_free(self._stake_currency)
+            return (available_balance - tot_profit + open_stakes) * self._config[
+                "tradable_balance_ratio"
+            ]
 
     def get_total_stake_amount(self):
         """
@@ -254,9 +297,9 @@ class Wallets:
             # Ensure <tradable_balance_ratio>% is used from the overall balance
             # Otherwise we'd risk lowering stakes with each open trade.
             # (tied up + current free) * ratio) - tied up
-            available_amount = (
-                val_tied_up + self.get_free(self._config["stake_currency"])
-            ) * self._config["tradable_balance_ratio"]
+            available_amount = (val_tied_up + self.get_free(self._stake_currency)) * self._config[
+                "tradable_balance_ratio"
+            ]
         return available_amount
 
     def get_available_stake_amount(self) -> float:
@@ -267,7 +310,7 @@ class Wallets:
         (<open_trade stakes> + free amount) * tradable_balance_ratio - <open_trade stakes>
         """
 
-        free = self.get_free(self._config["stake_currency"])
+        free = self.get_free(self._stake_currency)
         return min(self.get_total_stake_amount() - Trade.total_open_trades_stakes(), free)
 
     def _calculate_unlimited_stake_amount(
@@ -306,7 +349,7 @@ class Wallets:
                 f"lower than stake amount ({stake_amount} {self._config['stake_currency']})"
             )
 
-        return stake_amount
+        return max(stake_amount, 0)
 
     def get_trade_stake_amount(
         self, pair: str, max_open_trades: IntOrInf, edge=None, update: bool = True
@@ -326,8 +369,8 @@ class Wallets:
         if edge:
             stake_amount = edge.stake_amount(
                 pair,
-                self.get_free(self._config["stake_currency"]),
-                self.get_total(self._config["stake_currency"]),
+                self.get_free(self._stake_currency),
+                self.get_total(self._stake_currency),
                 val_tied_up,
             )
         else:
@@ -342,13 +385,16 @@ class Wallets:
     def validate_stake_amount(
         self,
         pair: str,
-        stake_amount: Optional[float],
-        min_stake_amount: Optional[float],
+        stake_amount: float | None,
+        min_stake_amount: float | None,
         max_stake_amount: float,
-        trade_amount: Optional[float],
+        trade_amount: float | None,
     ):
         if not stake_amount:
-            logger.debug(f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.")
+            self._local_log(
+                f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.",
+                level="debug",
+            )
             return 0
 
         max_allowed_stake = min(max_stake_amount, self.get_available_stake_amount())
@@ -358,34 +404,43 @@ class Wallets:
             max_allowed_stake = min(max_allowed_stake, max_stake_amount - trade_amount)
 
         if min_stake_amount is not None and min_stake_amount > max_allowed_stake:
-            if not self._is_backtest:
-                logger.warning(
-                    "Minimum stake amount > available balance. "
-                    f"{min_stake_amount} > {max_allowed_stake}"
-                )
+            self._local_log(
+                "Minimum stake amount > available balance. "
+                f"{min_stake_amount} > {max_allowed_stake}",
+                level="warning",
+            )
             return 0
         if min_stake_amount is not None and stake_amount < min_stake_amount:
-            if not self._is_backtest:
-                logger.info(
-                    f"Stake amount for pair {pair} is too small "
-                    f"({stake_amount} < {min_stake_amount}), adjusting to {min_stake_amount}."
-                )
+            self._local_log(
+                f"Stake amount for pair {pair} is too small "
+                f"({stake_amount} < {min_stake_amount}), adjusting to {min_stake_amount}."
+            )
             if stake_amount * 1.3 < min_stake_amount:
                 # Top-cap stake-amount adjustments to +30%.
-                if not self._is_backtest:
-                    logger.info(
-                        f"Adjusted stake amount for pair {pair} is more than 30% bigger than "
-                        f"the desired stake amount of ({stake_amount:.8f} * 1.3 = "
-                        f"{stake_amount * 1.3:.8f}) < {min_stake_amount}), ignoring trade."
-                    )
+                self._local_log(
+                    f"Adjusted stake amount for pair {pair} is more than 30% bigger than "
+                    f"the desired stake amount of ({stake_amount:.8f} * 1.3 = "
+                    f"{stake_amount * 1.3:.8f}) < {min_stake_amount}), ignoring trade."
+                )
                 return 0
             stake_amount = min_stake_amount
 
         if stake_amount > max_allowed_stake:
-            if not self._is_backtest:
-                logger.info(
-                    f"Stake amount for pair {pair} is too big "
-                    f"({stake_amount} > {max_allowed_stake}), adjusting to {max_allowed_stake}."
-                )
+            self._local_log(
+                f"Stake amount for pair {pair} is too big "
+                f"({stake_amount} > {max_allowed_stake}), adjusting to {max_allowed_stake}."
+            )
             stake_amount = max_allowed_stake
         return stake_amount
+
+    def _local_log(self, msg: str, level: Literal["info", "warning", "debug"] = "info") -> None:
+        """
+        Log a message to the local log.
+        """
+        if not self._is_backtest:
+            if level == "warning":
+                logger.warning(msg)
+            elif level == "debug":
+                logger.debug(msg)
+            else:
+                logger.info(msg)

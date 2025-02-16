@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import torch
@@ -25,7 +25,7 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
         criterion: nn.Module,
         device: str,
         data_convertor: PyTorchDataConvertor,
-        model_meta_data: Optional[Dict[str, Any]] = None,
+        model_meta_data: dict[str, Any] | None = None,
         window_size: int = 1,
         tb_logger: Any = None,
         **kwargs,
@@ -52,8 +52,8 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
         self.criterion = criterion
         self.model_meta_data = model_meta_data
         self.device = device
-        self.n_epochs: Optional[int] = kwargs.get("n_epochs", 10)
-        self.n_steps: Optional[int] = kwargs.get("n_steps", None)
+        self.n_epochs: int | None = kwargs.get("n_epochs", 10)
+        self.n_steps: int | None = kwargs.get("n_steps", None)
         if self.n_steps is None and not self.n_epochs:
             raise Exception("Either `n_steps` or `n_epochs` should be set.")
 
@@ -63,7 +63,7 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
         self.tb_logger = tb_logger
         self.test_batch_counter = 0
 
-    def fit(self, data_dictionary: Dict[str, pd.DataFrame], splits: List[str]):
+    def fit(self, data_dictionary: dict[str, pd.DataFrame], splits: list[str]):
         """
         :param data_dictionary: the dictionary constructed by DataHandler to hold
         all the training and test data/labels.
@@ -104,7 +104,7 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
     @torch.no_grad()
     def estimate_loss(
         self,
-        data_loader_dictionary: Dict[str, DataLoader],
+        data_loader_dictionary: dict[str, DataLoader],
         split: str,
     ) -> None:
         self.model.eval()
@@ -121,8 +121,8 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
         self.model.train()
 
     def create_data_loaders_dictionary(
-        self, data_dictionary: Dict[str, pd.DataFrame], splits: List[str]
-    ) -> Dict[str, DataLoader]:
+        self, data_dictionary: dict[str, pd.DataFrame], splits: list[str]
+    ) -> dict[str, DataLoader]:
         """
         Converts the input data to PyTorch tensors using a data loader.
         """
@@ -183,7 +183,7 @@ class PyTorchModelTrainer(PyTorchTrainerInterface):
         checkpoint = torch.load(path)
         return self.load_from_checkpoint(checkpoint)
 
-    def load_from_checkpoint(self, checkpoint: Dict):
+    def load_from_checkpoint(self, checkpoint: dict):
         """
         when using continual_learning, DataDrawer will load the dictionary
         (containing state dicts and model_meta_data) by calling torch.load(path).
@@ -202,8 +202,8 @@ class PyTorchTransformerTrainer(PyTorchModelTrainer):
     """
 
     def create_data_loaders_dictionary(
-        self, data_dictionary: Dict[str, pd.DataFrame], splits: List[str]
-    ) -> Dict[str, DataLoader]:
+        self, data_dictionary: dict[str, pd.DataFrame], splits: list[str]
+    ) -> dict[str, DataLoader]:
         """
         Converts the input data to PyTorch tensors using a data loader.
         """

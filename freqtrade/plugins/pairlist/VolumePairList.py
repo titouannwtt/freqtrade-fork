@@ -6,14 +6,14 @@ Provides dynamic pair list based on trade volumes
 
 import logging
 from datetime import timedelta
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from cachetools import TTLCache
 
 from freqtrade.constants import ListPairsWithTimeframes
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_prev_date
-from freqtrade.exchange.types import Tickers
+from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 from freqtrade.util import dt_now, format_ms_time
 
@@ -122,7 +122,7 @@ class VolumePairList(IPairList):
         return "Provides dynamic pair list based on trade volumes."
 
     @staticmethod
-    def available_parameters() -> Dict[str, PairlistParameter]:
+    def available_parameters() -> dict[str, PairlistParameter]:
         return {
             "number_assets": {
                 "type": "number",
@@ -170,7 +170,7 @@ class VolumePairList(IPairList):
             },
         }
 
-    def gen_pairlist(self, tickers: Tickers) -> List[str]:
+    def gen_pairlist(self, tickers: Tickers) -> list[str]:
         """
         Generate the pairlist
         :param tickers: Tickers (from exchange.get_tickers). May be cached.
@@ -212,7 +212,7 @@ class VolumePairList(IPairList):
 
         return pairlist
 
-    def filter_pairlist(self, pairlist: List[str], tickers: Dict) -> List[str]:
+    def filter_pairlist(self, pairlist: list[str], tickers: dict) -> list[str]:
         """
         Filters and sorts pairlist and returns the whitelist again.
         Called on each bot iteration - please use internal caching if necessary
@@ -222,7 +222,7 @@ class VolumePairList(IPairList):
         """
         if self._use_range:
             # Create bare minimum from tickers structure.
-            filtered_tickers: List[Dict[str, Any]] = [{"symbol": k} for k in pairlist]
+            filtered_tickers: list[dict[str, Any]] = [{"symbol": k} for k in pairlist]
 
             # get lookback period in ms, for exchange ohlcv fetch
             since_ms = (

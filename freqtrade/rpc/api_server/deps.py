@@ -1,4 +1,5 @@
-from typing import Any, AsyncIterator, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 from uuid import uuid4
 
 from fastapi import Depends, HTTPException
@@ -13,13 +14,13 @@ from freqtrade.rpc.rpc import RPC, RPCException
 from .webserver import ApiServer
 
 
-def get_rpc_optional() -> Optional[RPC]:
+def get_rpc_optional() -> RPC | None:
     if ApiServer._has_rpc:
         return ApiServer._rpc
     return None
 
 
-async def get_rpc() -> Optional[AsyncIterator[RPC]]:
+async def get_rpc() -> AsyncIterator[RPC] | None:
     _rpc = get_rpc_optional()
     if _rpc:
         request_id = str(uuid4())
@@ -35,11 +36,11 @@ async def get_rpc() -> Optional[AsyncIterator[RPC]]:
         raise RPCException("Bot is not in the correct state")
 
 
-def get_config() -> Dict[str, Any]:
+def get_config() -> dict[str, Any]:
     return ApiServer._config
 
 
-def get_api_config() -> Dict[str, Any]:
+def get_api_config() -> dict[str, Any]:
     return ApiServer._config["api_server"]
 
 

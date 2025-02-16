@@ -25,7 +25,7 @@ def test_parse_args_defaults(mocker) -> None:
     assert args["config"] == ["config.json"]
     assert args["strategy_path"] is None
     assert args["datadir"] is None
-    assert args["verbosity"] == 0
+    assert args["verbosity"] is None
 
 
 def test_parse_args_default_userdatadir(mocker) -> None:
@@ -35,17 +35,17 @@ def test_parse_args_default_userdatadir(mocker) -> None:
     assert args["config"] == [str(Path("user_data/config.json"))]
     assert args["strategy_path"] is None
     assert args["datadir"] is None
-    assert args["verbosity"] == 0
+    assert args["verbosity"] is None
 
 
 def test_parse_args_userdatadir(mocker) -> None:
     mocker.patch.object(Path, "is_file", MagicMock(return_value=True))
-    args = Arguments(["trade", "--user-data-dir", "user_data"]).get_parsed_arg()
+    args = Arguments(["trade", "--user-data-dir", "user_data", "-v"]).get_parsed_arg()
     # configuration defaults to user_data if that is available.
     assert args["config"] == [str(Path("user_data/config.json"))]
     assert args["strategy_path"] is None
     assert args["datadir"] is None
-    assert args["verbosity"] == 0
+    assert args["verbosity"] == 1
 
 
 def test_parse_args_config() -> None:
@@ -82,8 +82,8 @@ def test_common_scripts_options() -> None:
 
 
 def test_parse_args_version() -> None:
-    with pytest.raises(SystemExit, match=r"0"):
-        Arguments(["--version"]).get_parsed_arg()
+    args = Arguments(["--version"]).get_parsed_arg()
+    assert args["version_main"] is True
 
 
 def test_parse_args_invalid() -> None:
@@ -132,7 +132,7 @@ def test_parse_args_backtesting_custom() -> None:
     ]
     call_args = Arguments(args).get_parsed_arg()
     assert call_args["config"] == ["test_conf.json"]
-    assert call_args["verbosity"] == 0
+    assert call_args["verbosity"] is None
     assert call_args["command"] == "backtesting"
     assert call_args["func"] is not None
     assert call_args["timeframe"] == "1m"
@@ -145,7 +145,7 @@ def test_parse_args_hyperopt_custom() -> None:
     call_args = Arguments(args).get_parsed_arg()
     assert call_args["config"] == ["test_conf.json"]
     assert call_args["epochs"] == 20
-    assert call_args["verbosity"] == 0
+    assert call_args["verbosity"] is None
     assert call_args["command"] == "hyperopt"
     assert call_args["spaces"] == ["buy"]
     assert call_args["func"] is not None

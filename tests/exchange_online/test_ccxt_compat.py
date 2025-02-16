@@ -48,6 +48,22 @@ class TestCCXTExchange:
             }
         )
 
+    def test_ohlcv_limit(self, exchange: EXCHANGE_FIXTURE_TYPE):
+        exch, exchangename = exchange
+        expected_count = EXCHANGES[exchangename].get("candle_count")
+        if not expected_count:
+            pytest.skip("No expected candle count for exchange")
+
+        assert exch.ohlcv_candle_limit("1m", CandleType.SPOT) == expected_count
+
+    def test_ohlcv_limit_futures(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
+        exch, exchangename = exchange_futures
+        expected_count = EXCHANGES[exchangename].get("candle_count")
+        if not expected_count:
+            pytest.skip("No expected candle count for exchange")
+
+        assert exch.ohlcv_candle_limit("1m", CandleType.SPOT) == expected_count
+
     def test_load_markets_futures(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename]["pair"]
@@ -61,28 +77,31 @@ class TestCCXTExchange:
     def test_ccxt_order_parse(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchange_name = exchange
         if orders := EXCHANGES[exchange_name].get("sample_order"):
-            pair = "SOL/USDT"
             for order in orders:
+                pair = order["pair"]
+                exchange_response: dict = order["exchange_response"]
+
                 market = exch._api.markets[pair]
-                po = exch._api.parse_order(order, market)
+                po = exch._api.parse_order(exchange_response, market)
+                expected = order["expected"]
                 assert isinstance(po["id"], str)
                 assert po["id"] is not None
-                if len(order.keys()) < 5:
+                if len(exchange_response.keys()) < 5:
                     # Kucoin case
                     assert po["status"] is None
                     continue
-                assert po["timestamp"] == 1674493798550
+                assert po["timestamp"] == expected["timestamp"]
                 assert isinstance(po["datetime"], str)
                 assert isinstance(po["timestamp"], int)
                 assert isinstance(po["price"], float)
-                assert po["price"] == 15.5
+                assert po["price"] == expected["price"]
                 if po["status"] == "closed":
                     # Filled orders should have average assigned.
                     assert isinstance(po["average"], float)
                     assert po["average"] == 15.5
                 assert po["symbol"] == pair
                 assert isinstance(po["amount"], float)
-                assert po["amount"] == 1.1
+                assert po["amount"] == expected["amount"]
                 assert isinstance(po["status"], str)
         else:
             pytest.skip(f"No sample order available for exchange {exchange_name}")
@@ -111,6 +130,19 @@ class TestCCXTExchange:
         else:
             pytest.skip(f"No sample Trades available for exchange {exchange_name}")
 
+    def test_ccxt_balances_parse(self, exchange: EXCHANGE_FIXTURE_TYPE):
+        exch, exchange_name = exchange
+        if balance_response := EXCHANGES[exchange_name].get("sample_balances"):
+            balances = exch._api.parse_balance(balance_response["exchange_response"])
+            expected = balance_response["expected"]
+            for currency, balance in expected.items():
+                assert currency in balances
+                assert isinstance(balance, dict)
+                assert balance == balances[currency]
+            pass
+        else:
+            pytest.skip(f"No sample Balances available for exchange {exchange_name}")
+
     def test_ccxt_fetch_tickers(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange
         pair = EXCHANGES[exchangename]["pair"]
@@ -118,9 +150,10 @@ class TestCCXTExchange:
         tickers = exch.get_tickers()
         assert pair in tickers
         assert "ask" in tickers[pair]
-        assert tickers[pair]["ask"] is not None
         assert "bid" in tickers[pair]
-        assert tickers[pair]["bid"] is not None
+        if EXCHANGES[exchangename].get("tickers_have_bid_ask"):
+            assert tickers[pair]["bid"] is not None
+            assert tickers[pair]["ask"] is not None
         assert "quoteVolume" in tickers[pair]
         if EXCHANGES[exchangename].get("hasQuoteVolume"):
             assert tickers[pair]["quoteVolume"] is not None
@@ -150,9 +183,10 @@ class TestCCXTExchange:
 
         ticker = exch.fetch_ticker(pair)
         assert "ask" in ticker
-        assert ticker["ask"] is not None
         assert "bid" in ticker
-        assert ticker["bid"] is not None
+        if EXCHANGES[exchangename].get("tickers_have_bid_ask"):
+            assert ticker["ask"] is not None
+            assert ticker["bid"] is not None
         assert "quoteVolume" in ticker
         if EXCHANGES[exchangename].get("hasQuoteVolume"):
             assert ticker["quoteVolume"] is not None
@@ -257,9 +291,9 @@ class TestCCXTExchange:
             candles = res[3]
             candle_count = exchange.ohlcv_candle_limit(timeframe, candle_type, since_ms) * factor
             candle_count1 = (now.timestamp() * 1000 - since_ms) // timeframe_ms * factor
-            assert len(candles) >= min(
-                candle_count, candle_count1
-            ), f"{len(candles)} < {candle_count} in {timeframe}, Offset: {offset} {factor}"
+            assert len(candles) >= min(candle_count, candle_count1), (
+                f"{len(candles)} < {candle_count} in {timeframe}, Offset: {offset} {factor}"
+            )
             # Check if first-timeframe is either the start, or start + 1
             assert candles[0][0] == since_ms or (since_ms + timeframe_ms)
 
@@ -457,6 +491,7 @@ class TestCCXTExchange:
                 stake_amount=100,
                 leverage=5,
                 wallet_balance=100,
+                open_trades=[],
             )
             assert isinstance(liquidation_price, float)
             assert liquidation_price >= 0.0
@@ -469,6 +504,7 @@ class TestCCXTExchange:
                 stake_amount=100,
                 leverage=5,
                 wallet_balance=100,
+                open_trades=[],
             )
             assert isinstance(liquidation_price, float)
             assert liquidation_price >= 0.0

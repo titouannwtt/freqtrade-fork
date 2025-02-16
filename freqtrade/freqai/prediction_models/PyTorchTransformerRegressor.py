@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -60,10 +60,10 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
         super().__init__(**kwargs)
         config = self.freqai_info.get("model_training_parameters", {})
         self.learning_rate: float = config.get("learning_rate", 3e-4)
-        self.model_kwargs: Dict[str, Any] = config.get("model_kwargs", {})
-        self.trainer_kwargs: Dict[str, Any] = config.get("trainer_kwargs", {})
+        self.model_kwargs: dict[str, Any] = config.get("model_kwargs", {})
+        self.trainer_kwargs: dict[str, Any] = config.get("trainer_kwargs", {})
 
-    def fit(self, data_dictionary: Dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
+    def fit(self, data_dictionary: dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
         """
         User sets up the training and test data to fit their desired model here
         :param data_dictionary: the dictionary holding all data for train, test,
@@ -100,7 +100,7 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
 
     def predict(
         self, unfiltered_df: pd.DataFrame, dk: FreqaiDataKitchen, **kwargs
-    ) -> Tuple[pd.DataFrame, npt.NDArray[np.int_]]:
+    ) -> tuple[pd.DataFrame, npt.NDArray[np.int_]]:
         """
         Filter the prediction features data and predict with it.
         :param unfiltered_df: Full dataframe for the current backtest period.
@@ -141,7 +141,7 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
         pred_df = pd.DataFrame(yb.detach().numpy(), columns=dk.label_list)
         pred_df, _, _ = dk.label_pipeline.inverse_transform(pred_df)
 
-        if self.freqai_info.get("DI_threshold", 0) > 0:
+        if self.ft_params.get("DI_threshold", 0) > 0:
             dk.DI_values = dk.feature_pipeline["di"].di_values
         else:
             dk.DI_values = np.zeros(outliers.shape[0])

@@ -1,13 +1,17 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from random import randint
 from unittest.mock import MagicMock, PropertyMock
 
 import ccxt
+import pandas as pd
 import pytest
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import DependencyException, InvalidOrderException, OperationalException
-from tests.conftest import EXMS, get_mock_coro, get_patched_exchange, log_has_re
+from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_seconds
+from freqtrade.persistence import Trade
+from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts, dt_utc
+from tests.conftest import EXMS, get_patched_exchange
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
 
@@ -41,7 +45,7 @@ def test__get_params_binance(default_conf, mocker, side, order_type, time_in_for
 )
 def test_create_stoploss_order_binance(default_conf, mocker, limitratio, expected, side, trademode):
     api_mock = MagicMock()
-    order_id = f"test_prod_buy_{randint(0, 10 ** 6)}"
+    order_id = f"test_prod_buy_{randint(0, 10**6)}"
     order_type = "stop_loss_limit" if trademode == TradingMode.SPOT else "stop"
 
     api_mock.create_order = MagicMock(return_value={"id": order_id, "info": {"foo": "bar"}})
@@ -171,59 +175,101 @@ def test_stoploss_adjust_binance(mocker, default_conf, sl1, sl2, sl3, side):
 
 
 @pytest.mark.parametrize(
-    "is_short, trading_mode, margin_mode, wallet_balance, "
-    "mm_ex_1, upnl_ex_1, maintenance_amt, amount, open_rate, "
+    "pair, is_short, trading_mode, margin_mode, wallet_balance, "
+    "maintenance_amt, amount, open_rate, open_trades,"
     "mm_ratio, expected",
     [
         (
+            "ETH/USDT:USDT",
             False,
             "futures",
             "isolated",
             1535443.01,
-            0.0,
-            0.0,
             135365.00,
             3683.979,
             1456.84,
+            [],
             0.10,
             1114.78,
         ),
         (
+            "ETH/USDT:USDT",
             False,
             "futures",
             "isolated",
             1535443.01,
-            0.0,
-            0.0,
             16300.000,
             109.488,
             32481.980,
+            [],
             0.025,
             18778.73,
         ),
         (
+            "ETH/USDT:USDT",
             False,
             "futures",
             "cross",
             1535443.01,
-            71200.81144,
-            -56354.57,
             135365.00,
-            3683.979,
-            1456.84,
+            3683.979,  # amount
+            1456.84,  # open_rate
+            [
+                {
+                    # From calc example
+                    "pair": "BTC/USDT:USDT",
+                    "open_rate": 32481.98,
+                    "amount": 109.488,
+                    "stake_amount": 3556387.02624,  # open_rate * amount
+                    "mark_price": 31967.27,
+                    "mm_ratio": 0.025,
+                    "maintenance_amt": 16300.0,
+                },
+                {
+                    # From calc example
+                    "pair": "ETH/USDT:USDT",
+                    "open_rate": 1456.84,
+                    "amount": 3683.979,
+                    "stake_amount": 5366967.96,
+                    "mark_price": 1335.18,
+                    "mm_ratio": 0.10,
+                    "maintenance_amt": 135365.00,
+                },
+            ],
             0.10,
             1153.26,
         ),
         (
+            "BTC/USDT:USDT",
             False,
             "futures",
             "cross",
             1535443.01,
-            356512.508,
-            -448192.89,
-            16300.000,
-            109.488,
-            32481.980,
+            16300.0,
+            109.488,  # amount
+            32481.980,  # open_rate
+            [
+                {
+                    # From calc example
+                    "pair": "BTC/USDT:USDT",
+                    "open_rate": 32481.98,
+                    "amount": 109.488,
+                    "stake_amount": 3556387.02624,  # open_rate * amount
+                    "mark_price": 31967.27,
+                    "mm_ratio": 0.025,
+                    "maintenance_amt": 16300.0,
+                },
+                {
+                    # From calc example
+                    "pair": "ETH/USDT:USDT",
+                    "open_rate": 1456.84,
+                    "amount": 3683.979,
+                    "stake_amount": 5366967.96,
+                    "mark_price": 1335.18,
+                    "mm_ratio": 0.10,
+                    "maintenance_amt": 135365.00,
+                },
+            ],
             0.025,
             26316.89,
         ),
@@ -232,36 +278,65 @@ def test_stoploss_adjust_binance(mocker, default_conf, sl1, sl2, sl3, side):
 def test_liquidation_price_binance(
     mocker,
     default_conf,
-    open_rate,
+    pair,
     is_short,
     trading_mode,
     margin_mode,
     wallet_balance,
-    mm_ex_1,
-    upnl_ex_1,
     maintenance_amt,
     amount,
+    open_rate,
+    open_trades,
     mm_ratio,
     expected,
 ):
     default_conf["trading_mode"] = trading_mode
     default_conf["margin_mode"] = margin_mode
     default_conf["liquidation_buffer"] = 0.0
+    mocker.patch(f"{EXMS}.price_to_precision", lambda s, x, y, **kwargs: y)
     exchange = get_patched_exchange(mocker, default_conf, exchange="binance")
-    exchange.get_maintenance_ratio_and_amt = MagicMock(return_value=(mm_ratio, maintenance_amt))
+
+    def get_maint_ratio(pair_, stake_amount):
+        if pair_ != pair:
+            oc = [c for c in open_trades if c["pair"] == pair_][0]
+            return oc["mm_ratio"], oc["maintenance_amt"]
+        return mm_ratio, maintenance_amt
+
+    def fetch_funding_rates(*args, **kwargs):
+        return {
+            t["pair"]: {
+                "symbol": t["pair"],
+                "markPrice": t["mark_price"],
+            }
+            for t in open_trades
+        }
+
+    exchange.get_maintenance_ratio_and_amt = get_maint_ratio
+    exchange.fetch_funding_rates = fetch_funding_rates
+
+    open_trade_objects = [
+        Trade(
+            pair=t["pair"],
+            open_rate=t["open_rate"],
+            amount=t["amount"],
+            stake_amount=t["stake_amount"],
+            fee_open=0,
+        )
+        for t in open_trades
+    ]
+
     assert (
         pytest.approx(
             round(
                 exchange.get_liquidation_price(
-                    pair="DOGE/USDT",
+                    pair=pair,
                     open_rate=open_rate,
                     is_short=is_short,
                     wallet_balance=wallet_balance,
-                    mm_ex_1=mm_ex_1,
-                    upnl_ex_1=upnl_ex_1,
                     amount=amount,
                     stake_amount=open_rate * amount,
                     leverage=5,
+                    open_trades=open_trade_objects,
                 ),
                 2,
             )
@@ -660,42 +735,243 @@ def test__set_leverage_binance(mocker, default_conf):
     )
 
 
-@pytest.mark.parametrize("candle_type", [CandleType.MARK, ""])
-async def test__async_get_historic_ohlcv_binance(default_conf, mocker, caplog, candle_type):
-    ohlcv = [
-        [
-            int((datetime.now(timezone.utc).timestamp() - 1000) * 1000),
-            1,  # open
-            2,  # high
-            3,  # low
-            4,  # close
-            5,  # volume (in quote currency)
+def patch_binance_vision_ohlcv(mocker, start, archive_end, api_end, timeframe):
+    def make_storage(start: datetime, end: datetime, timeframe: str):
+        date = pd.date_range(start, end, freq=timeframe.replace("m", "min"))
+        df = pd.DataFrame(
+            data=dict(date=date, open=1.0, high=1.0, low=1.0, close=1.0),
+        )
+        return df
+
+    archive_storage = make_storage(start, archive_end, timeframe)
+    api_storage = make_storage(start, api_end, timeframe)
+
+    ohlcv = [[dt_ts(start), 1, 1, 1, 1]]
+    # (pair, timeframe, candle_type, ohlcv, True)
+    candle_history = [None, None, None, ohlcv, None]
+
+    def get_historic_ohlcv(
+        # self,
+        pair: str,
+        timeframe: str,
+        since_ms: int,
+        candle_type: CandleType,
+        is_new_pair: bool = False,
+        until_ms: int | None = None,
+    ):
+        since = dt_from_ts(since_ms)
+        until = dt_from_ts(until_ms) if until_ms else api_end + timedelta(seconds=1)
+        return api_storage.loc[(api_storage["date"] >= since) & (api_storage["date"] < until)]
+
+    async def download_archive_ohlcv(
+        candle_type,
+        pair,
+        timeframe,
+        since_ms,
+        until_ms,
+        markets=None,
+        stop_on_404=False,
+    ):
+        since = dt_from_ts(since_ms)
+        until = dt_from_ts(until_ms) if until_ms else archive_end + timedelta(seconds=1)
+        if since < start:
+            pass
+        return archive_storage.loc[
+            (archive_storage["date"] >= since) & (archive_storage["date"] < until)
         ]
-    ]
 
+    candle_mock = mocker.patch(f"{EXMS}._async_get_candle_history", return_value=candle_history)
+    api_mock = mocker.patch(f"{EXMS}.get_historic_ohlcv", side_effect=get_historic_ohlcv)
+    archive_mock = mocker.patch(
+        "freqtrade.exchange.binance.download_archive_ohlcv", side_effect=download_archive_ohlcv
+    )
+    return candle_mock, api_mock, archive_mock
+
+
+@pytest.mark.parametrize(
+    "timeframe,is_new_pair,since,until,first_date,last_date,candle_called,archive_called,"
+    "api_called",
+    [
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            True,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 3),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2, 23, 59),
+            True,
+            True,
+            True,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 2, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 2, 0, 59),
+            True,
+            False,
+            True,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            False,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2019, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            True,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2019, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23, 59),
+            False,
+            True,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2019, 1, 1),
+            dt_utc(2019, 1, 2),
+            None,
+            None,
+            False,
+            True,
+            True,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2019, 1, 1),
+            dt_utc(2019, 1, 2),
+            None,
+            None,
+            True,
+            False,
+            False,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2021, 1, 1),
+            dt_utc(2021, 1, 2),
+            None,
+            None,
+            False,
+            False,
+            False,
+        ),
+        (
+            "1m",
+            True,
+            dt_utc(2021, 1, 1),
+            dt_utc(2021, 1, 2),
+            None,
+            None,
+            True,
+            False,
+            False,
+        ),
+        (
+            "1h",
+            False,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 2),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 23),
+            False,
+            False,
+            True,
+        ),
+        (
+            "1m",
+            False,
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 3, 50, 30),
+            dt_utc(2020, 1, 1),
+            dt_utc(2020, 1, 1, 3, 50),
+            False,
+            True,
+            False,
+        ),
+    ],
+)
+def test_get_historic_ohlcv_binance(
+    mocker,
+    default_conf,
+    timeframe,
+    is_new_pair,
+    since,
+    until,
+    first_date,
+    last_date,
+    candle_called,
+    archive_called,
+    api_called,
+):
     exchange = get_patched_exchange(mocker, default_conf, exchange="binance")
-    # Monkey-patch async function
-    exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
 
-    pair = "ETH/BTC"
-    respair, restf, restype, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", 1500000000000, is_new_pair=False, candle_type=candle_type
-    )
-    assert respair == pair
-    assert restf == "5m"
-    assert restype == candle_type
-    # Call with very old timestamp - causes tons of requests
-    assert exchange._api_async.fetch_ohlcv.call_count > 400
-    # assert res == ohlcv
-    exchange._api_async.fetch_ohlcv.reset_mock()
-    _, _, _, res, _ = await exchange._async_get_historic_ohlcv(
-        pair, "5m", 1500000000000, is_new_pair=True, candle_type=candle_type
+    start = dt_utc(2020, 1, 1)
+    archive_end = dt_utc(2020, 1, 2)
+    api_end = dt_utc(2020, 1, 3)
+    candle_mock, api_mock, archive_mock = patch_binance_vision_ohlcv(
+        mocker, start=start, archive_end=archive_end, api_end=api_end, timeframe=timeframe
     )
 
-    # Called twice - one "init" call - and one to get the actual data.
-    assert exchange._api_async.fetch_ohlcv.call_count == 2
-    assert res == ohlcv
-    assert log_has_re(r"Candle-data for ETH/BTC available starting with .*", caplog)
+    candle_type = CandleType.SPOT
+    pair = "BTC/USDT"
+
+    since_ms = dt_ts(since)
+    until_ms = dt_ts(until)
+
+    df = exchange.get_historic_ohlcv(pair, timeframe, since_ms, candle_type, is_new_pair, until_ms)
+
+    if df.empty:
+        assert first_date is None
+        assert last_date is None
+    else:
+        assert df["date"].iloc[0] == first_date
+        assert df["date"].iloc[-1] == last_date
+        assert (
+            df["date"].diff().iloc[1:] == timedelta(seconds=timeframe_to_seconds(timeframe))
+        ).all()
+
+    if candle_called:
+        candle_mock.assert_called_once()
+    if archive_called:
+        archive_mock.assert_called_once()
+    if api_called:
+        api_mock.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -723,3 +999,60 @@ def test_get_maintenance_ratio_and_amt_binance(
     exchange._leverage_tiers = leverage_tiers
     (result_ratio, result_amt) = exchange.get_maintenance_ratio_and_amt(pair, notional_value)
     assert (round(result_ratio, 8), round(result_amt, 8)) == (mm_ratio, amt)
+
+
+async def test__async_get_trade_history_id_binance(default_conf_usdt, mocker, fetch_trades_result):
+    exchange = get_patched_exchange(mocker, default_conf_usdt, exchange="binance")
+
+    async def mock_get_trade_hist(pair, *args, **kwargs):
+        if "since" in kwargs:
+            # older than initial call
+            if kwargs["since"] < 1565798399752:
+                return []
+            else:
+                # Don't expect to get here
+                raise ValueError("Unexpected call")
+                # return fetch_trades_result[:-2]
+        elif kwargs.get("params", {}).get(exchange._trades_pagination_arg) == "0":
+            # Return first 3
+            return fetch_trades_result[:-2]
+        elif kwargs.get("params", {}).get(exchange._trades_pagination_arg) in (
+            fetch_trades_result[-3]["id"],
+            1565798399752,
+        ):
+            # Return 2
+            return fetch_trades_result[-3:-1]
+        else:
+            # Return last 2
+            return fetch_trades_result[-2:]
+
+    exchange._api_async.fetch_trades = MagicMock(side_effect=mock_get_trade_hist)
+
+    pair = "ETH/BTC"
+    ret = await exchange._async_get_trade_history_id(
+        pair,
+        since=fetch_trades_result[0]["timestamp"],
+        until=fetch_trades_result[-1]["timestamp"] - 1,
+    )
+    assert ret[0] == pair
+    assert isinstance(ret[1], list)
+    assert exchange._api_async.fetch_trades.call_count == 4
+
+    fetch_trades_cal = exchange._api_async.fetch_trades.call_args_list
+    # first call (using since, not fromId)
+    assert fetch_trades_cal[0][0][0] == pair
+    assert fetch_trades_cal[0][1]["since"] == fetch_trades_result[0]["timestamp"]
+
+    # 2nd call
+    assert fetch_trades_cal[1][0][0] == pair
+    assert "params" in fetch_trades_cal[1][1]
+    pagination_arg = exchange._ft_has["trades_pagination_arg"]
+    assert pagination_arg in fetch_trades_cal[1][1]["params"]
+    # Initial call was with from_id = "0"
+    assert fetch_trades_cal[1][1]["params"][pagination_arg] == "0"
+
+    assert fetch_trades_cal[2][1]["params"][pagination_arg] != "0"
+    assert fetch_trades_cal[3][1]["params"][pagination_arg] != "0"
+
+    # Clean up event loop to avoid warnings
+    exchange.close()

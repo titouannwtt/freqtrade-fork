@@ -10,13 +10,13 @@ from base64 import urlsafe_b64decode
 from inspect import getfullargspec
 from os import walk
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from freqtrade.configuration.config_validation import validate_migrated_strategy_settings
 from freqtrade.constants import REQUIRED_ORDERTIF, REQUIRED_ORDERTYPES, USERPATH_STRATEGIES, Config
 from freqtrade.enums import TradingMode
 from freqtrade.exceptions import OperationalException
-from freqtrade.resolvers import IResolver
+from freqtrade.resolvers.iresolver import IResolver
 from freqtrade.strategy.interface import IStrategy
 
 
@@ -35,7 +35,7 @@ class StrategyResolver(IResolver):
     extra_path = "strategy_path"
 
     @staticmethod
-    def load_strategy(config: Optional[Config] = None) -> IStrategy:
+    def load_strategy(config: Config | None = None) -> IStrategy:
         """
         Load the custom class from config parameter
         :param config: configuration dictionary or None
@@ -69,7 +69,6 @@ class StrategyResolver(IResolver):
             ("order_time_in_force", None),
             ("stake_currency", None),
             ("stake_amount", None),
-            ("protections", None),
             ("startup_candle_count", None),
             ("unfilledtimeout", None),
             ("use_exit_signal", True),
@@ -247,7 +246,7 @@ class StrategyResolver(IResolver):
 
     @staticmethod
     def _load_strategy(
-        strategy_name: str, config: Config, extra_dir: Optional[str] = None
+        strategy_name: str, config: Config, extra_dir: str | None = None
     ) -> IStrategy:
         """
         Search and loads the specified strategy.
@@ -257,7 +256,7 @@ class StrategyResolver(IResolver):
         :return: Strategy instance or None
         """
         if config.get("recursive_strategy_search", False):
-            extra_dirs: List[str] = [
+            extra_dirs: list[str] = [
                 path[0] for path in walk(f"{config['user_data_dir']}/{USERPATH_STRATEGIES}")
             ]  # sub-directories
         else:

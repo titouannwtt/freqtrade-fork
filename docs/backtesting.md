@@ -7,103 +7,7 @@ To learn how to get data for the pairs and exchange you're interested in, head o
 
 ## Backtesting command reference
 
-```
-usage: freqtrade backtesting [-h] [-v] [--logfile FILE] [-V] [-c PATH]
-                             [-d PATH] [--userdir PATH] [-s NAME]
-                             [--strategy-path PATH] [-i TIMEFRAME]
-                             [--timerange TIMERANGE]
-                             [--data-format-ohlcv {json,jsongz,hdf5}]
-                             [--max-open-trades INT]
-                             [--stake-amount STAKE_AMOUNT] [--fee FLOAT]
-                             [-p PAIRS [PAIRS ...]] [--eps] [--dmmp]
-                             [--enable-protections]
-                             [--dry-run-wallet DRY_RUN_WALLET]
-                             [--timeframe-detail TIMEFRAME_DETAIL]
-                             [--strategy-list STRATEGY_LIST [STRATEGY_LIST ...]]
-                             [--export {none,trades,signals}]
-                             [--export-filename PATH]
-                             [--breakdown {day,week,month} [{day,week,month} ...]]
-                             [--cache {none,day,week,month}]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i TIMEFRAME, --timeframe TIMEFRAME
-                        Specify timeframe (`1m`, `5m`, `30m`, `1h`, `1d`).
-  --timerange TIMERANGE
-                        Specify what timerange of data to use.
-  --data-format-ohlcv {json,jsongz,hdf5,feather,parquet}
-                        Storage format for downloaded candle (OHLCV) data.
-                        (default: `feather`).
-  --max-open-trades INT
-                        Override the value of the `max_open_trades`
-                        configuration setting.
-  --stake-amount STAKE_AMOUNT
-                        Override the value of the `stake_amount` configuration
-                        setting.
-  --fee FLOAT           Specify fee ratio. Will be applied twice (on trade
-                        entry and exit).
-  -p PAIRS [PAIRS ...], --pairs PAIRS [PAIRS ...]
-                        Limit command to these pairs. Pairs are space-
-                        separated.
-  --eps, --enable-position-stacking
-                        Allow buying the same pair multiple times (position
-                        stacking).
-  --dmmp, --disable-max-market-positions
-                        Disable applying `max_open_trades` during backtest
-                        (same as setting `max_open_trades` to a very high
-                        number).
-  --enable-protections, --enableprotections
-                        Enable protections for backtesting.Will slow
-                        backtesting down by a considerable amount, but will
-                        include configured protections
-  --dry-run-wallet DRY_RUN_WALLET, --starting-balance DRY_RUN_WALLET
-                        Starting balance, used for backtesting / hyperopt and
-                        dry-runs.
-  --timeframe-detail TIMEFRAME_DETAIL
-                        Specify detail timeframe for backtesting (`1m`, `5m`,
-                        `30m`, `1h`, `1d`).
-  --strategy-list STRATEGY_LIST [STRATEGY_LIST ...]
-                        Provide a space-separated list of strategies to
-                        backtest. Please note that timeframe needs to be set
-                        either in config or via command line. When using this
-                        together with `--export trades`, the strategy-name is
-                        injected into the filename (so `backtest-data.json`
-                        becomes `backtest-data-SampleStrategy.json`
-  --export {none,trades,signals}
-                        Export backtest results (default: trades).
-  --export-filename PATH, --backtest-filename PATH
-                        Use this filename for backtest results.Requires
-                        `--export` to be set as well. Example: `--export-filen
-                        ame=user_data/backtest_results/backtest_today.json`
-  --breakdown {day,week,month} [{day,week,month} ...]
-                        Show backtesting breakdown per [day, week, month].
-  --cache {none,day,week,month}
-                        Load a cached backtest result no older than specified
-                        age (default: day).
-
-Common arguments:
-  -v, --verbose         Verbose mode (-vv for more, -vvv to get all messages).
-  --logfile FILE        Log to the file specified. Special values are:
-                        'syslog', 'journald'. See the documentation for more
-                        details.
-  -V, --version         show program's version number and exit
-  -c PATH, --config PATH
-                        Specify configuration file (default:
-                        `userdir/config.json` or `config.json` whichever
-                        exists). Multiple --config options may be used. Can be
-                        set to `-` to read config from stdin.
-  -d PATH, --datadir PATH
-                        Path to directory with historical backtesting data.
-  --userdir PATH, --user-data-dir PATH
-                        Path to userdata directory.
-
-Strategy arguments:
-  -s NAME, --strategy NAME
-                        Specify strategy class name which will be used by the
-                        bot.
-  --strategy-path PATH  Specify additional strategy lookup path.
-
-```
+--8<-- "commands/backtesting.md"
 
 ## Test your strategy with Backtesting
 
@@ -293,6 +197,7 @@ A backtesting result will look like that:
 |-----------------------------+---------------------|
 | Backtesting from            | 2019-01-01 00:00:00 |
 | Backtesting to              | 2019-05-01 00:00:00 |
+| Trading Mode                | Spot                |
 | Max open trades             | 3                   |
 |                             |                     |
 | Total/Daily Avg Trades      | 429 / 3.575         |
@@ -398,6 +303,7 @@ It contains some useful key metrics about performance of your strategy on backte
 |-----------------------------+---------------------|
 | Backtesting from            | 2019-01-01 00:00:00 |
 | Backtesting to              | 2019-05-01 00:00:00 |
+| Trading Mode                | Spot                |
 | Max open trades             | 3                   |
 |                             |                     |
 | Total/Daily Avg Trades      | 429 / 3.575         |
@@ -452,6 +358,7 @@ It contains some useful key metrics about performance of your strategy on backte
 
 - `Backtesting from` / `Backtesting to`: Backtesting range (usually defined with the `--timerange` option).
 - `Max open trades`: Setting of `max_open_trades` (or `--max-open-trades`) - or number of pairs in the pairlist (whatever is lower).
+- `Trading Mode`: Spot or Futures trading.
 - `Total/Daily Avg Trades`: Identical to the total trades of the backtest output table / Total trades divided by the backtesting duration in days (this will give you information about how many trades to expect from the strategy).
 - `Starting balance`: Start balance - as given by dry-run-wallet (config or command line).
 - `Final balance`: Final balance - starting balance + absolute profit.
@@ -555,6 +462,7 @@ Since backtesting lacks some detailed information about what happens within a ca
   - Stoploss
   - ROI
   - Trailing stoploss
+- Position reversals (futures only) happen if an entry signal in the other direction than the closing trade triggers at the candle the existing trade closes.
 
 Taking these assumptions, backtesting tries to mirror real trading as closely as possible. However, backtesting will **never** replace running a strategy in dry-run mode.
 Also, keep in mind that past results don't guarantee future success.
@@ -569,7 +477,7 @@ These limits are usually listed in the exchange documentation as "trading rules"
 Backtesting (as well as live and dry-run) does honor these limits, and will ensure that a stoploss can be placed below this value - so the value will be slightly higher than what the exchange specifies.
 Freqtrade has however no information about historic limits.
 
-This can lead to situations where trading-limits are inflated by using a historic price, resulting in minimum amounts > 50$.
+This can lead to situations where trading-limits are inflated by using a historic price, resulting in minimum amounts > 50\$.
 
 For example:
 
@@ -600,7 +508,12 @@ To utilize this, you can append `--timeframe-detail 5m` to your regular backtest
 freqtrade backtesting --strategy AwesomeStrategy --timeframe 1h --timeframe-detail 5m
 ```
 
-This will load 1h data as well as 5m data for the timeframe. The strategy will be analyzed with the 1h timeframe, and Entry orders will only be placed at the main timeframe, however Order fills and exit signals will be evaluated at the 5m candle, simulating intra-candle movements.
+This will load 1h data (the main timeframe) as well as 5m data (detail timeframe) for the selected timerange.
+The strategy will be analyzed with the 1h timeframe.
+Candles where activity may take place (there's an active signal, the pair is in a trade) are  evaluated at the 5m timeframe.
+This will allow for a more accurate simulation of intra-candle movements - and can lead to different results, especially on higher timeframes.
+
+Entries will generally still happen at the main candle's open, however freed trade slots may be freed earlier (if the exit signal is triggered on the 5m candle), which can then be used for a new trade of a different pair.
 
 All callback functions (`custom_exit()`, `custom_stoploss()`, ... ) will be running for each 5m candle once the trade is opened (so 12 times in the above example of 1h timeframe, and 5m detailed timeframe).
 
@@ -611,6 +524,27 @@ Also, data must be available / downloaded already.
 
 !!! Tip
     You can use this function as the last part of strategy development, to ensure your strategy is not exploiting one of the [backtesting assumptions](#assumptions-made-by-backtesting). Strategies that perform similarly well with this mode have a good chance to perform well in dry/live modes too (although only forward-testing (dry-mode) can really confirm a strategy).
+
+??? Sample "Extreme Difference Example"
+    Using `--timeframe-detail` on an extreme example (all below pairs have the 10:00 candle with an entry signal) may lead to the following backtesting Trade sequence with 1 max_open_trades:
+
+    | Pair | Entry Time | Exit Time | Duration |
+    |------|------------|-----------| -------- |
+    | BTC/USDT | 2024-01-01 10:00:00 | 2021-01-01 10:05:00 | 5m |
+    | ETH/USDT | 2024-01-01 10:05:00 | 2021-01-01 10:15:00 | 10m |
+    | XRP/USDT | 2024-01-01 10:15:00 | 2021-01-01 10:30:00 | 15m |
+    | SOL/USDT | 2024-01-01 10:15:00 | 2021-01-01 11:05:00 | 50m |
+    | BTC/USDT | 2024-01-01 11:05:00 | 2021-01-01 12:00:00 | 55m |
+
+    Without timeframe-detail, this would look like:
+
+    | Pair | Entry Time | Exit Time | Duration |
+    |------|------------|-----------| -------- |
+    | BTC/USDT | 2024-01-01 10:00:00 | 2021-01-01 11:00:00 | 1h |
+    | BTC/USDT | 2024-01-01 11:00:00 | 2021-01-01 12:00:00 | 1h |
+
+    The difference is significant, as without detail data, only the first `max_open_trades` signals per candle are evaluated, and the trade slots are only freed at the end of the candle, allowing for a new trade to be opened at the next candle.
+
 
 ## Backtesting multiple strategies
 

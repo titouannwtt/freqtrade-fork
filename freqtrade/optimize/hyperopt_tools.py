@@ -1,8 +1,9 @@
 import logging
+from collections.abc import Iterator
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import rapidjson
@@ -43,7 +44,7 @@ class HyperoptStateContainer:
 
 class HyperoptTools:
     @staticmethod
-    def get_strategy_filename(config: Config, strategy_name: str) -> Optional[Path]:
+    def get_strategy_filename(config: Config, strategy_name: str) -> Path | None:
         """
         Get Strategy-location (filename) from strategy_name
         """
@@ -83,7 +84,7 @@ class HyperoptTools:
             )
 
     @staticmethod
-    def load_params(filename: Path) -> Dict:
+    def load_params(filename: Path) -> dict:
         """
         Load parameters from file
         """
@@ -92,7 +93,7 @@ class HyperoptTools:
         return params
 
     @staticmethod
-    def try_export_params(config: Config, strategy_name: str, params: Dict):
+    def try_export_params(config: Config, strategy_name: str, params: dict):
         if params.get(FTHYPT_FILEVERSION, 1) >= 2 and not config.get("disableparamexport", False):
             # Export parameters ...
             fn = HyperoptTools.get_strategy_filename(config, strategy_name)
@@ -113,7 +114,7 @@ class HyperoptTools:
             return any(s in config["spaces"] for s in [space, "all", "default"])
 
     @staticmethod
-    def _read_results(results_file: Path, batch_size: int = 10) -> Iterator[List[Any]]:
+    def _read_results(results_file: Path, batch_size: int = 10) -> Iterator[list[Any]]:
         """
         Stream hyperopt results from file
         """
@@ -143,7 +144,7 @@ class HyperoptTools:
             return False
 
     @staticmethod
-    def load_filtered_results(results_file: Path, config: Config) -> Tuple[List, int]:
+    def load_filtered_results(results_file: Path, config: Config) -> tuple[list, int]:
         filteroptions = {
             "only_best": config.get("hyperopt_list_best", False),
             "only_profitable": config.get("hyperopt_list_profitable", False),
@@ -187,7 +188,7 @@ class HyperoptTools:
         total_epochs: int,
         print_json: bool,
         no_header: bool = False,
-        header_str: Optional[str] = None,
+        header_str: str | None = None,
     ) -> None:
         """
         Display details of the hyperopt result
@@ -204,7 +205,7 @@ class HyperoptTools:
             print(f"\n{header_str}:\n\n{explanation_str}\n")
 
         if print_json:
-            result_dict: Dict = {}
+            result_dict: dict = {}
             for s in [
                 "buy",
                 "sell",
@@ -256,7 +257,7 @@ class HyperoptTools:
 
     @staticmethod
     def _params_pretty_print(
-        params, space: str, header: str, non_optimized: Optional[Dict] = None
+        params, space: str, header: str, non_optimized: dict | None = None
     ) -> None:
         if space in params or (non_optimized and space in non_optimized):
             space_params = HyperoptTools._space_params(params, space, 5)
@@ -298,7 +299,7 @@ class HyperoptTools:
             print(result)
 
     @staticmethod
-    def _space_params(params, space: str, r: Optional[int] = None) -> Dict:
+    def _space_params(params, space: str, r: int | None = None) -> dict:
         d = params.get(space)
         if d:
             # Round floats to `r` digits after the decimal point if requested
@@ -328,7 +329,7 @@ class HyperoptTools:
         return bool(results["loss"] < current_best_loss)
 
     @staticmethod
-    def format_results_explanation_string(results_metrics: Dict, stake_currency: str) -> str:
+    def format_results_explanation_string(results_metrics: dict, stake_currency: str) -> str:
         """
         Return the formatted results explanation in a string
         """
@@ -373,7 +374,6 @@ class HyperoptTools:
 
         trials = json_normalize(results, max_level=1)
         trials["Best"] = ""
-        trials["Stake currency"] = config["stake_currency"]
 
         base_metrics = [
             "Best",
@@ -382,11 +382,13 @@ class HyperoptTools:
             "results_metrics.profit_mean",
             "results_metrics.profit_median",
             "results_metrics.profit_total",
-            "Stake currency",
+            "results_metrics.stake_currency",
             "results_metrics.profit_total_abs",
             "results_metrics.holding_avg",
             "results_metrics.trade_count_long",
             "results_metrics.trade_count_short",
+            "results_metrics.max_drawdown_abs",
+            "results_metrics.max_drawdown_account",
             "loss",
             "is_initial_point",
             "is_best",
@@ -408,6 +410,8 @@ class HyperoptTools:
             "Avg duration",
             "Trade count long",
             "Trade count short",
+            "Max drawdown",
+            "Max drawdown percent",
             "Objective",
             "is_initial_point",
             "is_best",
@@ -429,6 +433,9 @@ class HyperoptTools:
         )
         trials["Profit"] = trials["Profit"].apply(lambda x: f"{x:,.2f}" if not isna(x) else "")
         trials["Avg profit"] = trials["Avg profit"].apply(
+            lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
+        )
+        trials["Max drawdown percent"] = trials["Max drawdown percent"].apply(
             lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
         )
         trials["Objective"] = trials["Objective"].apply(

@@ -24,7 +24,7 @@ The easiest way to install and run Freqtrade is to clone the bot Github reposito
     The `stable` branch contains the code of the last release (done usually once per month on an approximately one week old snapshot of the `develop` branch to prevent packaging bugs, so potentially it's more stable).
 
 !!! Note
-    Python3.9 or higher and the corresponding `pip` are assumed to be available. The install-script will warn you and stop if that's not the case. `git` is also needed to clone the Freqtrade repository.  
+    Python3.10 or higher and the corresponding `pip` are assumed to be available. The install-script will warn you and stop if that's not the case. `git` is also needed to clone the Freqtrade repository.  
     Also, python headers (`python<yourversion>-dev` / `python<yourversion>-devel`) must be available for the installation to complete successfully.
 
 !!! Warning "Up-to-date clock"
@@ -42,7 +42,7 @@ These requirements apply to both [Script Installation](#script-installation) and
 
 ### Install guide
 
-* [Python >= 3.9](http://docs.python-guide.org/en/latest/starting/installation/)
+* [Python >= 3.10](http://docs.python-guide.org/en/latest/starting/installation/)
 * [pip](https://pip.pypa.io/en/stable/installing/)
 * [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 * [virtualenv](https://virtualenv.pypa.io/en/stable/installation.html) (Recommended)
@@ -54,7 +54,7 @@ We've included/collected install instructions for Ubuntu, MacOS, and Windows. Th
 OS Specific steps are listed first, the common section below is necessary for all systems.
 
 !!! Note
-    Python3.9 or higher and the corresponding pip are assumed to be available.
+    Python3.10 or higher and the corresponding pip are assumed to be available.
 
 === "Debian/Ubuntu"
     #### Install necessary dependencies
@@ -67,16 +67,28 @@ OS Specific steps are listed first, the common section below is necessary for al
     sudo apt install -y python3-pip python3-venv python3-dev python3-pandas git curl
     ```
 
+=== "MacOS"
+    #### Install necessary dependencies
+
+    Install [Homebrew](https://brew.sh/) if you don't have it already.
+
+    ```bash
+    # install packages
+    brew install gettext libomp
+    ```
+    !!! Note
+        The `setup.sh` script will install these dependencies for you - assuming brew is installed on your system.
+
 === "RaspberryPi/Raspbian"
     The following assumes the latest [Raspbian Buster lite image](https://www.raspberrypi.org/downloads/raspbian/).
-    This image comes with python3.9 preinstalled, making it easy to get freqtrade up and running.
+    This image comes with python3.11 preinstalled, making it easy to get freqtrade up and running.
 
     Tested using a Raspberry Pi 3 with the Raspbian Buster lite image, all updates applied.
 
 
     ```bash
     sudo apt-get install python3-venv libatlas-base-dev cmake curl
-    # Use pywheels.org to speed up installation
+    # Use piwheels.org to speed up installation
     sudo echo "[global]\nextra-index-url=https://www.piwheels.org/simple" > tee /etc/pip.conf
 
     git clone https://github.com/freqtrade/freqtrade.git
@@ -150,9 +162,7 @@ Each time you open a new terminal, you must run `source .venv/bin/activate` to a
 source ./.venv/bin/activate
 ```
 
-### Congratulations
-
-[You are ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready) to run the bot.
 
 ### Other options of /setup.sh script
 
@@ -169,7 +179,7 @@ You can as well update, configure and reset the codebase of your bot with `./scr
 ** --install **
 
 With this option, the script will install the bot and most dependencies:
-You will need to have git and python3.9+ installed beforehand for this to work.
+You will need to have git and python3.10+ installed beforehand for this to work.
 
 * Mandatory software as: `ta-lib`
 * Setup your virtualenv under `.venv/`
@@ -220,7 +230,7 @@ cd ..
 rm -rf ./ta-lib*
 ```
 
-#### Setup Python virtual environment (virtualenv)
+### Setup Python virtual environment (virtualenv)
 
 You will run freqtrade in separated `virtual environment`
 
@@ -232,19 +242,18 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-#### Install python dependencies
+### Install python dependencies
 
 ```bash
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
+# install freqtrade
 python3 -m pip install -e .
 ```
 
-### Congratulations
+[You are now ready](#you-are-ready) to run the bot.
 
-[You are ready](#you-are-ready), and run the bot
-
-#### (Optional) Post-installation Tasks
+### (Optional) Post-installation Tasks
 
 !!! Note 
     If you run the bot on a server, you should consider using [Docker](docker_quickstart.md) or a terminal multiplexer like `screen` or [`tmux`](https://en.wikipedia.org/wiki/Tmux) to avoid that the bot is stopped on logout.
@@ -333,9 +342,7 @@ cd build_helpers
 bash install_ta-lib.sh ${CONDA_PREFIX} nosudo
 ```
 
-### Congratulations
-
-[You are ready](#you-are-ready), and run the bot
+[You are now ready](#you-are-ready) to run the bot.
 
 ### Important shortcuts
 

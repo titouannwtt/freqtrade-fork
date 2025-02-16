@@ -2,9 +2,10 @@ import copy
 import importlib
 import logging
 from abc import abstractmethod
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -49,9 +50,9 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         )
         th.set_num_threads(self.max_threads)
         self.reward_params = self.freqai_info["rl_config"]["model_reward_parameters"]
-        self.train_env: Union[VecMonitor, SubprocVecEnv, gym.Env] = gym.Env()
-        self.eval_env: Union[VecMonitor, SubprocVecEnv, gym.Env] = gym.Env()
-        self.eval_callback: Optional[MaskableEvalCallback] = None
+        self.train_env: VecMonitor | SubprocVecEnv | gym.Env = gym.Env()
+        self.eval_env: VecMonitor | SubprocVecEnv | gym.Env = gym.Env()
+        self.eval_callback: MaskableEvalCallback | None = None
         self.model_type = self.freqai_info["rl_config"]["model_type"]
         self.rl_config = self.freqai_info["rl_config"]
         self.df_raw: DataFrame = DataFrame()
@@ -114,7 +115,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             training_filter=True,
         )
 
-        dd: Dict[str, Any] = dk.make_train_test_datasets(features_filtered, labels_filtered)
+        dd: dict[str, Any] = dk.make_train_test_datasets(features_filtered, labels_filtered)
         self.df_raw = copy.deepcopy(dd["train_features"])
         dk.fit_labels()  # FIXME useless for now, but just satiating append methods
 
@@ -137,8 +138,8 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             )
 
         logger.info(
-            f'Training model on {len(dk.data_dictionary["train_features"].columns)}'
-            f' features and {len(dd["train_features"])} data points'
+            f"Training model on {len(dk.data_dictionary['train_features'].columns)}"
+            f" features and {len(dd['train_features'])} data points"
         )
 
         self.set_train_and_eval_environments(dd, prices_train, prices_test, dk)
@@ -151,7 +152,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
     def set_train_and_eval_environments(
         self,
-        data_dictionary: Dict[str, DataFrame],
+        data_dictionary: dict[str, DataFrame],
         prices_train: DataFrame,
         prices_test: DataFrame,
         dk: FreqaiDataKitchen,
@@ -183,7 +184,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         actions = self.train_env.get_actions()
         self.tensorboard_callback = TensorboardCallback(verbose=1, actions=actions)
 
-    def pack_env_dict(self, pair: str) -> Dict[str, Any]:
+    def pack_env_dict(self, pair: str) -> dict[str, Any]:
         """
         Create dictionary of environment arguments
         """
@@ -204,7 +205,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         return env_info
 
     @abstractmethod
-    def fit(self, data_dictionary: Dict[str, Any], dk: FreqaiDataKitchen, **kwargs):
+    def fit(self, data_dictionary: dict[str, Any], dk: FreqaiDataKitchen, **kwargs):
         """
         Agent customizations and abstract Reinforcement Learning customizations
         go in here. Abstract method, so this function must be overridden by
@@ -212,7 +213,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         """
         return
 
-    def get_state_info(self, pair: str) -> Tuple[float, float, int]:
+    def get_state_info(self, pair: str) -> tuple[float, float, int]:
         """
         State info during dry/live (not backtesting) which is fed back
         into the model.
@@ -250,7 +251,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
     def predict(
         self, unfiltered_df: DataFrame, dk: FreqaiDataKitchen, **kwargs
-    ) -> Tuple[DataFrame, npt.NDArray[np.int_]]:
+    ) -> tuple[DataFrame, npt.NDArray[np.int_]]:
         """
         Filter the prediction features data and predict with it.
         :param unfiltered_dataframe: Full dataframe for the current backtest period.
@@ -303,7 +304,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
     def build_ohlc_price_dataframes(
         self, data_dictionary: dict, pair: str, dk: FreqaiDataKitchen
-    ) -> Tuple[DataFrame, DataFrame]:
+    ) -> tuple[DataFrame, DataFrame]:
         """
         Builds the train prices and test prices for the environment.
         """
@@ -345,8 +346,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             )
         elif prices_train.empty:
             raise OperationalException(
-                "No prices found, please follow log warning "
-                "instructions to correct the strategy."
+                "No prices found, please follow log warning instructions to correct the strategy."
             )
 
         prices_train.rename(columns=rename_dict, inplace=True)
@@ -482,13 +482,13 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
 
 def make_env(
-    MyRLEnv: Type[BaseEnvironment],
+    MyRLEnv: type[BaseEnvironment],
     env_id: str,
     rank: int,
     seed: int,
     train_df: DataFrame,
     price: DataFrame,
-    env_info: Dict[str, Any],
+    env_info: dict[str, Any],
 ) -> Callable:
     """
     Utility function for multiprocessed env.

@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from freqtrade.constants import Config, LongShort
 from freqtrade.exchange import timeframe_to_minutes
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ProtectionReturn:
     lock: bool
     until: datetime
-    reason: Optional[str]
+    reason: str | None
     lock_side: str = "*"
 
 
@@ -28,13 +28,13 @@ class IProtection(LoggingMixin, ABC):
     # Can stop trading for one pair
     has_local_stop: bool = False
 
-    def __init__(self, config: Config, protection_config: Dict[str, Any]) -> None:
+    def __init__(self, config: Config, protection_config: dict[str, Any]) -> None:
         self._config = config
         self._protection_config = protection_config
-        self._stop_duration_candles: Optional[int] = None
+        self._stop_duration_candles: int | None = None
         self._stop_duration: int = 0
-        self._lookback_period_candles: Optional[int] = None
-        self._unlock_at: Optional[str] = None
+        self._lookback_period_candles: int | None = None
+        self._unlock_at: str | None = None
 
         tf_in_min = timeframe_to_minutes(config["timeframe"])
         if "stop_duration_candles" in protection_config:
@@ -102,7 +102,7 @@ class IProtection(LoggingMixin, ABC):
         """
 
     @abstractmethod
-    def global_stop(self, date_now: datetime, side: LongShort) -> Optional[ProtectionReturn]:
+    def global_stop(self, date_now: datetime, side: LongShort) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for all pairs
         This must evaluate to true for the whole period of the "cooldown period".
@@ -111,7 +111,7 @@ class IProtection(LoggingMixin, ABC):
     @abstractmethod
     def stop_per_pair(
         self, pair: str, date_now: datetime, side: LongShort
-    ) -> Optional[ProtectionReturn]:
+    ) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for this pair
         This must evaluate to true for the whole period of the "cooldown period".
@@ -119,7 +119,7 @@ class IProtection(LoggingMixin, ABC):
             If true, this pair will be locked with <reason> until <until>
         """
 
-    def calculate_lock_end(self, trades: List[LocalTrade]) -> datetime:
+    def calculate_lock_end(self, trades: list[LocalTrade]) -> datetime:
         """
         Get lock end time
         Implicitly uses `self._stop_duration` or `self._unlock_at` depending on the configuration.

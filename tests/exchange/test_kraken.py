@@ -23,7 +23,7 @@ STOPLOSS_LIMIT_ORDERTYPE = "stop-loss-limit"
 )
 def test_kraken_trading_agreement(default_conf, mocker, order_type, time_in_force, expected_params):
     api_mock = MagicMock()
-    order_id = f"test_prod_{order_type}_{randint(0, 10 ** 6)}"
+    order_id = f"test_prod_{order_type}_{randint(0, 10**6)}"
     api_mock.options = {}
     api_mock.create_order = MagicMock(
         return_value={"id": order_id, "symbol": "ETH/BTC", "info": {"foo": "bar"}}
@@ -56,17 +56,22 @@ def test_kraken_trading_agreement(default_conf, mocker, order_type, time_in_forc
     assert api_mock.create_order.call_args[0][5] == expected_params
 
 
-def test_get_balances_prod(default_conf, mocker):
-    balance_item = {"free": None, "total": 10.0, "used": 0.0}
+def test_get_balances_prod_kraken(default_conf, mocker):
+    balance_item = {"free": 0.0, "total": 10.0, "used": 0.0}
+    kraken = ccxt.kraken()
 
     api_mock = MagicMock()
+    api_mock.commonCurrencies = kraken.commonCurrencies
     api_mock.fetch_balance = MagicMock(
         return_value={
-            "1ST": balance_item.copy(),
+            "1ST": {"free": 0.0, "total": 0.0, "used": 0.0},
+            "1ST.F": balance_item.copy(),  # When "rewards" is enabled, the balance is in ".F"
             "2ND": balance_item.copy(),
             "3RD": balance_item.copy(),
             "4TH": balance_item.copy(),
             "EUR": balance_item.copy(),
+            "BTC": {"free": 0.0, "total": 0.0, "used": 0.0},
+            "XBT.F": balance_item.copy(),
             "timestamp": 123123,
         }
     )
@@ -123,7 +128,7 @@ def test_get_balances_prod(default_conf, mocker):
     default_conf["dry_run"] = False
     exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="kraken")
     balances = exchange.get_balances()
-    assert len(balances) == 6
+    assert len(balances) == 7
 
     assert balances["1ST"]["free"] == 9.0
     assert balances["1ST"]["total"] == 10.0
@@ -144,6 +149,10 @@ def test_get_balances_prod(default_conf, mocker):
     assert balances["EUR"]["free"] == 8.0
     assert balances["EUR"]["total"] == 10.0
     assert balances["EUR"]["used"] == 2.0
+
+    assert balances["BTC"]["free"] == 10.0
+    assert balances["BTC"]["total"] == 10.0
+    assert balances["BTC"]["used"] == 0.0
     ccxt_exceptionhandlers(
         mocker, default_conf, api_mock, "kraken", "get_balances", "fetch_balance"
     )
@@ -159,7 +168,7 @@ def test_get_balances_prod(default_conf, mocker):
 )
 def test_create_stoploss_order_kraken(default_conf, mocker, ordertype, side, adjustedprice):
     api_mock = MagicMock()
-    order_id = f"test_prod_buy_{randint(0, 10 ** 6)}"
+    order_id = f"test_prod_buy_{randint(0, 10**6)}"
 
     api_mock.create_order = MagicMock(return_value={"id": order_id, "info": {"foo": "bar"}})
 

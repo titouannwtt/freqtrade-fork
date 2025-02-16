@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict
@@ -14,18 +14,18 @@ class BaseArbitraryModel(BaseModel):
 
 class WSRequestSchema(BaseArbitraryModel):
     type: RPCRequestType
-    data: Optional[Any] = None
+    data: Any | None = None
 
 
 class WSMessageSchemaType(TypedDict):
     # Type for typing to avoid doing pydantic typechecks.
     type: RPCMessageType
-    data: Optional[Dict[str, Any]]
+    data: dict[str, Any] | None
 
 
 class WSMessageSchema(BaseArbitraryModel):
     type: RPCMessageType
-    data: Optional[Any] = None
+    data: Any | None = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -34,7 +34,7 @@ class WSMessageSchema(BaseArbitraryModel):
 
 class WSSubscribeRequest(WSRequestSchema):
     type: RPCRequestType = RPCRequestType.SUBSCRIBE
-    data: List[RPCMessageType]
+    data: list[RPCMessageType]
 
 
 class WSWhitelistRequest(WSRequestSchema):
@@ -44,7 +44,7 @@ class WSWhitelistRequest(WSRequestSchema):
 
 class WSAnalyzedDFRequest(WSRequestSchema):
     type: RPCRequestType = RPCRequestType.ANALYZED_DF
-    data: Dict[str, Any] = {"limit": 1500, "pair": None}
+    data: dict[str, Any] = {"limit": 1500, "pair": None}
 
 
 # ------------------------------ MESSAGE SCHEMAS ----------------------------
@@ -52,7 +52,7 @@ class WSAnalyzedDFRequest(WSRequestSchema):
 
 class WSWhitelistMessage(WSMessageSchema):
     type: RPCMessageType = RPCMessageType.WHITELIST
-    data: List[str]
+    data: list[str]
 
 
 class WSAnalyzedDFMessage(WSMessageSchema):

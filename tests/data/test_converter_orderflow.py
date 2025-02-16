@@ -1,13 +1,17 @@
-from collections import OrderedDict
-
-import numpy as np
 import pandas as pd
 import pytest
 
 from freqtrade.constants import DEFAULT_TRADES_COLUMNS
 from freqtrade.data.converter import populate_dataframe_with_trades
-from freqtrade.data.converter.orderflow import trades_to_volumeprofile_with_total_delta_bid_ask
+from freqtrade.data.converter.orderflow import (
+    ORDERFLOW_ADDED_COLUMNS,
+    stacked_imbalance,
+    timeframe_to_DateOffset,
+    trades_to_volumeprofile_with_total_delta_bid_ask,
+)
 from freqtrade.data.converter.trade_converter import trades_list_to_df
+from freqtrade.data.dataprovider import DataProvider
+from tests.strategy.strats.strategy_test_v3 import StrategyTestV3
 
 
 BIN_SIZE_SCALE = 0.5
@@ -37,6 +41,7 @@ def populate_dataframe_with_trades_trades(testdatadir):
 
 @pytest.fixture
 def candles(testdatadir):
+    # TODO: this fixture isn't really necessary and could be removed
     return pd.read_json(testdatadir / "orderflow/candles.json").copy()
 
 
@@ -102,7 +107,7 @@ def test_public_trades_mock_populate_dataframe_with_trades__check_orderflow(
         },
     }
     # Apply the function to populate the data frame with order flow data
-    df, _ = populate_dataframe_with_trades(OrderedDict(), config, dataframe, trades)
+    df, _ = populate_dataframe_with_trades(None, config, dataframe, trades)
     # Extract results from the first row of the DataFrame
     results = df.iloc[0]
     t = results["trades"]
@@ -180,24 +185,24 @@ def test_public_trades_mock_populate_dataframe_with_trades__check_orderflow(
     assert results["max_delta"] == 17.298
 
     # Assert that stacked imbalances are NaN (not applicable in this test)
-    assert np.isnan(results["stacked_imbalances_bid"])
-    assert np.isnan(results["stacked_imbalances_ask"])
+    assert results["stacked_imbalances_bid"] == []
+    assert results["stacked_imbalances_ask"] == []
 
     # Repeat assertions for the third from last row
     results = df.iloc[-2]
     assert pytest.approx(results["delta"]) == -20.862
     assert pytest.approx(results["min_delta"]) == -54.559999
     assert 82.842 == results["max_delta"]
-    assert 234.99 == results["stacked_imbalances_bid"]
-    assert 234.96 == results["stacked_imbalances_ask"]
+    assert results["stacked_imbalances_bid"] == [234.97]
+    assert results["stacked_imbalances_ask"] == [234.94]
 
     # Repeat assertions for the last row
     results = df.iloc[-1]
     assert pytest.approx(results["delta"]) == -49.302
     assert results["min_delta"] == -70.222
     assert pytest.approx(results["max_delta"]) == 11.213
-    assert np.isnan(results["stacked_imbalances_bid"])
-    assert np.isnan(results["stacked_imbalances_ask"])
+    assert results["stacked_imbalances_bid"] == []
+    assert results["stacked_imbalances_ask"] == []
 
 
 def test_public_trades_trades_mock_populate_dataframe_with_trades__check_trades(
@@ -243,7 +248,7 @@ def test_public_trades_trades_mock_populate_dataframe_with_trades__check_trades(
     }
 
     # Populate the DataFrame with trades and order flow data
-    df, _ = populate_dataframe_with_trades(OrderedDict(), config, dataframe, trades)
+    df, _ = populate_dataframe_with_trades(None, config, dataframe, trades)
 
     # --- DataFrame and Trade Data Validation ---
 
@@ -353,7 +358,8 @@ def test_public_trades_binned_big_sample_list(public_trades_list):
     assert 197.512 == df["bid_amount"].iloc[0]  # total bid amount
     assert 88.98 == df["ask_amount"].iloc[0]  # total ask amount
     assert 26 == df["ask"].iloc[0]  # ask price
-    assert -108.532 == pytest.approx(df["delta"].iloc[0])  # delta (bid amount - ask amount)
+    # delta (bid amount - ask amount)
+    assert -108.532 == pytest.approx(df["delta"].iloc[0])
 
     assert 3 == df["bid"].iloc[-1]  # bid price
     assert 50.659 == df["bid_amount"].iloc[-1]  # total bid amount
@@ -401,9 +407,7 @@ def test_public_trades_config_max_trades(
         },
     }
 
-    df, _ = populate_dataframe_with_trades(
-        OrderedDict(), default_conf | orderflow_config, dataframe, trades
-    )
+    df, _ = populate_dataframe_with_trades(None, default_conf | orderflow_config, dataframe, trades)
     assert df.delta.count() == 1
 
 
@@ -482,3 +486,128 @@ def test_public_trades_testdata_sanity(
         "cost",
         "date",
     ]
+
+
+def test_analyze_with_orderflow(
+    default_conf_usdt,
+    mocker,
+    populate_dataframe_with_trades_dataframe,
+    populate_dataframe_with_trades_trades,
+):
+    ohlcv_history = populate_dataframe_with_trades_dataframe
+    # call without orderflow
+    strategy = StrategyTestV3(config=default_conf_usdt)
+    strategy.dp = DataProvider(default_conf_usdt, None, None)
+
+    mocker.patch.object(strategy.dp, "trades", return_value=populate_dataframe_with_trades_trades)
+    import freqtrade.data.converter.orderflow as orderflow_module
+
+    spy = mocker.spy(orderflow_module, "trades_to_volumeprofile_with_total_delta_bid_ask")
+
+    pair = "ETH/BTC"
+    df = strategy.advise_indicators(ohlcv_history, {"pair:": pair})
+    assert len(df) == len(ohlcv_history)
+    assert "open" in df.columns
+    assert spy.call_count == 0
+
+    # Not expected to run - shouldn't have added orderflow columns
+    for col in ORDERFLOW_ADDED_COLUMNS:
+        assert col not in df.columns, f"Column {col} found in df.columns"
+
+    default_conf_usdt["exchange"]["use_public_trades"] = True
+    default_conf_usdt["orderflow"] = {
+        "cache_size": 5,
+        "max_candles": 5,
+        "scale": 0.005,
+        "imbalance_volume": 0,
+        "imbalance_ratio": 3,
+        "stacked_imbalance_range": 3,
+    }
+
+    strategy.config = default_conf_usdt
+    # First round - builds cache
+    df1 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
+    assert len(df1) == len(ohlcv_history)
+    assert "open" in df1.columns
+    assert spy.call_count == 5
+
+    for col in ORDERFLOW_ADDED_COLUMNS:
+        assert col in df1.columns, f"Column {col} not found in df.columns"
+
+        if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
+            assert df1[col].count() == 5, f"Column {col} has {df1[col].count()} non-NaN values"
+
+    assert len(strategy._cached_grouped_trades_per_pair[pair]) == 5
+
+    lastval_trades = df1.at[len(df1) - 1, "trades"]
+    assert isinstance(lastval_trades, list)
+    assert len(lastval_trades) == 122
+
+    lastval_of = df1.at[len(df1) - 1, "orderflow"]
+    assert isinstance(lastval_of, dict)
+
+    spy.reset_mock()
+    # Ensure caching works - call the same logic again.
+    df2 = strategy.advise_indicators(ohlcv_history, {"pair": pair})
+    assert len(df2) == len(ohlcv_history)
+    assert "open" in df2.columns
+    assert spy.call_count == 0
+    for col in ORDERFLOW_ADDED_COLUMNS:
+        assert col in df2.columns, f"Round2: Column {col} not found in df.columns"
+
+        if col not in ("stacked_imbalances_bid", "stacked_imbalances_ask"):
+            assert df2[col].count() == 5, (
+                f"Round2: Column {col} has {df2[col].count()} non-NaN values"
+            )
+
+    lastval_trade2 = df2.at[len(df2) - 1, "trades"]
+    assert isinstance(lastval_trade2, list)
+    assert len(lastval_trade2) == 122
+
+    lastval_of2 = df2.at[len(df2) - 1, "orderflow"]
+    assert isinstance(lastval_of2, dict)
+
+
+def test_stacked_imbalances_multiple_prices():
+    """Test that stacked imbalances correctly returns multiple price levels when present"""
+    # Test with empty result
+    df_no_stacks = pd.DataFrame(
+        {
+            "bid_imbalance": [False, False, True, False],
+            "ask_imbalance": [False, True, False, False],
+        },
+        index=[234.95, 234.96, 234.97, 234.98],
+    )
+    no_stacks = stacked_imbalance(df_no_stacks, "bid", stacked_imbalance_range=2)
+    assert no_stacks == []
+
+    # Create a sample DataFrame with known imbalances
+    df = pd.DataFrame(
+        {
+            "bid_imbalance": [True, True, True, False, False, True, True, False, True],
+            "ask_imbalance": [False, False, True, True, True, False, False, True, True],
+        },
+        index=[234.95, 234.96, 234.97, 234.98, 234.99, 235.00, 235.01, 235.02, 235.03],
+    )
+    # Test bid imbalances (should return prices in ascending order)
+    bid_prices = stacked_imbalance(df, "bid", stacked_imbalance_range=2)
+    assert bid_prices == [234.95, 234.96, 235.00]
+
+    # Test ask imbalances (should return prices in descending order)
+    ask_prices = stacked_imbalance(df, "ask", stacked_imbalance_range=2)
+    assert ask_prices == [234.97, 234.98, 235.02]
+
+    # Test with higher stacked_imbalance_range
+    bid_prices_higher = stacked_imbalance(df, "bid", stacked_imbalance_range=3)
+    assert bid_prices_higher == [234.95]
+
+
+def test_timeframe_to_DateOffset():
+    assert timeframe_to_DateOffset("1s") == pd.DateOffset(seconds=1)
+    assert timeframe_to_DateOffset("1m") == pd.DateOffset(minutes=1)
+    assert timeframe_to_DateOffset("5m") == pd.DateOffset(minutes=5)
+    assert timeframe_to_DateOffset("1h") == pd.DateOffset(hours=1)
+    assert timeframe_to_DateOffset("1d") == pd.DateOffset(days=1)
+    assert timeframe_to_DateOffset("1w") == pd.DateOffset(weeks=1)
+    assert timeframe_to_DateOffset("1M") == pd.DateOffset(months=1)
+    assert timeframe_to_DateOffset("1y") == pd.DateOffset(years=1)

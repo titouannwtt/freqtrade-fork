@@ -1,8 +1,6 @@
 import logging
-from typing import Optional
 
 from freqtrade.constants import Config
-from freqtrade.data.history import get_datahandler
 from freqtrade.enums import TradingMode
 from freqtrade.exchange import Exchange
 
@@ -10,7 +8,9 @@ from freqtrade.exchange import Exchange
 logger = logging.getLogger(__name__)
 
 
-def migrate_funding_fee_timeframe(config: Config, exchange: Optional[Exchange]):
+def migrate_funding_fee_timeframe(config: Config, exchange: Exchange | None):
+    from freqtrade.data.history import get_datahandler
+
     if config.get("trading_mode", TradingMode.SPOT) != TradingMode.FUTURES:
         # only act on futures
         return

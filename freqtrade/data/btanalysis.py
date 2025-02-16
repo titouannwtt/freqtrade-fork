@@ -3,20 +3,22 @@ Helpers when analyzing backtest data
 """
 
 import logging
+import zipfile
 from copy import copy
 from datetime import datetime, timezone
+from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
 from freqtrade.constants import LAST_BT_RESULT_FN, IntOrInf
 from freqtrade.exceptions import ConfigurationError, OperationalException
+from freqtrade.ft_types import BacktestHistoryEntryType, BacktestResultType
 from freqtrade.misc import file_dump_json, json_load
 from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename
 from freqtrade.persistence import LocalTrade, Trade, init_db
-from freqtrade.types import BacktestHistoryEntryType, BacktestResultType
 
 
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ BT_DATA_COLUMNS = [
 ]
 
 
-def get_latest_optimize_filename(directory: Union[Path, str], variant: str) -> str:
+def get_latest_optimize_filename(directory: Path | str, variant: str) -> str:
     """
     Get latest backtest export based on '.last_result.json'.
     :param directory: Directory to search for last result
@@ -84,7 +86,7 @@ def get_latest_optimize_filename(directory: Union[Path, str], variant: str) -> s
     return data[f"latest_{variant}"]
 
 
-def get_latest_backtest_filename(directory: Union[Path, str]) -> str:
+def get_latest_backtest_filename(directory: Path | str) -> str:
     """
     Get latest backtest export based on '.last_result.json'.
     :param directory: Directory to search for last result
@@ -97,7 +99,7 @@ def get_latest_backtest_filename(directory: Union[Path, str]) -> str:
     return get_latest_optimize_filename(directory, "backtest")
 
 
-def get_latest_hyperopt_filename(directory: Union[Path, str]) -> str:
+def get_latest_hyperopt_filename(directory: Path | str) -> str:
     """
     Get latest hyperopt export based on '.last_result.json'.
     :param directory: Directory to search for last result
@@ -114,9 +116,7 @@ def get_latest_hyperopt_filename(directory: Union[Path, str]) -> str:
         return "hyperopt_results.pickle"
 
 
-def get_latest_hyperopt_file(
-    directory: Union[Path, str], predef_filename: Optional[str] = None
-) -> Path:
+def get_latest_hyperopt_file(directory: Path | str, predef_filename: str | None = None) -> Path:
     """
     Get latest hyperopt export based on '.last_result.json'.
     :param directory: Directory to search for last result
@@ -137,7 +137,7 @@ def get_latest_hyperopt_file(
     return directory / get_latest_hyperopt_filename(directory)
 
 
-def load_backtest_metadata(filename: Union[Path, str]) -> Dict[str, Any]:
+def load_backtest_metadata(filename: Path | str) -> dict[str, Any]:
     """
     Read metadata dictionary from backtest results file without reading and deserializing entire
     file.
@@ -154,7 +154,7 @@ def load_backtest_metadata(filename: Union[Path, str]) -> Dict[str, Any]:
         raise OperationalException("Unexpected error while loading backtest metadata.") from e
 
 
-def load_backtest_stats(filename: Union[Path, str]) -> BacktestResultType:
+def load_backtest_stats(filename: Path | str) -> BacktestResultType:
     """
     Load backtest statistics file.
     :param filename: pathlib.Path object, or string pointing to the file.
@@ -167,8 +167,16 @@ def load_backtest_stats(filename: Union[Path, str]) -> BacktestResultType:
     if not filename.is_file():
         raise ValueError(f"File {filename} does not exist.")
     logger.info(f"Loading backtest result from {filename}")
-    with filename.open() as file:
-        data = json_load(file)
+
+    if filename.suffix == ".zip":
+        data = json_load(
+            StringIO(
+                load_file_from_zip(filename, filename.with_suffix(".json").name).decode("utf-8")
+            )
+        )
+    else:
+        with filename.open() as file:
+            data = json_load(file)
 
     # Legacy list format does not contain metadata.
     if isinstance(data, dict):
@@ -176,7 +184,7 @@ def load_backtest_stats(filename: Union[Path, str]) -> BacktestResultType:
     return data
 
 
-def load_and_merge_backtest_result(strategy_name: str, filename: Path, results: Dict[str, Any]):
+def load_and_merge_backtest_result(strategy_name: str, filename: Path, results: dict[str, Any]):
     """
     Load one strategy from multi-strategy result and merge it with results
     :param strategy_name: Name of the strategy contained in the result
@@ -195,12 +203,14 @@ def load_and_merge_backtest_result(strategy_name: str, filename: Path, results: 
             break
 
 
-def _get_backtest_files(dirname: Path) -> List[Path]:
-    # Weird glob expression here avoids including .meta.json files.
-    return list(reversed(sorted(dirname.glob("backtest-result-*-[0-9][0-9].json"))))
+def _get_backtest_files(dirname: Path) -> list[Path]:
+    # Get both json and zip files separately and combine the results
+    json_files = dirname.glob("backtest-result-*-[0-9][0-9]*.json")
+    zip_files = dirname.glob("backtest-result-*-[0-9][0-9]*.zip")
+    return list(reversed(sorted(list(json_files) + list(zip_files))))
 
 
-def _extract_backtest_result(filename: Path) -> List[BacktestHistoryEntryType]:
+def _extract_backtest_result(filename: Path) -> list[BacktestHistoryEntryType]:
     metadata = load_backtest_metadata(filename)
     return [
         {
@@ -220,14 +230,14 @@ def _extract_backtest_result(filename: Path) -> List[BacktestHistoryEntryType]:
     ]
 
 
-def get_backtest_result(filename: Path) -> List[BacktestHistoryEntryType]:
+def get_backtest_result(filename: Path) -> list[BacktestHistoryEntryType]:
     """
     Get backtest result read from metadata file
     """
     return _extract_backtest_result(filename)
 
 
-def get_backtest_resultlist(dirname: Path) -> List[BacktestHistoryEntryType]:
+def get_backtest_resultlist(dirname: Path) -> list[BacktestHistoryEntryType]:
     """
     Get list of backtest results read from metadata files
     """
@@ -244,12 +254,13 @@ def delete_backtest_result(file_abs: Path):
     """
     # *.meta.json
     logger.info(f"Deleting backtest result file: {file_abs.name}")
-    file_abs_meta = file_abs.with_suffix(".meta.json")
-    file_abs.unlink()
-    file_abs_meta.unlink()
+
+    for file in file_abs.parent.glob(f"{file_abs.stem}*"):
+        logger.info(f"Deleting file: {file}")
+        file.unlink()
 
 
-def update_backtest_metadata(filename: Path, strategy: str, content: Dict[str, Any]):
+def update_backtest_metadata(filename: Path, strategy: str, content: dict[str, Any]):
     """
     Updates backtest metadata file with new content.
     :raises: ValueError if metadata file does not exist, or strategy is not in this file.
@@ -268,15 +279,19 @@ def get_backtest_market_change(filename: Path, include_ts: bool = True) -> pd.Da
     """
     Read backtest market change file.
     """
-    df = pd.read_feather(filename)
+    if filename.suffix == ".zip":
+        data = load_file_from_zip(filename, f"{filename.stem}_market_change.feather")
+        df = pd.read_feather(BytesIO(data))
+    else:
+        df = pd.read_feather(filename)
     if include_ts:
         df.loc[:, "__date_ts"] = df.loc[:, "date"].astype(np.int64) // 1000 // 1000
     return df
 
 
 def find_existing_backtest_stats(
-    dirname: Union[Path, str], run_ids: Dict[str, str], min_backtest_date: Optional[datetime] = None
-) -> Dict[str, Any]:
+    dirname: Path | str, run_ids: dict[str, str], min_backtest_date: datetime | None = None
+) -> dict[str, Any]:
     """
     Find existing backtest stats that match specified run IDs and load them.
     :param dirname: pathlib.Path object, or string pointing to the file.
@@ -287,7 +302,7 @@ def find_existing_backtest_stats(
     # Copy so we can modify this dict without affecting parent scope.
     run_ids = copy(run_ids)
     dirname = Path(dirname)
-    results: Dict[str, Any] = {
+    results: dict[str, Any] = {
         "metadata": {},
         "strategy": {},
         "strategy_comparison": [],
@@ -344,7 +359,7 @@ def _load_backtest_data_df_compatibility(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_backtest_data(filename: Union[Path, str], strategy: Optional[str] = None) -> pd.DataFrame:
+def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.DataFrame:
     """
     Load backtest data file.
     :param filename: pathlib.Path object, or string pointing to a file or directory
@@ -387,6 +402,93 @@ def load_backtest_data(filename: Union[Path, str], strategy: Optional[str] = Non
     if not df.empty:
         df = df.sort_values("open_date").reset_index(drop=True)
     return df
+
+
+def load_file_from_zip(zip_path: Path, filename: str) -> bytes:
+    """
+    Load a file from a zip file
+    :param zip_path: Path to the zip file
+    :param filename: Name of the file to load
+    :return: Bytes of the file
+    :raises: ValueError if loading goes wrong.
+    """
+    try:
+        with zipfile.ZipFile(zip_path) as zipf:
+            try:
+                with zipf.open(filename) as file:
+                    return file.read()
+            except KeyError:
+                logger.error(f"File {filename} not found in zip: {zip_path}")
+                raise ValueError(f"File {filename} not found in zip: {zip_path}") from None
+    except FileNotFoundError:
+        raise ValueError(f"Zip file {zip_path} not found.")
+    except zipfile.BadZipFile:
+        logger.error(f"Bad zip file: {zip_path}.")
+        raise ValueError(f"Bad zip file: {zip_path}.") from None
+
+
+def load_backtest_analysis_data(backtest_dir: Path, name: str):
+    """
+    Load backtest analysis data either from a pickle file or from within a zip file
+    :param backtest_dir: Directory containing backtest results
+    :param name: Name of the analysis data to load (signals, rejected, exited)
+    :return: Analysis data
+    """
+    import joblib
+
+    if backtest_dir.is_dir():
+        lbf = Path(get_latest_backtest_filename(backtest_dir))
+        zip_path = backtest_dir / lbf
+    else:
+        zip_path = backtest_dir
+
+    if zip_path.suffix == ".zip":
+        # Load from zip file
+        analysis_name = f"{zip_path.stem}_{name}.pkl"
+        data = load_file_from_zip(zip_path, analysis_name)
+        if not data:
+            return None
+        loaded_data = joblib.load(BytesIO(data))
+
+        logger.info(f"Loaded {name} candles from zip: {str(zip_path)}:{analysis_name}")
+        return loaded_data
+
+    else:
+        # Load from separate pickle file
+        if backtest_dir.is_dir():
+            scpf = Path(backtest_dir, f"{zip_path.stem}_{name}.pkl")
+        else:
+            scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
+
+        try:
+            with scpf.open("rb") as scp:
+                loaded_data = joblib.load(scp)
+                logger.info(f"Loaded {name} candles: {str(scpf)}")
+                return loaded_data
+        except Exception:
+            logger.exception(f"Cannot load {name} data from pickled results.")
+            return None
+
+
+def load_rejected_signals(backtest_dir: Path):
+    """
+    Load rejected signals from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "rejected")
+
+
+def load_signal_candles(backtest_dir: Path):
+    """
+    Load signal candles from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "signals")
+
+
+def load_exit_signal_candles(backtest_dir: Path) -> dict[str, dict[str, pd.DataFrame]]:
+    """
+    Load exit signal candles from backtest directory
+    """
+    return load_backtest_analysis_data(backtest_dir, "exited")
 
 
 def analyze_trade_parallelism(results: pd.DataFrame, timeframe: str) -> pd.DataFrame:
@@ -438,7 +540,7 @@ def evaluate_result_multi(
     return df_final[df_final["open_trades"] > max_open_trades]
 
 
-def trade_list_to_dataframe(trades: Union[List[Trade], List[LocalTrade]]) -> pd.DataFrame:
+def trade_list_to_dataframe(trades: list[Trade] | list[LocalTrade]) -> pd.DataFrame:
     """
     Convert list of Trade objects to pandas Dataframe
     :param trades: List of trade objects
@@ -452,7 +554,7 @@ def trade_list_to_dataframe(trades: Union[List[Trade], List[LocalTrade]]) -> pd.
     return df
 
 
-def load_trades_from_db(db_url: str, strategy: Optional[str] = None) -> pd.DataFrame:
+def load_trades_from_db(db_url: str, strategy: str | None = None) -> pd.DataFrame:
     """
     Load trades from a DB (using dburl)
     :param db_url: Sqlite url (default format sqlite:///tradesv3.dry-run.sqlite)
@@ -475,7 +577,7 @@ def load_trades(
     db_url: str,
     exportfilename: Path,
     no_trades: bool = False,
-    strategy: Optional[str] = None,
+    strategy: str | None = None,
 ) -> pd.DataFrame:
     """
     Based on configuration option 'trade_source':

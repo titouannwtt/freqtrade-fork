@@ -1,21 +1,30 @@
-from typing import Any, Dict, Literal, Optional, TypedDict
+from typing import Any, Literal
 from uuid import uuid4
+
+from typing_extensions import NotRequired, TypedDict
 
 from freqtrade.exchange.exchange import Exchange
 
 
+class ProgressTask(TypedDict):
+    progress: float
+    total: float
+    description: str
+
+
 class JobsContainer(TypedDict):
-    category: Literal["pairlist"]
+    category: Literal["pairlist", "download_data"]
     is_running: bool
     status: str
-    progress: Optional[float]
+    progress: float | None
+    progress_tasks: NotRequired[dict[str, ProgressTask]]
     result: Any
-    error: Optional[str]
+    error: str | None
 
 
 class ApiBG:
     # Backtesting type: Backtesting
-    bt: Dict[str, Any] = {
+    bt: dict[str, Any] = {
         "bt": None,
         "data": None,
         "timerange": None,
@@ -24,14 +33,15 @@ class ApiBG:
     }
     bgtask_running: bool = False
     # Exchange - only available in webserver mode.
-    exchanges: Dict[str, Exchange] = {}
+    exchanges: dict[str, Exchange] = {}
 
     # Generic background jobs
 
     # TODO: Change this to TTLCache
-    jobs: Dict[str, JobsContainer] = {}
+    jobs: dict[str, JobsContainer] = {}
     # Pairlist evaluate things
     pairlist_running: bool = False
+    download_data_running: bool = False
 
     @staticmethod
     def get_job_id() -> str:

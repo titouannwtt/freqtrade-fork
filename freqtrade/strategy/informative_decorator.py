@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any
 
 from pandas import DataFrame
 
@@ -13,19 +14,19 @@ PopulateIndicators = Callable[[Any, DataFrame, dict], DataFrame]
 
 @dataclass
 class InformativeData:
-    asset: Optional[str]
+    asset: str | None
     timeframe: str
-    fmt: Union[str, Callable[[Any], str], None]
+    fmt: str | Callable[[Any], str] | None
     ffill: bool
-    candle_type: Optional[CandleType]
+    candle_type: CandleType | None
 
 
 def informative(
     timeframe: str,
     asset: str = "",
-    fmt: Optional[Union[str, Callable[[Any], str]]] = None,
+    fmt: str | Callable[[Any], str] | None = None,
     *,
-    candle_type: Optional[Union[CandleType, str]] = None,
+    candle_type: CandleType | str | None = None,
     ffill: bool = True,
 ) -> Callable[[PopulateIndicators], PopulateIndicators]:
     """
@@ -73,7 +74,7 @@ def informative(
     return decorator
 
 
-def __get_pair_formats(market: Optional[Dict[str, Any]]) -> Dict[str, str]:
+def __get_pair_formats(market: dict[str, Any] | None) -> dict[str, str]:
     if not market:
         return {}
     base = market["base"]
@@ -86,7 +87,7 @@ def __get_pair_formats(market: Optional[Dict[str, Any]]) -> Dict[str, str]:
     }
 
 
-def _format_pair_name(config, pair: str, market: Optional[Dict[str, Any]] = None) -> str:
+def _format_pair_name(config, pair: str, market: dict[str, Any] | None = None) -> str:
     return pair.format(
         stake_currency=config["stake_currency"],
         stake=config["stake_currency"],

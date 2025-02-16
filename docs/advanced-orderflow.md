@@ -4,6 +4,7 @@ This guide walks you through utilizing public trade data for advanced orderflow 
 
 !!! Warning "Experimental Feature"
     The orderflow feature is currently in beta and may be subject to changes in future releases. Please report any issues or feedback on the [Freqtrade GitHub repository](https://github.com/freqtrade/freqtrade/issues).
+    It's also currently not been tested with freqAI - and combining these two features is considered out of scope at this point.
 
 !!! Warning "Performance"
     Orderflow requires raw trades data. This data is rather large, and can cause a slow initial startup, when freqtrade needs to download the trades data for the last X candles. Additionally, enabling this feature will cause increased memory usage. Please ensure to have sufficient resources available.
@@ -69,8 +70,8 @@ dataframe["delta"] # Difference between ask and bid volume.
 dataframe["min_delta"] # Minimum delta within the candle
 dataframe["max_delta"] # Maximum delta within the candle
 dataframe["total_trades"] # Total number of trades
-dataframe["stacked_imbalances_bid"] # Price level of stacked bid imbalance 
-dataframe["stacked_imbalances_ask"] # Price level of stacked ask imbalance  
+dataframe["stacked_imbalances_bid"] # List of price levels of stacked bid imbalance range beginnings
+dataframe["stacked_imbalances_ask"] # List of price levels of stacked ask imbalance range beginnings
 ```
 
 You can access these columns in your strategy code for further analysis. Here's an example:

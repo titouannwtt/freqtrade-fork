@@ -1,5 +1,6 @@
 # pragma pylint: disable=missing-docstring
 
+import re
 from copy import deepcopy
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock
@@ -26,6 +27,14 @@ def test_parse_args_None(caplog) -> None:
     assert log_has_re(r"Usage of Freqtrade requires a subcommand.*", caplog)
 
 
+def test_parse_args_version(capsys) -> None:
+    with pytest.raises(SystemExit):
+        main(["-V"])
+    captured = capsys.readouterr()
+    assert re.search(r"CCXT Version:\s.*", captured.out, re.MULTILINE)
+    assert re.search(r"Freqtrade Version:\s+freqtrade\s.*", captured.out, re.MULTILINE)
+
+
 def test_parse_args_backtesting(mocker) -> None:
     """
     Test that main() can start backtesting and also ensure we can pass some specific arguments
@@ -40,7 +49,7 @@ def test_parse_args_backtesting(mocker) -> None:
     assert backtesting_mock.call_count == 1
     call_args = backtesting_mock.call_args[0][0]
     assert call_args["config"] == ["config.json"]
-    assert call_args["verbosity"] == 0
+    assert call_args["verbosity"] is None
     assert call_args["command"] == "backtesting"
     assert call_args["func"] is not None
     assert callable(call_args["func"])
@@ -57,7 +66,7 @@ def test_main_start_hyperopt(mocker) -> None:
     assert hyperopt_mock.call_count == 1
     call_args = hyperopt_mock.call_args[0][0]
     assert call_args["config"] == ["config.json"]
-    assert call_args["verbosity"] == 0
+    assert call_args["verbosity"] is None
     assert call_args["command"] == "hyperopt"
     assert call_args["func"] is not None
     assert callable(call_args["func"])
@@ -121,7 +130,7 @@ def test_main_operational_exception(mocker, default_conf, caplog) -> None:
 def test_main_operational_exception1(mocker, default_conf, caplog) -> None:
     patch_exchange(mocker)
     mocker.patch(
-        "freqtrade.commands.list_commands.list_available_exchanges",
+        "freqtrade.exchange.list_available_exchanges",
         MagicMock(side_effect=ValueError("Oh snap!")),
     )
     patched_configuration_load_config_file(mocker, default_conf)
@@ -135,7 +144,7 @@ def test_main_operational_exception1(mocker, default_conf, caplog) -> None:
     assert log_has("Fatal exception!", caplog)
     assert not log_has_re(r"SIGINT.*", caplog)
     mocker.patch(
-        "freqtrade.commands.list_commands.list_available_exchanges",
+        "freqtrade.exchange.list_available_exchanges",
         MagicMock(side_effect=KeyboardInterrupt),
     )
     with pytest.raises(SystemExit):
@@ -147,7 +156,7 @@ def test_main_operational_exception1(mocker, default_conf, caplog) -> None:
 def test_main_ConfigurationError(mocker, default_conf, caplog) -> None:
     patch_exchange(mocker)
     mocker.patch(
-        "freqtrade.commands.list_commands.list_available_exchanges",
+        "freqtrade.exchange.list_available_exchanges",
         MagicMock(side_effect=ConfigurationError("Oh snap!")),
     )
     patched_configuration_load_config_file(mocker, default_conf)

@@ -5,7 +5,7 @@ This module contains the class to persist trades into SQLite
 import logging
 import threading
 from contextvars import ContextVar
-from typing import Any, Dict, Final, Optional
+from typing import Any, Final
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import NoSuchModuleError
@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 REQUEST_ID_CTX_KEY: Final[str] = "request_id"
-_request_id_ctx_var: ContextVar[Optional[str]] = ContextVar(REQUEST_ID_CTX_KEY, default=None)
+_request_id_ctx_var: ContextVar[str | None] = ContextVar(REQUEST_ID_CTX_KEY, default=None)
 
 
-def get_request_or_thread_id() -> Optional[str]:
+def get_request_or_thread_id() -> str | None:
     """
     Helper method to get either async context (for fastapi requests), or thread id
     """
@@ -51,7 +51,7 @@ def init_db(db_url: str) -> None:
     :param db_url: Database to use
     :return: None
     """
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
 
     if db_url == "sqlite:///":
         raise OperationalException(
@@ -75,8 +75,7 @@ def init_db(db_url: str) -> None:
         engine = create_engine(db_url, future=True, **kwargs)
     except NoSuchModuleError:
         raise OperationalException(
-            f"Given value for db_url: '{db_url}' "
-            f"is no valid database URL! (See {_SQL_DOCS_URL})"
+            f"Given value for db_url: '{db_url}' is no valid database URL! (See {_SQL_DOCS_URL})"
         )
 
     # https://docs.sqlalchemy.org/en/13/orm/contextual.html#thread-local-scope

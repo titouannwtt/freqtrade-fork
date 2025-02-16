@@ -1,11 +1,10 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from xgboost import XGBRFRegressor
 
 from freqtrade.freqai.base_models.BaseRegressionModel import BaseRegressionModel
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
-from freqtrade.freqai.tensorboard import TBCallback
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ class XGBoostRFRegressor(BaseRegressionModel):
     top level config.json file.
     """
 
-    def fit(self, data_dictionary: Dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
+    def fit(self, data_dictionary: dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
         """
         User sets up the training and test data to fit their desired model here
         :param data_dictionary: the dictionary holding all data for train, test,
@@ -45,7 +44,12 @@ class XGBoostRFRegressor(BaseRegressionModel):
 
         model = XGBRFRegressor(**self.model_training_parameters)
 
-        model.set_params(callbacks=[TBCallback(dk.data_path)])
+        # Callbacks are not supported for XGBRFRegressor, and version 2.1.x started to throw
+        # the following error:
+        # NotImplementedError: `early_stopping_rounds` and `callbacks` are not implemented
+        # for random forest.
+
+        # model.set_params(callbacks=[TBCallback(dk.data_path)])
         model.fit(
             X=X,
             y=y,
@@ -55,6 +59,6 @@ class XGBoostRFRegressor(BaseRegressionModel):
             xgb_model=xgb_model,
         )
         # set the callbacks to empty so that we can serialize to disk later
-        model.set_params(callbacks=[])
+        # model.set_params(callbacks=[])
 
         return model

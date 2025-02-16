@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Tuple, Type
 
 from pandas import DataFrame, to_datetime
 
@@ -24,6 +23,7 @@ from freqtrade.data.converter import (
     trim_dataframe,
 )
 from freqtrade.enums import CandleType, TradingMode
+from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_seconds
 
 
@@ -71,7 +71,7 @@ class IDataHandler(ABC):
         ]
 
     @classmethod
-    def ohlcv_get_pairs(cls, datadir: Path, timeframe: str, candle_type: CandleType) -> List[str]:
+    def ohlcv_get_pairs(cls, datadir: Path, timeframe: str, candle_type: CandleType) -> list[str]:
         """
         Returns a list of all pairs with ohlcv data available in this datadir
         for the specified timeframe
@@ -107,7 +107,7 @@ class IDataHandler(ABC):
 
     def ohlcv_data_min_max(
         self, pair: str, timeframe: str, candle_type: CandleType
-    ) -> Tuple[datetime, datetime, int]:
+    ) -> tuple[datetime, datetime, int]:
         """
         Returns the min and max timestamp for the given pair and timeframe.
         :param pair: Pair to get min/max for
@@ -126,7 +126,7 @@ class IDataHandler(ABC):
 
     @abstractmethod
     def _ohlcv_load(
-        self, pair: str, timeframe: str, timerange: Optional[TimeRange], candle_type: CandleType
+        self, pair: str, timeframe: str, timerange: TimeRange | None, candle_type: CandleType
     ) -> DataFrame:
         """
         Internal method used to load data for one pair from disk.
@@ -168,7 +168,7 @@ class IDataHandler(ABC):
         """
 
     @classmethod
-    def trades_get_available_data(cls, datadir: Path, trading_mode: TradingMode) -> List[str]:
+    def trades_get_available_data(cls, datadir: Path, trading_mode: TradingMode) -> list[str]:
         """
         Returns a list of all pairs with ohlcv data available in this datadir
         :param datadir: Directory to search for ohlcv files
@@ -191,7 +191,7 @@ class IDataHandler(ABC):
         self,
         pair: str,
         trading_mode: TradingMode,
-    ) -> Tuple[datetime, datetime, int]:
+    ) -> tuple[datetime, datetime, int]:
         """
         Returns the min and max timestamp for the given pair's trades data.
         :param pair: Pair to get min/max for
@@ -212,7 +212,7 @@ class IDataHandler(ABC):
         )
 
     @classmethod
-    def trades_get_pairs(cls, datadir: Path) -> List[str]:
+    def trades_get_pairs(cls, datadir: Path) -> list[str]:
         """
         Returns a list of all pairs for which trade data is available in this
         :param datadir: Directory to search for ohlcv files
@@ -247,7 +247,7 @@ class IDataHandler(ABC):
 
     @abstractmethod
     def _trades_load(
-        self, pair: str, trading_mode: TradingMode, timerange: Optional[TimeRange] = None
+        self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> DataFrame:
         """
         Load a pair from file, either .json.gz or .json
@@ -282,7 +282,7 @@ class IDataHandler(ABC):
         return False
 
     def trades_load(
-        self, pair: str, trading_mode: TradingMode, timerange: Optional[TimeRange] = None
+        self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> DataFrame:
         """
         Load a pair from file, either .json.gz or .json
@@ -370,7 +370,7 @@ class IDataHandler(ABC):
         timeframe: str,
         candle_type: CandleType,
         *,
-        timerange: Optional[TimeRange] = None,
+        timerange: TimeRange | None = None,
         fill_missing: bool = True,
         drop_incomplete: bool = False,
         startup_candles: int = 0,
@@ -532,7 +532,7 @@ class IDataHandler(ABC):
             Path(old_name).rename(new_name)
 
 
-def get_datahandlerclass(datatype: str) -> Type[IDataHandler]:
+def get_datahandlerclass(datatype: str) -> type[IDataHandler]:
     """
     Get datahandler class.
     Could be done using Resolvers, but since this may be called often and resolvers
@@ -550,9 +550,13 @@ def get_datahandlerclass(datatype: str) -> Type[IDataHandler]:
 
         return JsonGzDataHandler
     elif datatype == "hdf5":
-        from .hdf5datahandler import HDF5DataHandler
+        raise OperationalException(
+            "DEPRECATED: The hdf5 dataformat is deprecated and has been removed in 2025.1. "
+            "Please downgrade to 2024.12 and use the convert-data command to convert your data "
+            "to a supported format."
+            "We recommend using the feather format, as it is faster and is more space-efficient."
+        )
 
-        return HDF5DataHandler
     elif datatype == "feather":
         from .featherdatahandler import FeatherDataHandler
 
@@ -566,7 +570,7 @@ def get_datahandlerclass(datatype: str) -> Type[IDataHandler]:
 
 
 def get_datahandler(
-    datadir: Path, data_format: Optional[str] = None, data_handler: Optional[IDataHandler] = None
+    datadir: Path, data_format: str | None = None, data_handler: IDataHandler | None = None
 ) -> IDataHandler:
     """
     :param datadir: Folder to save data

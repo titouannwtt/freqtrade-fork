@@ -37,8 +37,9 @@ class SuperDuperHyperOptLoss(IHyperOptLoss):
         min_date: datetime,
         max_date: datetime,
         config: Config,
-        processed: Dict[str, DataFrame],
-        backtest_stats: Dict[str, Any],
+        processed: dict[str, DataFrame],
+        backtest_stats: dict[str, Any],
+        starting_balance: float,
         **kwargs,
     ) -> float:
         """
@@ -70,6 +71,7 @@ Currently, the arguments are:
 * `config`: Config object used (Note: Not all strategy-related parameters will be updated here if they are part of a hyperopt space).
 * `processed`: Dict of Dataframes with the pair as keys containing the data used for backtesting.
 * `backtest_stats`: Backtesting statistics using the same format as the backtesting file "strategy" substructure. Available fields can be seen in `generate_strategy_stats()` in `optimize_reports.py`.
+* `starting_balance`: Starting balance used for backtesting.
 
 This function needs to return a floating point number (`float`). Smaller numbers will be interpreted as better results. The parameters and balancing for this is up to you.
 
@@ -103,7 +105,7 @@ class MyAwesomeStrategy(IStrategy):
                 SKDecimal(0.01, 0.20, decimals=3, name='roi_p3'),
             ]
 
-        def generate_roi_table(params: Dict) -> Dict[int, float]:
+        def generate_roi_table(params: Dict) -> dict[int, float]:
 
             roi_table = {}
             roi_table[0] = params['roi_p1'] + params['roi_p2'] + params['roi_p3']

@@ -1,6 +1,5 @@
 import logging
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Tuple
 
 import ccxt
 
@@ -13,7 +12,8 @@ from freqtrade.exceptions import (
     TemporaryError,
 )
 from freqtrade.exchange import Exchange, date_minus_candles
-from freqtrade.exchange.common import retrier
+from freqtrade.exchange.common import API_RETRY_COUNT, retrier
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
 from freqtrade.util import dt_now, dt_ts
 
@@ -27,16 +27,16 @@ class Okx(Exchange):
     Contains adjustments needed for Freqtrade to work with this exchange.
     """
 
-    _ft_has: Dict = {
+    _ft_has: FtHas = {
         "ohlcv_candle_limit": 100,  # Warning, special case with data prior to X months
         "mark_ohlcv_timeframe": "4h",
         "funding_fee_timeframe": "8h",
         "stoploss_order_types": {"limit": "limit"},
         "stoploss_on_exchange": True,
         "trades_has_history": False,  # Endpoint doesn't have a "since" parameter
-        "ws.enabled": True,
+        "ws_enabled": True,
     }
-    _ft_has_futures: Dict = {
+    _ft_has_futures: FtHas = {
         "tickers_have_quoteVolume": False,
         "stop_price_type_field": "slTriggerPxType",
         "stop_price_type_value_mapping": {
@@ -44,10 +44,10 @@ class Okx(Exchange):
             PriceType.MARK: "index",
             PriceType.INDEX: "mark",
         },
-        "ws.enabled": True,
+        "ws_enabled": True,
     }
 
-    _supported_trading_mode_margin_pairs: List[Tuple[TradingMode, MarginMode]] = [
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
         # TradingMode.SPOT always supported and not required in this list
         # (TradingMode.MARGIN, MarginMode.CROSS),
         # (TradingMode.FUTURES, MarginMode.CROSS),
@@ -56,10 +56,10 @@ class Okx(Exchange):
 
     net_only = True
 
-    _ccxt_params: Dict = {"options": {"brokerId": "ffb5405ad327SUDE"}}
+    _ccxt_params: dict = {"options": {"brokerId": "ffb5405ad327SUDE"}}
 
     def ohlcv_candle_limit(
-        self, timeframe: str, candle_type: CandleType, since_ms: Optional[int] = None
+        self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
         """
         Exchange ohlcv candle limit
@@ -118,7 +118,7 @@ class Okx(Exchange):
         leverage: float,
         reduceOnly: bool,
         time_in_force: str = "GTC",
-    ) -> Dict:
+    ) -> dict:
         params = super()._get_params(
             side=side,
             ordertype=ordertype,
@@ -183,14 +183,14 @@ class Okx(Exchange):
         pair_tiers = self._leverage_tiers[pair]
         return pair_tiers[-1]["maxNotional"] / leverage
 
-    def _get_stop_params(self, side: BuySell, ordertype: str, stop_price: float) -> Dict:
+    def _get_stop_params(self, side: BuySell, ordertype: str, stop_price: float) -> dict:
         params = super()._get_stop_params(side, ordertype, stop_price)
         if self.trading_mode == TradingMode.FUTURES and self.margin_mode:
             params["tdMode"] = self.margin_mode.value
             params["posSide"] = self._get_posSide(side, True)
         return params
 
-    def _convert_stop_order(self, pair: str, order_id: str, order: Dict) -> Dict:
+    def _convert_stop_order(self, pair: str, order_id: str, order: CcxtOrder) -> CcxtOrder:
         if (
             order.get("status", "open") == "closed"
             and (real_order_id := order.get("info", {}).get("ordId")) is not None
@@ -207,7 +207,10 @@ class Okx(Exchange):
         order["type"] = "stoploss"
         return order
 
-    def fetch_stoploss_order(self, order_id: str, pair: str, params: Optional[Dict] = None) -> Dict:
+    @retrier(retries=API_RETRY_COUNT)
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: dict | None = None
+    ) -> CcxtOrder:
         if self._config["dry_run"]:
             return self.fetch_dry_run_order(order_id)
 
@@ -216,8 +219,20 @@ class Okx(Exchange):
             order_reg = self._api.fetch_order(order_id, pair, params=params1)
             self._log_exchange_response("fetch_stoploss_order", order_reg)
             return self._convert_stop_order(pair, order_id, order_reg)
-        except ccxt.OrderNotFound:
+        except (ccxt.OrderNotFound, ccxt.InvalidOrder):
             pass
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Could not get order due to {e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
+
+        return self._fetch_stop_order_fallback(order_id, pair)
+
+    def _fetch_stop_order_fallback(self, order_id: str, pair: str) -> CcxtOrder:
         params2 = {"stop": True, "ordType": "conditional"}
         for method in (
             self._api.fetch_open_orders,
@@ -230,18 +245,24 @@ class Okx(Exchange):
                 if orders_f:
                     order = orders_f[0]
                     return self._convert_stop_order(pair, order_id, order)
-            except ccxt.BaseError:
+            except (ccxt.OrderNotFound, ccxt.InvalidOrder):
                 pass
+            except ccxt.DDoSProtection as e:
+                raise DDosProtection(e) from e
+            except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+                raise TemporaryError(
+                    f"Could not get order due to {e.__class__.__name__}. Message: {e}"
+                ) from e
+            except ccxt.BaseError as e:
+                raise OperationalException(e) from e
         raise RetryableOrderError(f"StoplossOrder not found (pair: {pair} id: {order_id}).")
 
-    def get_order_id_conditional(self, order: Dict[str, Any]) -> str:
+    def get_order_id_conditional(self, order: CcxtOrder) -> str:
         if order.get("type", "") == "stop":
             return safe_value_fallback2(order, order, "id_stop", "id")
         return order["id"]
 
-    def cancel_stoploss_order(
-        self, order_id: str, pair: str, params: Optional[Dict] = None
-    ) -> Dict:
+    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         params1 = {"stop": True}
         # 'ordType': 'conditional'
         #
@@ -251,7 +272,7 @@ class Okx(Exchange):
             params=params1,
         )
 
-    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> List[Dict]:
+    def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
 
         orders = self._api.fetch_closed_orders(pair, since=since_ms)

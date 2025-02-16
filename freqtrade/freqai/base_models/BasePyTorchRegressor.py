@@ -1,6 +1,6 @@
 import logging
 from time import time
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -24,7 +24,7 @@ class BasePyTorchRegressor(BasePyTorchModel):
 
     def predict(
         self, unfiltered_df: DataFrame, dk: FreqaiDataKitchen, **kwargs
-    ) -> Tuple[DataFrame, npt.NDArray[np.int_]]:
+    ) -> tuple[DataFrame, npt.NDArray[np.int_]]:
         """
         Filter the prediction features data and predict with it.
         :param unfiltered_df: Full dataframe for the current backtest period.
@@ -85,9 +85,6 @@ class BasePyTorchRegressor(BasePyTorchModel):
             dk.fit_labels()
         dk.feature_pipeline = self.define_data_pipeline(threads=dk.thread_count)
         dk.label_pipeline = self.define_label_pipeline(threads=dk.thread_count)
-
-        dd["train_labels"], _, _ = dk.label_pipeline.fit_transform(dd["train_labels"])
-        dd["test_labels"], _, _ = dk.label_pipeline.transform(dd["test_labels"])
 
         (dd["train_features"], dd["train_labels"], dd["train_weights"]) = (
             dk.feature_pipeline.fit_transform(

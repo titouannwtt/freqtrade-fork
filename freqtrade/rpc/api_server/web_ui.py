@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
@@ -21,7 +20,7 @@ async def fallback():
 
 @router_ui.get("/ui_version", include_in_schema=False)
 async def ui_version():
-    from freqtrade.commands.deploy_commands import read_ui_version
+    from freqtrade.commands.deploy_ui import read_ui_version
 
     uibase = Path(__file__).parent / "ui/installed/"
     version = read_ui_version(uibase)
@@ -29,16 +28,6 @@ async def ui_version():
     return {
         "version": version if version else "not_installed",
     }
-
-
-def is_relative_to(path: Path, base: Path) -> bool:
-    # Helper function simulating behaviour of is_relative_to, which was only added in python 3.9
-    try:
-        path.relative_to(base)
-        return True
-    except ValueError:
-        pass
-    return False
 
 
 @router_ui.get("/{rest_of_path:path}", include_in_schema=False)
@@ -52,11 +41,11 @@ async def index_html(rest_of_path: str):
     filename = uibase / rest_of_path
     # It's security relevant to check "relative_to".
     # Without this, Directory-traversal is possible.
-    media_type: Optional[str] = None
+    media_type: str | None = None
     if filename.suffix == ".js":
         # Force text/javascript for .js files - Circumvent faulty system configuration
         media_type = "application/javascript"
-    if filename.is_file() and is_relative_to(filename, uibase):
+    if filename.is_file() and filename.is_relative_to(uibase):
         return FileResponse(str(filename), media_type=media_type)
 
     index_file = uibase / "index.html"

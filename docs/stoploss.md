@@ -30,12 +30,13 @@ The Order-type will be ignored if only one mode is available.
 |----------|-------------|
 | Binance  | limit |
 | Binance Futures  | market, limit |
-| Bingx  | market, limit |
-| HTX (former Huobi)    | limit |
+| Bingx    | market, limit |
+| HTX      | limit |
 | kraken   | market, limit |
 | Gate     | limit |
 | Okx      | limit |
 | Kucoin   | stop-limit, stop-market|
+| Hyperliquid (futures only)   | limit |
 
 !!! Note "Tight stoploss"
     <ins>Do not set too low/tight stoploss value when using stop loss on exchange!</ins>  

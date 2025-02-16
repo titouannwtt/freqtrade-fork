@@ -111,7 +111,7 @@ def test_load_config_file_error_range(default_conf, mocker, caplog) -> None:
 
     x = log_config_error_range("somefile", "Parse error at offset 4: Invalid value.")
     assert isinstance(x, str)
-    assert x == '  "max_open_trades": 1,\n  "stake_currency": "BTC",\n' '  "stake_amount": .001,'
+    assert x == '  "max_open_trades": 1,\n  "stake_currency": "BTC",\n  "stake_amount": .001,'
 
     x = log_config_error_range("-", "")
     assert x == ""
@@ -489,7 +489,6 @@ def test_setup_configuration_with_arguments(mocker, default_conf, caplog, tmp_pa
         "--timeframe",
         "1m",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--timerange",
         ":100",
         "--export",
@@ -517,10 +516,6 @@ def test_setup_configuration_with_arguments(mocker, default_conf, caplog, tmp_pa
 
     assert "position_stacking" in config
     assert log_has("Parameter --enable-position-stacking detected ...", caplog)
-
-    assert "use_max_market_positions" in config
-    assert log_has("Parameter --disable-max-market-positions detected ...", caplog)
-    assert log_has("max_open_trades set to unlimited ...", caplog)
 
     assert "timerange" in config
     assert log_has("Parameter --timerange detected: {} ...".format(config["timerange"]), caplog)
@@ -569,8 +564,6 @@ def test_setup_configuration_with_stratlist(mocker, default_conf, caplog) -> Non
     assert log_has("Using strategy list of 2 strategies", caplog)
 
     assert "position_stacking" not in config
-
-    assert "use_max_market_positions" not in config
 
     assert "timerange" not in config
 
@@ -810,65 +803,6 @@ def test_validate_whitelist(default_conf):
     del conf["exchange"]["pair_whitelist"]
 
     validate_config_consistency(conf)
-
-
-@pytest.mark.parametrize(
-    "protconf,expected",
-    [
-        ([], None),
-        ([{"method": "StoplossGuard", "lookback_period": 2000, "stop_duration_candles": 10}], None),
-        ([{"method": "StoplossGuard", "lookback_period_candles": 20, "stop_duration": 10}], None),
-        (
-            [
-                {
-                    "method": "StoplossGuard",
-                    "lookback_period_candles": 20,
-                    "lookback_period": 2000,
-                    "stop_duration": 10,
-                }
-            ],
-            r"Protections must specify either `lookback_period`.*",
-        ),
-        (
-            [
-                {
-                    "method": "StoplossGuard",
-                    "lookback_period": 20,
-                    "stop_duration": 10,
-                    "stop_duration_candles": 10,
-                }
-            ],
-            r"Protections must specify either `stop_duration`.*",
-        ),
-        (
-            [
-                {
-                    "method": "StoplossGuard",
-                    "lookback_period": 20,
-                    "stop_duration": 10,
-                    "unlock_at": "20:02",
-                }
-            ],
-            r"Protections must specify either `unlock_at`, `stop_duration` or.*",
-        ),
-        (
-            [{"method": "StoplossGuard", "lookback_period_candles": 20, "unlock_at": "20:02"}],
-            None,
-        ),
-        (
-            [{"method": "StoplossGuard", "lookback_period_candles": 20, "unlock_at": "55:102"}],
-            "Invalid date format for unlock_at: 55:102.",
-        ),
-    ],
-)
-def test_validate_protections(default_conf, protconf, expected):
-    conf = deepcopy(default_conf)
-    conf["protections"] = protconf
-    if expected:
-        with pytest.raises(OperationalException, match=expected):
-            validate_config_consistency(conf)
-    else:
-        validate_config_consistency(conf)
 
 
 def test_validate_ask_orderbook(default_conf, caplog) -> None:
@@ -1533,8 +1467,8 @@ def test_process_deprecated_protections(default_conf, caplog):
     assert not log_has(message, caplog)
 
     config["protections"] = []
-    process_temporary_deprecated_settings(config)
-    assert log_has(message, caplog)
+    with pytest.raises(ConfigurationError, match=message):
+        process_temporary_deprecated_settings(config)
 
 
 def test_flat_vars_to_nested_dict(caplog):
@@ -1547,6 +1481,12 @@ def test_flat_vars_to_nested_dict(caplog):
         "FREQTRADE__STAKE_AMOUNT": "200.05",
         "FREQTRADE__TELEGRAM__CHAT_ID": "2151",
         "NOT_RELEVANT": "200.0",  # Will be ignored
+        "FREQTRADE__ARRAY": '[{"name":"default","host":"xxx"}]',
+        "FREQTRADE__EXCHANGE__PAIR_WHITELIST": '["BTC/USDT", "ETH/USDT"]',
+        # Fails due to trailing comma
+        "FREQTRADE__ARRAY_TRAIL_COMMA": '[{"name":"default","host":"xxx",}]',
+        # Object fails
+        "FREQTRADE__OBJECT": '{"name":"default","host":"xxx"}',
     }
     expected = {
         "stake_amount": 200.05,
@@ -1560,8 +1500,12 @@ def test_flat_vars_to_nested_dict(caplog):
             },
             "some_setting": True,
             "some_false_setting": False,
+            "pair_whitelist": ["BTC/USDT", "ETH/USDT"],
         },
         "telegram": {"chat_id": "2151"},
+        "array": [{"name": "default", "host": "xxx"}],
+        "object": '{"name":"default","host":"xxx"}',
+        "array_trail_comma": '[{"name":"default","host":"xxx",}]',
     }
     res = _flat_vars_to_nested_dict(test_args, ENV_VAR_PREFIX)
     assert res == expected

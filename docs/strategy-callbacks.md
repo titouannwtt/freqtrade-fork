@@ -90,8 +90,8 @@ Called before entering a trade, makes it possible to manage your position size w
 
 class AwesomeStrategy(IStrategy):
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
-                            proposed_stake: float, min_stake: Optional[float], max_stake: float,
-                            leverage: float, entry_tag: Optional[str], side: str,
+                            proposed_stake: float, min_stake: float | None, max_stake: float,
+                            leverage: float, entry_tag: str | None, side: str,
                             **kwargs) -> float:
 
         dataframe, _ = self.dp.get_analyzed_dataframe(pair=pair, timeframe=self.timeframe)
@@ -165,7 +165,8 @@ Called for open trade every iteration (roughly every 5 seconds) until a trade is
 
 The usage of the custom stoploss method must be enabled by setting `use_custom_stoploss=True` on the strategy object.
 
-The stoploss price can only ever move upwards - if the stoploss value returned from `custom_stoploss` would result in a lower stoploss price than was previously set, it will be ignored. The traditional `stoploss` value serves as an absolute lower level and will be instated as the initial stoploss (before this method is called for the first time for a trade), and is still mandatory.
+The stoploss price can only ever move upwards - if the stoploss value returned from `custom_stoploss` would result in a lower stoploss price than was previously set, it will be ignored. The traditional `stoploss` value serves as an absolute lower level and will be instated as the initial stoploss (before this method is called for the first time for a trade), and is still mandatory.  
+As custom stoploss acts as regular, changing stoploss, it will behave similar to `trailing_stop` - and trades exiting due to this will have the exit_reason of `"trailing_stop_loss"`.
 
 The method must return a stoploss value (float / number) as a percentage of the current price.
 E.g. If the `current_rate` is 200 USD, then returning `0.02` will set the stoploss price 2% lower, at 196 USD.
@@ -212,7 +213,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool, 
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
         """
         Custom stoploss logic, returning the new distance relative to current_rate (as ratio).
         e.g. returning -0.05 would create a stoploss 5% below current_rate.
@@ -250,7 +251,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool, 
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         # Make sure you have the longest interval first - these conditions are evaluated from top to bottom.
         if current_time - timedelta(minutes=120) > trade.open_date_utc:
@@ -276,7 +277,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool, 
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         if after_fill: 
             # After an additional order, start with a stoploss of 10% below the new open rate
@@ -305,7 +306,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool,
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         if pair in ("ETH/BTC", "XRP/BTC"):
             return -0.10
@@ -331,7 +332,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool,
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         if current_profit < 0.04:
             return None # return None to keep using the initial stoploss
@@ -363,7 +364,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool,
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         # evaluate highest to lowest, so that highest possible stop is used
         if current_profit > 0.40:
@@ -394,7 +395,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                         current_rate: float, current_profit: float, after_fill: bool,
-                        **kwargs) -> Optional[float]:
+                        **kwargs) -> float | None:
 
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         last_candle = dataframe.iloc[-1].squeeze()
@@ -439,7 +440,7 @@ Stoploss values returned from `custom_stoploss()` must specify a percentage rela
 
         def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                             current_rate: float, current_profit: float, after_fill: bool,
-                            **kwargs) -> Optional[float]:
+                            **kwargs) -> float | None:
 
             # once the profit has risen above 10%, keep the stoploss at 7% above the open price
             if current_profit > 0.10:
@@ -482,7 +483,7 @@ The helper function `stoploss_from_absolute()` can be used to convert from an ab
 
         def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
                             current_rate: float, current_profit: float, after_fill: bool,
-                            **kwargs) -> Optional[float]:
+                            **kwargs) -> float | None:
             dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
             trade_date = timeframe_to_prev_date(self.timeframe, trade.open_date_utc)
             candle = dataframe.iloc[-1].squeeze()
@@ -519,8 +520,8 @@ class AwesomeStrategy(IStrategy):
 
     # ... populate_* methods
 
-    def custom_entry_price(self, pair: str, trade: Optional[Trade], current_time: datetime, proposed_rate: float,
-                           entry_tag: Optional[str], side: str, **kwargs) -> float:
+    def custom_entry_price(self, pair: str, trade: Trade | None, current_time: datetime, proposed_rate: float,
+                           entry_tag: str | None, side: str, **kwargs) -> float:
 
         dataframe, last_updated = self.dp.get_analyzed_dataframe(pair=pair,
                                                                 timeframe=self.timeframe)
@@ -530,7 +531,7 @@ class AwesomeStrategy(IStrategy):
 
     def custom_exit_price(self, pair: str, trade: Trade,
                           current_time: datetime, proposed_rate: float,
-                          current_profit: float, exit_tag: Optional[str], **kwargs) -> float:
+                          current_profit: float, exit_tag: str | None, **kwargs) -> float:
 
         dataframe, last_updated = self.dp.get_analyzed_dataframe(pair=pair,
                                                                 timeframe=self.timeframe)
@@ -662,7 +663,7 @@ class AwesomeStrategy(IStrategy):
     # ... populate_* methods
 
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
-                            time_in_force: str, current_time: datetime, entry_tag: Optional[str],
+                            time_in_force: str, current_time: datetime, entry_tag: str | None,
                             side: str, **kwargs) -> bool:
         """
         Called right before placing a entry order.
@@ -757,7 +758,7 @@ For performance reasons, it's disabled by default and freqtrade will show a warn
 
 Additional orders also result in additional fees and those orders don't count towards `max_open_trades`.
 
-This callback is **not** called when there is an open order (either buy or sell) waiting for execution.
+This callback is also called when there is an open order (either buy or sell) waiting for execution - and will cancel the existing open order to place a new order if the amount, price or direction is different.
 
 `adjust_trade_position()` is called very frequently for the duration of a trade, so you must keep your implementation as performant as possible.
 
@@ -765,6 +766,22 @@ Position adjustments will always be applied in the direction of the trade, so a 
 Adjustment orders can be assigned with a tag by returning a 2 element Tuple, with the first element being the adjustment amount, and the 2nd element the tag (e.g. `return 250, "increase_favorable_conditions"`).
 
 Modifications to leverage are not possible, and the stake-amount returned is assumed to be before applying leverage.
+
+The combined stake currently allocated to the position is held in `trade.stake_amount`. Therefore `trade.stake_amount` will always be updated on every additional entry and partial exit made through `adjust_trade_position()`.
+
+!!! Danger "Loose Logic"
+    On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run out of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
+
+    Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order.
+
+!!! Warning "Performance with many position adjustments"
+    Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
+    Each of the orders will be attached to the trade object for the duration of the trade - hence increasing memory usage.
+    Trades with long duration and 10s or even 100ds of position adjustments are therefore not recommended, and should be closed at regular intervals to not affect performance.
+
+!!! Warning "Backtesting"
+    During backtesting this callback is called for each candle in `timeframe` or `timeframe_detail`, so run-time performance will be affected.
+    This can also cause deviating results between live and backtesting, since backtesting can adjust the trade only once per candle, whereas live could adjust the trade multiple times per candle.
 
 ### Increase position
 
@@ -775,31 +792,28 @@ If there are not enough funds in the wallet (the return value is above `max_stak
 
 Additional entries are ignored once you have reached the maximum amount of extra entries that you have set on `max_entry_position_adjustment`, but the callback is called anyway looking for partial exits.
 
+!!! Note "About stake size"
+    Using fixed stake size means it will be the amount used for the first order, just like without position adjustment.
+    If you wish to buy additional orders with DCA, then make sure to leave enough funds in the wallet for that.
+    Using `"unlimited"` stake amount with DCA orders requires you to also implement the `custom_stake_amount()` callback to avoid allocating all funds to the initial order.
+
 ### Decrease position
 
 The strategy is expected to return a negative stake_amount (in stake currency) for a partial exit.
 Returning the full owned stake at that point (`-trade.stake_amount`) results in a full exit.  
 Returning a value more than the above (so remaining stake_amount would become negative) will result in the bot ignoring the signal.
 
-!!! Note "About stake size"
-    Using fixed stake size means it will be the amount used for the first order, just like without position adjustment.
-    If you wish to buy additional orders with DCA, then make sure to leave enough funds in the wallet for that.
-    Using `"unlimited"` stake amount with DCA orders requires you to also implement the `custom_stake_amount()` callback to avoid allocating all funds to the initial order.
+For a partial exit, it's important to know that the formula used to calculate the amount of the coin for the partial exit order is `amount to be exited partially = negative_stake_amount * trade.amount / trade.stake_amount`, where `negative_stake_amount` is the value returned from the `adjust_trade_position` function. As seen in the formula, the formula doesn't care about current profit/loss of the position. It only cares about `trade.amount` and `trade.stake_amount` which aren't affected by the price movement at all.
+
+For example, let's say you buy 2 SHITCOIN/USDT at open rate of 50, which means the trade's stake amount is 100 USDT. Now the price raises to 200 and you want to sell half of it. In that case, you have to return -50% of `trade.stake_amount` (0.5 * 100 USDT) which equals to -50. The bot will calculate the amount it needed to sell, which is `50 * 2 / 100` which equals 1 SHITCOIN/USDT. If you return -200 (50% of 2 * 200), the bot will ignore it since `trade.stake_amount` is only 100 USDT but you asked to sell 200 USDT which means you are asking to sell 4 SHITCOIN/USDT.
+
+Back to the example above, since current rate is 200, the current USDT value of your trade is now 400 USDT. Let's say you want to partially sell 100 USDT to take out the initial investment and leave the profit in the trade hoping that the price keeps rising. In that case, you have to do a different approach. First, you need to calculate the exact amount you needed to sell. In this case, since you want to sell 100 USDT worth based of current rate, the exact amount you need to partially sell is `100 * 2 / 400` which equals 0.5 SHITCOIN/USDT. Since we know now the exact amount we want to sell (0.5), the value you need to return in the `adjust_trade_position` function is `-amount to be exited partially * trade.stake_amount / trade.amount`, which equals -25. The bot will sell 0.5 SHITCOIN/USDT, keeping 1.5 in trade. You will receive 100 USDT from the partial exit.
 
 !!! Warning "Stoploss calculation"
     Stoploss is still calculated from the initial opening price, not averaged price.
     Regular stoploss rules still apply (cannot move down).
 
     While `/stopentry` command stops the bot from entering new trades, the position adjustment feature will continue buying new orders on existing trades.
-
-!!! Warning "Backtesting"
-    During backtesting this callback is called for each candle in `timeframe` or `timeframe_detail`, so run-time performance will be affected.
-    This can also cause deviating results between live and backtesting, since backtesting can adjust the trade only once per candle, whereas live could adjust the trade multiple times per candle.
-
-!!! Warning "Performance with many position adjustments"
-    Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
-    Each of the orders will be attached to the trade object for the duration of the trade - hence increasing memory usage.
-    Trades with long duration and 10s or even 100ds of position adjustments are therefore not recommended, and should be closed at regular intervals to not affect performance.
 
 ``` python
 # Default imports
@@ -820,8 +834,8 @@ class DigDeeperStrategy(IStrategy):
 
     # This is called when placing the initial order (opening trade)
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
-                            proposed_stake: float, min_stake: Optional[float], max_stake: float,
-                            leverage: float, entry_tag: Optional[str], side: str,
+                            proposed_stake: float, min_stake: float | None, max_stake: float,
+                            leverage: float, entry_tag: str | None, side: str,
                             **kwargs) -> float:
 
         # We need to leave most of the funds for possible further DCA orders
@@ -830,11 +844,11 @@ class DigDeeperStrategy(IStrategy):
 
     def adjust_trade_position(self, trade: Trade, current_time: datetime,
                               current_rate: float, current_profit: float,
-                              min_stake: Optional[float], max_stake: float,
+                              min_stake: float | None, max_stake: float,
                               current_entry_rate: float, current_exit_rate: float,
                               current_entry_profit: float, current_exit_profit: float,
                               **kwargs
-                              ) -> Union[Optional[float], Tuple[Optional[float], Optional[str]]]:
+                              ) -> float | None | tuple[float | None, str | None]:
         """
         Custom trade adjustment logic, returning the stake amount that a trade should be
         increased or decreased.
@@ -890,7 +904,7 @@ class DigDeeperStrategy(IStrategy):
         # Hope you have a deep wallet!
         try:
             # This returns first order stake size
-            stake_amount = filled_entries[0].stake_amount
+            stake_amount = filled_entries[0].stake_amount_filled
             # This then calculates current safety order size
             stake_amount = stake_amount * (1 + (count_of_entries * 0.25))
             return stake_amount, "1/3rd_increase"
@@ -922,7 +936,10 @@ class DigDeeperStrategy(IStrategy):
 
 ## Adjust Entry Price
 
-The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.
+The `adjust_entry_price()` callback may be used by strategy developer to refresh/replace limit orders upon arrival of new candles.  
+This callback is called once every iteration unless the order has been (re)placed within the current candle - limiting the maximum (re)placement of each order to once per candle.
+This also means that the first call will be at the start of the next candle after the initial order was placed.
+
 Be aware that `custom_entry_price()` is still the one dictating initial entry limit order price target at the time of entry trigger.
 
 Orders can be cancelled out of this callback by returning `None`.
@@ -933,7 +950,8 @@ Returning any other price will cancel the existing order, and replace it with a 
 The trade open-date (`trade.open_date_utc`) will remain at the time of the very first order placed.
 Please make sure to be aware of this - and eventually adjust your logic in other callbacks to account for this, and use the date of the first filled order instead.
 
-If the cancellation of the original order fails, then the order will not be replaced - though the order will most likely have been canceled on exchange. Having this happen on initial entries will result in the deletion of the order, while on position adjustment orders, it'll result in the trade size remaining as is.
+If the cancellation of the original order fails, then the order will not be replaced - though the order will most likely have been canceled on exchange. Having this happen on initial entries will result in the deletion of the order, while on position adjustment orders, it'll result in the trade size remaining as is.  
+If the order has been partially filled, the order will not be replaced. You can however use [`adjust_trade_position()`](#adjust-trade-position) to adjust the trade size to the full, expected position size, should this be necessary / desired.
 
 !!! Warning "Regular timeout"
     Entry `unfilledtimeout` mechanism (as well as `check_entry_timeout()`) takes precedence over this.
@@ -946,9 +964,9 @@ class AwesomeStrategy(IStrategy):
 
     # ... populate_* methods
 
-    def adjust_entry_price(self, trade: Trade, order: Optional[Order], pair: str,
+    def adjust_entry_price(self, trade: Trade, order: Order | None, pair: str,
                            current_time: datetime, proposed_rate: float, current_order_rate: float,
-                           entry_tag: Optional[str], side: str, **kwargs) -> float:
+                           entry_tag: str | None, side: str, **kwargs) -> float:
         """
         Entry price re-adjustment logic, returning the user desired limit price.
         This only executes when a order was already placed, still open (unfilled fully or partially)
@@ -975,7 +993,7 @@ class AwesomeStrategy(IStrategy):
             pair == "BTC/USDT" 
             and entry_tag == "long_sma200" 
             and side == "long" 
-            and (current_time - timedelta(minutes=10)) > trade.open_date_utc
+            and (current_time - timedelta(minutes=10)) <= trade.open_date_utc
         ):
             # just cancel the order if it has been filled more than half of the amount
             if order.filled > order.remaining:
@@ -1003,7 +1021,7 @@ For markets / exchanges that don't support leverage, this method is ignored.
 
 class AwesomeStrategy(IStrategy):
     def leverage(self, pair: str, current_time: datetime, current_rate: float,
-                 proposed_leverage: float, max_leverage: float, entry_tag: Optional[str], side: str,
+                 proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
                  **kwargs) -> float:
         """
         Customize leverage for each new trade. This method is only called in futures mode.

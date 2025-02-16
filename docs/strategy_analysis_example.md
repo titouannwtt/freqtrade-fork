@@ -152,7 +152,7 @@ print(stats["strategy"][strategy]["pairlist"])
 # Get market change (average change of all pairs from start to end of the backtest period)
 print(stats["strategy"][strategy]["market_change"])
 # Maximum drawdown ()
-print(stats["strategy"][strategy]["max_drawdown"])
+print(stats["strategy"][strategy]["max_drawdown_abs"])
 # Maximum drawdown start and end
 print(stats["strategy"][strategy]["drawdown_start"])
 print(stats["strategy"][strategy]["drawdown_end"])
@@ -215,7 +215,7 @@ trades.groupby("pair")["exit_reason"].value_counts()
 ```
 
 ## Analyze the loaded trades for trade parallelism
-This can be useful to find the best `max_open_trades` parameter, when used with backtesting in conjunction with `--disable-max-market-positions`.
+This can be useful to find the best `max_open_trades` parameter, when used with backtesting in conjunction with a very high `max_open_trades` setting.
 
 `analyze_trade_parallelism()` returns a timeseries dataframe with an "open_trades" column, specifying the number of open trades for each candle.
 

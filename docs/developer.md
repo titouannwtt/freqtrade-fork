@@ -116,7 +116,7 @@ A similar setup can also be taken for Pycharm - using `freqtrade` as module name
     ![Pycharm debug configuration](assets/pycharm_debug.png)
 
 !!! Note "Startup directory"
-    This assumes that you have the repository checked out, and the editor is started at the repository root level (so setup.py is at the top level of your repository).
+    This assumes that you have the repository checked out, and the editor is started at the repository root level (so pyproject.toml is at the top level of your repository).
 
 ## ErrorHandling
 
@@ -162,7 +162,7 @@ Hopefully you also want to contribute this back upstream.
 
 Whatever your motivations are - This should get you off the ground in trying to develop a new Pairlist Handler.
 
-First of all, have a look at the [VolumePairList](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/pairlist/VolumePairList.py) Handler, and best copy this file with a name of your new Pairlist Handler.
+First of all, have a look at the [VolumePairList](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/plugins/pairlist/VolumePairList.py) Handler, and best copy this file with a name of your new Pairlist Handler.
 
 This is a simple Handler, which however serves as a good example on how to start developing.
 
@@ -205,7 +205,7 @@ This is called with each iteration of the bot (only if the Pairlist Handler is a
 
 It must return the resulting pairlist (which may then be passed into the chain of Pairlist Handlers).
 
-Validations are optional, the parent class exposes a `_verify_blacklist(pairlist)` and `_whitelist_for_active_markets(pairlist)` to do default filtering. Use this if you limit your result to a certain number of pairs - so the end-result is not shorter than expected.
+Validations are optional, the parent class exposes a `verify_blacklist(pairlist)` and `_whitelist_for_active_markets(pairlist)` to do default filtering. Use this if you limit your result to a certain number of pairs - so the end-result is not shorter than expected.
 
 #### filter_pairlist
 
@@ -219,14 +219,14 @@ The default implementation in the base class simply calls the `_validate_pair()`
 
 If overridden, it must return the resulting pairlist (which may then be passed into the next Pairlist Handler in the chain).
 
-Validations are optional, the parent class exposes a `_verify_blacklist(pairlist)` and `_whitelist_for_active_markets(pairlist)` to do default filters. Use this if you limit your result to a certain number of pairs - so the end result is not shorter than expected.
+Validations are optional, the parent class exposes a `verify_blacklist(pairlist)` and `_whitelist_for_active_markets(pairlist)` to do default filters. Use this if you limit your result to a certain number of pairs - so the end result is not shorter than expected.
 
 In `VolumePairList`, this implements different methods of sorting, does early validation so only the expected number of pairs is returned.
 
 ##### sample
 
 ``` python
-    def filter_pairlist(self, pairlist: List[str], tickers: Dict) -> List[str]:
+    def filter_pairlist(self, pairlist: list[str], tickers: dict) -> List[str]:
         # Generate dynamic whitelist
         pairs = self._calculate_pairlist(pairlist, tickers)
         return pairs
@@ -241,7 +241,6 @@ No protection should use datetime directly, but use the provided `date_now` vari
 
 !!! Tip "Writing a new Protection"
     Best copy one of the existing Protections to have a good example.
-    Don't forget to register your protection in `constants.py` under the variable `AVAILABLE_PROTECTIONS` - otherwise it will not be selectable.
 
 #### Implementation of a new protection
 

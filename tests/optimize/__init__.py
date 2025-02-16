@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Dict, List, NamedTuple, Optional
+from typing import NamedTuple
 
 from pandas import DataFrame
 
@@ -20,7 +20,7 @@ class BTrade(NamedTuple):
     exit_reason: ExitType
     open_tick: int
     close_tick: int
-    enter_tag: Optional[str] = None
+    enter_tag: str | None = None
     is_short: bool = False
 
 
@@ -29,22 +29,23 @@ class BTContainer(NamedTuple):
     Minimal BacktestContainer defining Backtest inputs and results.
     """
 
-    data: List[List[float]]
+    data: list[list[float]]
     stop_loss: float
-    roi: Dict[str, float]
-    trades: List[BTrade]
+    roi: dict[str, float]
+    trades: list[BTrade]
     profit_perc: float
     trailing_stop: bool = False
     trailing_only_offset_is_reached: bool = False
-    trailing_stop_positive: Optional[float] = None
+    trailing_stop_positive: float | None = None
     trailing_stop_positive_offset: float = 0.0
     use_exit_signal: bool = False
     use_custom_stoploss: bool = False
-    custom_entry_price: Optional[float] = None
-    custom_exit_price: Optional[float] = None
+    custom_entry_price: float | None = None
+    custom_exit_price: float | None = None
     leverage: float = 1.0
-    timeout: Optional[int] = None
-    adjust_entry_price: Optional[float] = None
+    timeout: int | None = None
+    adjust_entry_price: float | None = None
+    adjust_trade_position: list[float] | None = None
 
 
 def _get_frame_time_from_offset(offset):

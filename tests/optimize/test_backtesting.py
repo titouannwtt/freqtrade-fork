@@ -5,7 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import ANY, MagicMock, PropertyMock
 
 import numpy as np
 import pandas as pd
@@ -189,7 +189,6 @@ def test_setup_bt_configuration_with_arguments(mocker, default_conf, caplog) -> 
         "--timeframe",
         "1m",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--timerange",
         ":100",
         "--export-filename",
@@ -213,10 +212,6 @@ def test_setup_bt_configuration_with_arguments(mocker, default_conf, caplog) -> 
 
     assert "position_stacking" in config
     assert log_has("Parameter --enable-position-stacking detected ...", caplog)
-
-    assert "use_max_market_positions" in config
-    assert log_has("Parameter --disable-max-market-positions detected ...", caplog)
-    assert log_has("max_open_trades set to unlimited ...", caplog)
 
     assert "timerange" in config
     assert log_has("Parameter --timerange detected: {} ...".format(config["timerange"]), caplog)
@@ -376,8 +371,7 @@ def test_backtesting_start(default_conf, mocker, caplog) -> None:
     mocker.patch("freqtrade.optimize.backtesting.Backtesting.backtest")
     mocker.patch("freqtrade.optimize.backtesting.generate_backtest_stats")
     mocker.patch("freqtrade.optimize.backtesting.show_backtest_results")
-    sbs = mocker.patch("freqtrade.optimize.backtesting.store_backtest_stats")
-    sbc = mocker.patch("freqtrade.optimize.backtesting.store_backtest_analysis_results")
+    sbs = mocker.patch("freqtrade.optimize.backtesting.store_backtest_results")
     mocker.patch(
         "freqtrade.plugins.pairlistmanager.PairListManager.whitelist",
         PropertyMock(return_value=["UNITTEST/BTC"]),
@@ -402,7 +396,6 @@ def test_backtesting_start(default_conf, mocker, caplog) -> None:
     assert backtesting.strategy.bot_start.call_count == 1
     assert backtesting.strategy.bot_loop_start.call_count == 0
     assert sbs.call_count == 1
-    assert sbc.call_count == 1
 
 
 def test_backtesting_start_no_data(default_conf, mocker, caplog, testdatadir) -> None:
@@ -573,6 +566,9 @@ def test_backtest__enter_trade_futures(default_conf_usdt, fee, mocker) -> None:
     mocker.patch(f"{EXMS}.get_fee", fee)
     mocker.patch(f"{EXMS}.get_min_pair_stake_amount", return_value=0.00001)
     mocker.patch(f"{EXMS}.get_max_pair_stake_amount", return_value=float("inf"))
+    mocker.patch(
+        "freqtrade.persistence.trade_model.price_to_precision", lambda p, *args, **kwargs: p
+    )
     mocker.patch(f"{EXMS}.get_max_leverage", return_value=100)
     mocker.patch("freqtrade.optimize.backtesting.price_to_precision", lambda p, *args: p)
     patch_exchange(mocker)
@@ -637,7 +633,7 @@ def test_backtest__enter_trade_futures(default_conf_usdt, fee, mocker) -> None:
     trade = backtesting._enter_trade(pair, row=row, direction="short")
     assert pytest.approx(trade.liquidation_price) == 0.11787191
     assert pytest.approx(trade.orders[0].cost) == (
-        trade.stake_amount * trade.leverage + trade.fee_open
+        trade.stake_amount * trade.leverage * (1 + fee.return_value)
     )
     assert pytest.approx(trade.orders[-1].stake_amount) == trade.stake_amount
 
@@ -799,6 +795,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517251200000,
                         "ft_is_entry": True,
                         "ft_order_tag": "",
+                        "cost": ANY,
                     },
                     {
                         "amount": 0.00957442,
@@ -807,6 +804,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517265300000,
                         "ft_is_entry": False,
                         "ft_order_tag": "roi",
+                        "cost": ANY,
                     },
                 ],
                 [
@@ -817,6 +815,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517283000000,
                         "ft_is_entry": True,
                         "ft_order_tag": "",
+                        "cost": ANY,
                     },
                     {
                         "amount": 0.0097064,
@@ -825,6 +824,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                         "order_filled_timestamp": 1517285400000,
                         "ft_is_entry": False,
                         "ft_order_tag": "roi",
+                        "cost": ANY,
                     },
                 ],
             ],
@@ -870,6 +870,7 @@ def test_backtest_one_detail(default_conf_usdt, mocker, testdatadir, use_detail)
     backtesting = Backtesting(default_conf_usdt)
     backtesting._set_strategy(backtesting.strategylist[0])
     backtesting.strategy.populate_entry_trend = advise_entry
+    backtesting.strategy.ignore_buying_expired_candle_after = 59
     backtesting.strategy.custom_entry_price = custom_entry_price
     pair = "XRP/ETH"
     # Pick a timerange adapted to the pair we use to test
@@ -940,8 +941,8 @@ def test_backtest_one_detail(default_conf_usdt, mocker, testdatadir, use_detail)
 @pytest.mark.parametrize(
     "use_detail,exp_funding_fee, exp_ff_updates",
     [
-        (True, -0.018054162, 11),
-        (False, -0.01780296, 5),
+        (True, -0.018054162, 10),
+        (False, -0.01780296, 6),
     ],
 )
 def test_backtest_one_detail_futures(
@@ -1002,7 +1003,7 @@ def test_backtest_one_detail_futures(
     results = result["results"]
     assert not results.empty
     # Timeout settings from default_conf = entry: 10, exit: 30
-    assert len(results) == (5 if use_detail else 2)
+    assert len(results) == (4 if use_detail else 2)
 
     assert "orders" in results.columns
     data_pair = processed[pair]
@@ -1051,8 +1052,8 @@ def test_backtest_one_detail_futures(
 @pytest.mark.parametrize(
     "use_detail,entries,max_stake,ff_updates,expected_ff",
     [
-        (True, 50, 3000, 54, -1.18038144),
-        (False, 6, 360, 10, -0.14679994),
+        (True, 50, 3000, 55, -1.18038144),
+        (False, 6, 360, 11, -0.14679994),
     ],
 )
 def test_backtest_one_detail_futures_funding_fees(
@@ -1299,7 +1300,7 @@ def test_backtest_pricecontours_protections(default_conf, fee, mocker, testdatad
     # While this test IS a copy of test_backtest_pricecontours, it's needed to ensure
     # results do not carry-over to the next run, which is not given by using parametrize.
     patch_exchange(mocker)
-    default_conf["protections"] = [
+    default_conf["_strategy_protections"] = [
         {
             "method": "CooldownPeriod",
             "stop_duration": 3,
@@ -1358,7 +1359,7 @@ def test_backtest_pricecontours(
     default_conf, mocker, testdatadir, protections, contour, expected
 ) -> None:
     if protections:
-        default_conf["protections"] = protections
+        default_conf["_strategy_protections"] = protections
         default_conf["enable_protections"] = True
 
     patch_exchange(mocker)
@@ -1651,8 +1652,8 @@ def test_backtest_multi_pair_detail(
     if use_detail:
         # Backtest loop is called once per candle per pair
         # Exact numbers depend on trade state - but should be around 3_800
-        assert bl_spy.call_count > 1_350
-        assert bl_spy.call_count < 1_500
+        assert bl_spy.call_count > 1_220
+        assert bl_spy.call_count < 1_300
     else:
         assert bl_spy.call_count < 995
 
@@ -1679,6 +1680,141 @@ def test_backtest_multi_pair_detail(
     }
     results = backtesting.backtest(**backtest_conf)
     assert len(evaluate_result_multi(results["results"], "5m", 1)) == 0
+
+
+@pytest.mark.parametrize("use_detail", [True, False])
+@pytest.mark.parametrize("pair", ["ADA/USDT", "LTC/USDT"])
+@pytest.mark.parametrize("tres", [0, 20, 30])
+def test_backtest_multi_pair_detail_simplified(
+    default_conf_usdt,
+    fee,
+    mocker,
+    tres,
+    pair,
+    use_detail,
+):
+    """
+    literally the same as test_backtest_multi_pair_detail
+    but with an "always enter" strategy, exiting after about half of the candle duration.
+    """
+
+    def _always_buy(dataframe, metadata):
+        """
+        Buy every xth candle - sell every other xth -2 (hold on to pairs a bit)
+        """
+        dataframe["enter_long"] = 1
+        dataframe["enter_short"] = 0
+        dataframe["exit_short"] = 0
+        return dataframe
+
+    def custom_exit(
+        trade: Trade,
+        current_time: datetime,
+        **kwargs,
+    ) -> str | bool | None:
+        # Exit within the same candle.
+        if (trade.open_date_utc + timedelta(minutes=20)) < current_time:
+            return "exit after 20 minutes"
+
+    default_conf_usdt.update(
+        {
+            "runmode": "backtest",
+            "stoploss": -1.0,
+            "minimal_roi": {"0": 100},
+        }
+    )
+
+    if use_detail:
+        default_conf_usdt["timeframe_detail"] = "5m"
+
+    mocker.patch(f"{EXMS}.get_min_pair_stake_amount", return_value=0.00001)
+    mocker.patch(f"{EXMS}.get_max_pair_stake_amount", return_value=float("inf"))
+    mocker.patch(f"{EXMS}.get_fee", fee)
+    patch_exchange(mocker)
+
+    raw_candles_5m = generate_test_data("5m", 1000, "2022-01-03 12:00:00+00:00")
+    raw_candles = ohlcv_fill_up_missing_data(raw_candles_5m, "1h", "dummy")
+
+    pairs = ["ADA/USDT", "DASH/USDT", "ETH/USDT", "LTC/USDT", "NXT/USDT"]
+    data = {pair: raw_candles for pair in pairs}
+    detail_data = {pair: raw_candles_5m for pair in pairs}
+
+    # Only use 500 lines to increase performance
+    data = trim_dictlist(data, -200)
+
+    # Remove data for one pair from the beginning of the data
+    if tres > 0:
+        data[pair] = data[pair][tres:].reset_index()
+    default_conf_usdt["timeframe"] = "1h"
+    default_conf_usdt["max_open_trades"] = 3
+
+    backtesting = Backtesting(default_conf_usdt)
+    vr_spy = mocker.spy(backtesting, "validate_row")
+    bl_spy = mocker.spy(backtesting, "backtest_loop")
+    backtesting.detail_data = detail_data
+    backtesting._set_strategy(backtesting.strategylist[0])
+    backtesting.strategy.bot_loop_start = MagicMock()
+    backtesting.strategy.advise_entry = _always_buy  # Override
+    backtesting.strategy.advise_exit = _always_buy  # Override
+    backtesting.strategy.custom_exit = custom_exit  # Override
+
+    processed = backtesting.strategy.advise_all_indicators(data)
+    min_date, max_date = get_timerange(processed)
+
+    backtest_conf = {
+        "processed": deepcopy(processed),
+        "start_date": min_date,
+        "end_date": max_date,
+    }
+
+    results = backtesting.backtest(**backtest_conf)
+
+    # bot_loop_start is called once per candle.
+    # assert backtesting.strategy.bot_loop_start.call_count == 83
+    # Validated row once per candle and pair
+    assert vr_spy.call_count == 415
+
+    if use_detail:
+        # Backtest loop is called once per candle per pair
+        # Exact numbers depend on trade state - but should be around 2_600
+        assert bl_spy.call_count > 2_170
+        assert bl_spy.call_count < 2_800
+        assert len(evaluate_result_multi(results["results"], "1h", 3)) > 0
+    else:
+        assert bl_spy.call_count < 995
+        assert len(evaluate_result_multi(results["results"], "1h", 3)) == 0
+
+    # Make sure we have parallel trades
+    assert len(evaluate_result_multi(results["results"], "1h", 2)) > 0
+    assert len(evaluate_result_multi(results["results"], "5m", 2)) > 0
+    # make sure we don't have trades with more than configured max_open_trades
+    # This must evaluate on detail timeframe - as we can have entries within the candle.
+    assert len(evaluate_result_multi(results["results"], "5m", 3)) == 0
+    assert len(evaluate_result_multi(results["results"], "1m", 3)) == 0
+
+    # # Cached data correctly removed amounts
+    offset = 1 if tres == 0 else 0
+    removed_candles = len(data[pair]) - offset
+    assert len(backtesting.dataprovider.get_analyzed_dataframe(pair, "1h")[0]) == removed_candles
+    assert (
+        len(backtesting.dataprovider.get_analyzed_dataframe("NXT/USDT", "1h")[0])
+        == len(data["NXT/USDT"]) - 1
+    )
+
+    backtesting.strategy.max_open_trades = 1
+    backtesting.config.update({"max_open_trades": 1})
+    backtest_conf = {
+        "processed": deepcopy(processed),
+        "start_date": min_date,
+        "end_date": max_date,
+    }
+    results = backtesting.backtest(**backtest_conf)
+    if use_detail:
+        assert len(evaluate_result_multi(results["results"], "1h", 1)) > 0
+    else:
+        assert len(evaluate_result_multi(results["results"], "1h", 1)) == 0
+    assert len(evaluate_result_multi(results["results"], "5m", 1)) == 0
+    assert len(evaluate_result_multi(results["results"], "1m", 1)) == 0
 
 
 @pytest.mark.parametrize("use_detail", [True, False])
@@ -1722,6 +1858,7 @@ def test_backtest_multi_pair_long_short_switch(
     if use_detail:
         default_conf_usdt["timeframe_detail"] = "1m"
 
+    mocker.patch(f"{EXMS}.price_to_precision", lambda s, x, y, **kwargs: y)
     mocker.patch(f"{EXMS}.get_min_pair_stake_amount", return_value=0.00001)
     mocker.patch(f"{EXMS}.get_max_pair_stake_amount", return_value=float("inf"))
     mocker.patch(f"{EXMS}.get_fee", fee)
@@ -1774,9 +1911,9 @@ def test_backtest_multi_pair_long_short_switch(
 
     if use_detail:
         # Backtest loop is called once per candle per pair
-        assert bl_spy.call_count == 1071
+        assert bl_spy.call_count == 1511
     else:
-        assert bl_spy.call_count == 479
+        assert bl_spy.call_count == 508
 
     # Make sure we have parallel trades
     assert len(evaluate_result_multi(results["results"], "5m", 0)) > 0
@@ -1784,7 +1921,7 @@ def test_backtest_multi_pair_long_short_switch(
     assert len(evaluate_result_multi(results["results"], "5m", 1)) == 0
 
     # Expect 26 results initially
-    assert len(results["results"]) == 30
+    assert len(results["results"]) == 53
 
 
 def test_backtest_start_timerange(default_conf, mocker, caplog, testdatadir):
@@ -1811,14 +1948,12 @@ def test_backtest_start_timerange(default_conf, mocker, caplog, testdatadir):
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
     ]
     args = get_args(args)
     start_backtesting(args)
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -1892,7 +2027,6 @@ def test_backtest_start_multi_strat(default_conf, mocker, caplog, testdatadir):
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--strategy-list",
         CURRENT_TEST_STRATEGY,
         "StrategyTestV2",
@@ -1909,7 +2043,6 @@ def test_backtest_start_multi_strat(default_conf, mocker, caplog, testdatadir):
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -2030,7 +2163,6 @@ def test_backtest_start_multi_strat_nomock(default_conf, mocker, caplog, testdat
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--breakdown",
         "day",
         "--strategy-list",
@@ -2043,7 +2175,6 @@ def test_backtest_start_multi_strat_nomock(default_conf, mocker, caplog, testdat
     # check the logs, that will contain the backtest result
     exists = [
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
-        "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
         "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
@@ -2468,7 +2599,6 @@ def test_backtest_start_multi_strat_caching(
         "--timerange",
         "1510694220-1510700340",
         "--enable-position-stacking",
-        "--disable-max-market-positions",
         "--cache",
         cache,
         "--strategy-list",
@@ -2483,7 +2613,7 @@ def test_backtest_start_multi_strat_caching(
         "Parameter -i/--timeframe detected ... Using timeframe: 1m ...",
         "Parameter --timerange detected: 1510694220-1510700340 ...",
         f"Using data directory: {testdatadir} ...",
-        "Loading data from 2017-11-14 20:57:00 " "up to 2017-11-14 22:59:00 (0 days).",
+        "Loading data from 2017-11-14 20:57:00 up to 2017-11-14 22:59:00 (0 days).",
         "Parameter --enable-position-stacking detected ...",
     ]
 
@@ -2495,7 +2625,6 @@ def test_backtest_start_multi_strat_caching(
         exists = [
             "Running backtesting for Strategy StrategyTestV2",
             "Running backtesting for Strategy StrategyTestV3",
-            "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
             "Backtesting with data from 2017-11-14 21:17:00 up to 2017-11-14 22:59:00 (0 days).",
         ]
     elif run_id == "2" and min_backtest_date < start_time:
@@ -2508,7 +2637,6 @@ def test_backtest_start_multi_strat_caching(
         exists = [
             "Reusing result of previous backtest for StrategyTestV2",
             "Running backtesting for Strategy StrategyTestV3",
-            "Ignoring max_open_trades (--disable-max-market-positions was used) ...",
             "Backtesting with data from 2017-11-14 21:17:00 up to 2017-11-14 22:59:00 (0 days).",
         ]
         assert backtestmock.call_count == 1
@@ -2547,7 +2675,7 @@ def test_get_backtest_metadata_filename():
 
     # Test with a string file path with no extension
     filename = "/path/to/backtest_results"
-    expected = Path("/path/to/backtest_results.meta")
+    expected = Path("/path/to/backtest_results.meta.json")
     assert get_backtest_metadata_filename(filename) == expected
 
     # Test with a string file path with multiple dots in the name
@@ -2558,4 +2686,9 @@ def test_get_backtest_metadata_filename():
     # Test with a string file path with no parent directory
     filename = "backtest_results.json"
     expected = Path("backtest_results.meta.json")
+    assert get_backtest_metadata_filename(filename) == expected
+    # Test with a string file path with no parent directory
+
+    filename = "backtest_results_zip.zip"
+    expected = Path("backtest_results_zip.meta.json")
     assert get_backtest_metadata_filename(filename) == expected

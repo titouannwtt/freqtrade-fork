@@ -1,10 +1,8 @@
 # Required json-schema for user specified config
-from typing import Dict
 
 from freqtrade.constants import (
     AVAILABLE_DATAHANDLERS,
     AVAILABLE_PAIRLISTS,
-    AVAILABLE_PROTECTIONS,
     BACKTEST_BREAKDOWNS,
     DRY_RUN_WALLET,
     EXPORT_OPTIONS,
@@ -24,7 +22,7 @@ from freqtrade.constants import (
 from freqtrade.enums import RPCMessageType
 
 
-__MESSAGE_TYPE_DICT: Dict[str, Dict[str, str]] = {x: {"type": "object"} for x in RPCMessageType}
+__MESSAGE_TYPE_DICT: dict[str, dict[str, str]] = {x: {"type": "object"} for x in RPCMessageType}
 
 __IN_STRATEGY = "\nUsually specified in the strategy and missing in the configuration."
 
@@ -40,6 +38,10 @@ CONF_SCHEMA = {
             "description": (
                 f"The timeframe to use (e.g `1m`, `5m`, `15m`, `30m`, `1h` ...). {__IN_STRATEGY}"
             ),
+            "type": "string",
+        },
+        "proxy_coin": {
+            "description": "Proxy coin - must be used for specific futures modes (e.g. BNFCR)",
             "type": "string",
         },
         "stake_currency": {
@@ -87,8 +89,10 @@ CONF_SCHEMA = {
         },
         "dry_run_wallet": {
             "description": "Initial wallet balance for dry run mode.",
-            "type": "number",
+            "type": ["number", "object"],
             "default": DRY_RUN_WALLET,
+            "patternProperties": {r"^[a-zA-Z0-9]+$": {"type": "number"}},
+            "additionalProperties": False,
         },
         "cancel_open_orders_on_exit": {
             "description": "Cancel open orders when exiting.",
@@ -449,60 +453,6 @@ CONF_SCHEMA = {
                 "required": ["method"],
             },
         },
-        "protections": {
-            "description": "Configuration for various protections.",
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "method": {
-                        "description": "Method used for the protection.",
-                        "type": "string",
-                        "enum": AVAILABLE_PROTECTIONS,
-                    },
-                    "stop_duration": {
-                        "description": (
-                            "Duration to lock the pair after a protection is triggered, "
-                            "in minutes."
-                        ),
-                        "type": "number",
-                        "minimum": 0.0,
-                    },
-                    "stop_duration_candles": {
-                        "description": (
-                            "Duration to lock the pair after a protection is triggered, in "
-                            "number of candles."
-                        ),
-                        "type": "number",
-                        "minimum": 0,
-                    },
-                    "unlock_at": {
-                        "description": (
-                            "Time when trading will be unlocked regularly. Format: HH:MM"
-                        ),
-                        "type": "string",
-                    },
-                    "trade_limit": {
-                        "description": "Minimum number of trades required during lookback period.",
-                        "type": "number",
-                        "minimum": 1,
-                    },
-                    "lookback_period": {
-                        "description": "Period to look back for protection checks, in minutes.",
-                        "type": "number",
-                        "minimum": 1,
-                    },
-                    "lookback_period_candles": {
-                        "description": (
-                            "Period to look back for protection checks, in number " "of candles."
-                        ),
-                        "type": "number",
-                        "minimum": 1,
-                    },
-                },
-                "required": ["method"],
-            },
-        },
         # RPC section
         "telegram": {
             "description": "Telegram settings.",
@@ -514,7 +464,11 @@ CONF_SCHEMA = {
                 },
                 "token": {"description": "Telegram bot token.", "type": "string"},
                 "chat_id": {
-                    "description": "Telegram chat ID",
+                    "description": "Telegram chat or group ID",
+                    "type": "string",
+                },
+                "topic_id": {
+                    "description": "Telegram topic ID - only applicable for group chats",
                     "type": "string",
                 },
                 "allow_custom_messages": {
@@ -573,8 +527,11 @@ CONF_SCHEMA = {
                         },
                         "exit_fill": {
                             "description": "Telegram setting for exit fill signals.",
-                            "type": "string",
-                            "enum": TELEGRAM_SETTING_OPTIONS,
+                            "type": ["string", "object"],
+                            "additionalProperties": {
+                                "type": "string",
+                                "enum": TELEGRAM_SETTING_OPTIONS,
+                            },
                             "default": "on",
                         },
                         "exit_cancel": {
@@ -696,7 +653,7 @@ CONF_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
-                "x": {
+                "verbosity": {
                     "description": "Logging verbosity level.",
                     "type": "string",
                     "enum": ["error", "info"],
@@ -1050,6 +1007,13 @@ CONF_SCHEMA = {
                     ),
                     "type": "string",
                     "default": "example",
+                },
+                "wait_for_training_iteration_on_reload": {
+                    "description": (
+                        "Wait for the next training iteration to complete after /reload or ctrl+c."
+                    ),
+                    "type": "boolean",
+                    "default": True,
                 },
                 "feature_parameters": {
                     "description": "The parameters used to engineer the feature set",

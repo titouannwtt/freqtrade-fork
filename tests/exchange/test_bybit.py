@@ -5,7 +5,6 @@ import pytest
 
 from freqtrade.enums.marginmode import MarginMode
 from freqtrade.enums.tradingmode import TradingMode
-from freqtrade.exceptions import OperationalException
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange, log_has
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
@@ -27,13 +26,11 @@ def test_additional_exchange_init_bybit(default_conf, mocker, caplog):
 
     api_mock.set_position_mode.reset_mock()
     api_mock.is_unified_enabled = MagicMock(return_value=[False, True])
-    with pytest.raises(OperationalException, match=r"Bybit: Unified account is not supported.*"):
-        get_patched_exchange(mocker, default_conf, exchange="bybit", api_mock=api_mock)
-    assert log_has("Bybit: Unified account.", caplog)
-    # exchange = get_patched_exchange(mocker, default_conf, exchange="bybit", api_mock=api_mock)
-    # assert api_mock.set_position_mode.call_count == 1
-    # assert api_mock.is_unified_enabled.call_count == 1
-    # assert exchange.unified_account is True
+    exchange = get_patched_exchange(mocker, default_conf, exchange="bybit", api_mock=api_mock)
+    assert log_has("Bybit: Unified account. Assuming dedicated subaccount for this bot.", caplog)
+    assert api_mock.set_position_mode.call_count == 1
+    assert api_mock.is_unified_enabled.call_count == 1
+    assert exchange.unified_account is True
 
     ccxt_exceptionhandlers(
         mocker, default_conf, api_mock, "bybit", "additional_exchange_init", "set_position_mode"
@@ -177,3 +174,26 @@ def test_bybit_fetch_order_canceled_empty(default_conf_usdt, mocker):
     assert res2["filled"] == 0.0
     assert res2["amount"] == 20.0
     assert res2["status"] == "open"
+
+
+@pytest.mark.parametrize(
+    "side,order_type,uta,tradingmode,expected",
+    [
+        ("buy", "limit", False, "spot", True),
+        ("buy", "limit", False, "futures", True),
+        ("sell", "limit", False, "spot", True),
+        ("sell", "limit", False, "futures", True),
+        ("buy", "market", False, "spot", True),
+        ("buy", "market", False, "futures", False),
+        ("buy", "market", True, "spot", False),
+        ("buy", "market", True, "futures", False),
+    ],
+)
+def test_bybit__order_needs_price(
+    default_conf, mocker, side, order_type, uta, tradingmode, expected
+):
+    exchange = get_patched_exchange(mocker, default_conf, exchange="bybit")
+    exchange.trading_mode = tradingmode
+    exchange.unified_account = uta
+
+    assert exchange._order_needs_price(side, order_type) == expected

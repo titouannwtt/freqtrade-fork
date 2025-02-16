@@ -4,14 +4,13 @@ Rate of change pairlist filter
 
 import logging
 from datetime import timedelta
-from typing import Dict, List, Optional
 
 from cachetools import TTLCache
 from pandas import DataFrame
 
 from freqtrade.constants import ListPairsWithTimeframes
 from freqtrade.exceptions import OperationalException
-from freqtrade.exchange.types import Tickers
+from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.misc import plural
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 from freqtrade.util import dt_floor_day, dt_now, dt_ts
@@ -31,7 +30,7 @@ class RangeStabilityFilter(IPairList):
         self._max_rate_of_change = self._pairlistconfig.get("max_rate_of_change")
         self._refresh_period = self._pairlistconfig.get("refresh_period", 86400)
         self._def_candletype = self._config["candle_type_def"]
-        self._sort_direction: Optional[str] = self._pairlistconfig.get("sort_direction", None)
+        self._sort_direction: str | None = self._pairlistconfig.get("sort_direction", None)
 
         self._pair_cache: TTLCache = TTLCache(maxsize=1000, ttl=self._refresh_period)
 
@@ -76,7 +75,7 @@ class RangeStabilityFilter(IPairList):
         return "Filters pairs by their rate of change."
 
     @staticmethod
-    def available_parameters() -> Dict[str, PairlistParameter]:
+    def available_parameters() -> dict[str, PairlistParameter]:
         return {
             "lookback_days": {
                 "type": "number",
@@ -106,7 +105,7 @@ class RangeStabilityFilter(IPairList):
             **IPairList.refresh_period_parameter(),
         }
 
-    def filter_pairlist(self, pairlist: List[str], tickers: Tickers) -> List[str]:
+    def filter_pairlist(self, pairlist: list[str], tickers: Tickers) -> list[str]:
         """
         Validate trading range
         :param pairlist: pairlist to filter or sort
@@ -120,8 +119,8 @@ class RangeStabilityFilter(IPairList):
         since_ms = dt_ts(dt_floor_day(dt_now()) - timedelta(days=self._days + 1))
         candles = self._exchange.refresh_ohlcv_with_cache(needed_pairs, since_ms=since_ms)
 
-        resulting_pairlist: List[str] = []
-        pct_changes: Dict[str, float] = {}
+        resulting_pairlist: list[str] = []
+        pct_changes: dict[str, float] = {}
 
         for p in pairlist:
             daily_candles = candles.get((p, "1d", self._def_candletype), None)
@@ -143,7 +142,7 @@ class RangeStabilityFilter(IPairList):
             )
         return resulting_pairlist
 
-    def _calculate_rate_of_change(self, pair: str, daily_candles: DataFrame) -> Optional[float]:
+    def _calculate_rate_of_change(self, pair: str, daily_candles: DataFrame) -> float | None:
         # Check symbol in cache
         if (pct_change := self._pair_cache.get(pair, None)) is not None:
             return pct_change

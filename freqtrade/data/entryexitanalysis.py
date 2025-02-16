@@ -1,55 +1,29 @@
 import logging
 from pathlib import Path
-from typing import List
 
-import joblib
 import pandas as pd
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import Config
 from freqtrade.data.btanalysis import (
-    get_latest_backtest_filename,
+    BT_DATA_COLUMNS,
     load_backtest_data,
     load_backtest_stats,
+    load_exit_signal_candles,
+    load_rejected_signals,
+    load_signal_candles,
 )
-from freqtrade.exceptions import OperationalException
+from freqtrade.exceptions import ConfigurationError, OperationalException
 from freqtrade.util import print_df_rich_table
 
 
 logger = logging.getLogger(__name__)
 
 
-def _load_backtest_analysis_data(backtest_dir: Path, name: str):
-    if backtest_dir.is_dir():
-        scpf = Path(
-            backtest_dir,
-            Path(get_latest_backtest_filename(backtest_dir)).stem + "_" + name + ".pkl",
-        )
-    else:
-        scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
-
-    try:
-        with scpf.open("rb") as scp:
-            loaded_data = joblib.load(scp)
-            logger.info(f"Loaded {name} candles: {str(scpf)}")
-    except Exception as e:
-        logger.error(f"Cannot load {name} data from pickled results: ", e)
-        return None
-
-    return loaded_data
-
-
-def _load_rejected_signals(backtest_dir: Path):
-    return _load_backtest_analysis_data(backtest_dir, "rejected")
-
-
-def _load_signal_candles(backtest_dir: Path):
-    return _load_backtest_analysis_data(backtest_dir, "signals")
-
-
-def _process_candles_and_indicators(pairlist, strategy_name, trades, signal_candles):
-    analysed_trades_dict = {}
-    analysed_trades_dict[strategy_name] = {}
+def _process_candles_and_indicators(
+    pairlist, strategy_name, trades, signal_candles, date_col: str = "open_date"
+):
+    analysed_trades_dict: dict[str, dict] = {strategy_name: {}}
 
     try:
         logger.info(f"Processing {strategy_name} : {len(pairlist)} pairs")
@@ -57,7 +31,7 @@ def _process_candles_and_indicators(pairlist, strategy_name, trades, signal_cand
         for pair in pairlist:
             if pair in signal_candles[strategy_name]:
                 analysed_trades_dict[strategy_name][pair] = _analyze_candles_and_indicators(
-                    pair, trades, signal_candles[strategy_name][pair]
+                    pair, trades, signal_candles[strategy_name][pair], date_col
                 )
     except Exception as e:
         print(f"Cannot process entry/exit reasons for {strategy_name}: ", e)
@@ -65,7 +39,9 @@ def _process_candles_and_indicators(pairlist, strategy_name, trades, signal_cand
     return analysed_trades_dict
 
 
-def _analyze_candles_and_indicators(pair, trades: pd.DataFrame, signal_candles: pd.DataFrame):
+def _analyze_candles_and_indicators(
+    pair: str, trades: pd.DataFrame, signal_candles: pd.DataFrame, date_col: str = "open_date"
+) -> pd.DataFrame:
     buyf = signal_candles
 
     if len(buyf) > 0:
@@ -75,8 +51,8 @@ def _analyze_candles_and_indicators(pair, trades: pd.DataFrame, signal_candles: 
         trades_inds = pd.DataFrame()
 
         if trades_red.shape[0] > 0 and buyf.shape[0] > 0:
-            for t, v in trades_red.open_date.items():
-                allinds = buyf.loc[(buyf["date"] < v)]
+            for t, v in trades_red.iterrows():
+                allinds = buyf.loc[(buyf["date"] < v[date_col])]
                 if allinds.shape[0] > 0:
                     tmp_inds = allinds.iloc[[-1]]
 
@@ -235,7 +211,7 @@ def _select_rows_by_tags(df, enter_reason_list, exit_reason_list):
 
 def prepare_results(
     analysed_trades, stratname, enter_reason_list, exit_reason_list, timerange=None
-):
+) -> pd.DataFrame:
     res_df = pd.DataFrame()
     for pair, trades in analysed_trades[stratname].items():
         if trades.shape[0] > 0:
@@ -252,8 +228,11 @@ def prepare_results(
 
 def print_results(
     res_df: pd.DataFrame,
-    analysis_groups: List[str],
-    indicator_list: List[str],
+    exit_df: pd.DataFrame,
+    analysis_groups: list[str],
+    indicator_list: list[str],
+    entry_only: bool,
+    exit_only: bool,
     csv_path: Path,
     rejected_signals=None,
     to_csv=False,
@@ -278,9 +257,11 @@ def print_results(
             for ind in indicator_list:
                 if ind in res_df:
                     available_inds.append(ind)
-            ilist = ["pair", "enter_reason", "exit_reason"] + available_inds
+
+            merged_df = _merge_dfs(res_df, exit_df, available_inds, entry_only, exit_only)
+
             _print_table(
-                res_df[ilist],
+                merged_df,
                 sortcols=["exit_reason"],
                 show_index=False,
                 name="Indicators:",
@@ -289,6 +270,36 @@ def print_results(
             )
     else:
         print("\\No trades to show")
+
+
+def _merge_dfs(
+    entry_df: pd.DataFrame,
+    exit_df: pd.DataFrame,
+    available_inds: list[str],
+    entry_only: bool,
+    exit_only: bool,
+):
+    merge_on = ["pair", "open_date"]
+    signal_wide_indicators = list(set(available_inds) - set(BT_DATA_COLUMNS))
+    columns_to_keep = merge_on + ["enter_reason", "exit_reason"]
+
+    if exit_df is None or exit_df.empty or entry_only is True:
+        return entry_df[columns_to_keep + available_inds]
+
+    if exit_only is True:
+        return pd.merge(
+            entry_df[columns_to_keep],
+            exit_df[merge_on + signal_wide_indicators],
+            on=merge_on,
+            suffixes=(" (entry)", " (exit)"),
+        )
+
+    return pd.merge(
+        entry_df[columns_to_keep + available_inds],
+        exit_df[merge_on + signal_wide_indicators],
+        on=merge_on,
+        suffixes=(" (entry)", " (exit)"),
+    )
 
 
 def _print_table(
@@ -316,27 +327,37 @@ def process_entry_exit_reasons(config: Config):
         enter_reason_list = config.get("enter_reason_list", ["all"])
         exit_reason_list = config.get("exit_reason_list", ["all"])
         indicator_list = config.get("indicator_list", [])
+        entry_only = config.get("entry_only", False)
+        exit_only = config.get("exit_only", False)
         do_rejected = config.get("analysis_rejected", False)
         to_csv = config.get("analysis_to_csv", False)
         csv_path = Path(config.get("analysis_csv_path", config["exportfilename"]))
+
+        if entry_only is True and exit_only is True:
+            raise OperationalException(
+                "Cannot use --entry-only and --exit-only at the same time. Please choose one."
+            )
         if to_csv and not csv_path.is_dir():
             raise OperationalException(f"Specified directory {csv_path} does not exist.")
 
         timerange = TimeRange.parse_timerange(
             None if config.get("timerange") is None else str(config.get("timerange"))
         )
-
-        backtest_stats = load_backtest_stats(config["exportfilename"])
+        try:
+            backtest_stats = load_backtest_stats(config["exportfilename"])
+        except ValueError as e:
+            raise ConfigurationError(e) from e
 
         for strategy_name, results in backtest_stats["strategy"].items():
             trades = load_backtest_data(config["exportfilename"], strategy_name)
 
             if trades is not None and not trades.empty:
-                signal_candles = _load_signal_candles(config["exportfilename"])
+                signal_candles = load_signal_candles(config["exportfilename"])
+                exit_signals = load_exit_signal_candles(config["exportfilename"])
 
                 rej_df = None
                 if do_rejected:
-                    rejected_signals_dict = _load_rejected_signals(config["exportfilename"])
+                    rejected_signals_dict = load_rejected_signals(config["exportfilename"])
                     rej_df = prepare_results(
                         rejected_signals_dict,
                         strategy_name,
@@ -345,22 +366,35 @@ def process_entry_exit_reasons(config: Config):
                         timerange=timerange,
                     )
 
-                analysed_trades_dict = _process_candles_and_indicators(
-                    config["exchange"]["pair_whitelist"], strategy_name, trades, signal_candles
-                )
-
-                res_df = prepare_results(
-                    analysed_trades_dict,
-                    strategy_name,
+                entry_df = _generate_dfs(
+                    config["exchange"]["pair_whitelist"],
                     enter_reason_list,
                     exit_reason_list,
-                    timerange=timerange,
+                    signal_candles,
+                    strategy_name,
+                    timerange,
+                    trades,
+                    "open_date",
+                )
+
+                exit_df = _generate_dfs(
+                    config["exchange"]["pair_whitelist"],
+                    enter_reason_list,
+                    exit_reason_list,
+                    exit_signals,
+                    strategy_name,
+                    timerange,
+                    trades,
+                    "close_date",
                 )
 
                 print_results(
-                    res_df,
+                    entry_df,
+                    exit_df,
                     analysis_groups,
                     indicator_list,
+                    entry_only,
+                    exit_only,
                     rejected_signals=rej_df,
                     to_csv=to_csv,
                     csv_path=csv_path,
@@ -368,3 +402,30 @@ def process_entry_exit_reasons(config: Config):
 
     except ValueError as e:
         raise OperationalException(e) from e
+
+
+def _generate_dfs(
+    pairlist: list,
+    enter_reason_list: list,
+    exit_reason_list: list,
+    signal_candles: dict,
+    strategy_name: str,
+    timerange: TimeRange,
+    trades: pd.DataFrame,
+    date_col: str,
+) -> pd.DataFrame:
+    analysed_trades_dict = _process_candles_and_indicators(
+        pairlist,
+        strategy_name,
+        trades,
+        signal_candles,
+        date_col,
+    )
+    res_df = prepare_results(
+        analysed_trades_dict,
+        strategy_name,
+        enter_reason_list,
+        exit_reason_list,
+        timerange=timerange,
+    )
+    return res_df

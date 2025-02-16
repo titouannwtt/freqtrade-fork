@@ -1,16 +1,16 @@
 import logging
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, Literal
 
 from freqtrade.constants import UNLIMITED_STAKE_AMOUNT, Config
+from freqtrade.ft_types import BacktestResultType
 from freqtrade.optimize.optimize_reports.optimize_reports import generate_periodic_breakdown_stats
-from freqtrade.types import BacktestResultType
 from freqtrade.util import decimals_per_coin, fmt_coin, print_rich_table
 
 
 logger = logging.getLogger(__name__)
 
 
-def _get_line_floatfmt(stake_currency: str) -> List[str]:
+def _get_line_floatfmt(stake_currency: str) -> list[str]:
     """
     Generate floatformat (goes in line with _generate_result_line())
     """
@@ -18,8 +18,8 @@ def _get_line_floatfmt(stake_currency: str) -> List[str]:
 
 
 def _get_line_header(
-    first_column: Union[str, List[str]], stake_currency: str, direction: str = "Trades"
-) -> List[str]:
+    first_column: str | list[str], stake_currency: str, direction: str = "Trades"
+) -> list[str]:
     """
     Generate header lines (goes in line with _generate_result_line())
     """
@@ -45,7 +45,7 @@ def generate_wins_draws_losses(wins, draws, losses):
 
 
 def text_table_bt_results(
-    pair_results: List[Dict[str, Any]], stake_currency: str, title: str
+    pair_results: list[dict[str, Any]], stake_currency: str, title: str
 ) -> None:
     """
     Generates and returns a text table for the given backtest data and the results dataframe
@@ -73,7 +73,7 @@ def text_table_bt_results(
 
 def text_table_tags(
     tag_type: Literal["enter_tag", "exit_tag", "mix_tag"],
-    tag_results: List[Dict[str, Any]],
+    tag_results: list[dict[str, Any]],
     stake_currency: str,
 ) -> None:
     """
@@ -123,7 +123,7 @@ def text_table_tags(
 
 
 def text_table_periodic_breakdown(
-    days_breakdown_stats: List[Dict[str, Any]], stake_currency: str, period: str
+    days_breakdown_stats: list[dict[str, Any]], stake_currency: str, period: str
 ) -> None:
     """
     Generate small table with Backtest results by days
@@ -163,16 +163,16 @@ def text_table_strategy(strategy_results, stake_currency: str, title: str):
 
     # Align drawdown string on the center two space separator.
     if "max_drawdown_account" in strategy_results[0]:
-        drawdown = [f'{t["max_drawdown_account"] * 100:.2f}' for t in strategy_results]
+        drawdown = [f"{t['max_drawdown_account'] * 100:.2f}" for t in strategy_results]
     else:
         # Support for prior backtest results
-        drawdown = [f'{t["max_drawdown_per"]:.2f}' for t in strategy_results]
+        drawdown = [f"{t['max_drawdown_per']:.2f}" for t in strategy_results]
 
     dd_pad_abs = max([len(t["max_drawdown_abs"]) for t in strategy_results])
     dd_pad_per = max([len(dd) for dd in drawdown])
     drawdown = [
-        f'{t["max_drawdown_abs"]:>{dd_pad_abs}} {stake_currency}  {dd:>{dd_pad_per}}%'
-        for t, dd in zip(strategy_results, drawdown)
+        f"{t['max_drawdown_abs']:>{dd_pad_abs}} {stake_currency}  {dd:>{dd_pad_per}}%"
+        for t, dd in zip(strategy_results, drawdown, strict=False)
     ]
 
     output = [
@@ -186,12 +186,12 @@ def text_table_strategy(strategy_results, stake_currency: str, title: str):
             generate_wins_draws_losses(t["wins"], t["draws"], t["losses"]),
             drawdown,
         ]
-        for t, drawdown in zip(strategy_results, drawdown)
+        for t, drawdown in zip(strategy_results, drawdown, strict=False)
     ]
     print_rich_table(output, headers, summary=title)
 
 
-def text_table_add_metrics(strat_results: Dict) -> None:
+def text_table_add_metrics(strat_results: dict) -> None:
     if len(strat_results["trades"]) > 0:
         best_trade = max(strat_results["trades"], key=lambda x: x["profit_ratio"])
         worst_trade = min(strat_results["trades"], key=lambda x: x["profit_ratio"])
@@ -263,12 +263,32 @@ def text_table_add_metrics(strat_results: Dict) -> None:
             else []
         )
 
+        trading_mode = (
+            (
+                [
+                    (
+                        "Trading Mode",
+                        (
+                            ""
+                            if not strat_results.get("margin_mode")
+                            or strat_results.get("trading_mode", "spot") == "spot"
+                            else f"{strat_results['margin_mode'].capitalize()} "
+                        )
+                        + f"{strat_results['trading_mode'].capitalize()}",
+                    )
+                ]
+            )
+            if "trading_mode" in strat_results
+            else []
+        )
+
         # Newly added fields should be ignored if they are missing in strat_results. hyperopt-show
         # command stores these results and newer version of freqtrade must be able to handle old
         # results with missing new fields.
         metrics = [
             ("Backtesting from", strat_results["backtest_start"]),
             ("Backtesting to", strat_results["backtest_end"]),
+            *trading_mode,
             ("Max open trades", strat_results["max_open_trades"]),
             ("", ""),  # Empty line to improve readability
             (
@@ -295,7 +315,7 @@ def text_table_add_metrics(strat_results: Dict) -> None:
             (
                 "Profit factor",
                 (
-                    f'{strat_results["profit_factor"]:.2f}'
+                    f"{strat_results['profit_factor']:.2f}"
                     if "profit_factor" in strat_results
                     else "N/A"
                 ),
@@ -391,7 +411,7 @@ def text_table_add_metrics(strat_results: Dict) -> None:
         print(message)
 
 
-def _show_tag_subresults(results: Dict[str, Any], stake_currency: str):
+def _show_tag_subresults(results: dict[str, Any], stake_currency: str):
     """
     Print tag subresults (enter_tag, exit_reason_summary, mix_tag_stats)
     """
@@ -406,7 +426,7 @@ def _show_tag_subresults(results: Dict[str, Any], stake_currency: str):
 
 
 def show_backtest_result(
-    strategy: str, results: Dict[str, Any], stake_currency: str, backtest_breakdown: List[str]
+    strategy: str, results: dict[str, Any], stake_currency: str, backtest_breakdown: list[str]
 ):
     """
     Print results for one strategy

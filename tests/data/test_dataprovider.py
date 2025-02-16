@@ -90,20 +90,13 @@ def test_historic_trades(mocker, default_conf, trades_history_df):
     assert isinstance(data, DataFrame)
     assert len(data) == len(trades_history_df)
 
-    # Random other runmode
-    default_conf["runmode"] = RunMode.UTIL_EXCHANGE
-    dp = DataProvider(default_conf, None)
-    data = dp.trades("UNITTEST/BTC", "5m")
-    assert isinstance(data, DataFrame)
-    assert len(data) == 0
-
 
 def test_historic_ohlcv_dataformat(mocker, default_conf, ohlcv_history):
-    hdf5loadmock = MagicMock(return_value=ohlcv_history)
+    parquetloadmock = MagicMock(return_value=ohlcv_history)
     featherloadmock = MagicMock(return_value=ohlcv_history)
     mocker.patch(
-        "freqtrade.data.history.datahandlers.hdf5datahandler.HDF5DataHandler._ohlcv_load",
-        hdf5loadmock,
+        "freqtrade.data.history.datahandlers.parquetdatahandler.ParquetDataHandler._ohlcv_load",
+        parquetloadmock,
     )
     mocker.patch(
         "freqtrade.data.history.datahandlers.featherdatahandler.FeatherDataHandler._ohlcv_load",
@@ -115,17 +108,17 @@ def test_historic_ohlcv_dataformat(mocker, default_conf, ohlcv_history):
     dp = DataProvider(default_conf, exchange)
     data = dp.historic_ohlcv("UNITTEST/BTC", "5m")
     assert isinstance(data, DataFrame)
-    hdf5loadmock.assert_not_called()
+    parquetloadmock.assert_not_called()
     featherloadmock.assert_called_once()
 
-    # Switching to dataformat hdf5
-    hdf5loadmock.reset_mock()
+    # Switching to dataformat parquet
+    parquetloadmock.reset_mock()
     featherloadmock.reset_mock()
-    default_conf["dataformat_ohlcv"] = "hdf5"
+    default_conf["dataformat_ohlcv"] = "parquet"
     dp = DataProvider(default_conf, exchange)
     data = dp.historic_ohlcv("UNITTEST/BTC", "5m")
     assert isinstance(data, DataFrame)
-    hdf5loadmock.assert_called_once()
+    parquetloadmock.assert_called_once()
     featherloadmock.assert_not_called()
 
 
