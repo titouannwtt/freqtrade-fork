@@ -4,6 +4,9 @@ on:
     branches:
     - stable
 
+# disable permissions for all of the available permissions
+permissions: {}
+
 jobs:
   dockerHubDescription:
     runs-on: ubuntu-latest
