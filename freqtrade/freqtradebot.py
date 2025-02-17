@@ -1774,7 +1774,7 @@ class FreqtradeBot(LoggingMixin):
         if trade.has_open_orders:
             oo = trade.select_order(side, True)
             if oo is not None:
-                if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
+                if price == oo.price and side == oo.side and amount == oo.amount:
                     logger.info(
                         f"A similar open order was found for {trade.pair}. "
                         f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
