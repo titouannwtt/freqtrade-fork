@@ -1376,11 +1376,12 @@ class FreqtradeBot(LoggingMixin):
             if should_exit.exit_flag:
                 exit_tag1 = exit_tag if should_exit.exit_type == ExitType.EXIT_SIGNAL else None
                 if trade.has_open_orders:
-                    pc = self._exit_reason_cache.get(
+                    if prev_eval := self._exit_reason_cache.get(
                         f"{trade.pair}_{trade.id}_{exit_tag1 or should_exit.exit_reason}", None
-                    )
-                    if pc:
-                        logger.debug(f"Exit reason already seen this candle, first seen at {pc}")
+                    ):
+                        logger.debug(
+                            f"Exit reason already seen this candle, first seen at {prev_eval}"
+                        )
                         continue
 
                 logger.info(
