@@ -56,7 +56,7 @@ pytz==2025.1
 schedule==1.2.2
 
 #WS Messages
-websockets==14.2
+websockets==15.0
 janus==2.0.0
 
 ast-comments==1.2.2
