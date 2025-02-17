@@ -8,5 +8,5 @@ joblib==1.4.2
 catboost==1.2.7; 'arm' not in platform_machine
 lightgbm==4.5.0
 xgboost==2.1.4
-tensorboard==2.18.0
+tensorboard==2.19.0
 datasieve==0.1.7
