@@ -737,6 +737,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         current_order_rate: float,
         entry_tag: str | None,
         side: str,
+        is_entry: bool,
         **kwargs,
     ) -> float:
         """
@@ -758,11 +759,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         :param current_order_rate: Rate of the existing order in place.
         :param entry_tag: Optional entry_tag (buy_tag) if provided with the buy signal.
         :param side: 'long' or 'short' - indicating the direction of the proposed trade
+        :param is_entry: True if the order is an entry order, False if it's an exit order.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         :return float: New entry price value if provided
 
         """
-        if order.side == trade.entry_side:
+        if is_entry:
             return self.adjust_entry_price(
                 trade=trade,
                 order=order,
