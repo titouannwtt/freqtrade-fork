@@ -1686,7 +1686,7 @@ class FreqtradeBot(LoggingMixin):
                 is_short=trade.is_short,
                 refresh=True,
             )
-            adjusted_entry_price = strategy_safe_wrapper(
+            adjusted_price = strategy_safe_wrapper(
                 self.strategy.adjust_order_price, default_retval=order_obj.safe_placement_price
             )(
                 trade=trade,
@@ -1702,11 +1702,11 @@ class FreqtradeBot(LoggingMixin):
 
             replacing = True
             cancel_reason = constants.CANCEL_REASON["REPLACE"]
-            if not adjusted_entry_price:
+            if not adjusted_price:
                 replacing = False
                 cancel_reason = constants.CANCEL_REASON["USER_CANCEL"]
 
-            if order_obj.safe_placement_price != adjusted_entry_price:
+            if order_obj.safe_placement_price != adjusted_price:
                 # cancel existing order if new price is supplied or None
                 res = self.handle_cancel_order(
                     order, order_obj, trade, cancel_reason, replacing=replacing
@@ -1716,7 +1716,7 @@ class FreqtradeBot(LoggingMixin):
                         trade, f"Could not fully cancel order for {trade}, therefore not replacing."
                     )
                     return
-                if adjusted_entry_price:
+                if adjusted_price:
                     # place new order only if new price is supplied
                     try:
                         if is_entry:
@@ -1725,7 +1725,7 @@ class FreqtradeBot(LoggingMixin):
                                 stake_amount=(
                                     order_obj.safe_remaining * order_obj.safe_price / trade.leverage
                                 ),
-                                price=adjusted_entry_price,
+                                price=adjusted_price,
                                 trade=trade,
                                 is_short=trade.is_short,
                                 mode="replace",
@@ -1733,7 +1733,7 @@ class FreqtradeBot(LoggingMixin):
                         else:
                             succeeded = self.execute_trade_exit(
                                 trade,
-                                adjusted_entry_price,
+                                adjusted_price,
                                 exit_check=ExitCheckTuple(
                                     exit_type=ExitType.CUSTOM_EXIT,
                                     exit_reason=order_obj.ft_order_tag,
