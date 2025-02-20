@@ -1661,9 +1661,9 @@ class FreqtradeBot(LoggingMixin):
     def replace_order(self, order: CcxtOrder, order_obj: Order | None, trade: Trade) -> None:
         """
         Check if current analyzed entry order should be replaced or simply cancelled.
-        To simply cancel the existing order(no replacement) adjust_entry_price() should return None
-        To maintain existing order adjust_entry_price() should return order_obj.price
-        To replace existing order adjust_entry_price() should return desired price for limit order
+        To simply cancel the existing order(no replacement) adjust_order_price() should return None
+        To maintain existing order adjust_order_price() should return order_obj.price
+        To replace existing order adjust_order_price() should return desired price for limit order
         :param order: Order dict grabbed with exchange.fetch_order()
         :param order_obj: Order object.
         :param trade: Trade object.
