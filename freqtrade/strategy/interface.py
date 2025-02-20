@@ -762,7 +762,6 @@ class IStrategy(ABC, HyperStrategyMixin):
         :param is_entry: True if the order is an entry order, False if it's an exit order.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         :return float: New entry price value if provided
-
         """
         if is_entry:
             return self.adjust_entry_price(
