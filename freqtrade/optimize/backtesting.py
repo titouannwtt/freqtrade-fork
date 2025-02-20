@@ -1301,7 +1301,7 @@ class Backtesting:
         Returns True if the trade should be deleted.
         """
         # only check on new candles for open entry orders
-        if order.side == trade.entry_side and current_time > order.order_date_utc:
+        if current_time > order.order_date_utc:
             is_entry = order.side == trade.entry_side
             requested_rate = strategy_safe_wrapper(
                 self.strategy.adjust_order_price, default_retval=order.ft_price
