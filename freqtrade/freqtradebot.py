@@ -1736,7 +1736,7 @@ class FreqtradeBot(LoggingMixin):
                                 adjusted_price,
                                 exit_check=ExitCheckTuple(
                                     exit_type=ExitType.CUSTOM_EXIT,
-                                    exit_reason=order_obj.ft_order_tag,
+                                    exit_reason=order_obj.ft_order_tag or "order_replaced",
                                 ),
                                 ordertype="limit",
                                 sub_trade_amt=order_obj.safe_remaining,
