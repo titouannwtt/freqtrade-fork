@@ -1603,27 +1603,29 @@ class FreqtradeBot(LoggingMixin):
                         self.replace_order(order, open_order, trade)
 
     def handle_cancel_order(
-        self, order: CcxtOrder, order_obj: Order, trade: Trade, reason: str
-    ) -> None:
+        self, order: CcxtOrder, order_obj: Order, trade: Trade, reason: str, replacing: bool = False
+    ) -> bool:
         """
         Check if current analyzed order timed out and cancel if necessary.
         :param order: Order dict grabbed with exchange.fetch_order()
         :param order_obj: Order object from the database.
         :param trade: Trade object.
-        :return: None
+        :return: True if the order was canceled, False otherwise.
         """
         if order["side"] == trade.entry_side:
-            self.handle_cancel_enter(trade, order, order_obj, reason)
+            return self.handle_cancel_enter(trade, order, order_obj, reason, replacing)
         else:
             canceled = self.handle_cancel_exit(trade, order, order_obj, reason)
-            canceled_count = trade.get_canceled_exit_order_count()
-            max_timeouts = self.config.get("unfilledtimeout", {}).get("exit_timeout_count", 0)
-            if canceled and max_timeouts > 0 and canceled_count >= max_timeouts:
-                logger.warning(
-                    f"Emergency exiting trade {trade}, as the exit order "
-                    f"timed out {max_timeouts} times. force selling {order['amount']}."
-                )
-                self.emergency_exit(trade, order["price"], order["amount"])
+            if not replacing:
+                canceled_count = trade.get_canceled_exit_order_count()
+                max_timeouts = self.config.get("unfilledtimeout", {}).get("exit_timeout_count", 0)
+                if canceled and max_timeouts > 0 and canceled_count >= max_timeouts:
+                    logger.warning(
+                        f"Emergency exiting trade {trade}, as the exit order "
+                        f"timed out {max_timeouts} times. force selling {order['amount']}."
+                    )
+                    self.emergency_exit(trade, order["price"], order["amount"])
+            return canceled
 
     def emergency_exit(
         self, trade: Trade, price: float, sub_trade_amt: float | None = None
@@ -1675,17 +1677,17 @@ class FreqtradeBot(LoggingMixin):
             self.strategy.timeframe, latest_candle_open_date
         )
         # Check if new candle
-        if (
-            order_obj
-            and order_obj.side == trade.entry_side
-            and latest_candle_close_date > order_obj.order_date_utc
-        ):
+        if order_obj and latest_candle_close_date > order_obj.order_date_utc:
+            is_entry = order_obj.side == trade.entry_side
             # New candle
             proposed_rate = self.exchange.get_rate(
-                trade.pair, side="entry", is_short=trade.is_short, refresh=True
+                trade.pair,
+                side="entry" if is_entry else "exit",
+                is_short=trade.is_short,
+                refresh=True,
             )
             adjusted_entry_price = strategy_safe_wrapper(
-                self.strategy.adjust_entry_price, default_retval=order_obj.safe_placement_price
+                self.strategy.adjust_order_price, default_retval=order_obj.safe_placement_price
             )(
                 trade=trade,
                 order=order_obj,
@@ -1695,6 +1697,7 @@ class FreqtradeBot(LoggingMixin):
                 current_order_rate=order_obj.safe_placement_price,
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
+                is_entry=is_entry,
             )
 
             replacing = True
@@ -1702,10 +1705,11 @@ class FreqtradeBot(LoggingMixin):
             if not adjusted_entry_price:
                 replacing = False
                 cancel_reason = constants.CANCEL_REASON["USER_CANCEL"]
+
             if order_obj.safe_placement_price != adjusted_entry_price:
                 # cancel existing order if new price is supplied or None
-                res = self.handle_cancel_enter(
-                    trade, order, order_obj, cancel_reason, replacing=replacing
+                res = self.handle_cancel_order(
+                    order, order_obj, trade, cancel_reason, replacing=replacing
                 )
                 if not res:
                     self.replace_order_failed(
@@ -1715,16 +1719,29 @@ class FreqtradeBot(LoggingMixin):
                 if adjusted_entry_price:
                     # place new order only if new price is supplied
                     try:
-                        if not self.execute_entry(
-                            pair=trade.pair,
-                            stake_amount=(
-                                order_obj.safe_remaining * order_obj.safe_price / trade.leverage
-                            ),
-                            price=adjusted_entry_price,
-                            trade=trade,
-                            is_short=trade.is_short,
-                            mode="replace",
-                        ):
+                        if is_entry:
+                            succeeded = self.execute_entry(
+                                pair=trade.pair,
+                                stake_amount=(
+                                    order_obj.safe_remaining * order_obj.safe_price / trade.leverage
+                                ),
+                                price=adjusted_entry_price,
+                                trade=trade,
+                                is_short=trade.is_short,
+                                mode="replace",
+                            )
+                        else:
+                            succeeded = self.execute_trade_exit(
+                                trade,
+                                adjusted_entry_price,
+                                exit_check=ExitCheckTuple(
+                                    exit_type=ExitType.CUSTOM_EXIT,
+                                    exit_reason=order_obj.ft_order_tag,
+                                ),
+                                ordertype="limit",
+                                sub_trade_amt=order_obj.safe_remaining,
+                            )
+                        if not succeeded:
                             self.replace_order_failed(
                                 trade, f"Could not replace order for {trade}."
                             )
