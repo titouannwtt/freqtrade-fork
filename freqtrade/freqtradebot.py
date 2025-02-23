@@ -145,7 +145,11 @@ class FreqtradeBot(LoggingMixin):
             else None
         )
 
-        self.active_pair_whitelist = self._refresh_active_whitelist()
+        logger.info("Starting initial pairlist refresh")
+        with MeasureTime(
+            lambda duration, _: logger.info(f"Initial Pairlist refresh took {duration:.2f}s"), 0
+        ):
+            self.active_pair_whitelist = self._refresh_active_whitelist()
 
         # Set initial bot state from config
         initial_state = self.config.get("initial_state")
