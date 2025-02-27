@@ -23,7 +23,7 @@ repos:
         # stages: [push]
 
   - repo: https://github.com/pycqa/isort
-    rev: "6.0.0"
+    rev: "6.0.1"
     hooks:
       - id: isort
         name: isort (python)
@@ -70,6 +70,6 @@ repos:
 
   # Ensure github actions remain safe
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.3.1
+    rev: v1.4.1
     hooks:
     - id: zizmor
