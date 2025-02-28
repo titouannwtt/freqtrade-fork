@@ -7,7 +7,7 @@ This module contains the backtesting logic
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
 from numpy import nan
@@ -63,7 +63,7 @@ from freqtrade.plugins.protectionmanager import ProtectionManager
 from freqtrade.resolvers import ExchangeResolver, StrategyResolver
 from freqtrade.strategy.interface import IStrategy
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
-from freqtrade.util import FtPrecise
+from freqtrade.util import FtPrecise, dt_now
 from freqtrade.util.migrations import migrate_data
 from freqtrade.wallets import Wallets
 
@@ -396,6 +396,8 @@ class Backtesting:
         self.canceled_trade_entries = 0
         self.canceled_entry_orders = 0
         self.replaced_entry_orders = 0
+        self.canceled_exit_orders = 0
+        self.replaced_exit_orders = 0
         self.dataprovider.clear_cache()
         if enable_protections:
             self._load_protections(self.strategy)
@@ -1234,8 +1236,8 @@ class Backtesting:
         for order in [o for o in trade.orders if o.ft_is_open]:
             if order.side == trade.entry_side:
                 self.canceled_entry_orders += 1
-            # elif order.side == trade.exit_side:
-            #     self.canceled_exit_orders += 1
+            elif order.side == trade.exit_side:
+                self.canceled_exit_orders += 1
             # canceled orders are removed from the trade
             del trade.orders[trade.orders.index(order)]
 
@@ -1299,9 +1301,10 @@ class Backtesting:
         Returns True if the trade should be deleted.
         """
         # only check on new candles for open entry orders
-        if order.side == trade.entry_side and current_time > order.order_date_utc:
+        if current_time > order.order_date_utc:
+            is_entry = order.side == trade.entry_side
             requested_rate = strategy_safe_wrapper(
-                self.strategy.adjust_entry_price, default_retval=order.ft_price
+                self.strategy.adjust_order_price, default_retval=order.ft_price
             )(
                 trade=trade,  # type: ignore[arg-type]
                 order=order,
@@ -1311,6 +1314,7 @@ class Backtesting:
                 current_order_rate=order.ft_price,
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
+                is_entry=is_entry,
             )  # default value is current order price
 
             # cancel existing order whenever a new rate is requested (or None)
@@ -1319,22 +1323,35 @@ class Backtesting:
                 return False
             else:
                 del trade.orders[trade.orders.index(order)]
-                self.canceled_entry_orders += 1
+                if is_entry:
+                    self.canceled_entry_orders += 1
+                else:
+                    self.canceled_exit_orders += 1
 
             # place new order if result was not None
             if requested_rate:
-                self._enter_trade(
-                    pair=trade.pair,
-                    row=row,
-                    trade=trade,
-                    requested_rate=requested_rate,
-                    requested_stake=(order.safe_remaining * order.ft_price / trade.leverage),
-                    direction="short" if trade.is_short else "long",
-                )
+                if is_entry:
+                    self._enter_trade(
+                        pair=trade.pair,
+                        row=row,
+                        trade=trade,
+                        requested_rate=requested_rate,
+                        requested_stake=(order.safe_remaining * order.ft_price / trade.leverage),
+                        direction="short" if trade.is_short else "long",
+                    )
+                    self.replaced_entry_orders += 1
+                else:
+                    self._exit_trade(
+                        trade=trade,
+                        sell_row=row,
+                        close_rate=requested_rate,
+                        amount=order.safe_remaining,
+                        exit_reason=order.ft_order_tag,
+                    )
+                    self.replaced_exit_orders += 1
                 # Delete trade if no successful entries happened (if placing the new order failed)
-                if not trade.has_open_orders and trade.nr_of_successful_entries == 0:
+                if not trade.has_open_orders and is_entry and trade.nr_of_successful_entries == 0:
                     return True
-                self.replaced_entry_orders += 1
             else:
                 # assumption: there can't be multiple open entry orders at any given time
                 return trade.nr_of_successful_entries == 0
@@ -1656,7 +1673,7 @@ class Backtesting:
         self.progress.init_step(BacktestState.ANALYZE, 0)
         strategy_name = strat.get_strategy_name()
         logger.info(f"Running backtesting for Strategy {strategy_name}")
-        backtest_start_time = datetime.now(timezone.utc)
+        backtest_start_time = dt_now()
         self._set_strategy(strat)
 
         # need to reprocess data every time to populate signals
@@ -1683,7 +1700,7 @@ class Backtesting:
             start_date=min_date,
             end_date=max_date,
         )
-        backtest_end_time = datetime.now(timezone.utc)
+        backtest_end_time = dt_now()
         results.update(
             {
                 "run_id": self.run_ids.get(strategy_name, ""),
@@ -1710,14 +1727,14 @@ class Backtesting:
     def _get_min_cached_backtest_date(self):
         min_backtest_date = None
         backtest_cache_age = self.config.get("backtest_cache", constants.BACKTEST_CACHE_DEFAULT)
-        if self.timerange.stopts == 0 or self.timerange.stopdt > datetime.now(tz=timezone.utc):
+        if self.timerange.stopts == 0 or self.timerange.stopdt > dt_now():
             logger.warning("Backtest result caching disabled due to use of open-ended timerange.")
         elif backtest_cache_age == "day":
-            min_backtest_date = datetime.now(tz=timezone.utc) - timedelta(days=1)
+            min_backtest_date = dt_now() - timedelta(days=1)
         elif backtest_cache_age == "week":
-            min_backtest_date = datetime.now(tz=timezone.utc) - timedelta(weeks=1)
+            min_backtest_date = dt_now() - timedelta(weeks=1)
         elif backtest_cache_age == "month":
-            min_backtest_date = datetime.now(tz=timezone.utc) - timedelta(weeks=4)
+            min_backtest_date = dt_now() - timedelta(weeks=4)
         return min_backtest_date
 
     def load_prior_backtest(self):
