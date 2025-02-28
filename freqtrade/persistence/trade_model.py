@@ -464,6 +464,8 @@ class LocalTrade:
     # Used to keep running funding fees - between the last filled order and now
     # Shall not be used for calculations!
     funding_fee_running: float | None = None
+    # v 2 -> correct max_stake_amount calculation for leveraged trades
+    record_version: int = 2
 
     @property
     def stoploss_or_liquidation(self) -> float:
@@ -1751,6 +1753,8 @@ class Trade(ModelBase, LocalTrade):
     funding_fee_running: Mapped[float | None] = mapped_column(  # type: ignore
         Float(), nullable=True, default=None
     )
+
+    record_version: Mapped[int] = mapped_column(Integer, nullable=False, default=2)  # type: ignore
 
     def __init__(self, **kwargs):
         from_json = kwargs.pop("__FROM_JSON", None)
