@@ -1243,7 +1243,7 @@ class LocalTrade:
                 total_stake += self._calc_open_trade_value(tmp_amount, price)
                 max_stake_amount += tmp_amount * price
         self.funding_fees = funding_fees
-        self.max_stake_amount = float(max_stake_amount)
+        self.max_stake_amount = float(max_stake_amount) / (self.leverage or 1.0)
 
         if close_profit:
             self.close_profit = close_profit
