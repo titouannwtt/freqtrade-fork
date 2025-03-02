@@ -773,8 +773,8 @@ class FreqaiDataKitchen:
     def use_strategy_to_populate_indicators(  # noqa: C901
         self,
         strategy: IStrategy,
-        corr_dataframes: dict = {},
-        base_dataframes: dict = {},
+        corr_dataframes: dict[str, DataFrame] | None = None,
+        base_dataframes: dict[str, dict[str, DataFrame]] | None = None,
         pair: str = "",
         prediction_dataframe: DataFrame | None = None,
         do_corr_pairs: bool = True,
@@ -793,6 +793,10 @@ class FreqaiDataKitchen:
         :return:
         dataframe: DataFrame = dataframe containing populated indicators
         """
+        if not corr_dataframes:
+            corr_dataframes = {}
+        if not base_dataframes:
+            base_dataframes = {}
 
         # check if the user is using the deprecated populate_any_indicators function
         new_version = inspect.getsource(strategy.populate_any_indicators) == (
