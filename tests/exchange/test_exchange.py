@@ -2373,6 +2373,8 @@ def test_refresh_latest_trades(
     caplog.set_level(logging.DEBUG)
     use_trades_conf = default_conf
     use_trades_conf["exchange"]["use_public_trades"] = True
+    use_trades_conf["exchange"]["only_from_ccxt"] = True
+
     use_trades_conf["datadir"] = tmp_path
     use_trades_conf["orderflow"] = {"max_candles": 1500}
     exchange = get_patched_exchange(mocker, use_trades_conf)
@@ -3365,6 +3367,7 @@ async def test__async_fetch_trades_contract_size(
 async def test__async_get_trade_history_id(
     default_conf, mocker, exchange_name, fetch_trades_result
 ):
+    default_conf["exchange"]["only_from_ccxt"] = True
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
     if exchange._trades_pagination != "id":
         exchange.close()
