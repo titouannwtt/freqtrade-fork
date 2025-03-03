@@ -2593,7 +2593,7 @@ class FreqtradeBot(LoggingMixin):
 
         # Log a warning if the custom price was adjusted by clamping.
         if final_price != valid_custom_price:
-            logger.warning(
+            logger.info(
                 f"Custom price adjusted from {valid_custom_price} to {final_price} based on "
                 "custom_price_max_distance_ratio of {cust_p_max_dist_r}."
             )
