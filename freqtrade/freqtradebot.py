@@ -903,14 +903,14 @@ class FreqtradeBot(LoggingMixin):
 
         msg = (
             f"Position adjust: about to create a new order for {pair} with stake_amount: "
-            f"{stake_amount} for {trade}"
+            f"{stake_amount} and price: {enter_limit_requested} for {trade}"
             if mode == "pos_adjust"
             else (
                 f"Replacing {side} order: about create a new order for {pair} with stake_amount: "
-                f"{stake_amount} ..."
+                f"{stake_amount} and price: {enter_limit_requested} ..."
                 if mode == "replace"
                 else f"{name} signal found: about create a new trade for {pair} with stake_amount: "
-                f"{stake_amount} ..."
+                f"{stake_amount} and price: {enter_limit_requested} ..."
             )
         )
         logger.info(msg)
