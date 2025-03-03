@@ -1901,7 +1901,10 @@ class FreqtradeBot(LoggingMixin):
             # to the trade object
             self.update_trade_state(trade, order_id, corder)
 
-            logger.info(f"Partial {trade.entry_side} order timeout for {trade}.")
+            logger.info(
+                f"Partial {trade.entry_side} order timeout for {trade}. Filled: {filled_amount}, "
+                f"total: {order_obj.ft_amount}"
+            )
             order_obj.ft_cancel_reason += f", {constants.CANCEL_REASON['PARTIALLY_FILLED']}"
 
         self.wallets.update()
