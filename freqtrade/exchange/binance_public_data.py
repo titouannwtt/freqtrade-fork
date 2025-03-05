@@ -160,7 +160,7 @@ async def _download_archive_ohlcv(
                         return concat_safe(dfs)
                     else:
                         dfs.append(None)
-                except BaseException as e:
+                except Exception as e:
                     logger.warning(f"An exception raised: {e}")
                     # Directly return the existing data, do not allow the gap within the data
                     await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
@@ -487,7 +487,7 @@ async def _download_archive_trades(
                             )
                         await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
                         return results
-                except BaseException as e:
+                except Exception as e:
                     logger.warning(f"An exception raised: {e}")
                     # Directly return the existing data, do not allow the gap within the data
                     await cancel_and_await_tasks(tasks[tasks.index(task) + 1 :])
