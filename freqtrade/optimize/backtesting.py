@@ -603,7 +603,7 @@ class Backtesting:
             # This should not be reached...
             return row[OPEN_IDX]
 
-    def _get_adjust_trade_entry_for_candle(
+    def _check_adjust_trade_for_candle(
         self, trade: LocalTrade, row: tuple, current_time: datetime
     ) -> LocalTrade:
         current_rate: float = row[OPEN_IDX]
@@ -871,7 +871,7 @@ class Backtesting:
 
         # Check if we need to adjust our current positions
         if self.strategy.position_adjustment_enable:
-            trade = self._get_adjust_trade_entry_for_candle(trade, row, current_time)
+            trade = self._check_adjust_trade_for_candle(trade, row, current_time)
 
         if trade.is_open:
             enter = row[SHORT_IDX] if trade.is_short else row[LONG_IDX]
