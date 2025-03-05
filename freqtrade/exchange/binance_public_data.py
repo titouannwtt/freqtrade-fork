@@ -285,7 +285,11 @@ async def get_daily_ohlcv(
                                 names=["date", "open", "high", "low", "close", "volume"],
                                 header=header,
                             )
-                            df["date"] = pd.to_datetime(df["date"], unit="ms", utc=True)
+                            df["date"] = pd.to_datetime(
+                                np.where(df["date"] > 1e13, df["date"] // 1000, df["date"]),
+                                unit="ms",
+                                utc=True,
+                            )
                             return df
                 elif resp.status == 404:
                     logger.debug(f"Failed to download {url}")
@@ -374,7 +378,7 @@ def parse_trades_from_zip(csvf):
     df.loc[:, "type"] = None
     # Convert timestamp to ms
     df.loc[:, "timestamp"] = np.where(
-        df["timestamp"] > 10000000000000,
+        df["timestamp"] > 1e13,
         df["timestamp"] // 1000,
         df["timestamp"],
     )
