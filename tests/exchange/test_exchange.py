@@ -2177,13 +2177,11 @@ def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_
 
     caplog.clear()
 
-    async def mock_get_candle_hist_error(pair, *args, **kwargs):
-        raise TimeoutError()
-
-    exchange._async_get_candle_history = MagicMock(side_effect=mock_get_candle_hist_error)
-    ret = exchange.get_historic_ohlcv(
-        pair, "5m", dt_ts(dt_now() - timedelta(seconds=since)), candle_type=candle_type
-    )
+    exchange._async_get_candle_history = get_mock_coro(side_effect=TimeoutError)
+    with pytest.raises(TimeoutError):
+        exchange.get_historic_ohlcv(
+            pair, "5m", dt_ts(dt_now() - timedelta(seconds=since)), candle_type=candle_type
+        )
     assert log_has_re(r"Async code raised an exception: .*", caplog)
 
 
