@@ -2177,7 +2177,7 @@ def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_
 
     caplog.clear()
 
-    exchange._async_get_candle_history = get_mock_coro(side_effect=TimeoutError)
+    exchange._async_get_candle_history = get_mock_coro(side_effect=TimeoutError())
     with pytest.raises(TimeoutError):
         exchange.get_historic_ohlcv(
             pair, "5m", dt_ts(dt_now() - timedelta(seconds=since)), candle_type=candle_type
