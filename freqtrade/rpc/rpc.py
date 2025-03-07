@@ -1138,8 +1138,8 @@ class RPC:
                 data = trade.get_custom_data(key=key)
                 if data:
                     custom_data = [data]
-
-            custom_data.extend(trade.get_all_custom_data())
+            else:
+                custom_data.extend(trade.get_all_custom_data())
 
         # Format the results
         return [
