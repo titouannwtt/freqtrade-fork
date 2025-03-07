@@ -1121,6 +1121,7 @@ class RPC:
         """
         Fetch custom data for a specific trade, or all open trades if `trade_id` is not provided.
         """
+        trades: Sequence[Trade]
         if trade_id is None:
             # get all open trades
             trades = Trade.get_open_trades()
@@ -1130,15 +1131,15 @@ class RPC:
         if not trades:
             return []
 
-        # Collect custom data
         custom_data = []
-        if key:
-            data = trades.get_custom_data(key=key)
-            if data:
-                custom_data = [data]
-        else:
-            for trade in trades:
-                custom_data.extend(trade.get_all_custom_data())
+        for trade in trades:
+            # Collect custom data
+            if key:
+                data = trade.get_custom_data(key=key)
+                if data:
+                    custom_data = [data]
+
+            custom_data.extend(trade.get_all_custom_data())
 
         # Format the results
         return [
