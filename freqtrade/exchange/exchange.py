@@ -2351,6 +2351,7 @@ class Exchange:
                     since_ms=since_ms,
                     until_ms=until_ms,
                     candle_type=candle_type,
+                    raise_=True,
                 )
             )
         logger.debug(f"Downloaded data for {pair} from ccxt with length {len(data)}.")
@@ -2391,7 +2392,7 @@ class Exchange:
                 if isinstance(res, BaseException):
                     logger.warning(f"Async code raised an exception: {repr(res)}")
                     if raise_:
-                        raise
+                        raise res
                     continue
                 else:
                     # Deconstruct tuple if it's not an exception
