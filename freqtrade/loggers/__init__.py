@@ -66,7 +66,6 @@ FT_LOGGING_CONFIG = {
     "handlers": {
         "console": {
             "class": "freqtrade.loggers.ft_rich_handler.FtRichHandler",
-            "console": error_console,
             "formatter": "basic",
             # "class": "logging.StreamHandler",
             # "formatter": "standard",
@@ -101,9 +100,12 @@ def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
     log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
 
-    logfile = config.get("logfile")
+    # Dynamically update any FtRichHandler with the error_console
+    for handler_config in log_config.get("handlers", {}).values():
+        if handler_config.get("class") == "freqtrade.loggers.ft_rich_handler.FtRichHandler":
+            handler_config["console"] = error_console
 
-    if logfile:
+    if logfile := config.get("logfile"):
         s = logfile.split(":")
         if s[0] == "syslog":
             # Add syslog handler to the config
