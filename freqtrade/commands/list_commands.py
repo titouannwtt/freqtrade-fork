@@ -6,7 +6,6 @@ from typing import Any
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import ConfigurationError, OperationalException
 from freqtrade.ft_types import ValidExchangesType
-from freqtrade.misc import safe_value_fallback
 
 
 logger = logging.getLogger(__name__)
@@ -220,7 +219,7 @@ def start_list_markets(args: dict[str, Any], pairs_only: bool = False) -> None:
     """
     from freqtrade.configuration import setup_utils_configuration
     from freqtrade.exchange import market_is_active
-    from freqtrade.misc import plural
+    from freqtrade.misc import plural, safe_value_fallback
     from freqtrade.resolvers import ExchangeResolver
     from freqtrade.util import print_rich_table
 
