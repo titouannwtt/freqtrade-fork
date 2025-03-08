@@ -297,7 +297,8 @@ def start_list_markets(args: dict[str, Any], pairs_only: bool = False) -> None:
                     v["symbol"],
                     safe_value_fallback(tickers.get(v["symbol"], {}), "last", "ask", 0.0),
                     0.0,
-                ),
+                )
+                or 0.0,
                 8,
             ),
         }
