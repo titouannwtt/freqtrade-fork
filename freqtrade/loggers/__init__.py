@@ -92,9 +92,9 @@ def _add_root_handler(log_config: dict[str, Any], handler_name: str):
         log_config["root"]["handlers"].append(handler_name)
 
 
-def _add_formatter(log_config: dict[str, Any], format_name: str, format: str):
+def _add_formatter(log_config: dict[str, Any], format_name: str, format_: str):
     if format_name not in log_config["formatters"]:
-        log_config["formatters"][format_name] = {"format": format}
+        log_config["formatters"][format_name] = {"format": format_}
 
 
 def _create_log_config(config: Config) -> dict[str, Any]:
