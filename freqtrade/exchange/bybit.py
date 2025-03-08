@@ -166,15 +166,16 @@ class Bybit(Exchange):
         PERPETUAL:
          bybit:
           https://www.bybithelp.com/HelpCenterKnowledge/bybitHC_Article?language=en_US&id=000001067
+          https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#b
 
         Long:
         Liquidation Price = (
-            Entry Price * (1 - Initial Margin Rate + Maintenance Margin Rate)
-            - Extra Margin Added/ Contract)
+            Entry Price - [(Initial Margin - Maintenance Margin)/Contract Quantity]
+            - (Extra Margin Added/Contract Quantity))
         Short:
         Liquidation Price = (
-            Entry Price * (1 + Initial Margin Rate - Maintenance Margin Rate)
-            + Extra Margin Added/ Contract)
+            Entry Price + [(Initial Margin - Maintenance Margin)/Contract Quantity]
+            + (Extra Margin Added/Contract Quantity))
 
         Implementation Note: Extra margin is currently not used.
 
@@ -196,13 +197,16 @@ class Bybit(Exchange):
         if self.trading_mode == TradingMode.FUTURES and self.margin_mode == MarginMode.ISOLATED:
             if market["inverse"]:
                 raise OperationalException("Freqtrade does not yet support inverse contracts")
-            initial_margin_rate = 1 / leverage
+            position_value = amount * open_rate
+            initial_margin = position_value / leverage
+            maintenance_margin = position_value * mm_ratio
+            margin_diff_per_contract = (initial_margin - maintenance_margin) / amount
 
             # See docstring - ignores extra margin!
             if is_short:
-                return open_rate * (1 + initial_margin_rate - mm_ratio)
+                return open_rate + margin_diff_per_contract
             else:
-                return open_rate * (1 - initial_margin_rate + mm_ratio)
+                return open_rate - margin_diff_per_contract
 
         else:
             raise OperationalException(
