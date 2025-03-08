@@ -274,12 +274,12 @@ class Binance(Exchange):
     def dry_run_liquidation_price(
         self,
         pair: str,
-        open_rate: float,  # Entry price of position
+        open_rate: float,
         is_short: bool,
         amount: float,
         stake_amount: float,
         leverage: float,
-        wallet_balance: float,  # Or margin balance
+        wallet_balance: float,
         open_trades: list,
     ) -> float | None:
         """
@@ -293,8 +293,6 @@ class Binance(Exchange):
         :param amount: Absolute value of position size incl. leverage (in base currency)
         :param stake_amount: Stake amount - Collateral in settle currency.
         :param leverage: Leverage used for this position.
-        :param trading_mode: SPOT, MARGIN, FUTURES, etc.
-        :param margin_mode: Either ISOLATED or CROSS
         :param wallet_balance: Amount of margin_mode in the wallet being used to trade
             Cross-Margin Mode: crossWalletBalance
             Isolated-Margin Mode: isolatedWalletBalance

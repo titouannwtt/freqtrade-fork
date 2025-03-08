@@ -184,8 +184,6 @@ class Bybit(Exchange):
         :param amount: Absolute value of position size incl. leverage (in base currency)
         :param stake_amount: Stake amount - Collateral in settle currency.
         :param leverage: Leverage used for this position.
-        :param trading_mode: SPOT, MARGIN, FUTURES, etc.
-        :param margin_mode: Either ISOLATED or CROSS
         :param wallet_balance: Amount of margin_mode in the wallet being used to trade
             Cross-Margin Mode: crossWalletBalance
             Isolated-Margin Mode: isolatedWalletBalance
