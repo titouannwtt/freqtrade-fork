@@ -8,7 +8,6 @@ from freqtrade.exceptions import OperationalException
 from freqtrade.loggers.buffering_handler import FTBufferingHandler
 from freqtrade.loggers.ft_rich_handler import FtRichHandler
 from freqtrade.loggers.rich_console import get_rich_console
-from freqtrade.loggers.set_log_levels import set_loggers
 
 
 # from freqtrade.loggers.std_err_stream_handler import FTStdErrStreamHandler
@@ -79,12 +78,34 @@ FT_LOGGING_CONFIG = {
 }
 
 
-def _set_loggers(log_config: dict[str, Any]) -> None:
+def _set_log_levels(
+    log_config: dict[str, Any], verbosity: int = 0, api_verbosity: str = "info"
+) -> None:
+    """
+    Set the logging level for the different loggers
+    """
     if "loggers" not in log_config:
         log_config["loggers"] = {}
 
-    if "freqtrade" not in log_config["loggers"]:
-        log_config["loggers"]["freqtrade"] = {"level": "INFO", "propagate": True}
+    # Set default levels for third party libraries
+    third_party_loggers = {
+        "freqtrade": logging.INFO if verbosity <= 1 else logging.DEBUG,
+        "requests": logging.INFO if verbosity <= 1 else logging.DEBUG,
+        "urllib3": logging.INFO if verbosity <= 1 else logging.DEBUG,
+        "httpcore": logging.INFO if verbosity <= 1 else logging.DEBUG,
+        "ccxt.base.exchange": logging.INFO if verbosity <= 2 else logging.DEBUG,
+        "telegram": logging.INFO,
+        "httpx": logging.WARNING,
+        "werkzeug": logging.ERROR if api_verbosity == "error" else logging.INFO,
+    }
+
+    # Add third party loggers to the configuration
+    for logger_name, level in third_party_loggers.items():
+        if logger_name not in log_config["loggers"]:
+            log_config["loggers"][logger_name] = {
+                "level": logging.getLevelName(level),
+                "propagate": True,
+            }
 
 
 def _add_root_handler(log_config: dict[str, Any], handler_name: str):
@@ -166,7 +187,6 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
-    _set_loggers(log_config)
     return log_config
 
 
@@ -174,7 +194,11 @@ def setup_logging(config: Config) -> None:
     """
     Process -v/--verbose, --logfile options
     """
+    verbosity = config["verbosity"]
+
     log_config = _create_log_config(config)
+    _set_log_levels(log_config, verbosity, config.get("api_server", {}).get("verbosity", "info"))
+
     logging.config.dictConfig(log_config)
 
     # Add buffer handler to root logger
@@ -188,8 +212,6 @@ def setup_logging(config: Config) -> None:
     logging.info("Logfile configured")
 
     # Set verbosity levels
-    verbosity = config["verbosity"]
     logging.root.setLevel(logging.INFO if verbosity < 1 else logging.DEBUG)
-    set_loggers(verbosity, config.get("api_server", {}).get("verbosity", "info"))
 
     logger.info("Verbosity set to %s", verbosity)
