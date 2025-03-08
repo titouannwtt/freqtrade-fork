@@ -72,13 +72,13 @@ logging_config = {
             # "formatter": "standard",
             # "stream": "ext://sys.stdout",
         },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "formatter": "standard",
-            "filename": "whatever.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10Mb
-            "backupCount": 10,
-        },
+        # "file": {
+        #     "class": "logging.handlers.RotatingFileHandler",
+        #     "formatter": "standard",
+        #     "filename": "whatever.log",
+        #     "maxBytes": 1024 * 1024 * 10,  # 10Mb
+        #     "backupCount": 10,
+        # },
     },
     "loggers": {
         "freqtrade": {
@@ -88,7 +88,10 @@ logging_config = {
         },
     },
     "root": {
-        "handlers": ["console", "file"],
+        "handlers": [
+            "console",
+            # "file",
+        ],
         "level": "INFO",
     },
 }
@@ -101,60 +104,75 @@ def setup_logging(config: Config) -> None:
     # Log level
     verbosity = config["verbosity"]
 
-    logging.config.dictConfig(logging_config)
-
-    logging.root.addHandler(bufferHandler)
-    if config.get("print_colorized", True):
-        logger.info("Enabling colorized output.")
-        error_console._color_system = error_console._detect_color_system()
+    # Get log_config from user config or use default
+    log_config = config.get("log_config", logging_config.copy())
 
     logfile = config.get("logfile")
-    logging.info("Logfile configured")
 
     if logfile:
         s = logfile.split(":")
         if s[0] == "syslog":
-            # Address can be either a string (socket filename) for Unix domain socket or
-            # a tuple (hostname, port) for UDP socket.
-            # Address can be omitted (i.e. simple 'syslog' used as the value of
-            # config['logfilename']), which defaults to '/dev/log', applicable for most
-            # of the systems.
-            address = (s[1], int(s[2])) if len(s) > 2 else s[1] if len(s) > 1 else "/dev/log"
-            if handler_sl := get_existing_handlers(SysLogHandler):
-                logging.root.removeHandler(handler_sl)
-            handler_sl = SysLogHandler(address=address)
-            # No datetime field for logging into syslog, to allow syslog
-            # to perform reduction of repeating messages if this is set in the
-            # syslog config. The messages should be equal for this.
-            handler_sl.setFormatter(Formatter("%(name)s - %(levelname)s - %(message)s"))
-            logging.root.addHandler(handler_sl)
+            # Add syslog handler to the config
+            log_config["handlers"]["syslog"] = {
+                "class": "logging.handlers.SysLogHandler",
+                "formatter": "syslog_format",
+                "address": (s[1], int(s[2])) if len(s) > 2 else s[1] if len(s) > 1 else "/dev/log",
+            }
+            # Add the syslog formatter if not already present
+            if "syslog_format" not in log_config["formatters"]:
+                log_config["formatters"]["syslog_format"] = {
+                    "format": "%(name)s - %(levelname)s - %(message)s"
+                }
+            # Add handler to root
+            if "syslog" not in log_config["root"]["handlers"]:
+                log_config["root"]["handlers"].append("syslog")
+
         elif s[0] == "journald":  # pragma: no cover
+            # Check if we have the module available
             try:
-                from cysystemd.journal import JournaldLogHandler
+                from cysystemd.journal import JournaldLogHandler  # noqa: F401
             except ImportError:
                 raise OperationalException(
                     "You need the cysystemd python package be installed in "
                     "order to use logging to journald."
                 )
-            if handler_jd := get_existing_handlers(JournaldLogHandler):
-                logging.root.removeHandler(handler_jd)
-            handler_jd = JournaldLogHandler()
-            # No datetime field for logging into journald, to allow syslog
-            # to perform reduction of repeating messages if this is set in the
-            # syslog config. The messages should be equal for this.
-            handler_jd.setFormatter(Formatter("%(name)s - %(levelname)s - %(message)s"))
-            logging.root.addHandler(handler_jd)
+
+            # Add journald handler to the config
+            log_config["handlers"]["journald"] = {
+                "class": "cysystemd.journal.JournaldLogHandler",
+                "formatter": "journald_format",
+            }
+            # Add the journald formatter if not already present
+            if "journald_format" not in log_config["formatters"]:
+                log_config["formatters"]["journald_format"] = {
+                    "format": "%(name)s - %(levelname)s - %(message)s"
+                }
+            # Add handler to root
+            if "journald" not in log_config["root"]["handlers"]:
+                log_config["root"]["handlers"].append("journald")
+
         else:
-            if handler_rf := get_existing_handlers(RotatingFileHandler):
-                logging.root.removeHandler(handler_rf)
+            # Regular file logging
             try:
                 logfile_path = Path(logfile)
                 logfile_path.parent.mkdir(parents=True, exist_ok=True)
-                handler_rf = RotatingFileHandler(
-                    logfile_path,
-                    maxBytes=1024 * 1024 * 10,  # 10Mb
-                    backupCount=10,
-                )
+
+                # Update file handler configuration
+                if "file" in log_config["handlers"]:
+                    log_config["handlers"]["file"]["filename"] = str(logfile_path)
+                else:
+                    log_config["handlers"]["file"] = {
+                        "class": "logging.handlers.RotatingFileHandler",
+                        "formatter": "standard",
+                        "filename": str(logfile_path),
+                        "maxBytes": 1024 * 1024 * 10,  # 10Mb
+                        "backupCount": 10,
+                    }
+
+                # Ensure file handler is in root handlers
+                if "file" not in log_config["root"]["handlers"]:
+                    log_config["root"]["handlers"].append("file")
+
             except PermissionError:
                 raise OperationalException(
                     f'Failed to create or access log file "{logfile_path.absolute()}". '
@@ -164,9 +182,20 @@ def setup_logging(config: Config) -> None:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
-            handler_rf.setFormatter(Formatter(LOGFORMAT))
-            logging.root.addHandler(handler_rf)
 
+    # Apply the configuration
+    logging.config.dictConfig(log_config)
+
+    # Add buffer handler to root logger
+    logging.root.addHandler(bufferHandler)
+    # Set color system for console output
+    if config.get("print_colorized", True):
+        logger.info("Enabling colorized output.")
+        error_console._color_system = error_console._detect_color_system()
+
+    logging.info("Logfile configured")
+
+    # Set verbosity levels
     logging.root.setLevel(logging.INFO if verbosity < 1 else logging.DEBUG)
     set_loggers(verbosity, config.get("api_server", {}).get("verbosity", "info"))
 
