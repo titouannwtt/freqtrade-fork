@@ -105,11 +105,6 @@ def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
     log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
 
-    # Dynamically update any FtRichHandler with the proper console object
-    for handler_config in log_config.get("handlers", {}).values():
-        if handler_config.get("class") == "freqtrade.loggers.ft_rich_handler.FtRichHandler":
-            handler_config["console"] = error_console
-
     if logfile := config.get("logfile"):
         s = logfile.split(":")
         if s[0] == "syslog":
@@ -150,26 +145,28 @@ def _create_log_config(config: Config) -> dict[str, Any]:
 
         else:
             # Regular file logging
+            # Update existing file handler configuration
+            if "file" in log_config["handlers"]:
+                log_config["handlers"]["file"]["filename"] = logfile
+            else:
+                log_config["handlers"]["file"] = {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "formatter": "standard",
+                    "filename": logfile,
+                    "maxBytes": 1024 * 1024 * 10,  # 10Mb
+                    "backupCount": 10,
+                }
+            _add_root_handler(log_config, "file")
+
+    # Dynamically update some handlers
+    for handler_config in log_config.get("handlers", {}).values():
+        if handler_config.get("class") == "freqtrade.loggers.ft_rich_handler.FtRichHandler":
+            handler_config["console"] = error_console
+        elif handler_config.get("class") == "logging.handlers.RotatingFileHandler":
+            logfile_path = Path(handler_config["filename"])
             try:
-                logfile_path = Path(logfile)
+                # Create parent for filehandler
                 logfile_path.parent.mkdir(parents=True, exist_ok=True)
-
-                # Update file handler configuration
-                if "file" in log_config["handlers"]:
-                    log_config["handlers"]["file"]["filename"] = str(logfile_path)
-                else:
-                    log_config["handlers"]["file"] = {
-                        "class": "logging.handlers.RotatingFileHandler",
-                        "formatter": "standard",
-                        "filename": str(logfile_path),
-                        "maxBytes": 1024 * 1024 * 10,  # 10Mb
-                        "backupCount": 10,
-                    }
-
-                # Ensure file handler is in root handlers
-                if "file" not in log_config["root"]["handlers"]:
-                    log_config["root"]["handlers"].append("file")
-
             except PermissionError:
                 raise OperationalException(
                     f'Failed to create or access log file "{logfile_path.absolute()}". '
@@ -179,6 +176,7 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
+
     return log_config
 
 
