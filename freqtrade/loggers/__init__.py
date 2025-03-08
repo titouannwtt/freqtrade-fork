@@ -197,14 +197,17 @@ def setup_logging(config: Config) -> None:
     Process -v/--verbose, --logfile options
     """
     verbosity = config["verbosity"]
+    if not config.get("ft_tests_skip_logging"):
+        log_config = _create_log_config(config)
+        _set_log_levels(
+            log_config, verbosity, config.get("api_server", {}).get("verbosity", "info")
+        )
 
-    log_config = _create_log_config(config)
-    _set_log_levels(log_config, verbosity, config.get("api_server", {}).get("verbosity", "info"))
-
-    logging.config.dictConfig(log_config)
+        logging.config.dictConfig(log_config)
 
     # Add buffer handler to root logger
-    logging.root.addHandler(bufferHandler)
+    if bufferHandler not in logging.root.handlers:
+        logging.root.addHandler(bufferHandler)
 
     # Set color system for console output
     if config.get("print_colorized", True):
