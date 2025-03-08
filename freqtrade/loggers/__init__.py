@@ -53,7 +53,7 @@ def setup_logging_pre() -> None:
     )
 
 
-logging_config = {
+FT_LOGGING_CONFIG = {
     "version": 1,
     # "incremental": True,
     # "disable_existing_loggers": False,
@@ -99,7 +99,7 @@ logging_config = {
 
 def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
-    log_config = config.get("log_config", logging_config.copy())
+    log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
 
     logfile = config.get("logfile")
 
