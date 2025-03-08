@@ -101,6 +101,11 @@ def _add_root_handler(log_config: dict[str, Any], handler_name: str):
         log_config["root"]["handlers"].append(handler_name)
 
 
+def _add_formatter(log_config: dict[str, Any], format_name: str, format: str):
+    if format_name not in log_config["formatters"]:
+        log_config["formatters"][format_name] = {"format": format}
+
+
 def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
     log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
@@ -114,11 +119,8 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                 "formatter": "syslog_format",
                 "address": (s[1], int(s[2])) if len(s) > 2 else s[1] if len(s) > 1 else "/dev/log",
             }
-            # Add the syslog formatter if not already present
-            if "syslog_format" not in log_config["formatters"]:
-                log_config["formatters"]["syslog_format"] = {
-                    "format": "%(name)s - %(levelname)s - %(message)s"
-                }
+
+            _add_formatter(log_config, "syslog_format", "%(name)s - %(levelname)s - %(message)s")
             _add_root_handler(log_config, "syslog")
 
         elif s[0] == "journald":  # pragma: no cover
@@ -136,11 +138,8 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                 "class": "cysystemd.journal.JournaldLogHandler",
                 "formatter": "journald_format",
             }
-            # Add the journald formatter if not already present
-            if "journald_format" not in log_config["formatters"]:
-                log_config["formatters"]["journald_format"] = {
-                    "format": "%(name)s - %(levelname)s - %(message)s"
-                }
+
+            _add_formatter(log_config, "journald_format", "%(name)s - %(levelname)s - %(message)s")
             _add_root_handler(log_config, "journald")
 
         else:
