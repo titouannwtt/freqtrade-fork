@@ -6,6 +6,7 @@ from typing import Any
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import ConfigurationError, OperationalException
 from freqtrade.ft_types import ValidExchangesType
+from freqtrade.misc import safe_value_fallback
 
 
 logger = logging.getLogger(__name__)
@@ -246,6 +247,8 @@ def start_list_markets(args: dict[str, Any], pairs_only: bool = False) -> None:
     except Exception as e:
         raise OperationalException(f"Cannot get markets. Reason: {e}") from e
 
+    tickers = exchange.get_tickers()
+
     summary_str = (
         (f"Exchange {exchange.name} has {len(pairs)} ")
         + ("active " if active_only else "")
@@ -275,6 +278,7 @@ def start_list_markets(args: dict[str, Any], pairs_only: bool = False) -> None:
         "Margin",
         "Future",
         "Leverage",
+        "Min Stake",
     ]
 
     tabular_data = [
@@ -288,6 +292,14 @@ def start_list_markets(args: dict[str, Any], pairs_only: bool = False) -> None:
             "Margin": "Margin" if exchange.market_is_margin(v) else "",
             "Future": "Future" if exchange.market_is_future(v) else "",
             "Leverage": exchange.get_max_leverage(v["symbol"], 20),
+            "Min Stake": round(
+                exchange.get_min_pair_stake_amount(
+                    v["symbol"],
+                    safe_value_fallback(tickers.get(v["symbol"], {}), "last", "ask", 0.0),
+                    0.0,
+                ),
+                8,
+            ),
         }
         for _, v in pairs.items()
     ]
