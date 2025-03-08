@@ -96,11 +96,16 @@ FT_LOGGING_CONFIG = {
 }
 
 
+def _add_root_handler(log_config: dict[str, Any], handler_name: str):
+    if handler_name not in log_config["root"]["handlers"]:
+        log_config["root"]["handlers"].append(handler_name)
+
+
 def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
     log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
 
-    # Dynamically update any FtRichHandler with the error_console
+    # Dynamically update any FtRichHandler with the proper console object
     for handler_config in log_config.get("handlers", {}).values():
         if handler_config.get("class") == "freqtrade.loggers.ft_rich_handler.FtRichHandler":
             handler_config["console"] = error_console
@@ -119,9 +124,7 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                 log_config["formatters"]["syslog_format"] = {
                     "format": "%(name)s - %(levelname)s - %(message)s"
                 }
-            # Add handler to root
-            if "syslog" not in log_config["root"]["handlers"]:
-                log_config["root"]["handlers"].append("syslog")
+            _add_root_handler(log_config, "syslog")
 
         elif s[0] == "journald":  # pragma: no cover
             # Check if we have the module available
@@ -143,9 +146,7 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                 log_config["formatters"]["journald_format"] = {
                     "format": "%(name)s - %(levelname)s - %(message)s"
                 }
-            # Add handler to root
-            if "journald" not in log_config["root"]["handlers"]:
-                log_config["root"]["handlers"].append("journald")
+            _add_root_handler(log_config, "journald")
 
         else:
             # Regular file logging
