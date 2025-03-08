@@ -7,7 +7,6 @@ from freqtrade.exceptions import OperationalException
 from freqtrade.loggers import (
     FTBufferingHandler,
     FtRichHandler,
-    set_loggers,
     setup_logging,
     setup_logging_pre,
 )
@@ -27,8 +26,11 @@ def test_set_loggers() -> None:
     previous_value1 = logging.getLogger("requests").level
     previous_value2 = logging.getLogger("ccxt.base.exchange").level
     previous_value3 = logging.getLogger("telegram").level
-
-    set_loggers()
+    config = {
+        "verbosity": 1,
+        "ft_tests_force_logging": True,
+    }
+    setup_logging(config)
 
     value1 = logging.getLogger("requests").level
     assert previous_value1 is not value1
@@ -41,15 +43,17 @@ def test_set_loggers() -> None:
     value3 = logging.getLogger("telegram").level
     assert previous_value3 is not value3
     assert value3 is logging.INFO
-
-    set_loggers(verbosity=2)
+    config["verbosity"] = 2
+    setup_logging(config)
 
     assert logging.getLogger("requests").level is logging.DEBUG
     assert logging.getLogger("ccxt.base.exchange").level is logging.INFO
     assert logging.getLogger("telegram").level is logging.INFO
     assert logging.getLogger("werkzeug").level is logging.INFO
 
-    set_loggers(verbosity=3, api_verbosity="error")
+    config["verbosity"] = 3
+    config["api_server"] = {"verbosity": "error"}
+    setup_logging(config)
 
     assert logging.getLogger("requests").level is logging.DEBUG
     assert logging.getLogger("ccxt.base.exchange").level is logging.DEBUG
@@ -64,6 +68,7 @@ def test_set_loggers_syslog():
     logger.handlers = []
 
     config = {
+        "ft_tests_force_logging": True,
         "verbosity": 2,
         "logfile": "syslog:/dev/log",
     }
@@ -88,6 +93,7 @@ def test_set_loggers_Filehandler(tmp_path):
     logger.handlers = []
     logfile = tmp_path / "logs/ft_logfile.log"
     config = {
+        "ft_tests_force_logging": True,
         "verbosity": 2,
         "logfile": str(logfile),
     }
@@ -117,6 +123,7 @@ def test_set_loggers_Filehandler_without_permission(tmp_path):
         tmp_path.chmod(0o400)
         logfile = tmp_path / "logs/ft_logfile.log"
         config = {
+            "ft_tests_force_logging": True,
             "verbosity": 2,
             "logfile": str(logfile),
         }
@@ -137,6 +144,7 @@ def test_set_loggers_journald(mocker):
     logger.handlers = []
 
     config = {
+        "ft_tests_force_logging": True,
         "verbosity": 2,
         "logfile": "journald",
     }
@@ -156,6 +164,7 @@ def test_set_loggers_journald_importerror(import_fails):
     logger.handlers = []
 
     config = {
+        "ft_tests_force_logging": True,
         "verbosity": 2,
         "logfile": "journald",
     }

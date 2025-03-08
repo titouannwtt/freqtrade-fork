@@ -1,5 +1,6 @@
 import logging
 import logging.config
+import os
 from copy import deepcopy
 from logging import Formatter
 from pathlib import Path
@@ -197,7 +198,7 @@ def setup_logging(config: Config) -> None:
     Process -v/--verbose, --logfile options
     """
     verbosity = config["verbosity"]
-    if not config.get("ft_tests_skip_logging"):
+    if os.environ.get("PYTEST_VERSION") is None or config.get("ft_tests_force_logging"):
         log_config = _create_log_config(config)
         _set_log_levels(
             log_config, verbosity, config.get("api_server", {}).get("verbosity", "info")

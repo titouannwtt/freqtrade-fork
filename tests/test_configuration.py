@@ -603,7 +603,7 @@ def test_cli_verbose_with_params(default_conf, mocker, caplog) -> None:
     patched_configuration_load_config_file(mocker, default_conf)
 
     # Prevent setting loggers
-    mocker.patch("freqtrade.loggers.set_loggers", MagicMock)
+    mocker.patch("freqtrade.loggers.logging.config.dictConfig", MagicMock)
     arglist = ["trade", "-vvv"]
     args = Arguments(arglist).get_parsed_arg()
 
@@ -615,6 +615,7 @@ def test_cli_verbose_with_params(default_conf, mocker, caplog) -> None:
 
 
 def test_set_logfile(default_conf, mocker, tmp_path):
+    default_conf["ft_tests_force_logging"] = True
     patched_configuration_load_config_file(mocker, default_conf)
     f = tmp_path / "test_file.log"
     assert not f.is_file()

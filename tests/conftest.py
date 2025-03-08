@@ -644,7 +644,6 @@ def get_default_conf(testdatadir):
         "trading_mode": "spot",
         "margin_mode": "",
         "candle_type_def": CandleType.SPOT,
-        "ft_tests_skip_logging": True,
     }
     return configuration
 
