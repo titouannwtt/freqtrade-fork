@@ -69,12 +69,6 @@ FT_LOGGING_CONFIG = {
             "formatter": "basic",
         },
     },
-    "loggers": {
-        "freqtrade": {
-            "level": "INFO",
-            "propagate": True,
-        },
-    },
     "root": {
         "handlers": [
             "console",
@@ -83,6 +77,14 @@ FT_LOGGING_CONFIG = {
         "level": "INFO",
     },
 }
+
+
+def _set_loggers(log_config: dict[str, Any]) -> None:
+    if "loggers" not in log_config:
+        log_config["loggers"] = {}
+
+    if "freqtrade" not in log_config["loggers"]:
+        log_config["loggers"]["freqtrade"] = {"level": "INFO", "propagate": True}
 
 
 def _add_root_handler(log_config: dict[str, Any], handler_name: str):
@@ -164,7 +166,7 @@ def _create_log_config(config: Config) -> dict[str, Any]:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
-
+    _set_loggers(log_config)
     return log_config
 
 
@@ -172,10 +174,7 @@ def setup_logging(config: Config) -> None:
     """
     Process -v/--verbose, --logfile options
     """
-    verbosity = config["verbosity"]
-
     log_config = _create_log_config(config)
-    print(log_config)
     logging.config.dictConfig(log_config)
 
     # Add buffer handler to root logger
@@ -189,6 +188,7 @@ def setup_logging(config: Config) -> None:
     logging.info("Logfile configured")
 
     # Set verbosity levels
+    verbosity = config["verbosity"]
     logging.root.setLevel(logging.INFO if verbosity < 1 else logging.DEBUG)
     set_loggers(verbosity, config.get("api_server", {}).get("verbosity", "info"))
 
