@@ -1,4 +1,6 @@
 import logging
+import logging.config
+from copy import deepcopy
 from logging import Formatter
 from pathlib import Path
 from typing import Any
@@ -120,7 +122,7 @@ def _add_formatter(log_config: dict[str, Any], format_name: str, format_: str):
 
 def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
-    log_config = config.get("log_config", FT_LOGGING_CONFIG.copy())
+    log_config = config.get("log_config", deepcopy(FT_LOGGING_CONFIG))
 
     if logfile := config.get("logfile"):
         s = logfile.split(":")
