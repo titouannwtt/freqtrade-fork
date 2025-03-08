@@ -67,21 +67,10 @@ FT_LOGGING_CONFIG = {
         "console": {
             "class": "freqtrade.loggers.ft_rich_handler.FtRichHandler",
             "formatter": "basic",
-            # "class": "logging.StreamHandler",
-            # "formatter": "standard",
-            # "stream": "ext://sys.stdout",
         },
-        # "file": {
-        #     "class": "logging.handlers.RotatingFileHandler",
-        #     "formatter": "standard",
-        #     "filename": "whatever.log",
-        #     "maxBytes": 1024 * 1024 * 10,  # 10Mb
-        #     "backupCount": 10,
-        # },
     },
     "loggers": {
         "freqtrade": {
-            #     "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": True,
         },
@@ -186,7 +175,7 @@ def setup_logging(config: Config) -> None:
     verbosity = config["verbosity"]
 
     log_config = _create_log_config(config)
-
+    print(log_config)
     logging.config.dictConfig(log_config)
 
     # Add buffer handler to root logger
