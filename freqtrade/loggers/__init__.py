@@ -1,7 +1,7 @@
 import logging
 from logging import Formatter
-from logging.handlers import RotatingFileHandler, SysLogHandler
 from pathlib import Path
+from typing import Any
 
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
@@ -97,13 +97,7 @@ logging_config = {
 }
 
 
-def setup_logging(config: Config) -> None:
-    """
-    Process -v/--verbose, --logfile options
-    """
-    # Log level
-    verbosity = config["verbosity"]
-
+def _create_log_config(config: Config) -> dict[str, Any]:
     # Get log_config from user config or use default
     log_config = config.get("log_config", logging_config.copy())
 
@@ -182,6 +176,17 @@ def setup_logging(config: Config) -> None:
                     "non-root user, delete and recreate the directories you need, and then try "
                     "again."
                 )
+    return log_config
+
+
+def setup_logging(config: Config) -> None:
+    """
+    Process -v/--verbose, --logfile options
+    """
+    # Log level
+    verbosity = config["verbosity"]
+
+    log_config = _create_log_config(config)
 
     # Apply the configuration
     logging.config.dictConfig(log_config)
