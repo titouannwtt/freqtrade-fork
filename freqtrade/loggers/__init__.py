@@ -184,16 +184,15 @@ def setup_logging(config: Config) -> None:
     """
     Process -v/--verbose, --logfile options
     """
-    # Log level
     verbosity = config["verbosity"]
 
     log_config = _create_log_config(config)
 
-    # Apply the configuration
     logging.config.dictConfig(log_config)
 
     # Add buffer handler to root logger
     logging.root.addHandler(bufferHandler)
+
     # Set color system for console output
     if config.get("print_colorized", True):
         logger.info("Enabling colorized output.")
