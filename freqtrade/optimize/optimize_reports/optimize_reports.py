@@ -212,6 +212,8 @@ def _get_resample_from_period(period: str) -> str:
         return "1W-MON"
     if period == "month":
         return "1ME"
+    if period == "year":
+        return "1Y"
     raise ValueError(f"Period {period} is not supported.")
 
 
