@@ -215,19 +215,21 @@ def trade_reload(tradeid: int, rpc: RPC = Depends(get_rpc)):
 
 
 @router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trading"])
-def list_open_trades_custom_data(rpc: RPC = Depends(get_rpc)):
+def list_open_trades_custom_data(key: str | None = Query(None), rpc: RPC = Depends(get_rpc)):
     """
     Fetch custom data for all open trades.
+    If a key is provided, it will be used to filter data accordingly.
     """
-    return rpc._rpc_list_custom_data()
+    return rpc._rpc_list_custom_data(key=key)
 
 
 @router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
-def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):
+def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = Depends(get_rpc)):
     """
     Fetch custom data for a specific trade.
+    If a key is provided, it will be used to filter data accordingly.
     """
-    return rpc._rpc_list_custom_data(trade_id)
+    return rpc._rpc_list_custom_data(trade_id, key=key)
 
 
 # TODO: Missing response model
