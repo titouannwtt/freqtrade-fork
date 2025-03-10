@@ -17,11 +17,11 @@ def start_list_exchanges(args: dict[str, Any]) -> None:
     :param args: Cli args from Arguments()
     :return: None
     """
-    from rich.console import Console
     from rich.table import Table
     from rich.text import Text
 
     from freqtrade.exchange import list_available_exchanges
+    from freqtrade.loggers.rich_console import get_rich_console
 
     available_exchanges: list[ValidExchangesType] = list_available_exchanges(
         args["list_exchanges_all"]
@@ -77,14 +77,15 @@ def start_list_exchanges(args: dict[str, Any]) -> None:
             )
             # table.add_row(*[exchange[header] for header in headers])
 
-        console = Console()
+        console = get_rich_console()
         console.print(table)
 
 
 def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
-    from rich.console import Console
     from rich.table import Table
     from rich.text import Text
+
+    from freqtrade.loggers.rich_console import get_rich_console
 
     names = [s["name"] for s in objs]
     objs_to_print: list[dict[str, Text | str]] = [
@@ -118,10 +119,7 @@ def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
     for row in objs_to_print:
         table.add_row(*[row[header] for header in objs_to_print[0].keys()])
 
-    console = Console(
-        color_system="auto" if print_colorized else None,
-        width=200 if "pytest" in sys.modules else None,
-    )
+    console = get_rich_console(color_system="auto" if print_colorized else None)
     console.print(table)
 
 
