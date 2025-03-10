@@ -214,6 +214,22 @@ def trade_reload(tradeid: int, rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_trade_status([tradeid])[0]
 
 
+@router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trading"])
+def list_open_trades_custom_data(rpc: RPC = Depends(get_rpc)):
+    """
+    Fetch custom data for all open trades.
+    """
+    return rpc._rpc_list_custom_data()
+
+
+@router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
+def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):
+    """
+    Fetch custom data for a specific trade.
+    """
+    return rpc._rpc_list_custom_data(trade_id)
+
+
 # TODO: Missing response model
 @router.get("/edge", tags=["info"])
 def edge(rpc: RPC = Depends(get_rpc)):
@@ -509,19 +525,3 @@ def sysinfo():
 @router.get("/health", response_model=Health, tags=["info"])
 def health(rpc: RPC = Depends(get_rpc)):
     return rpc.health()
-
-
-@router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["info"])
-def list_open_trades_custom_data(rpc: RPC = Depends(get_rpc)):
-    """
-    Fetch custom data for all open trades.
-    """
-    return rpc._rpc_list_custom_data()
-
-
-@router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["info"])
-def list_custom_data(trade_id: int, rpc: RPC = Depends(get_rpc)):
-    """
-    Fetch custom data for a specific trade.
-    """
-    return rpc._rpc_list_custom_data(trade_id)
