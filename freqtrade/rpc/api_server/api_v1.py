@@ -215,12 +215,18 @@ def trade_reload(tradeid: int, rpc: RPC = Depends(get_rpc)):
 
 
 @router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trading"])
-def list_open_trades_custom_data(key: str | None = Query(None), rpc: RPC = Depends(get_rpc)):
+def list_open_trades_custom_data(
+    key: str | None = Query(None, description="Optional key to filter data"),
+    limit: int = Query(100, ge=1, description="Maximum number of different trades to return data"),
+    offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
+    rpc: RPC = Depends(get_rpc),
+):
     """
     Fetch custom data for all open trades.
     If a key is provided, it will be used to filter data accordingly.
+    Pagination is implemented via the `limit` and `offset` parameters.
     """
-    return rpc._rpc_list_custom_data(key=key)
+    return rpc._rpc_list_custom_data(key=key, limit=limit, offset=offset)
 
 
 @router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
