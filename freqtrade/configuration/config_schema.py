@@ -1015,6 +1015,15 @@ CONF_SCHEMA = {
                     "type": "boolean",
                     "default": True,
                 },
+                "continual_learning": {
+                    "description": (
+                        "Use the final state of the most recently trained model "
+                        "as starting point for the new model, allowing for "
+                        "incremental learning."
+                    ),
+                    "type": "boolean",
+                    "default": False,
+                },
                 "feature_parameters": {
                     "description": "The parameters used to engineer the feature set",
                     "type": "object",
