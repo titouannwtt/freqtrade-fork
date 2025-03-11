@@ -1116,15 +1116,18 @@ class RPC:
             }
 
     def _rpc_list_custom_data(
-        self, trade_id: int | None = None, key: str | None = None
+        self, trade_id: int | None = None, key: str | None = None, limit: int = 100, offset: int = 0
     ) -> list[dict[str, Any]]:
         """
         Fetch custom data for a specific trade, or all open trades if `trade_id` is not provided.
+        Pagination is applied via `limit` and `offset`.
         """
         trades: Sequence[Trade]
         if trade_id is None:
-            # get all open trades
-            trades = Trade.get_open_trades()
+            # Get all open trades
+            trades = Trade.session.scalars(
+                Trade.get_trades_query([Trade.is_open.is_(True)]).limit(limit).offset(offset)
+            ).all()
         else:
             trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
 
@@ -1142,7 +1145,7 @@ class RPC:
                 custom_data.extend(trade.get_all_custom_data())
 
         # Format the results
-        return [
+        formatted_results = [
             {
                 "id": data_entry.id,
                 "ft_trade_id": data_entry.ft_trade_id,
@@ -1154,6 +1157,8 @@ class RPC:
             }
             for data_entry in custom_data
         ]
+
+        return formatted_results
 
     def _rpc_performance(self) -> list[dict[str, Any]]:
         """
