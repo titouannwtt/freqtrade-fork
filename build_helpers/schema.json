@@ -257,7 +257,8 @@
         "enum": [
           "day",
           "week",
-          "month"
+          "month",
+          "year"
         ]
       }
     },
