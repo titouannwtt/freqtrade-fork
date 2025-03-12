@@ -639,6 +639,16 @@ class Health(BaseModel):
     bot_startup_ts: int | None = None
 
 
+class CustomDataEntry(BaseModel):
+    id: int
+    ft_trade_id: int
+    cd_key: str
+    cd_type: str
+    cd_value: Any
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
 class ListCustomData(BaseModel):
     trade_id: int
-    custom_data: list[dict[str, Any]]
+    custom_data: list[CustomDataEntry]
