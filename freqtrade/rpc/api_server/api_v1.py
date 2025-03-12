@@ -226,7 +226,10 @@ def list_open_trades_custom_data(
     If a key is provided, it will be used to filter data accordingly.
     Pagination is implemented via the `limit` and `offset` parameters.
     """
-    return rpc._rpc_list_custom_data(key=key, limit=limit, offset=offset)
+    try:
+        return rpc._rpc_list_custom_data(key=key, limit=limit, offset=offset)
+    except RPCException as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
@@ -235,7 +238,10 @@ def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = De
     Fetch custom data for a specific trade.
     If a key is provided, it will be used to filter data accordingly.
     """
-    return rpc._rpc_list_custom_data(trade_id, key=key)
+    try:
+        return rpc._rpc_list_custom_data(trade_id, key=key)
+    except RPCException as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # TODO: Missing response model
