@@ -1121,6 +1121,11 @@ class RPC:
         """
         Fetch custom data for a specific trade, or all open trades if `trade_id` is not provided.
         Pagination is applied via `limit` and `offset`.
+
+        Returns an array of dictionaries, each containing:
+        - "trade_id": the ID of the trade (int)
+        - "custom_data": a list of custom data dicts, each with the fields:
+                "id", "ft_trade_id", "cd_key", "cd_type", "cd_value", "created_at", "updated_at"
         """
         trades: Sequence[Trade]
         if trade_id is None:
@@ -1132,33 +1137,50 @@ class RPC:
             trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
 
         if not trades:
-            return []
+            raise RPCException(
+                f"No trade found for trade_id: {trade_id}" if trade_id else "No open trades found."
+            )
 
-        custom_data = []
+        results = []
         for trade in trades:
-            # Collect custom data
+            # Depending on whether a specific key is provided, retrieve custom data accordingly.
             if key:
-                data = trade.get_custom_data(key=key)
-                if data:
-                    custom_data.append(data)
+                data = trade.get_custom_data(key=key, retrieval_mode="object")
+                # If data exists, wrap it in a list so the output remains consistent.
+                custom_data = [data] if data else []
             else:
-                custom_data.extend(trade.get_all_custom_data())
+                custom_data = trade.get_all_custom_data()
 
-        # Format the results
-        formatted_results = [
-            {
-                "id": data_entry.id,
-                "ft_trade_id": data_entry.ft_trade_id,
-                "cd_key": data_entry.cd_key,
-                "cd_type": data_entry.cd_type,
-                "cd_value": data_entry.cd_value,
-                "created_at": data_entry.created_at,
-                "updated_at": data_entry.updated_at,
-            }
-            for data_entry in custom_data
-        ]
+            # Format each custom data entry.
+            formatted_custom_data = [
+                {
+                    "id": data_entry.id,
+                    "ft_trade_id": data_entry.ft_trade_id,
+                    "cd_key": data_entry.cd_key,
+                    "cd_type": data_entry.cd_type,
+                    "cd_value": data_entry.cd_value,
+                    "created_at": data_entry.created_at,
+                    "updated_at": data_entry.updated_at,
+                }
+                for data_entry in custom_data
+            ]
 
-        return formatted_results
+            # Append result for the trade if any custom data was found.
+            if formatted_custom_data:
+                results.append({"trade_id": trade.id, "custom_data": formatted_custom_data})
+
+        # Handle case when there is no custom data found across trades.
+        if not results:
+            message_details = "found for any open trades."
+            if key and trade_id:
+                message_details = f"with key '{key}' found for Trade ID: {trade_id}."
+            elif trade_id:
+                message_details = f"found for Trade ID: {trade_id}."
+            elif key:
+                message_details = f"with key '{key}' found for any open trades."
+            raise RPCException(f"No custom_data {message_details}")
+
+        return results
 
     def _rpc_performance(self) -> list[dict[str, Any]]:
         """
