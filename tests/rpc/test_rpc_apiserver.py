@@ -25,6 +25,7 @@ from freqtrade.exceptions import DependencyException, ExchangeError, Operational
 from freqtrade.loggers import setup_logging, setup_logging_pre
 from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.persistence import Trade
+from freqtrade.persistence.custom_data import CustomDataWrapper
 from freqtrade.rpc import RPC
 from freqtrade.rpc.api_server import ApiServer
 from freqtrade.rpc.api_server.api_auth import create_token, get_user_from_token
@@ -800,6 +801,85 @@ def test_api_trade_single(botclient, mocker, fee, ticker, markets, is_short):
     assert_response(rc)
     assert rc.json()["trade_id"] == 3
     assert rc.json()["is_short"] == is_short
+
+
+@pytest.mark.usefixtures("init_persistence")
+def test_api_custom_data_single_trade(botclient, fee):
+    Trade.reset_trades()
+    CustomDataWrapper.reset_custom_data()
+
+    create_mock_trades_usdt(fee, use_db=True)
+
+    trade1 = Trade.get_trades_proxy()[0]
+
+    assert trade1.get_all_custom_data() == []
+
+    trade1.set_custom_data("test_str", "test_value")
+    trade1.set_custom_data("test_int", 0)
+    trade1.set_custom_data("test_float", 1.54)
+    trade1.set_custom_data("test_bool", True)
+    trade1.set_custom_data("test_dict", {"test": "vl"})
+
+    trade1.set_custom_data("test_int", 1)
+
+    _, client = botclient
+
+    # CASE 1 Checking all custom data of trade 1
+    rc = client_get(client, f"{BASE_URI}/trades/1/custom-data")
+    assert_response(rc)
+
+    # Validate response JSON structure
+    response_json = rc.json()
+
+    assert len(response_json) == 1
+
+    res_cust_data = response_json[0]["custom_data"]
+    expected_data_td_1 = [
+        {"ft_trade_id": 1, "cd_key": "test_str", "cd_type": "str", "cd_value": "test_value"},
+        {"ft_trade_id": 1, "cd_key": "test_int", "cd_type": "int", "cd_value": "1"},
+        {"ft_trade_id": 1, "cd_key": "test_float", "cd_type": "float", "cd_value": "1.54"},
+        {"ft_trade_id": 1, "cd_key": "test_bool", "cd_type": "bool", "cd_value": "True"},
+        {"ft_trade_id": 1, "cd_key": "test_dict", "cd_type": "dict", "cd_value": '{"test": "vl"}'},
+    ]
+
+    # Ensure response contains exactly the expected number of entries
+    assert len(res_cust_data) == len(expected_data_td_1), (
+        f"\nError: Expected {len(expected_data_td_1)} entries, but got {len(res_cust_data)}.\n"
+    )
+
+    # Validate each expected entry
+    for expected in expected_data_td_1:
+        matched_item = None
+        for item in res_cust_data:
+            if item["cd_key"] == expected["cd_key"]:
+                matched_item = item
+                break
+
+        assert matched_item is not None, (
+            f"\nError: Missing expected entry for key '{expected['cd_key']}'\n"
+            f"Expected: {expected}\n"
+        )
+
+        # Validate individual fields and print only incorrect values
+        mismatches = []
+        for field in ["ft_trade_id", "cd_type", "cd_value"]:
+            if matched_item[field] != expected[field]:
+                mismatches.append(f"{field}: Expected {expected[field]}, Got {matched_item[field]}")
+
+        assert not mismatches, f"\nError in entry '{expected['cd_key']}':\n" + "\n".join(mismatches)
+
+    # CASE 2 Checking specific existing key custom data of trade 1
+    rc = client_get(client, f"{BASE_URI}/trades/1/custom-data?key=test_dict")
+    assert_response(rc, 200)
+
+    # CASE 3 Checking specific not existing key custom data of trade 1
+    rc = client_get(client, f"{BASE_URI}/trades/1/custom-data&key=test")
+    assert_response(rc, 404)
+
+    # CASE 4 Trying to get custom-data from not existing trade
+    rc = client_get(client, f"{BASE_URI}/trades/13/custom-data")
+    assert_response(rc, 404)
+    assert rc.json()["detail"] == "No trade found for trade_id: 13"
 
 
 @pytest.mark.parametrize("is_short", [True, False])
