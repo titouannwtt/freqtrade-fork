@@ -4,7 +4,7 @@ bottleneck==1.4.2
 numexpr==2.10.2
 pandas-ta==0.3.14b
 
-ccxt==4.4.64
+ccxt==4.4.65
 cryptography==44.0.2
 aiohttp==3.9.5
 SQLAlchemy==2.0.38
@@ -55,7 +55,7 @@ pytz==2025.1
 schedule==1.2.2
 
 #WS Messages
-websockets==15.0
+websockets==15.0.1
 janus==2.0.0
 
 ast-comments==1.2.2

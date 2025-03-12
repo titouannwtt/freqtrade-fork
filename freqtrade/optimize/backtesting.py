@@ -1552,7 +1552,9 @@ class Backtesting:
                     row_index += 1
                     indexes[pair] = row_index
                     is_last_row = current_time == end_date
-                    self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
+                    self.dataprovider._set_dataframe_max_index(
+                        pair, self.required_startup + row_index
+                    )
                     trade_dir = self.check_for_trade_entry(row)
                     pair_tradedir_cache[pair] = trade_dir
 
