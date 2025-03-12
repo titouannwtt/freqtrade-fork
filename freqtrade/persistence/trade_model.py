@@ -1351,13 +1351,20 @@ class LocalTrade:
         """
         CustomDataWrapper.set_custom_data(trade_id=self.id, key=key, value=value)
 
-    def get_custom_data(self, key: str, default: Any = None) -> Any:
+    def get_custom_data(self, key: str, default: Any = None, retrieval_mode: str = "value") -> Any:
         """
-        Get custom data for this trade
+        Get custom data for this trade.
+
         :param key: key of the custom data
+        :param default: value to return if no data is found
+        :param retrieval_mode: 'value' (default) to return the custom data's value,
+                            or 'object' to return the entire custom data object.
         """
         data = CustomDataWrapper.get_custom_data(trade_id=self.id, key=key)
         if data:
+            if retrieval_mode == "object":
+                return data[0]
+            # default behavior: return only the value
             return data[0].value
         return default
 
