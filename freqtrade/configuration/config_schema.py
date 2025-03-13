@@ -891,7 +891,10 @@ CONF_SCHEMA = {
                     # based on logging.config documentation
                     # "additionalProperties": {
                     #     "type": "object",
-                    #     "properties": {"format": {"type": "string"}, "datefmt": {"type": "string"}},
+                    #     "properties": {
+                    #         "format": {"type": "string"},
+                    #         "datefmt": {"type": "string"},
+                    #     },
                     #     "required": ["format"],
                     # },
                 },
