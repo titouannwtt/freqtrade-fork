@@ -128,6 +128,10 @@ def _create_log_config(config: Config) -> dict[str, Any]:
     if logfile := config.get("logfile"):
         s = logfile.split(":")
         if s[0] == "syslog":
+            logger.warning(
+                "DEPRECATED: Configuring syslog logging via command line is deprecated."
+                "Please use the log_config option in the configuration file instead."
+            )
             # Add syslog handler to the config
             log_config["handlers"]["syslog"] = {
                 "class": "logging.handlers.SysLogHandler",
