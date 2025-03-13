@@ -188,7 +188,66 @@ as the watchdog.
 
 ## Advanced Logging
 
+Freqtrade uses the default logging module provided by python.
+Python allows for extensive [logging configuration](https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig) in this regards - way more than what can be covered here.
+
+Default logging (Colored terminal output) is setup by default if no `log_config` is provided.
+Using `--logfile logfile.log` will enable the RotatingFileHandler.
+If you're not content with the log format - or with the default settings provided for the RotatingFileHandler, you can customize logging to your liking.
+
+The default configuration looks roughly like the below - with the file handler being provided - but not enabled.
+
+``` json hl_lines="5-7 13-16 27"
+{
+  "log_config": {
+      "version": 1,
+      "formatters": {
+          "basic": {
+              "format": "%(message)s"
+          },
+          "standard": {
+              "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+          }
+      },
+      "handlers": {
+          "console": {
+              "class": "freqtrade.loggers.ft_rich_handler.FtRichHandler",
+              "formatter": "basic"
+          },
+          "file": {
+              "class": "logging.handlers.RotatingFileHandler",
+              "formatter": "standard",
+              // "filename": "someRandomLogFile.log",
+              "maxBytes": 10485760,
+              "backupCount": 10
+          }
+      },
+      "root": {
+          "handlers": [
+              "console",
+              // "file"
+          ],
+          "level": "INFO",
+      }
+  }
+}
+```
+
+!!! Note highlighted lines
+    Highlighted lines in the above code-block define the Rich handler and belong together.
+    The formatter "standard" and "file" will belong to the FileHandler.
+
+Each handler must use one of the defined formatters (by name) - and it's class must be available and a valid logging class.
+To actually use a handler - it must be in the "handlers" section inside the "root" segment.
+If this section is left out, freqtrade will provide no output (in the non-configured handler, anyway).
+
+!!! Tip "Explicit log configuration"
+    We recommend to extract the logging configuration from your main configuration, and provide it to your bot via [multiple configuration files](configuration.md#multiple-configuration-files) functionality. This will avoid unnecessary code duplication.
+
+---
+
 On many Linux systems the bot can be configured to send its log messages to `syslog` or `journald` system services. Logging to a remote `syslog` server is also available on Windows. The special values for the `--logfile` command line option can be used for this.
+
 
 ### Logging to syslog
 
