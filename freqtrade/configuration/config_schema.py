@@ -885,7 +885,16 @@ CONF_SCHEMA = {
             "type": "object",
             "properties": {
                 "version": {"type": "number", "const": 1},
-                "formatters": {"type": "object"},
+                "formatters": {
+                    "type": "object",
+                    # In theory the below, but can be more flexible
+                    # based on logging.config documentation
+                    # "additionalProperties": {
+                    #     "type": "object",
+                    #     "properties": {"format": {"type": "string"}, "datefmt": {"type": "string"}},
+                    #     "required": ["format"],
+                    # },
+                },
                 "handlers": {"type": "object"},
                 "root": {"type": "object"},
             },
