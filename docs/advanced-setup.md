@@ -248,7 +248,6 @@ If this section is left out, freqtrade will provide no output (in the non-config
 
 On many Linux systems the bot can be configured to send its log messages to `syslog` or `journald` system services. Logging to a remote `syslog` server is also available on Windows. The special values for the `--logfile` command line option can be used for this.
 
-
 ### Logging to syslog
 
 To send Freqtrade log messages to a local or remote `syslog` service use the `"log_config"` setup option to configure logging.
@@ -268,7 +267,7 @@ To send Freqtrade log messages to a local or remote `syslog` service use the `"l
       "syslog": {
          "class": "logging.handlers.SysLogHandler",
           "formatter": "syslog_fmt",
-          // Use one of the other options above as adress instead? 
+          // Use one of the other options above as address instead? 
           "address": "/dev/log"
       }
     },
@@ -283,6 +282,8 @@ To send Freqtrade log messages to a local or remote `syslog` service use the `"l
   }
 }
 ```
+
+[Additional log-handlers](#advanced-logging) may need to be configured to for example also have log output in the console.
 
 #### Syslog usage
 
@@ -369,6 +370,8 @@ To send Freqtrade log messages to `journald` system service, add the following c
   }
 }
 ```
+
+[Additional log-handlers](#advanced-logging) may need to be configured to for example also have log output in the console.
 
 Log messages are send to `journald` with the `user` facility. So you can see them with the following commands:
 
