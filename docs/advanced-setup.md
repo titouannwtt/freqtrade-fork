@@ -232,9 +232,36 @@ $RepeatedMsgReduction on
 
 This needs the `cysystemd` python package installed as dependency (`pip install cysystemd`), which is not available on Windows. Hence, the whole journald logging functionality is not available for a bot running on Windows.
 
-To send Freqtrade log messages to `journald` system service use the `--logfile` command line option with the value in the following format:
+To send Freqtrade log messages to `journald` system service, add the following configuration snippet to your configuration.
 
-* `--logfile journald` -- send log messages to `journald`.
+``` json
+{
+  // ...
+  "log_config": {
+    "version": 1,
+    "formatters": {
+      "journald_fmt": {
+        "format": "%(name)s - %(levelname)s - %(message)s"
+      }
+    },
+    "handlers": {
+      // Other handlers? 
+      "journald": {
+         "class": "cysystemd.journal.JournaldLogHandler",
+          "formatter": "journald_fmt",
+      }
+    },
+    "root": {
+      "handlers": [
+        // .. 
+        "journald",
+        
+      ]
+    }
+
+  }
+}
+```
 
 Log messages are send to `journald` with the `user` facility. So you can see them with the following commands:
 
@@ -244,3 +271,8 @@ Log messages are send to `journald` with the `user` facility. So you can see the
 There are many other options in the `journalctl` utility to filter the messages, see manual pages for this utility.
 
 On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice versa), so both `--logfile syslog` or `--logfile journald` can be used and the messages be viewed with both `journalctl` and a syslog viewer utility. You can combine this in any way which suites you better.
+
+??? Info "Deprecated - command line option"
+    To send Freqtrade log messages to `journald` system service use the `--logfile` command line option with the value in the following format:
+
+    * `--logfile journald` -- send log messages to `journald`.
