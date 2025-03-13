@@ -233,7 +233,7 @@ The default configuration looks roughly like the below - with the file handler b
 }
 ```
 
-!!! Note highlighted lines
+!!! Note "highlighted lines"
     Highlighted lines in the above code-block define the Rich handler and belong together.
     The formatter "standard" and "file" will belong to the FileHandler.
 
