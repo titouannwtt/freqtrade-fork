@@ -140,6 +140,10 @@ def _create_log_config(config: Config) -> dict[str, Any]:
 
         elif s[0] == "journald":  # pragma: no cover
             # Check if we have the module available
+            logger.warning(
+                "DEPRECATED: Configuring Journald logging via command line is deprecated."
+                "Please use the log_config option in the configuration file instead."
+            )
             try:
                 from cysystemd.journal import JournaldLogHandler  # noqa: F401
             except ImportError:
