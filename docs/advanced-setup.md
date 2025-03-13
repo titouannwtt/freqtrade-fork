@@ -275,4 +275,4 @@ On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice vers
 ??? Info "Deprecated - command line option"
     To send Freqtrade log messages to `journald` system service use the `--logfile` command line option with the value in the following format:
 
-    * `--logfile journald` -- send log messages to `journald`.
+    `--logfile journald` -- send log messages to `journald`.
