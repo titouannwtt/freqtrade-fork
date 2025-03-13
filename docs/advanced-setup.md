@@ -192,26 +192,47 @@ On many Linux systems the bot can be configured to send its log messages to `sys
 
 ### Logging to syslog
 
-To send Freqtrade log messages to a local or remote `syslog` service use the `--logfile` command line option with the value in the following format:
+To send Freqtrade log messages to a local or remote `syslog` service use the `"log_config"` setup option to configure logging.
 
-* `--logfile syslog:<syslog_address>` -- send log messages to `syslog` service using the `<syslog_address>` as the syslog address.
+``` json
+{
+  // ...
+  "log_config": {
+    "version": 1,
+    "formatters": {
+      "syslog_fmt": {
+        "format": "%(name)s - %(levelname)s - %(message)s"
+      }
+    },
+    "handlers": {
+      // Other handlers? 
+      "syslog": {
+         "class": "logging.handlers.SysLogHandler",
+          "formatter": "syslog_fmt",
+          // Use one of the other options above as adress instead? 
+          "address": "/dev/log"
+      }
+    },
+    "root": {
+      "handlers": [
+        // other handlers
+        "syslog",
+        
+      ]
+    }
 
-The syslog address can be either a Unix domain socket (socket filename) or a UDP socket specification, consisting of IP address and UDP port, separated by the `:` character.
+  }
+}
+```
 
-So, the following are the examples of possible usages:
-
-* `--logfile syslog:/dev/log` -- log to syslog (rsyslog) using the `/dev/log` socket, suitable for most systems.
-* `--logfile syslog` -- same as above, the shortcut for `/dev/log`.
-* `--logfile syslog:/var/run/syslog` -- log to syslog (rsyslog) using the `/var/run/syslog` socket. Use this on MacOS.
-* `--logfile syslog:localhost:514` -- log to local syslog using UDP socket, if it listens on port 514.
-* `--logfile syslog:<ip>:514` -- log to remote syslog at IP address and port 514. This may be used on Windows for remote logging to an external syslog server.
+#### Syslog usage
 
 Log messages are send to `syslog` with the `user` facility. So you can see them with the following commands:
 
-* `tail -f /var/log/user`, or 
+* `tail -f /var/log/user`, or
 * install a comprehensive graphical viewer (for instance, 'Log File Viewer' for Ubuntu).
 
-On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice versa), so both `--logfile syslog` or `--logfile journald` can be used and the messages be viewed with both `journalctl` and a syslog viewer utility. You can combine this in any way which suites you better.
+On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice versa), so both syslog or journald can be used and the messages be viewed with both `journalctl` and a syslog viewer utility. You can combine this in any way which suites you better.
 
 For `rsyslog` the messages from the bot can be redirected into a separate dedicated log file. To achieve this, add
 
@@ -227,6 +248,33 @@ For `syslog` (`rsyslog`), the reduction mode can be switched on. This will reduc
 # Filter duplicated messages
 $RepeatedMsgReduction on
 ```
+
+#### Syslog addressing
+
+The syslog address can be either a Unix domain socket (socket filename) or a UDP socket specification, consisting of IP address and UDP port, separated by the `:` character.
+
+
+So, the following are the examples of possible addresses:
+
+* `"address": "/dev/log"` -- log to syslog (rsyslog) using the `/dev/log` socket, suitable for most systems.
+* `"address": "/var/run/syslog"` -- log to syslog (rsyslog) using the `/var/run/syslog` socket. Use this on MacOS.
+* `"address": "localhost:514"` -- log to local syslog using UDP socket, if it listens on port 514.
+* `"address": "<ip>:514"` -- log to remote syslog at IP address and port 514. This may be used on Windows for remote logging to an external syslog server.
+
+
+??? Info "Deprecated - configure syslog via command line"
+
+  `--logfile syslog:<syslog_address>` -- send log messages to `syslog` service using the `<syslog_address>` as the syslog address.
+
+  The syslog address can be either a Unix domain socket (socket filename) or a UDP socket specification, consisting of IP address and UDP port, separated by the `:` character.
+
+  So, the following are the examples of possible usages:
+
+  * `--logfile syslog:/dev/log` -- log to syslog (rsyslog) using the `/dev/log` socket, suitable for most systems.
+  * `--logfile syslog` -- same as above, the shortcut for `/dev/log`.
+  * `--logfile syslog:/var/run/syslog` -- log to syslog (rsyslog) using the `/var/run/syslog` socket. Use this on MacOS.
+  * `--logfile syslog:localhost:514` -- log to local syslog using UDP socket, if it listens on port 514.
+  * `--logfile syslog:<ip>:514` -- log to remote syslog at IP address and port 514. This may be used on Windows for remote logging to an external syslog server.
 
 ### Logging to journald
 
@@ -272,7 +320,7 @@ There are many other options in the `journalctl` utility to filter the messages,
 
 On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice versa), so both `--logfile syslog` or `--logfile journald` can be used and the messages be viewed with both `journalctl` and a syslog viewer utility. You can combine this in any way which suites you better.
 
-??? Info "Deprecated - command line option"
+??? Info "Deprecated - configure journald via command line"
     To send Freqtrade log messages to `journald` system service use the `--logfile` command line option with the value in the following format:
 
     `--logfile journald` -- send log messages to `journald`.
