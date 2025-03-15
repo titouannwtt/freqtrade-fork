@@ -1417,8 +1417,7 @@
         },
         "fit_live_predictions_candles": {
           "description": "Number of historical candles to use for computing target (label) statistics from prediction data, instead of from the training dataset.",
-          "type": "boolean",
-          "default": false
+          "type": "integer"
         },
         "data_kitchen_thread_count": {
           "description": "Designate the number of threads you want to use for data processing (outlier methods, normalization, etc.).",

@@ -1026,8 +1026,7 @@ CONF_SCHEMA = {
                         "Number of historical candles to use for computing target (label) "
                         "statistics from prediction data, instead of from the training dataset."
                     ),
-                    "type": "boolean",
-                    "default": False,
+                    "type": "integer",
                 },
                 "data_kitchen_thread_count": {
                     "description": (
