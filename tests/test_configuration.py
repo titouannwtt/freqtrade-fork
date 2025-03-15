@@ -614,6 +614,7 @@ def test_cli_verbose_with_params(default_conf, mocker, caplog) -> None:
     assert log_has("Verbosity set to 3", caplog)
 
 
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_logfile(default_conf, mocker, tmp_path):
     default_conf["ft_tests_force_logging"] = True
     patched_configuration_load_config_file(mocker, default_conf)

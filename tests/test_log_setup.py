@@ -16,6 +16,7 @@ from freqtrade.loggers.set_log_levels import (
 )
 
 
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_loggers() -> None:
     # Reset Logging to Debug, otherwise this fails randomly as it's set globally
     logging.getLogger("requests").setLevel(logging.DEBUG)
@@ -62,6 +63,7 @@ def test_set_loggers() -> None:
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_loggers_syslog():
     logger = logging.getLogger()
     orig_handlers = logger.handlers
@@ -87,6 +89,7 @@ def test_set_loggers_syslog():
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_loggers_Filehandler(tmp_path):
     logger = logging.getLogger()
     orig_handlers = logger.handlers
@@ -114,6 +117,7 @@ def test_set_loggers_Filehandler(tmp_path):
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_loggers_Filehandler_without_permission(tmp_path):
     logger = logging.getLogger()
     orig_handlers = logger.handlers
@@ -138,7 +142,8 @@ def test_set_loggers_Filehandler_without_permission(tmp_path):
 
 
 @pytest.mark.skip(reason="systemd is not installed on every system, so we're not testing this.")
-def test_set_loggers_journald(mocker):
+@pytest.mark.usefixtures("keep_log_config_loggers")
+def test_set_loggers_journald():
     logger = logging.getLogger()
     orig_handlers = logger.handlers
     logger.handlers = []
@@ -158,6 +163,7 @@ def test_set_loggers_journald(mocker):
     logger.handlers = orig_handlers
 
 
+@pytest.mark.usefixtures("keep_log_config_loggers")
 def test_set_loggers_journald_importerror(import_fails):
     logger = logging.getLogger()
     orig_handlers = logger.handlers
