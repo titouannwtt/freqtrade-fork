@@ -1027,7 +1027,6 @@ CONF_SCHEMA = {
                         "statistics from prediction data, instead of from the training dataset."
                     ),
                     "type": "integer",
-                    "default": 0,
                 },
                 "data_kitchen_thread_count": {
                     "description": (
