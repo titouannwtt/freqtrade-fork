@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 
 import pytest
@@ -176,6 +177,56 @@ def test_set_loggers_journald_importerror(import_fails):
     }
     with pytest.raises(OperationalException, match=r"You need the cysystemd python package.*"):
         setup_logging(config)
+    logger.handlers = orig_handlers
+
+
+@pytest.mark.usefixtures("keep_log_config_loggers")
+def test_set_loggers_json_format(capsys):
+    logger = logging.getLogger()
+    orig_handlers = logger.handlers
+    logger.handlers = []
+
+    config = {
+        "ft_tests_force_logging": True,
+        "verbosity": 2,
+        "log_config": {
+            "version": 1,
+            "formatters": {
+                "json": {
+                    "()": "freqtrade.loggers.json_formatter.JsonFormatter",
+                    "fmt_dict": {
+                        "timestamp": "asctime",
+                        "level": "levelname",
+                        "logger": "name",
+                        "message": "message",
+                    },
+                }
+            },
+            "handlers": {
+                "json": {
+                    "class": "logging.StreamHandler",
+                    "formatter": "json",
+                }
+            },
+            "root": {
+                "handlers": ["json"],
+                "level": "DEBUG",
+            },
+        },
+    }
+
+    setup_logging_pre()
+    setup_logging(config)
+    assert len(logger.handlers) == 2
+    assert [x for x in logger.handlers if type(x).__name__ == "StreamHandler"]
+    assert [x for x in logger.handlers if isinstance(x, FTBufferingHandler)]
+
+    logger.info("Test message")
+
+    captured = capsys.readouterr()
+    assert re.search(r'{"timestamp": ".*"Test message".*', captured.err)
+
+    # reset handlers to not break pytest
     logger.handlers = orig_handlers
 
 
