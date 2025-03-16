@@ -143,7 +143,7 @@ def text_table_periodic_breakdown(
             d.get("trades", "N/A"),
             fmt_coin(d["profit_abs"], stake_currency, False),
             d.get("profit_factor", "N/A"),
-            generate_wins_draws_losses(d["wins"], d["draws"], d["loses"]),
+            generate_wins_draws_losses(d["wins"], d["draws"], d.get("losses", d.get("loses", 0))),
         ]
         for d in days_breakdown_stats
     ]
