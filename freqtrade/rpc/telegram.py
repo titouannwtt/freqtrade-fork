@@ -119,8 +119,8 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
                 logger.debug(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
                 return None
 
-        authorized = self._config["telegram"].get("authorized_users", [])
-        if authorized and from_user_id not in authorized:
+        authorized = self._config["telegram"].get("authorized_users", None)
+        if authorized is not None and from_user_id not in authorized:
             logger.info(f"Unauthorized user tried to control the bot: {from_user_id}")
             return None
         # Rollback session to avoid getting data stored in a transaction.
@@ -2158,6 +2158,7 @@ class Telegram(RPCHandler):
             return
         chat_id = update.message.chat_id
         topic_id = update.message.message_thread_id
+        user_id = update.message.from_user.id if topic_id is not None else None
 
         msg = f"""Freqtrade Bot Info:
         ```json
@@ -2165,7 +2166,8 @@ class Telegram(RPCHandler):
                 "enabled": true,
                 "token": "********",
                 "chat_id": "{chat_id}",
-                {f'"topic_id": "{topic_id}"' if topic_id else ""}
+                {f'"topic_id": "{topic_id}",' if topic_id else ""}
+                {f'//"authorized_users": ["{user_id}"]' if topic_id else ""}
             }}
         ```
         """
