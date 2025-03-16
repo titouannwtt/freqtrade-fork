@@ -101,12 +101,9 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
         update = kwargs.get("update") or args[0]
 
         # Reject unauthorized messages
-        if update.callback_query:
-            cchat_id = int(update.callback_query.message.chat.id)
-            ctopic_id = update.callback_query.message.message_thread_id
-        else:
-            cchat_id = int(update.message.chat_id)
-            ctopic_id = update.message.message_thread_id
+        message = update.message if update.callback_query is None else update.callback_query.message
+        cchat_id = int(message.chat_id)
+        ctopic_id = message.message_thread_id
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
