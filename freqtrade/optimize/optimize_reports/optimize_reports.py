@@ -243,7 +243,7 @@ def generate_periodic_breakdown_stats(
                 "profit_abs": profit_abs,
                 "wins": wins,
                 "draws": draws,
-                "losses": losses,
+                "loses": losses,
                 "trades": trades,
                 "profit_factor": round(profit_factor, 2),
             }
