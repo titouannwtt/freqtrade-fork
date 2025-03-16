@@ -258,6 +258,42 @@ async def test_authorized_only_unauthorized(default_conf, mocker, caplog) -> Non
     assert not log_has("Exception occurred within Telegram module", caplog)
 
 
+async def test_authorized_users(default_conf, mocker, caplog, update) -> None:
+    patch_exchange(mocker)
+    caplog.set_level(logging.DEBUG)
+    default_conf["telegram"]["enabled"] = False
+    default_conf["telegram"]["authorized_users"] = ["5432"]
+    bot = FreqtradeBot(default_conf)
+    rpc = RPC(bot)
+    dummy = DummyCls(rpc, default_conf)
+
+    await dummy.dummy_handler(update=update, context=MagicMock())
+    assert dummy.state["called"] is True
+    assert log_has("Executing handler: dummy_handler for chat_id: 1235", caplog)
+    caplog.clear()
+    # Test empty case
+    default_conf["telegram"]["authorized_users"] = []
+    dummy1 = DummyCls(rpc, default_conf)
+    await dummy1.dummy_handler(update=update, context=MagicMock())
+    assert dummy1.state["called"] is False
+    assert log_has_re(r"Unauthorized user tried to .*5432", caplog)
+    caplog.clear()
+    # Test wrong user
+    default_conf["telegram"]["authorized_users"] = ["1234"]
+    dummy1 = DummyCls(rpc, default_conf)
+    await dummy1.dummy_handler(update=update, context=MagicMock())
+    assert dummy1.state["called"] is False
+    assert log_has_re(r"Unauthorized user tried to .*5432", caplog)
+    caplog.clear()
+
+    # Test reverse case again
+    default_conf["telegram"]["authorized_users"] = ["5432"]
+    dummy1 = DummyCls(rpc, default_conf)
+    await dummy1.dummy_handler(update=update, context=MagicMock())
+    assert dummy1.state["called"] is True
+    assert not log_has_re(r"Unauthorized user tried to .*5432", caplog)
+
+
 async def test_authorized_only_exception(default_conf, mocker, caplog, update) -> None:
     patch_exchange(mocker)
 
