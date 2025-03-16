@@ -386,3 +386,46 @@ On many systems `syslog` (`rsyslog`) fetches data from `journald` (and vice vers
     To send Freqtrade log messages to `journald` system service use the `--logfile` command line option with the value in the following format:
 
     `--logfile journald` -- send log messages to `journald`.
+
+### Log format as JSON
+
+You can also configure the default output stream to use JSON format instead.
+The "fmt_dict" attribute defines the keys for the json output - as well as the [python logging LogRecord attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes).
+
+The below configuration will change the default output to JSON. The same formatter could however also be used in combination with the `RotatingFileHandler`.
+We recommend to keep one format in human readable form.
+
+``` json
+{
+  // ...
+  "log_config": {
+    "version": 1,
+    "formatters": {
+       "json": {
+          "()": "freqtrade.loggers.json_formatter.JsonFormatter",
+          "fmt_dict": {
+              "timestamp": "asctime",
+              "level": "levelname",
+              "logger": "name",
+              "message": "message"
+          }
+      }
+    },
+    "handlers": {
+      // Other handlers? 
+      "jsonStream": {
+          "class": "logging.StreamHandler",
+          "formatter": "json"
+      }
+    },
+    "root": {
+      "handlers": [
+        // .. 
+        "jsonStream",
+        
+      ]
+    }
+
+  }
+}
+```
