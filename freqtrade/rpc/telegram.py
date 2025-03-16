@@ -97,9 +97,9 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
     """
 
     @wraps(command_handler)
-    async def wrapper(self, *args, **kwargs):
+    async def wrapper(self, *args, **kwargs) -> None:
         """Decorator logic"""
-        update: Update = kwargs.get("update") or args[0]
+        update = kwargs.get("update") or args[0]
 
         # Reject unauthorized messages
         message: Message = (
@@ -107,7 +107,7 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
         )
         cchat_id: int = int(message.chat_id)
         ctopic_id: int | None = message.message_thread_id
-        from_user_id: str = str(update.effective_user.id)
+        from_user_id: str = str(update.effective_user.id if update.effective_user else "")
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
@@ -2158,7 +2158,9 @@ class Telegram(RPCHandler):
             return
         chat_id = update.message.chat_id
         topic_id = update.message.message_thread_id
-        user_id = update.message.from_user.id if topic_id is not None else None
+        user_id = (
+            update.effective_user.id if topic_id is not None and update.effective_user else None
+        )
 
         msg = f"""Freqtrade Bot Info:
         ```json
@@ -2167,7 +2169,7 @@ class Telegram(RPCHandler):
                 "token": "********",
                 "chat_id": "{chat_id}",
                 {f'"topic_id": "{topic_id}",' if topic_id else ""}
-                {f'//"authorized_users": ["{user_id}"]' if topic_id else ""}
+                {f'//"authorized_users": ["{user_id}"]' if topic_id and user_id else ""}
             }}
         ```
         """
