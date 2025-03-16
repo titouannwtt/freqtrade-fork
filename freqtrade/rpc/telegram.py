@@ -25,6 +25,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
+    Message,
     ReplyKeyboardMarkup,
     Update,
 )
@@ -98,12 +99,15 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
     @wraps(command_handler)
     async def wrapper(self, *args, **kwargs):
         """Decorator logic"""
-        update = kwargs.get("update") or args[0]
+        update: Update = kwargs.get("update") or args[0]
 
         # Reject unauthorized messages
-        message = update.message if update.callback_query is None else update.callback_query.message
-        cchat_id = int(message.chat_id)
-        ctopic_id = message.message_thread_id
+        message: Message = (
+            update.message if update.callback_query is None else update.callback_query.message
+        )
+        cchat_id: int = int(message.chat_id)
+        ctopic_id: int | None = message.message_thread_id
+        from_user_id: str = str(update.effective_user.id)
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
@@ -115,6 +119,10 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
                 logger.debug(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
                 return None
 
+        authorized = self._config["telegram"].get("authorized_users", [])
+        if authorized and from_user_id not in authorized:
+            logger.info(f"Unauthorized user tried to control the bot: {from_user_id}")
+            return None
         # Rollback session to avoid getting data stored in a transaction.
         Trade.rollback()
         logger.debug("Executing handler: %s for chat_id: %s", command_handler.__name__, chat_id)
