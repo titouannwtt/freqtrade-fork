@@ -13,11 +13,20 @@ class JsonFormatter(logging.Formatter):
 
     def __init__(
         self,
-        fmt_dict: dict = None,
+        fmt_dict: dict | None = None,
         time_format: str = "%Y-%m-%dT%H:%M:%S",
         msec_format: str = "%s.%03dZ",
     ):
-        self.fmt_dict = fmt_dict if fmt_dict is not None else {"message": "message"}
+        self.fmt_dict = (
+            fmt_dict
+            if fmt_dict is not None
+            else {
+                "timestamp": "asctime",
+                "level": "levelname",
+                "logger": "name",
+                "message": "message",
+            }
+        )
         self.default_time_format = time_format
         self.default_msec_format = msec_format
         self.datefmt = None
@@ -28,7 +37,10 @@ class JsonFormatter(logging.Formatter):
         """
         return "asctime" in self.fmt_dict.values()
 
-    def formatMessage(self, record) -> dict:
+    def formatMessage(self, record) -> str:
+        raise NotImplementedError()
+
+    def formatMessageDict(self, record) -> dict:
         """
         Return a dictionary of the relevant LogRecord attributes instead of a string.
         KeyError is raised if an unknown attribute is provided in the fmt_dict.
@@ -45,7 +57,7 @@ class JsonFormatter(logging.Formatter):
         if self.usesTime():
             record.asctime = self.formatTime(record, self.datefmt)
 
-        message_dict = self.formatMessage(record)
+        message_dict = self.formatMessageDict(record)
 
         if record.exc_info:
             # Cache the traceback text to avoid converting it multiple times
