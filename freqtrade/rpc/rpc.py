@@ -1145,7 +1145,7 @@ class RPC:
         for trade in trades:
             # Depending on whether a specific key is provided, retrieve custom data accordingly.
             if key:
-                data = trade.get_custom_data(key=key, retrieval_mode="object")
+                data = trade.get_custom_data_entry(key=key)
                 # If data exists, wrap it in a list so the output remains consistent.
                 custom_data = [data] if data else []
             else:
