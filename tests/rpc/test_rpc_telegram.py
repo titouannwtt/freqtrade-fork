@@ -2861,7 +2861,7 @@ async def test_telegram_list_custom_data(default_conf_usdt, update, ticker, fee,
     context.args = ["1"]
     await telegram._list_custom_data(update=update, context=context)
     assert msg_mock.call_count == 1
-    assert "No custom_data found for Trade ID: 1." in msg_mock.call_args_list[0][0][0]
+    assert "No custom-data found for Trade ID: 1." in msg_mock.call_args_list[0][0][0]
     msg_mock.reset_mock()
 
     # Add some custom data
