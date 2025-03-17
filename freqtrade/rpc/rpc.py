@@ -1176,7 +1176,7 @@ class RPC:
                 message_details = f"found for Trade ID: {trade_id}."
             elif key:
                 message_details = f"with key '{key}' found for any open trades."
-            raise RPCException(f"No custom_data {message_details}")
+            raise RPCException(f"No custom-data {message_details}")
 
         return results
 
