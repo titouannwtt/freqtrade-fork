@@ -269,6 +269,20 @@ class FtRestClient:
             params["offset"] = offset
         return self._get("trades", params)
 
+    def list_custom_data(self, trade_id=None, key=None):
+        """Lists custom_data of the running bot.
+
+        :param tradeid: Optional keyword argument - Id of the trade
+
+        :return: json object
+        """
+        params = {}
+        trade_id = -1
+        if trade_id is not None:
+            params["trade_id"] = trade_id
+
+        return self._get("trades/{tradeid}/custom_data", params=params)
+
     def trade(self, trade_id):
         """Return specific trade
 
@@ -484,17 +498,3 @@ class FtRestClient:
         :return: json object
         """
         return self._get("health")
-
-    def list_custom_data(self, trade_id=None, key=None):
-        """Lists custom_data of the running bot.
-
-        :param tradeid: Optional keyword argument - Id of the trade
-
-        :return: json object
-        """
-        params = {}
-        trade_id = -1
-        if trade_id is not None:
-            params["trade_id"] = trade_id
-
-        return self._get("trades/{tradeid}/custom_data", params=params)
