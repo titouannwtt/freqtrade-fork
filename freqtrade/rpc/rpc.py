@@ -1151,22 +1151,20 @@ class RPC:
             else:
                 custom_data = trade.get_all_custom_data()
 
-            # Format each custom data entry.
-            formatted_custom_data = [
-                {
-                    "id": data_entry.id,
-                    "ft_trade_id": data_entry.ft_trade_id,
-                    "cd_key": data_entry.cd_key,
-                    "cd_type": data_entry.cd_type,
-                    "cd_value": data_entry.cd_value,
-                    "created_at": data_entry.created_at,
-                    "updated_at": data_entry.updated_at,
-                }
-                for data_entry in custom_data
-            ]
-
-            # Append result for the trade if any custom data was found.
-            if formatted_custom_data:
+            # Format and Append result for the trade if any custom data was found.
+            if custom_data:
+                formatted_custom_data = [
+                    {
+                        "id": data_entry.id,
+                        "ft_trade_id": data_entry.ft_trade_id,
+                        "cd_key": data_entry.cd_key,
+                        "cd_type": data_entry.cd_type,
+                        "cd_value": data_entry.cd_value,
+                        "created_at": data_entry.created_at,
+                        "updated_at": data_entry.updated_at,
+                    }
+                    for data_entry in custom_data
+                ]
                 results.append({"trade_id": trade.id, "custom_data": formatted_custom_data})
 
         # Handle case when there is no custom data found across trades.
