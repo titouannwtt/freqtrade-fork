@@ -1167,16 +1167,15 @@ class RPC:
                 ]
                 results.append({"trade_id": trade.id, "custom_data": formatted_custom_data})
 
-        # Handle case when there is no custom data found across trades.
-        if not results:
-            message_details = "found for any open trades."
-            if key and trade_id:
-                message_details = f"with key '{key}' found for Trade ID: {trade_id}."
-            elif trade_id:
-                message_details = f"found for Trade ID: {trade_id}."
-            elif key:
-                message_details = f"with key '{key}' found for any open trades."
-            raise RPCException(f"No custom-data {message_details}")
+            # Handle case when there is no custom data found across trades.
+            if not results:
+                message_details = ""
+                if key:
+                    message_details += f"with key '{key}' "
+                message_details += (
+                    f"found for Trade ID: {trade_id}." if trade_id else "found for any open trades."
+                )
+                raise RPCException(f"No custom-data {message_details}")
 
         return results
 
