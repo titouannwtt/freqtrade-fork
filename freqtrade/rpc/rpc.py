@@ -33,7 +33,7 @@ from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import KeyStoreKeys, KeyValueStore, PairLocks, Trade
+from freqtrade.persistence import CustomDataWrapper, KeyStoreKeys, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
@@ -1155,11 +1155,10 @@ class RPC:
             if custom_data:
                 formatted_custom_data = [
                     {
-                        "id": data_entry.id,
-                        "ft_trade_id": data_entry.ft_trade_id,
-                        "cd_key": data_entry.cd_key,
-                        "cd_type": data_entry.cd_type,
+                        "key": data_entry.cd_key,
+                        "type": data_entry.cd_type,
                         "cd_value": data_entry.cd_value,
+                        "value": CustomDataWrapper._convert_custom_data(data_entry),
                         "created_at": data_entry.created_at,
                         "updated_at": data_entry.updated_at,
                     }
