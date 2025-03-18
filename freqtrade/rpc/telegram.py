@@ -1982,11 +1982,10 @@ class Telegram(RPCHandler):
                 )
                 for custom_data in trade_custom_data:
                     lines = [
-                        f"*Key:* `{custom_data['cd_key']}`",
-                        f"*ID:* `{custom_data['id']}`",
-                        f"*Trade ID:* `{custom_data['ft_trade_id']}`",
-                        f"*Type:* `{custom_data['cd_type']}`",
-                        f"*Value:* `{custom_data['cd_value']}`",
+                        f"*Trade ID:* `{trade_id}`",
+                        f"*Key:* `{custom_data['key']}`",
+                        f"*Type:* `{custom_data['type']}`",
+                        f"*Value:* `{custom_data['value']}`",
                         f"*Create Date:* `{format_date(custom_data['created_at'])}`",
                         f"*Update Date:* `{format_date(custom_data['updated_at'])}`",
                     ]
