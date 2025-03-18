@@ -835,11 +835,11 @@ def test_api_custom_data_single_trade(botclient, fee):
 
     res_cust_data = response_json[0]["custom_data"]
     expected_data_td_1 = [
-        {"ft_trade_id": 1, "cd_key": "test_str", "cd_type": "str", "cd_value": "test_value"},
-        {"ft_trade_id": 1, "cd_key": "test_int", "cd_type": "int", "cd_value": "1"},
-        {"ft_trade_id": 1, "cd_key": "test_float", "cd_type": "float", "cd_value": "1.54"},
-        {"ft_trade_id": 1, "cd_key": "test_bool", "cd_type": "bool", "cd_value": "True"},
-        {"ft_trade_id": 1, "cd_key": "test_dict", "cd_type": "dict", "cd_value": '{"test": "vl"}'},
+        {"key": "test_str", "type": "str", "cd_value": "test_value", "value": "test_value"},
+        {"key": "test_int", "type": "int", "cd_value": "1", "value": 1},
+        {"key": "test_float", "type": "float", "cd_value": "1.54", "value": 1.54},
+        {"key": "test_bool", "type": "bool", "cd_value": "True", "value": True},
+        {"key": "test_dict", "type": "dict", "cd_value": '{"test": "vl"}', "value": {"test": "vl"}},
     ]
 
     # Ensure response contains exactly the expected number of entries
@@ -851,22 +851,21 @@ def test_api_custom_data_single_trade(botclient, fee):
     for expected in expected_data_td_1:
         matched_item = None
         for item in res_cust_data:
-            if item["cd_key"] == expected["cd_key"]:
+            if item["key"] == expected["key"]:
                 matched_item = item
                 break
 
         assert matched_item is not None, (
-            f"\nError: Missing expected entry for key '{expected['cd_key']}'\n"
-            f"Expected: {expected}\n"
+            f"\nError: Missing expected entry for key '{expected['key']}'\nExpected: {expected}\n"
         )
 
         # Validate individual fields and print only incorrect values
         mismatches = []
-        for field in ["ft_trade_id", "cd_type", "cd_value"]:
+        for field in ["key", "type", "cd_value", "value"]:
             if matched_item[field] != expected[field]:
                 mismatches.append(f"{field}: Expected {expected[field]}, Got {matched_item[field]}")
 
-        assert not mismatches, f"\nError in entry '{expected['cd_key']}':\n" + "\n".join(mismatches)
+        assert not mismatches, f"\nError in entry '{expected['key']}':\n" + "\n".join(mismatches)
 
     # CASE 2 Checking specific existing key custom data of trade 1
     rc = client_get(client, f"{BASE_URI}/trades/1/custom-data?key=test_dict")
@@ -933,48 +932,42 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
     expected_custom_data = {
         1: [
             {
-                "id": 1,
-                "ft_trade_id": 1,
-                "cd_key": "test_str",
-                "cd_type": "str",
+                "key": "test_str",
+                "type": "str",
                 "cd_value": "test_value_t1",
+                "value": "test_value_t1",
             },
             {
-                "id": 2,
-                "ft_trade_id": 1,
-                "cd_key": "test_float",
-                "cd_type": "float",
+                "key": "test_float",
+                "type": "float",
                 "cd_value": "1.54",
+                "value": 1.54,
             },
             {
-                "id": 3,
-                "ft_trade_id": 1,
-                "cd_key": "test_dict",
-                "cd_type": "dict",
+                "key": "test_dict",
+                "type": "dict",
                 "cd_value": '{"test_t1": "vl_t1"}',
+                "value": {"test_t1": "vl_t1"},
             },
         ],
         4: [
             {
-                "id": 4,
-                "ft_trade_id": 4,
-                "cd_key": "test_str",
-                "cd_type": "str",
+                "key": "test_str",
+                "type": "str",
                 "cd_value": "test_value_t2",
+                "value": "test_value_t2",
             },
             {
-                "id": 5,
-                "ft_trade_id": 4,
-                "cd_key": "test_float",
-                "cd_type": "float",
+                "key": "test_float",
+                "type": "float",
                 "cd_value": "1.55",
+                "value": 1.55,
             },
             {
-                "id": 6,
-                "ft_trade_id": 4,
-                "cd_key": "test_dict",
-                "cd_type": "dict",
+                "key": "test_dict",
+                "type": "dict",
                 "cd_value": '{"test_t2": "vl_t2"}',
+                "value": {"test_t2": "vl_t2"},
             },
         ],
     }
@@ -995,19 +988,19 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
         for expected in expected_data:
             matched_item = None
             for item in custom_data_list:
-                if item["cd_key"] == expected["cd_key"]:
+                if item["key"] == expected["key"]:
                     matched_item = item
                     break
 
             assert matched_item is not None, (
                 f"\nError: For trade_id {trade_id}, \
-                missing expected entry for key '{expected['cd_key']}'\n"
+                missing expected entry for key '{expected['key']}'\n"
                 f"Expected: {expected}\n"
             )
 
             # Validate key fields.
             mismatches = []
-            for field in ["id", "ft_trade_id", "cd_key", "cd_type", "cd_value"]:
+            for field in ["key", "type", "cd_value", "value"]:
                 if matched_item[field] != expected[field]:
                     mismatches.append(
                         f"{field}: Expected {expected[field]}, Got {matched_item[field]}"
@@ -1018,7 +1011,7 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
                     mismatches.append(f"Missing field: {field}")
 
             assert not mismatches, (
-                f"\nError in entry '{expected['cd_key']}' for trade_id {trade_id}:\n"
+                f"\nError in entry '{expected['key']}' for trade_id {trade_id}:\n"
                 + "\n".join(mismatches)
             )
 
