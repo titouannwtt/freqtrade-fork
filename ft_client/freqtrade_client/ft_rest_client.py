@@ -270,7 +270,7 @@ class FtRestClient:
         return self._get("trades", params)
 
     def list_open_trades_custom_data(self, key=None, limit=100, offset=0):
-        """List open trades custom_data of the running bot.
+        """List open trades custom-data of the running bot.
 
         :param key: str, optional - Key of the custom-data
         :param limit: limit of trades
@@ -283,10 +283,10 @@ class FtRestClient:
         if key is not None:
             params["key"] = key
 
-        return self._get("trades/open/custom_data", params=params)
+        return self._get("trades/open/custom-data", params=params)
 
     def list_custom_data(self, trade_id, key=None):
-        """List custom_data of the running bot for a specific trade.
+        """List custom-data of the running bot for a specific trade.
 
         :param trade_id: int - ID of the trade
         :param key: str, optional - Key of the custom-data
@@ -297,7 +297,7 @@ class FtRestClient:
         if key is not None:
             params["key"] = key
 
-        return self._get("trades/{tradeid}/custom_data", params=params)
+        return self._get("trades/{tradeid}/custom-data", params=params)
 
     def trade(self, trade_id):
         """Return specific trade
