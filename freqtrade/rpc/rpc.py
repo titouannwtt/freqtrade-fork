@@ -1158,7 +1158,7 @@ class RPC:
                         "key": data_entry.cd_key,
                         "type": data_entry.cd_type,
                         "cd_value": data_entry.cd_value,
-                        "value": CustomDataWrapper._convert_custom_data(data_entry),
+                        "value": CustomDataWrapper._convert_custom_data(data_entry).value,
                         "created_at": data_entry.created_at,
                         "updated_at": data_entry.updated_at,
                     }
