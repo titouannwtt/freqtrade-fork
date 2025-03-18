@@ -231,8 +231,11 @@ def generate_periodic_breakdown_stats(
         profit_abs = day["profit_abs"].sum().round(10)
         wins = sum(day["profit_abs"] > 0)
         draws = sum(day["profit_abs"] == 0)
-        loses = sum(day["profit_abs"] < 0)
-        trades = wins + draws + loses
+        losses = sum(day["profit_abs"] < 0)
+        trades = wins + draws + losses
+        winning_profit = day.loc[day["profit_abs"] > 0, "profit_abs"].sum()
+        losing_profit = day.loc[day["profit_abs"] < 0, "profit_abs"].sum()
+        profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
         stats.append(
             {
                 "date": name.strftime("%d/%m/%Y"),
@@ -240,8 +243,9 @@ def generate_periodic_breakdown_stats(
                 "profit_abs": profit_abs,
                 "wins": wins,
                 "draws": draws,
-                "loses": loses,
-                "winrate": wins / trades if trades else 0.0,
+                "losses": losses,
+                "trades": trades,
+                "profit_factor": round(profit_factor, 8),
             }
         )
     return stats
