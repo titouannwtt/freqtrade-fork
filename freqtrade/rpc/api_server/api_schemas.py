@@ -640,11 +640,10 @@ class Health(BaseModel):
 
 
 class CustomDataEntry(BaseModel):
-    id: int
-    ft_trade_id: int
-    cd_key: str
-    cd_type: str
+    key: str
+    type: str
     cd_value: Any
+    value: Any
     created_at: datetime
     updated_at: datetime | None = None
 
