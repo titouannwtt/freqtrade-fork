@@ -835,11 +835,11 @@ def test_api_custom_data_single_trade(botclient, fee):
 
     res_cust_data = response_json[0]["custom_data"]
     expected_data_td_1 = [
-        {"key": "test_str", "type": "str", "cd_value": "test_value", "value": "test_value"},
-        {"key": "test_int", "type": "int", "cd_value": "1", "value": 1},
-        {"key": "test_float", "type": "float", "cd_value": "1.54", "value": 1.54},
-        {"key": "test_bool", "type": "bool", "cd_value": "True", "value": True},
-        {"key": "test_dict", "type": "dict", "cd_value": '{"test": "vl"}', "value": {"test": "vl"}},
+        {"key": "test_str", "type": "str", "value": "test_value"},
+        {"key": "test_int", "type": "int", "value": 1},
+        {"key": "test_float", "type": "float", "value": 1.54},
+        {"key": "test_bool", "type": "bool", "value": True},
+        {"key": "test_dict", "type": "dict", "value": {"test": "vl"}},
     ]
 
     # Ensure response contains exactly the expected number of entries
@@ -861,7 +861,7 @@ def test_api_custom_data_single_trade(botclient, fee):
 
         # Validate individual fields and print only incorrect values
         mismatches = []
-        for field in ["key", "type", "cd_value", "value"]:
+        for field in ["key", "type", "value"]:
             if matched_item[field] != expected[field]:
                 mismatches.append(f"{field}: Expected {expected[field]}, Got {matched_item[field]}")
 
@@ -934,19 +934,16 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
             {
                 "key": "test_str",
                 "type": "str",
-                "cd_value": "test_value_t1",
                 "value": "test_value_t1",
             },
             {
                 "key": "test_float",
                 "type": "float",
-                "cd_value": "1.54",
                 "value": 1.54,
             },
             {
                 "key": "test_dict",
                 "type": "dict",
-                "cd_value": '{"test_t1": "vl_t1"}',
                 "value": {"test_t1": "vl_t1"},
             },
         ],
@@ -954,19 +951,16 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
             {
                 "key": "test_str",
                 "type": "str",
-                "cd_value": "test_value_t2",
                 "value": "test_value_t2",
             },
             {
                 "key": "test_float",
                 "type": "float",
-                "cd_value": "1.55",
                 "value": 1.55,
             },
             {
                 "key": "test_dict",
                 "type": "dict",
-                "cd_value": '{"test_t2": "vl_t2"}',
                 "value": {"test_t2": "vl_t2"},
             },
         ],
@@ -1000,7 +994,7 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
 
             # Validate key fields.
             mismatches = []
-            for field in ["key", "type", "cd_value", "value"]:
+            for field in ["key", "type", "value"]:
                 if matched_item[field] != expected[field]:
                     mismatches.append(
                         f"{field}: Expected {expected[field]}, Got {matched_item[field]}"
