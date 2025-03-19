@@ -288,7 +288,7 @@ class FtRestClient:
     def list_custom_data(self, trade_id, key=None):
         """List custom-data of the running bot for a specific trade.
 
-        :param trade_id: int - ID of the trade
+        :param trade_id: ID of the trade
         :param key: str, optional - Key of the custom-data
         :return: JSON object
         """
@@ -297,7 +297,7 @@ class FtRestClient:
         if key is not None:
             params["key"] = key
 
-        return self._get("trades/{tradeid}/custom-data", params=params)
+        return self._get(f"trades/{trade_id}/custom-data", params=params)
 
     def trade(self, trade_id):
         """Return specific trade
