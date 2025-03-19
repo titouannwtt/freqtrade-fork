@@ -1130,8 +1130,12 @@ class RPC:
         trades: Sequence[Trade]
         if trade_id is None:
             # Get all open trades
+            order_by: Any = Trade.close_date.desc()
             trades = Trade.session.scalars(
-                Trade.get_trades_query([Trade.is_open.is_(True)]).limit(limit).offset(offset)
+                Trade.get_trades_query([Trade.is_open.is_(True)])
+                .order_by(order_by)
+                .limit(limit)
+                .offset(offset)
             ).all()
         else:
             trades = Trade.get_trades(trade_filter=[Trade.id == trade_id]).all()
