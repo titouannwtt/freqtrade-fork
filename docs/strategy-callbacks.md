@@ -976,7 +976,7 @@ class AwesomeStrategy(IStrategy):
         side: str,
         is_entry: bool,
         **kwargs,
-    ) -> float:
+    ) -> float | None:
         """
         Exit and entry order price re-adjustment logic, returning the user desired limit price.
         This only executes when a order was already placed, still open (unfilled fully or partially)
@@ -998,7 +998,7 @@ class AwesomeStrategy(IStrategy):
         :param side: 'long' or 'short' - indicating the direction of the proposed trade
         :param is_entry: True if the order is an entry order, False if it's an exit order.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
-        :return float: New entry price value if provided
+        :return float or None: New entry price value if provided
         """
 
         # Limit entry orders to use and follow SMA200 as price target for the first 10 minutes since entry trigger for BTC/USDT pair.
