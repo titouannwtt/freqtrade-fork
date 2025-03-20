@@ -1125,7 +1125,7 @@ class RPC:
         Returns an array of dictionaries, each containing:
         - "trade_id": the ID of the trade (int)
         - "custom_data": a list of custom data dicts, each with the fields:
-                "id", "ft_trade_id", "cd_key", "cd_type", "cd_value", "created_at", "updated_at"
+                "id", "key", "type", "value", "created_at", "updated_at"
         """
         trades: Sequence[Trade]
         if trade_id is None:
