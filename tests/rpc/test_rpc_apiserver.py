@@ -843,7 +843,7 @@ def test_api_custom_data_single_trade(botclient, fee):
 
     # Ensure response contains exactly the expected number of entries
     assert len(res_cust_data) == len(expected_data_td_1), (
-        f"\nError: Expected {len(expected_data_td_1)} entries, but got {len(res_cust_data)}.\n"
+        f"Expected {len(expected_data_td_1)} entries, but got {len(res_cust_data)}.\n"
     )
 
     # Validate each expected entry
@@ -855,7 +855,7 @@ def test_api_custom_data_single_trade(botclient, fee):
                 break
 
         assert matched_item is not None, (
-            f"\nError: Missing expected entry for key '{expected['key']}'\nExpected: {expected}\n"
+            f"Missing expected entry for key '{expected['key']}'\nExpected: {expected}\n"
         )
 
         # Validate individual fields and print only incorrect values
@@ -864,7 +864,7 @@ def test_api_custom_data_single_trade(botclient, fee):
             if matched_item[field] != expected[field]:
                 mismatches.append(f"{field}: Expected {expected[field]}, Got {matched_item[field]}")
 
-        assert not mismatches, f"\nError in entry '{expected['key']}':\n" + "\n".join(mismatches)
+        assert not mismatches, f"Error in entry '{expected['key']}':\n" + "\n".join(mismatches)
 
     # CASE 2 Checking specific existing key custom data of trade 1
     rc = client_get(client, f"{BASE_URI}/trades/1/custom-data?key=test_dict")
@@ -922,9 +922,7 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
     response_json = rc.json()
 
     # Expecting two trade entries in the response
-    assert len(response_json) == 2, (
-        f"\nError: Expected 2 trade entries, but got {len(response_json)}.\n"
-    )
+    assert len(response_json) == 2, f"Expected 2 trade entries, but got {len(response_json)}.\n"
 
     # Define expected custom data for each trade.
     # The keys now use the actual trade_ids from the custom data.
@@ -973,8 +971,8 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
         custom_data_list = trade_entry.get("custom_data")
         expected_data = expected_custom_data[trade_id]
         assert len(custom_data_list) == len(expected_data), (
-            f"\nError for trade_id {trade_id}: \
-            Expected {len(expected_data)} entries, but got {len(custom_data_list)}.\n"
+            f"Error for trade_id {trade_id}: "
+            f"Expected {len(expected_data)} entries, but got {len(custom_data_list)}.\n"
         )
 
         # For each expected entry, check that the response contains the correct entry.
@@ -986,8 +984,8 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
                     break
 
             assert matched_item is not None, (
-                f"\nError: For trade_id {trade_id}, \
-                missing expected entry for key '{expected['key']}'\n"
+                f"For trade_id {trade_id}, "
+                f"missing expected entry for key '{expected['key']}'\n"
                 f"Expected: {expected}\n"
             )
 
@@ -1004,7 +1002,7 @@ def test_api_custom_data_multiple_open_trades(botclient, fee):
                     mismatches.append(f"Missing field: {field}")
 
             assert not mismatches, (
-                f"\nError in entry '{expected['key']}' for trade_id {trade_id}:\n"
+                f"Error in entry '{expected['key']}' for trade_id {trade_id}:\n"
                 + "\n".join(mismatches)
             )
 
