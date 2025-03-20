@@ -154,21 +154,33 @@ def stats(rpc: RPC = Depends(get_rpc)):
 
 
 @router.get("/daily", response_model=DailyWeeklyMonthly, tags=["info"])
-def daily(timescale: int = 7, rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
+def daily(
+    timescale: int = Query(7, ge=1, description="Number of days to fetch data for"),
+    rpc: RPC = Depends(get_rpc),
+    config=Depends(get_config),
+):
     return rpc._rpc_timeunit_profit(
         timescale, config["stake_currency"], config.get("fiat_display_currency", "")
     )
 
 
 @router.get("/weekly", response_model=DailyWeeklyMonthly, tags=["info"])
-def weekly(timescale: int = 4, rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
+def weekly(
+    timescale: int = Query(4, ge=1, description="Number of weeks to fetch data for"),
+    rpc: RPC = Depends(get_rpc),
+    config=Depends(get_config),
+):
     return rpc._rpc_timeunit_profit(
         timescale, config["stake_currency"], config.get("fiat_display_currency", ""), "weeks"
     )
 
 
 @router.get("/monthly", response_model=DailyWeeklyMonthly, tags=["info"])
-def monthly(timescale: int = 3, rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
+def monthly(
+    timescale: int = Query(3, ge=1, description="Number of months to fetch data for"),
+    rpc: RPC = Depends(get_rpc),
+    config=Depends(get_config),
+):
     return rpc._rpc_timeunit_profit(
         timescale, config["stake_currency"], config.get("fiat_display_currency", ""), "months"
     )
@@ -185,7 +197,11 @@ def status(rpc: RPC = Depends(get_rpc)):
 # Using the responsemodel here will cause a ~100% increase in response time (from 1s to 2s)
 # on big databases. Correct response model: response_model=TradeResponse,
 @router.get("/trades", tags=["info", "trading"])
-def trades(limit: int = 500, offset: int = 0, rpc: RPC = Depends(get_rpc)):
+def trades(
+    limit: int = Query(500, ge=1, description="Maximum number of different trades to return data"),
+    offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
+    rpc: RPC = Depends(get_rpc),
+):
     return rpc._rpc_trade_history(limit, offset=offset, order_by_id=True)
 
 
