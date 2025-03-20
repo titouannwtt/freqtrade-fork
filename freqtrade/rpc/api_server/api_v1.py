@@ -29,6 +29,7 @@ from freqtrade.rpc.api_server.api_schemas import (
     FreqAIModelListResponse,
     Health,
     HyperoptLossListResponse,
+    ListCustomData,
     Locks,
     LocksPayload,
     Logs,
@@ -211,6 +212,36 @@ def trade_cancel_open_order(tradeid: int, rpc: RPC = Depends(get_rpc)):
 def trade_reload(tradeid: int, rpc: RPC = Depends(get_rpc)):
     rpc._rpc_reload_trade_from_exchange(tradeid)
     return rpc._rpc_trade_status([tradeid])[0]
+
+
+@router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trading"])
+def list_open_trades_custom_data(
+    key: str | None = Query(None, description="Optional key to filter data"),
+    limit: int = Query(100, ge=1, description="Maximum number of different trades to return data"),
+    offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
+    rpc: RPC = Depends(get_rpc),
+):
+    """
+    Fetch custom data for all open trades.
+    If a key is provided, it will be used to filter data accordingly.
+    Pagination is implemented via the `limit` and `offset` parameters.
+    """
+    try:
+        return rpc._rpc_list_custom_data(key=key, limit=limit, offset=offset)
+    except RPCException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
+def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = Depends(get_rpc)):
+    """
+    Fetch custom data for a specific trade.
+    If a key is provided, it will be used to filter data accordingly.
+    """
+    try:
+        return rpc._rpc_list_custom_data(trade_id, key=key)
+    except RPCException as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # TODO: Missing response model
