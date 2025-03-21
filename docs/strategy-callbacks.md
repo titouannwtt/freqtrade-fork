@@ -772,7 +772,8 @@ The combined stake currently allocated to the position is held in `trade.stake_a
 !!! Danger "Loose Logic"
     On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, (e.g. increase position if RSI of the last candle is below 30), your bot will do extra re-entry every 5 secs until you either it run out of money, hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
 
-    Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order and if an order is already open.
+    Same thing also can happen with partial exit.  
+    So be sure to have a strict logic and/or check for the last filled order and if an order is already open.
 
 !!! Warning "Performance with many position adjustments"
     Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
