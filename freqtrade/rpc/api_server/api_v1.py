@@ -364,6 +364,11 @@ def start(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_start()
 
 
+@router.post("/pause", response_model=StatusMsg, tags=["botcontrol"])
+def pause(rpc: RPC = Depends(get_rpc)):
+    return rpc._rpc_pause()
+
+
 @router.post("/stop", response_model=StatusMsg, tags=["botcontrol"])
 def stop(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_stop()
