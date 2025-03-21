@@ -758,7 +758,7 @@ For performance reasons, it's disabled by default and freqtrade will show a warn
 
 Additional orders also result in additional fees and those orders don't count towards `max_open_trades`.
 
-This callback is also called when there is an open order (either buy or sell) waiting for execution - and will cancel the existing open order to place a new order if the amount, price or direction is different.
+This callback is also called when there is an open order (either buy or sell) waiting for execution - and will cancel the existing open order to place a new order if the amount, price or direction is different. Also partially filled orders will be canceled, and will be replaced with the new amount as returned by the callback.
 
 `adjust_trade_position()` is called very frequently for the duration of a trade, so you must keep your implementation as performant as possible.
 
@@ -770,9 +770,9 @@ Modifications to leverage are not possible, and the stake-amount returned is ass
 The combined stake currently allocated to the position is held in `trade.stake_amount`. Therefore `trade.stake_amount` will always be updated on every additional entry and partial exit made through `adjust_trade_position()`.
 
 !!! Danger "Loose Logic"
-    On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, for example your logic for extra entry is only to check RSI of last candle is below 30, then when such condition fulfilled, your bot will do extra re-entry every 5 secs until either it run out of money, it hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
+    On dry and live run, this function will be called every `throttle_process_secs` (default to 5s). If you have a loose logic, (e.g. increase position if RSI of the last candle is below 30), your bot will do extra re-entry every 5 secs until you either it run out of money, hit the `max_position_adjustment` limit, or a new candle with RSI more than 30 arrived.
 
-    Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order.
+    Same thing also can happen with partial exit. So be sure to have a strict logic and/or check for the last filled order and if an order is already open.
 
 !!! Warning "Performance with many position adjustments"
     Position adjustments can be a good approach to increase a strategy's output - but it can also have drawbacks if using this feature extensively.  
