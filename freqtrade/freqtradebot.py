@@ -300,7 +300,7 @@ class FreqtradeBot(LoggingMixin):
                 self.process_open_trade_positions()
 
         # Then looking for entry opportunities
-        if self.get_free_open_trades():
+        if self.state == State.RUNNING and self.get_free_open_trades():
             self.enter_positions()
         self._schedule.run_pending()
         Trade.commit()
