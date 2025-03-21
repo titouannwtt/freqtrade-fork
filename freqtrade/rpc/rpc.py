@@ -836,6 +836,21 @@ class RPC:
         self._freqtrade.state = State.RUNNING
         return {"status": "starting trader ..."}
 
+    def _rpc_pause(self) -> dict[str, str]:
+        """Handler for pause"""
+        if self._freqtrade.state == State.PAUSED:
+            return {"status": "already paused"}
+
+        if self._freqtrade.state == State.RUNNING:
+            self._freqtrade.state = State.PAUSED
+            return {"status": "pausing trader ..."}
+
+        if self._freqtrade.state == State.STOPPED:
+            self._freqtrade.state = State.PAUSED
+            return {"status": "starting bot with trader in paused state..."}
+
+        return {"status": "pausing trader ..."}
+
     def _rpc_stop(self) -> dict[str, str]:
         """Handler for stop"""
         if self._freqtrade.state == State.RUNNING:
