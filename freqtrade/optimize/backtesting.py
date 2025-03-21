@@ -714,7 +714,7 @@ class Backtesting:
                     exchange=self.exchange,
                     wallets=self.wallets,
                     stake_currency=self.config["stake_currency"],
-                    dry_run=self.config["dry_run"],
+                    dry_run=True,
                 )
             if not (order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount):
                 self._call_adjust_stop(current_date, trade, order.ft_price)
