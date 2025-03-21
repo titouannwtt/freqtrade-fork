@@ -1032,8 +1032,8 @@
       "type": "string",
       "enum": [
         "running",
-        "paused",
-        "stopped"
+        "stopped",
+        "paused"
       ]
     },
     "force_entry_enable": {
