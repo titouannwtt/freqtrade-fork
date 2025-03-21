@@ -38,6 +38,26 @@ def test_worker_running(mocker, default_conf, caplog) -> None:
     assert isinstance(worker.freqtrade.strategy.dp, DataProvider)
 
 
+def test_worker_paused(mocker, default_conf, caplog) -> None:
+    mock_throttle = MagicMock()
+    mocker.patch("freqtrade.worker.Worker._throttle", mock_throttle)
+    mocker.patch("freqtrade.persistence.Trade.stoploss_reinitialization", MagicMock())
+
+    worker = get_patched_worker(mocker, default_conf)
+
+    state = worker._worker(old_state=State.RUNNING)
+    worker.freqtrade.state = State.PAUSED
+    state = worker._worker(old_state=None)
+
+    assert state is State.PAUSED
+    assert log_has("Changing state to: PAUSED", caplog)
+    assert mock_throttle.call_count == 1
+    # Check strategy is loaded, and received a dataprovider object
+    assert worker.freqtrade.strategy
+    assert worker.freqtrade.strategy.dp
+    assert isinstance(worker.freqtrade.strategy.dp, DataProvider)
+
+
 def test_worker_stopped(mocker, default_conf, caplog) -> None:
     mock_throttle = MagicMock()
     mocker.patch("freqtrade.worker.Worker._throttle", mock_throttle)
