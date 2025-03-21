@@ -170,7 +170,7 @@ class Telegram(RPCHandler):
         self._keyboard: list[list[str | KeyboardButton]] = [
             ["/daily", "/profit", "/balance"],
             ["/status", "/status table", "/performance"],
-            ["/count", "/start", "/stop", "/help"],
+            ["/start", "/pause", "/stop", "/help"],
         ]
         # do not allow commands with mandatory arguments and critical cmds
         # TODO: DRY! - its not good to list all valid cmds here. But otherwise
@@ -178,6 +178,7 @@ class Telegram(RPCHandler):
         #       problem in _help()).
         valid_keys: list[str] = [
             r"/start$",
+            r"/pause$",
             r"/stop$",
             r"/status$",
             r"/status table$",
@@ -1245,6 +1246,18 @@ class Telegram(RPCHandler):
         await self._send_msg(f"Status: `{msg['status']}`")
 
     @authorized_only
+    async def _pause(self, update: Update, context: CallbackContext) -> None:
+        """
+        Handler for /pause.
+        pauses entry positions on TradeThread
+        :param bot: telegram bot
+        :param update: message update
+        :return: None
+        """
+        msg = self._rpc._rpc_pause()
+        await self._send_msg(f"Status: `{msg['status']}`")
+
+    @authorized_only
     async def _stop(self, update: Update, context: CallbackContext) -> None:
         """
         Handler for /stop.
@@ -1829,6 +1842,7 @@ class Telegram(RPCHandler):
             "_Bot Control_\n"
             "------------\n"
             "*/start:* `Starts the trader`\n"
+            "*/pause:* `Pause the new entries for trader, but handles open trades gracefully`\n"
             "*/stop:* `Stops the trader`\n"
             "*/stopentry:* `Stops entering, but handles open trades gracefully` \n"
             "*/forceexit <trade_id>|all:* `Instantly exits the given trade or all trades, "
