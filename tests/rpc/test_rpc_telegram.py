@@ -1225,14 +1225,11 @@ async def test_stop_handle_already_stopped(default_conf, update, mocker) -> None
 async def test_stopbuy_handle(default_conf, update, mocker) -> None:
     telegram, freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf)
 
-    assert freqtradebot.config["max_open_trades"] != 0
+    assert freqtradebot.state == State.RUNNING
     await telegram._stopentry(update=update, context=MagicMock())
-    assert freqtradebot.config["max_open_trades"] == 0
+    assert freqtradebot.state == State.PAUSED
     assert msg_mock.call_count == 1
-    assert (
-        "No more entries will occur from now. Run /reload_config to reset."
-        in msg_mock.call_args_list[0][0][0]
-    )
+    assert "pausing trader ..." in msg_mock.call_args_list[0][0][0]
 
 
 async def test_reload_config_handle(default_conf, update, mocker) -> None:
