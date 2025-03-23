@@ -933,7 +933,7 @@ class RPC:
         Sells the given trade at current price
         """
 
-        if self._freqtrade.state != State.RUNNING:
+        if self._freqtrade.state == State.STOPPED:
             raise RPCException("trader is not running")
 
         with self._freqtrade._exit_lock:
@@ -1049,7 +1049,7 @@ class RPC:
                 raise RPCException(f"Failed to enter position for {pair}.")
 
     def _rpc_cancel_open_order(self, trade_id: int):
-        if self._freqtrade.state != State.RUNNING:
+        if self._freqtrade.state == State.STOPPED:
             raise RPCException("trader is not running")
         with self._freqtrade._exit_lock:
             # Query for trade
@@ -1217,7 +1217,7 @@ class RPC:
 
     def _rpc_count(self) -> dict[str, float]:
         """Returns the number of trades running"""
-        if self._freqtrade.state != State.RUNNING:
+        if self._freqtrade.state == State.STOPPED:
             raise RPCException("trader is not running")
 
         trades = Trade.get_open_trades()
