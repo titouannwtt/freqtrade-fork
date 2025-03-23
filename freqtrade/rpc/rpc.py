@@ -836,21 +836,6 @@ class RPC:
         self._freqtrade.state = State.RUNNING
         return {"status": "starting trader ..."}
 
-    def _rpc_pause(self) -> dict[str, str]:
-        """Handler for pause"""
-        if self._freqtrade.state == State.PAUSED:
-            return {"status": "already paused"}
-
-        if self._freqtrade.state == State.RUNNING:
-            self._freqtrade.state = State.PAUSED
-            return {"status": "pausing trader ..."}
-
-        if self._freqtrade.state == State.STOPPED:
-            self._freqtrade.state = State.PAUSED
-            return {"status": "starting bot with trader in paused state..."}
-
-        return {"status": "pausing trader ..."}
-
     def _rpc_stop(self) -> dict[str, str]:
         """Handler for stop"""
         if self._freqtrade.state == State.RUNNING:
@@ -869,11 +854,14 @@ class RPC:
         Handler to stop buying, but handle open trades gracefully.
         """
         if self._freqtrade.state == State.RUNNING:
-            # Set 'max_open_trades' to 0
-            self._freqtrade.config["max_open_trades"] = 0
-            self._freqtrade.strategy.max_open_trades = 0
+            self._freqtrade.state = State.PAUSED
+            return {"status": "pausing trader ..."}
 
-        return {"status": "No more entries will occur from now. Run /reload_config to reset."}
+        if self._freqtrade.state == State.STOPPED:
+            self._freqtrade.state = State.PAUSED
+            return {"status": "starting bot with trader in paused state..."}
+
+        return {"status": "No more entries will occur from now. Run /start to enable entries"}
 
     def _rpc_reload_trade_from_exchange(self, trade_id: int) -> dict[str, str]:
         """
