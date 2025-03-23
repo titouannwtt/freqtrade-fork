@@ -1254,7 +1254,7 @@ class Telegram(RPCHandler):
         :param update: message update
         :return: None
         """
-        msg = self._rpc._rpc_pause()
+        msg = self._rpc._rpc_stopentry()
         await self._send_msg(f"Status: `{msg['status']}`")
 
     @authorized_only
