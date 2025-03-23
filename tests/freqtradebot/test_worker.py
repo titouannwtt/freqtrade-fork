@@ -45,12 +45,11 @@ def test_worker_paused(mocker, default_conf, caplog) -> None:
 
     worker = get_patched_worker(mocker, default_conf)
 
-    state = worker._worker(old_state=State.RUNNING)
     worker.freqtrade.state = State.PAUSED
-    state = worker._worker(old_state=None)
+    state = worker._worker(old_state=State.RUNNING)
 
     assert state is State.PAUSED
-    assert log_has("Changing state to: PAUSED", caplog)
+    assert log_has("Changing state from RUNNING to: PAUSED", caplog)
     assert mock_throttle.call_count == 1
     # Check strategy is loaded, and received a dataprovider object
     assert worker.freqtrade.strategy
