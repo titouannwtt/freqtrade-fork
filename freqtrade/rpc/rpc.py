@@ -861,7 +861,7 @@ class RPC:
             self._freqtrade.state = State.PAUSED
             return {"status": "starting bot with trader in paused state..."}
 
-        return {"status": "No more entries will occur from now. Run /start to enable entries"}
+        return {"status": "No more entries will occur from now. Run /start to enable entries."}
 
     def _rpc_reload_trade_from_exchange(self, trade_id: int) -> dict[str, str]:
         """

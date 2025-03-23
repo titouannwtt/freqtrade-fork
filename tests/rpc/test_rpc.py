@@ -813,12 +813,12 @@ def test_rpc_stopentry(mocker, default_conf) -> None:
     freqtradebot = get_patched_freqtradebot(mocker, default_conf)
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
-    freqtradebot.state = State.RUNNING
+    freqtradebot.state = State.PAUSED
 
-    assert freqtradebot.config["max_open_trades"] != 0
     result = rpc._rpc_stopentry()
-    assert {"status": "No more entries will occur from now. Run /reload_config to reset."} == result
-    assert freqtradebot.config["max_open_trades"] == 0
+    assert {
+        "status": "No more entries will occur from now. Run /start to enable entries."
+    } == result
 
 
 def test_rpc_force_exit(default_conf, ticker, fee, mocker) -> None:
