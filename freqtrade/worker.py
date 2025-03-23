@@ -96,7 +96,7 @@ class Worker:
             logger.info(
                 f"Changing state{f' from {old_state.name}' if old_state else ''} to: {state.name}"
             )
-            if state == State.RUNNING:
+            if state == State.RUNNING or state == State.PAUSED:
                 self.freqtrade.startup()
 
             if state == State.STOPPED:
@@ -112,9 +112,10 @@ class Worker:
 
             self._throttle(func=self._process_stopped, throttle_secs=self._throttle_secs)
 
-        elif state == State.RUNNING:
+        elif state == State.RUNNING or state == State.PAUSED:
+            state_str = "RUNNING" if state == State.RUNNING else "PAUSED"
             # Ping systemd watchdog before throttling
-            self._notify("WATCHDOG=1\nSTATUS=State: RUNNING.")
+            self._notify(f"WATCHDOG=1\nSTATUS=State: {state_str}.")
 
             # Use an offset of 1s to ensure a new candle has been issued
             self._throttle(
