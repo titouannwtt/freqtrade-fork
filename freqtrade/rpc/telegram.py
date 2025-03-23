@@ -1246,18 +1246,6 @@ class Telegram(RPCHandler):
         await self._send_msg(f"Status: `{msg['status']}`")
 
     @authorized_only
-    async def _pause(self, update: Update, context: CallbackContext) -> None:
-        """
-        Handler for /pause.
-        pauses entry positions on TradeThread
-        :param bot: telegram bot
-        :param update: message update
-        :return: None
-        """
-        msg = self._rpc._rpc_stopentry()
-        await self._send_msg(f"Status: `{msg['status']}`")
-
-    @authorized_only
     async def _stop(self, update: Update, context: CallbackContext) -> None:
         """
         Handler for /stop.
@@ -1284,7 +1272,7 @@ class Telegram(RPCHandler):
     @authorized_only
     async def _stopentry(self, update: Update, context: CallbackContext) -> None:
         """
-        Handler for /stop_buy.
+        Handler for /stop_buy /stop_entry and /pause.
         Sets max_open_trades to 0 and gracefully sells all open trades
         :param bot: telegram bot
         :param update: message update
