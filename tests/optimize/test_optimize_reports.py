@@ -294,7 +294,15 @@ def test_store_backtest_results_real(tmp_path):
     fn = get_latest_backtest_filename(tmp_path)
     assert fn == "backtest-result-2022_01_01_15_05_13.zip"
 
-    store_backtest_results(config, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame())
+    strategy_test_dir = Path(__file__).parent.parent / "strategy" / "strats"
+
+    store_backtest_results(
+        config,
+        data,
+        "2024_01_01_15_05_25",
+        market_change_data=pd.DataFrame(),
+        strategy_files={"DefStrat": str(strategy_test_dir / "strategy_test_v3.py")},
+    )
     zip_file = tmp_path / "backtest-result-2024_01_01_15_05_25.zip"
     assert zip_file.is_file()
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25.meta.json").is_file()
@@ -304,6 +312,14 @@ def test_store_backtest_results_real(tmp_path):
         assert "backtest-result-2024_01_01_15_05_25.json" in zipf.namelist()
         assert "backtest-result-2024_01_01_15_05_25_market_change.feather" in zipf.namelist()
         assert "backtest-result-2024_01_01_15_05_25_config.json" in zipf.namelist()
+        # strategy file is copied to the zip file
+        assert "backtest-result-2024_01_01_15_05_25_DefStrat.py" in zipf.namelist()
+        # compare the content of the strategy file
+        with zipf.open("backtest-result-2024_01_01_15_05_25_DefStrat.py") as strategy_file:
+            strategy_content = strategy_file.read()
+            with (strategy_test_dir / "strategy_test_v3.py").open("rb") as original_file:
+                original_content = original_file.read()
+                assert strategy_content == original_content
 
     assert (tmp_path / LAST_BT_RESULT_FN).is_file()
 
