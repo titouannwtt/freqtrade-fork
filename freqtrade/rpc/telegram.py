@@ -294,7 +294,7 @@ class Telegram(RPCHandler):
             CommandHandler(["unlock", "delete_locks"], self._delete_locks),
             CommandHandler(["reload_config", "reload_conf"], self._reload_config),
             CommandHandler(["show_config", "show_conf"], self._show_config),
-            CommandHandler(["stopbuy", "stopentry"], self._stopentry),
+            CommandHandler(["stopbuy", "stopentry", "pause"], self._stopentry),
             CommandHandler("whitelist", self._whitelist),
             CommandHandler("blacklist", self._blacklist),
             CommandHandler(["blacklist_delete", "bl_delete"], self._blacklist_delete),
