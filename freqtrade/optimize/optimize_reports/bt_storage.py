@@ -53,6 +53,7 @@ def store_backtest_results(
     *,
     market_change_data: DataFrame | None = None,
     analysis_results: dict[str, dict[str, DataFrame]] | None = None,
+    strategy_files: dict[str, str] | None = None,
 ) -> Path:
     """
     Stores backtest results and analysis data in a zip file, with metadata stored separately
@@ -89,6 +90,25 @@ def store_backtest_results(
         config_buf = StringIO()
         dump_json_to_file(config_buf, sanitize_config(config["original_config"]))
         zipf.writestr(f"{base_filename.stem}_config.json", config_buf.getvalue())
+
+        for strategy_name, strategy_file in (strategy_files or {}).items():
+            # Store the strategy file and its parameters
+            strategy_buf = BytesIO()
+            strategy_path = Path(strategy_file)
+            with strategy_path.open("rb") as strategy_file_obj:
+                strategy_buf.write(strategy_file_obj.read())
+            strategy_buf.seek(0)
+            zipf.writestr(f"{base_filename.stem}_{strategy_name}.py", strategy_buf.getvalue())
+            strategy_params = strategy_path.with_suffix(".json")
+            if strategy_params.is_file():
+                strategy_params_buf = BytesIO()
+                with strategy_params.open("rb") as strategy_params_obj:
+                    strategy_params_buf.write(strategy_params_obj.read())
+                strategy_params_buf.seek(0)
+                zipf.writestr(
+                    f"{base_filename.stem}_{strategy_name}.json",
+                    strategy_params_buf.getvalue(),
+                )
 
         # Add market change data if present
         if market_change_data is not None:
