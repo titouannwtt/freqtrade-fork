@@ -2814,7 +2814,7 @@ async def test__send_msg_keyboard(default_conf, mocker, caplog) -> None:
     default_keys_list = [
         ["/daily", "/profit", "/balance"],
         ["/status", "/status table", "/performance"],
-        ["/start", "/pause", "/stop", "/help"],
+        ["/count", "/start", "/stop", "/help"],
     ]
     default_keyboard = ReplyKeyboardMarkup(default_keys_list)
 
