@@ -253,8 +253,9 @@ def test_store_backtest_results(testdatadir, mocker):
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
     zip_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.ZipFile")
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-
-    store_backtest_results({"exportfilename": testdatadir}, data, "2022_01_01_15_05_13")
+    store_backtest_results(
+        {"exportfilename": testdatadir, "original_config": {}}, data, "2022_01_01_15_05_13"
+    )
 
     assert dump_mock.call_count == 2
     assert zip_mock.call_count == 1
@@ -264,7 +265,9 @@ def test_store_backtest_results(testdatadir, mocker):
     dump_mock.reset_mock()
     zip_mock.reset_mock()
     filename = testdatadir / "testresult.json"
-    store_backtest_results({"exportfilename": filename}, data, "2022_01_01_15_05_13")
+    store_backtest_results(
+        {"exportfilename": filename, "original_config": {}}, data, "2022_01_01_15_05_13"
+    )
     assert dump_mock.call_count == 2
     assert zip_mock.call_count == 1
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
@@ -274,7 +277,11 @@ def test_store_backtest_results(testdatadir, mocker):
 
 def test_store_backtest_results_real(tmp_path):
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-    store_backtest_results({"exportfilename": tmp_path}, data, "2022_01_01_15_05_13")
+    config = {
+        "exportfilename": tmp_path,
+        "original_config": {},
+    }
+    store_backtest_results(config, data, "2022_01_01_15_05_13")
 
     zip_file = tmp_path / "backtest-result-2022_01_01_15_05_13.zip"
     assert zip_file.is_file()
@@ -287,9 +294,7 @@ def test_store_backtest_results_real(tmp_path):
     fn = get_latest_backtest_filename(tmp_path)
     assert fn == "backtest-result-2022_01_01_15_05_13.zip"
 
-    store_backtest_results(
-        {"exportfilename": tmp_path}, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame()
-    )
+    store_backtest_results(config, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame())
     zip_file = tmp_path / "backtest-result-2024_01_01_15_05_25.zip"
     assert zip_file.is_file()
     assert (tmp_path / "backtest-result-2024_01_01_15_05_25.meta.json").is_file()
@@ -313,6 +318,7 @@ def test_write_read_backtest_candles(tmp_path):
         "exportfilename": tmp_path,
         "export": "signals",
         "runmode": "backtest",
+        "original_config": {},
     }
     # test directory exporting
     sample_date = "2022_01_01_15_05_13"
