@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 from typing_extensions import TypedDict
 
@@ -16,12 +16,15 @@ class BacktestResultType(TypedDict):
 
 
 def get_BacktestResultType_default() -> BacktestResultType:
-    return deepcopy(
-        {
-            "metadata": {},
-            "strategy": {},
-            "strategy_comparison": [],
-        }
+    return cast(
+        BacktestResultType,
+        deepcopy(
+            {
+                "metadata": {},
+                "strategy": {},
+                "strategy_comparison": [],
+            }
+        ),
     )
 
 
