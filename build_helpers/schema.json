@@ -1028,7 +1028,7 @@
       "type": "boolean"
     },
     "initial_state": {
-      "description": "Initial state of the trading system.",
+      "description": "Initial state of the system.",
       "type": "string",
       "enum": [
         "running",
