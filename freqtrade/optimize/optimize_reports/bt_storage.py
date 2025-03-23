@@ -6,6 +6,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from pandas import DataFrame
 
+from freqtrade.configuration import sanitize_config
 from freqtrade.constants import LAST_BT_RESULT_FN
 from freqtrade.enums.runmode import RunMode
 from freqtrade.ft_types import BacktestResultType
@@ -84,6 +85,10 @@ def store_backtest_results(
         stats_buf = StringIO()
         dump_json_to_file(stats_buf, stats_copy)
         zipf.writestr(json_filename.name, stats_buf.getvalue())
+
+        config_buf = StringIO()
+        dump_json_to_file(config_buf, sanitize_config(config["original_config"]))
+        zipf.writestr(f"{base_filename.stem}_config.json", config_buf.getvalue())
 
         # Add market change data if present
         if market_change_data is not None:

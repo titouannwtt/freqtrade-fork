@@ -303,6 +303,8 @@ def test_store_backtest_results_real(tmp_path):
     with ZipFile(zip_file, "r") as zipf:
         assert "backtest-result-2024_01_01_15_05_25.json" in zipf.namelist()
         assert "backtest-result-2024_01_01_15_05_25_market_change.feather" in zipf.namelist()
+        assert "backtest-result-2024_01_01_15_05_25_config.json" in zipf.namelist()
+
     assert (tmp_path / LAST_BT_RESULT_FN).is_file()
 
     # Last file reference should be updated
