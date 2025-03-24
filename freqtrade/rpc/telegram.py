@@ -1273,7 +1273,7 @@ class Telegram(RPCHandler):
     async def _stopentry(self, update: Update, context: CallbackContext) -> None:
         """
         Handler for /stop_buy /stop_entry and /pause.
-        Sets max_open_trades to 0 and gracefully sells all open trades
+        Sets bot state to paused
         :param bot: telegram bot
         :param update: message update
         :return: None
