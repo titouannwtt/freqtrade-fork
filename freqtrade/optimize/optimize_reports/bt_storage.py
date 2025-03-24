@@ -95,6 +95,9 @@ def store_backtest_results(
             # Store the strategy file and its parameters
             strategy_buf = BytesIO()
             strategy_path = Path(strategy_file)
+            if not strategy_path.is_file():
+                logger.warning(f"Strategy file '{strategy_path}' does not exist. Skipping.")
+                continue
             with strategy_path.open("rb") as strategy_file_obj:
                 strategy_buf.write(strategy_file_obj.read())
             strategy_buf.seek(0)
