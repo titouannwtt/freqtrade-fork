@@ -96,7 +96,7 @@ class Worker:
             logger.info(
                 f"Changing state{f' from {old_state.name}' if old_state else ''} to: {state.name}"
             )
-            if state == State.RUNNING or state == State.PAUSED:
+            if old_state == State.STOPPED and (state == State.RUNNING or state == State.PAUSED):
                 self.freqtrade.startup()
 
             if state == State.STOPPED:
