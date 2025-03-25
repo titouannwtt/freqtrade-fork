@@ -74,7 +74,7 @@ def _generate_result_line(
     min_date: datetime,
     max_date: datetime,
     starting_balance: float,
-    first_column: str | list[str]
+    first_column: str | list[str],
 ) -> dict:
     """
     Generate one result dict, with "first_column" as key.
@@ -168,13 +168,18 @@ def generate_pair_metrics(  #
         if skip_nan and result["profit_abs"].isnull().all():
             continue
 
-        tabular_data.append(_generate_result_line(result, min_date, max_date, starting_balance, pair))
+        tabular_data.append(
+            _generate_result_line(result, min_date, max_date, starting_balance, pair)
+        )
 
     # Sort by total profit %:
     tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
     # Append Total
-    tabular_data.append(_generate_result_line(results, min_date, max_date, starting_balance, "TOTAL"))
+    tabular_data.append(
+        _generate_result_line(results, min_date, max_date, starting_balance, "TOTAL")
+    )
+
     return tabular_data
 
 
@@ -203,13 +208,17 @@ def generate_tag_metrics(
             if skip_nan and group["profit_abs"].isnull().all():
                 continue
 
-            tabular_data.append(_generate_result_line(group, min_date, max_date, starting_balance, tags))
+            tabular_data.append(
+                _generate_result_line(group, min_date, max_date, starting_balance, tags)
+            )
 
         # Sort by total profit %:
         tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
         # Append Total
-        tabular_data.append(_generate_result_line(results, min_date, max_date, starting_balance, "TOTAL"))
+        tabular_data.append(
+            _generate_result_line(results, min_date, max_date, starting_balance, "TOTAL")
+        )
         return tabular_data
     else:
         return []
@@ -436,7 +445,7 @@ def generate_strategy_stats(
         results=results,
         min_date=min_date,
         max_date=max_date,
-        skip_nan=False
+        skip_nan=False,
     )
     exit_reason_stats = generate_tag_metrics(
         "exit_reason",
@@ -444,7 +453,7 @@ def generate_strategy_stats(
         results=results,
         min_date=min_date,
         max_date=max_date,
-        skip_nan=False
+        skip_nan=False,
     )
     mix_tag_stats = generate_tag_metrics(
         ["enter_tag", "exit_reason"],
