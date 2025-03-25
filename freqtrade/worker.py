@@ -225,7 +225,7 @@ class Worker:
         # Load and validate config and create new instance of the bot
         self._init(True)
 
-        self.freqtrade.notify_status("config reloaded")
+        self.freqtrade.notify_status(f"{State(self.freqtrade.state)} after config reloaded")
 
         # Tell systemd that we completed reconfiguration
         self._notify("READY=1")
