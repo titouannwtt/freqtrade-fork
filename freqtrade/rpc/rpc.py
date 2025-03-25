@@ -838,7 +838,7 @@ class RPC:
 
     def _rpc_stop(self) -> dict[str, str]:
         """Handler for stop"""
-        if self._freqtrade.state == State.RUNNING or self._freqtrade.state == State.PAUSED:
+        if self._freqtrade.state != State.STOPPED:
             self._freqtrade.state = State.STOPPED
             return {"status": "stopping trader ..."}
 
