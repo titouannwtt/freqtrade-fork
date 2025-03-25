@@ -255,7 +255,7 @@ class HyperOptimizer:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
 
-    def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]: # list[Any]
+    def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:  # list[Any]
         """
         Used Optimize function.
         Called once per epoch to optimize whatever is configured.
