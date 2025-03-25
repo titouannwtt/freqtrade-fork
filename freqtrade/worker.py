@@ -112,7 +112,7 @@ class Worker:
 
             self._throttle(func=self._process_stopped, throttle_secs=self._throttle_secs)
 
-        elif state == State.RUNNING or state == State.PAUSED:
+        elif state in (State.RUNNING, State.PAUSED):
             state_str = "RUNNING" if state == State.RUNNING else "PAUSED"
             # Ping systemd watchdog before throttling
             self._notify(f"WATCHDOG=1\nSTATUS=State: {state_str}.")
