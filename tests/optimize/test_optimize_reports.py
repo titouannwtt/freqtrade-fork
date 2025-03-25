@@ -67,6 +67,11 @@ def test_text_table_bt_results(capsys):
             "profit_ratio": [0.1, 0.2, -0.05],
             "profit_abs": [0.2, 0.4, -0.1],
             "trade_duration": [10, 30, 20],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
         }
     )
 
@@ -386,6 +391,10 @@ def test_generate_pair_metrics():
             "profit_ratio": [0.1, 0.2],
             "profit_abs": [0.2, 0.4],
             "trade_duration": [10, 30],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+            ],
             "wins": [2, 0],
             "draws": [0, 0],
             "losses": [0, 0],
@@ -483,6 +492,11 @@ def test_text_table_exit_reason(capsys):
             "profit_ratio": [0.1, 0.2, -0.1],
             "profit_abs": [0.2, 0.4, -0.2],
             "trade_duration": [10, 30, 10],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
             "wins": [2, 0, 0],
             "draws": [0, 0, 0],
             "losses": [0, 0, 1],
@@ -526,6 +540,11 @@ def test_generate_sell_reason_stats():
             "profit_ratio": [0.1, 0.2, -0.1],
             "profit_abs": [0.2, 0.4, -0.2],
             "trade_duration": [10, 30, 10],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
             "wins": [2, 0, 0],
             "draws": [0, 0, 0],
             "losses": [0, 0, 1],
