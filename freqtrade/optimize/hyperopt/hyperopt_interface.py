@@ -44,11 +44,12 @@ class IHyperOpt(ABC):
     def generate_estimator(self, dimensions: list[Dimension], **kwargs) -> EstimatorType:
         """
         Return base_estimator.
-        Can be any of "GP", "RF", "ET", "GBRT" or an instance of a class
-        inheriting from RegressorMixin (from sklearn).
+        Can be any of "TPESampler", "GPSampler", "CmaEsSampler", "NSGAIISampler"
+        "NSGAIIISampler", "QMCSampler" or an instance of a class
+        inheriting from BaseSampler (from optuna.samplers).
         """
-        return "ET"
-
+        return "NSGAIISampler"
+        
     def generate_roi_table(self, params: dict) -> dict[int, float]:
         """
         Create a ROI table.

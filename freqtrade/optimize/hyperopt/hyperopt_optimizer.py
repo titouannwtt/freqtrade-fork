@@ -30,11 +30,14 @@ from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
-
 # Suppress scikit-learn FutureWarnings from skopt
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
-    from skopt import Optimizer
+    # from skopt import Optimizer
+    from freqtrade.optimize.space.decimalspace import SKDecimal
+    from skopt.space import Categorical, Integer, Real
+    import optuna
+    import optunahub
     from skopt.space import Dimension
 
 logger = logging.getLogger(__name__)
@@ -58,6 +61,7 @@ class HyperOptimizer:
         self.trailing_space: list[Dimension] = []
         self.max_open_trades_space: list[Dimension] = []
         self.dimensions: list[Dimension] = []
+        self.o_dimensions: Dict = {}
 
         self.config = config
         self.min_date: datetime
@@ -127,8 +131,9 @@ class HyperOptimizer:
                 self.hyperopt_pickle_magic(modules.__bases__)
 
     def _get_params_dict(
-        self, dimensions: list[Dimension], raw_params: list[Any]
+        self, dimensions: list[Dimension], raw_params: dict[str, Any] # list[Any]
     ) -> dict[str, Any]:
+        # logger.info(f"_get_params_dict: {raw_params}")
         # Ensure the number of dimensions match
         # the number of parameters in the list.
         if len(raw_params) != len(dimensions):
@@ -136,7 +141,10 @@ class HyperOptimizer:
 
         # Return a dict where the keys are the names of the dimensions
         # and the values are taken from the list of parameters.
-        return {d.name: v for d, v in zip(dimensions, raw_params, strict=False)}
+        # result = {d.name: v for d, v in zip(dimensions, raw_params, strict=False)}
+        # logger.info(f"d_get_params_dict: {result}")
+        # return {d.name: v for d, v in zip(dimensions, raw_params.params, strict=False)}
+        return raw_params
 
     def _get_params_details(self, params: dict) -> dict:
         """
@@ -377,33 +385,78 @@ class HyperOptimizer:
             "total_profit": total_profit,
         }
 
+
+    def convert_dimensions_to_optuna_space(self, s_dimensions: list[Dimension]) -> dict:
+        o_dimensions = {}
+        for original_dim in s_dimensions:
+            if type(original_dim) == Integer:  # isinstance(original_dim, Integer):
+                o_dimensions[original_dim.name] = optuna.distributions.IntDistribution(
+                    original_dim.low, original_dim.high, log=False, step=1
+                )
+            elif (
+                type(original_dim) == SKDecimal
+            ):
+                o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
+                    original_dim.low_orig,
+                    original_dim.high_orig,
+                    log=False,
+                    step=1 / pow(10, original_dim.decimals)
+                )
+            elif (
+                type(original_dim) == Real
+            ):
+                o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
+                    original_dim.low,
+                    original_dim.high,
+                    log=False,
+                )
+            elif (
+                type(original_dim) == Categorical
+            ):
+                o_dimensions[original_dim.name] = optuna.distributions.CategoricalDistribution(
+                    list(original_dim.bounds)
+                )
+            else:
+                raise Exception(
+                    f"Unknown search space {original_dim} / {type(original_dim)}"
+                )
+            # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
+        return o_dimensions
+
     def get_optimizer(
         self,
-        cpu_count: int,
         random_state: int,
-        initial_points: int,
-        model_queue_size: int,
-    ) -> Optimizer:
-        dimensions = self.dimensions
-        estimator = self.custom_hyperopt.generate_estimator(dimensions=dimensions)
+    ):
 
-        acq_optimizer = "sampling"
-        if isinstance(estimator, str):
-            if estimator not in ("GP", "RF", "ET", "GBRT"):
-                raise OperationalException(f"Estimator {estimator} not supported.")
-            else:
-                acq_optimizer = "auto"
+        o_sampler = self.custom_hyperopt.generate_estimator(dimensions=self.dimensions)
+        self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
-        logger.info(f"Using estimator {estimator}.")
-        return Optimizer(
-            dimensions,
-            base_estimator=estimator,
-            acq_optimizer=acq_optimizer,
-            n_initial_points=initial_points,
-            acq_optimizer_kwargs={"n_jobs": cpu_count},
-            random_state=random_state,
-            model_queue_size=model_queue_size,
-        )
+        # for save/restore
+        # with open("sampler.pkl", "wb") as fout:
+        #     pickle.dump(study.sampler, fout)
+        # restored_sampler = pickle.load(open("sampler.pkl", "rb"))
+
+        if isinstance(o_sampler, str):
+            if o_sampler not in ("TPESampler", "GPSampler", "CmaEsSampler",
+                                 "NSGAIISampler", "NSGAIIISampler", "QMCSampler"
+                                 ):
+                raise OperationalException(f"Optuna Sampler {o_sampler} not supported.")
+
+        if o_sampler == "TPESampler":
+            sampler = optuna.samplers.TPESampler(seed=random_state)
+        elif o_sampler == "GPSampler":
+            sampler = optuna.samplers.GPSampler(seed=random_state)
+        elif o_sampler == "CmaEsSampler":
+            sampler = optuna.samplers.CmaEsSampler(seed=random_state)
+        elif o_sampler == "NSGAIISampler":
+            sampler = optuna.samplers.NSGAIISampler(seed=random_state)
+        elif o_sampler == "NSGAIIISampler":
+            sampler = optuna.samplers.NSGAIIISampler(seed=random_state)
+        elif o_sampler == "QMCSampler":
+            sampler = optuna.samplers.QMCSampler(seed=random_state)
+
+        logger.info(f"Using optuna sampler {o_sampler}.")
+        return optuna.create_study(sampler=sampler, direction="minimize")
 
     def advise_and_trim(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         preprocessed = self.backtesting.strategy.advise_all_indicators(data)

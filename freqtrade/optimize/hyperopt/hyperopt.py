@@ -37,7 +37,7 @@ INITIAL_POINTS = 30
 
 # Keep no more than SKOPT_MODEL_QUEUE_SIZE models
 # in the skopt model queue, to optimize memory consumption
-SKOPT_MODEL_QUEUE_SIZE = 10
+# SKOPT_MODEL_QUEUE_SIZE = 10
 
 log_queue: Any
 
@@ -165,7 +165,13 @@ class Hyperopt:
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
 
-    def get_asked_points(self, n_points: int) -> tuple[list[list[Any]], list[bool]]:
+    def get_optuna_asked_points(self, n_points: int, dimensions: dict) -> list[Any]:
+        asked: list[list[Any]] = []
+        for i in range(n_points):
+            asked.append(self.opt.ask(dimensions))
+        return asked
+
+    def get_asked_points(self, n_points: int, dimensions: dict) -> tuple[list[list[Any]], list[bool]]:
         """
         Enforce points returned from `self.opt.ask` have not been already evaluated
 
@@ -191,7 +197,8 @@ class Hyperopt:
         while i < 5 and len(asked_non_tried) < n_points:
             if i < 3:
                 self.opt.cache_ = {}
-                asked = unique_list(self.opt.ask(n_points=n_points * 5 if i > 0 else n_points))
+                asked = unique_list(self.get_optuna_asked_points(n_points=n_points * 5 if i > 0 else n_points,
+                                                                 dimensions=dimensions))
                 is_random = [False for _ in range(len(asked))]
             else:
                 asked = unique_list(self.opt.space.rvs(n_samples=n_points * 5))
@@ -199,10 +206,10 @@ class Hyperopt:
             is_random_non_tried += [
                 rand
                 for x, rand in zip(asked, is_random, strict=False)
-                if x not in self.opt.Xi and x not in asked_non_tried
+                if x not in asked_non_tried
             ]
             asked_non_tried += [
-                x for x in asked if x not in self.opt.Xi and x not in asked_non_tried
+                x for x in asked if x not in asked_non_tried
             ]
             i += 1
 
@@ -212,7 +219,7 @@ class Hyperopt:
                 is_random_non_tried[: min(len(asked_non_tried), n_points)],
             )
         else:
-            return self.opt.ask(n_points=n_points), [False for _ in range(n_points)]
+            return self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions), [False for _ in range(n_points)]
 
     def evaluate_result(self, val: dict[str, Any], current: int, is_random: bool):
         """
@@ -258,9 +265,7 @@ class Hyperopt:
         config_jobs = self.config.get("hyperopt_jobs", -1)
         logger.info(f"Number of parallel jobs set as: {config_jobs}")
 
-        self.opt = self.hyperopter.get_optimizer(
-            config_jobs, self.random_state, INITIAL_POINTS, SKOPT_MODEL_QUEUE_SIZE
-        )
+        self.opt = self.hyperopter.get_optimizer(self.random_state)
         self._setup_logging_mp_workaround()
         try:
             with Parallel(n_jobs=config_jobs) as parallel:
@@ -276,9 +281,9 @@ class Hyperopt:
                     if self.analyze_per_epoch:
                         # First analysis not in parallel mode when using --analyze-per-epoch.
                         # This allows dataprovider to load it's informative cache.
-                        asked, is_random = self.get_asked_points(n_points=1)
-                        f_val0 = self.hyperopter.generate_optimizer(asked[0])
-                        self.opt.tell(asked, [f_val0["loss"]])
+                        asked, is_random = self.get_asked_points(n_points=1, dimensions=self.hyperopter.o_dimensions)
+                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
+                        self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
                         start += 1
@@ -290,9 +295,12 @@ class Hyperopt:
                         n_rest = (i + 1) * jobs - (self.total_epochs - start)
                         current_jobs = jobs - n_rest if n_rest > 0 else jobs
 
-                        asked, is_random = self.get_asked_points(n_points=current_jobs)
-                        f_val = self.run_optimizer_parallel(parallel, asked)
-                        self.opt.tell(asked, [v["loss"] for v in f_val])
+                        asked, is_random = self.get_asked_points(
+                            n_points=current_jobs, dimensions=self.hyperopter.o_dimensions)
+                        f_val = self.run_optimizer_parallel(parallel, [asked1.params for asked1 in asked])
+                        for o_ask, v in zip(asked, f_val):
+                            self.opt.tell(o_ask, v["loss"])
+                        # self.opt.tell(asked, [v["loss"] for v in f_val])
 
                         for j, val in enumerate(f_val):
                             # Use human-friendly indexes here (starting from 1)

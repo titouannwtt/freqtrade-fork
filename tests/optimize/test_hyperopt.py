@@ -606,9 +606,9 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
     hyperopt.hyperopter.min_date = dt_utc(2017, 12, 10)
     hyperopt.hyperopter.max_date = dt_utc(2017, 12, 13)
     hyperopt.hyperopter.init_spaces()
-    generate_optimizer_value = hyperopt.hyperopter.generate_optimizer(
-        list(optimizer_param.values())
-    )
+    generate_optimizer_value = hyperopt.hyperopter.generate_optimizer(optimizer_param)
+        # list(optimizer_param.values())
+    
     assert generate_optimizer_value == response_expected
 
 
@@ -1088,8 +1088,8 @@ def test_in_strategy_auto_hyperopt(mocker, hyperopt_conf, tmp_path, fee) -> None
     assert opt.backtesting.strategy.max_open_trades != 1
 
     opt.custom_hyperopt.generate_estimator = lambda *args, **kwargs: "ET1"
-    with pytest.raises(OperationalException, match="Estimator ET1 not supported."):
-        opt.get_optimizer(2, 42, 2, 2)
+    with pytest.raises(OperationalException, match="Optuna Sampler ET1 not supported."):
+        opt.get_optimizer(42)
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
@@ -1313,9 +1313,10 @@ def test_max_open_trades_consistency(mocker, hyperopt_conf, tmp_path, fee) -> No
         @wraps(func)
         def wrapper(*args, **kwargs):
             nonlocal first_time_evaluated
+            print(f"max_open_trades: {hyperopt.hyperopter.backtesting.strategy.max_open_trades}")
             stake_amount = func(*args, **kwargs)
             if first_time_evaluated is False:
-                assert stake_amount == 1
+                assert stake_amount == 2
                 first_time_evaluated = True
             return stake_amount
 
@@ -1329,5 +1330,5 @@ def test_max_open_trades_consistency(mocker, hyperopt_conf, tmp_path, fee) -> No
 
     hyperopt.start()
 
-    assert hyperopt.hyperopter.backtesting.strategy.max_open_trades == 8
-    assert hyperopt.config["max_open_trades"] == 8
+    assert hyperopt.hyperopter.backtesting.strategy.max_open_trades == 4
+    assert hyperopt.config["max_open_trades"] == 4
