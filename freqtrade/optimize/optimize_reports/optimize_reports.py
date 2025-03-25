@@ -70,7 +70,11 @@ def generate_rejected_signals(
 
 
 def _generate_result_line(
-    result: DataFrame, starting_balance: float, first_column: str | list[str]
+    result: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
+    starting_balance: float,
+    first_column: str | list[str]
 ) -> dict:
     """
     Generate one result dict, with "first_column" as key.
@@ -78,6 +82,18 @@ def _generate_result_line(
     profit_sum = result["profit_ratio"].sum()
     # (end-capital - starting capital) / starting capital
     profit_total = result["profit_abs"].sum() / starting_balance
+    backtest_days = (max_date - min_date).days or 1
+    final_balance = starting_balance + result["profit_abs"].sum()
+    expectancy, expectancy_ratio = calculate_expectancy(result)
+    winning_profit = result.loc[result["profit_abs"] > 0, "profit_abs"].sum()
+    losing_profit = result.loc[result["profit_abs"] < 0, "profit_abs"].sum()
+    profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
+    try:
+        drawdown = calculate_max_drawdown(
+            result, value_col="profit_abs", starting_balance=starting_balance
+        )
+    except:
+        drawdown = None
 
     return {
         "key": first_column,
@@ -106,6 +122,16 @@ def _generate_result_line(
         "draws": len(result[result["profit_abs"] == 0]),
         "losses": len(result[result["profit_abs"] < 0]),
         "winrate": len(result[result["profit_abs"] > 0]) / len(result) if len(result) else 0.0,
+        "cagr": calculate_cagr(backtest_days, starting_balance, final_balance),
+        "expectancy": expectancy,
+        "expectancy_ratio": expectancy_ratio,
+        "sortino": calculate_sortino(result, min_date, max_date, starting_balance),
+        "sharpe": calculate_sharpe(result, min_date, max_date, starting_balance),
+        "calmar": calculate_calmar(result, min_date, max_date, starting_balance),
+        "sqn": calculate_sqn(result, starting_balance),
+        "profit_factor": profit_factor,
+        "max_drawdown_account": drawdown.relative_account_drawdown if drawdown else 0.0,
+        "max_drawdown_abs": drawdown.drawdown_abs if drawdown else 0.0,
     }
 
 
@@ -121,6 +147,8 @@ def generate_pair_metrics(  #
     stake_currency: str,
     starting_balance: float,
     results: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
     skip_nan: bool = False,
 ) -> list[dict]:
     """
@@ -140,13 +168,13 @@ def generate_pair_metrics(  #
         if skip_nan and result["profit_abs"].isnull().all():
             continue
 
-        tabular_data.append(_generate_result_line(result, starting_balance, pair))
+        tabular_data.append(_generate_result_line(result, min_date, max_date, starting_balance, pair))
 
     # Sort by total profit %:
     tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
     # Append Total
-    tabular_data.append(_generate_result_line(results, starting_balance, "TOTAL"))
+    tabular_data.append(_generate_result_line(results, min_date, max_date, starting_balance, "TOTAL"))
     return tabular_data
 
 
@@ -154,6 +182,8 @@ def generate_tag_metrics(
     tag_type: Literal["enter_tag", "exit_reason"] | list[Literal["enter_tag", "exit_reason"]],
     starting_balance: float,
     results: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
     skip_nan: bool = False,
 ) -> list[dict]:
     """
@@ -173,13 +203,13 @@ def generate_tag_metrics(
             if skip_nan and group["profit_abs"].isnull().all():
                 continue
 
-            tabular_data.append(_generate_result_line(group, starting_balance, tags))
+            tabular_data.append(_generate_result_line(group, min_date, max_date, starting_balance, tags))
 
         # Sort by total profit %:
         tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
         # Append Total
-        tabular_data.append(_generate_result_line(results, starting_balance, "TOTAL"))
+        tabular_data.append(_generate_result_line(results, min_date, max_date, starting_balance, "TOTAL"))
         return tabular_data
     else:
         return []
@@ -395,19 +425,33 @@ def generate_strategy_stats(
         stake_currency=stake_currency,
         starting_balance=start_balance,
         results=results,
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=False,
     )
 
     enter_tag_stats = generate_tag_metrics(
-        "enter_tag", starting_balance=start_balance, results=results, skip_nan=False
+        "enter_tag",
+        starting_balance=start_balance,
+        results=results,
+        min_date=min_date,
+        max_date=max_date,
+        skip_nan=False
     )
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=start_balance, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=start_balance,
+        results=results,
+        min_date=min_date,
+        max_date=max_date,
+        skip_nan=False
     )
     mix_tag_stats = generate_tag_metrics(
         ["enter_tag", "exit_reason"],
         starting_balance=start_balance,
         results=results,
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=False,
     )
     left_open_results = generate_pair_metrics(
@@ -415,6 +459,8 @@ def generate_strategy_stats(
         stake_currency=stake_currency,
         starting_balance=start_balance,
         results=results.loc[results["exit_reason"] == "force_exit"],
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=True,
     )
 
