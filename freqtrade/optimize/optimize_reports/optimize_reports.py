@@ -88,11 +88,13 @@ def _generate_result_line(
     winning_profit = result.loc[result["profit_abs"] > 0, "profit_abs"].sum()
     losing_profit = result.loc[result["profit_abs"] < 0, "profit_abs"].sum()
     profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
+
     try:
         drawdown = calculate_max_drawdown(
             result, value_col="profit_abs", starting_balance=starting_balance
         )
-    except:
+
+    except ValueError:
         drawdown = None
 
     return {
