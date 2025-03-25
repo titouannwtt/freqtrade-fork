@@ -49,7 +49,7 @@ class IHyperOpt(ABC):
         inheriting from BaseSampler (from optuna.samplers).
         """
         return "NSGAIISampler"
-        
+
     def generate_roi_table(self, params: dict) -> dict[int, float]:
         """
         Create a ROI table.

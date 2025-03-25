@@ -171,7 +171,9 @@ class Hyperopt:
             asked.append(self.opt.ask(dimensions))
         return asked
 
-    def get_asked_points(self, n_points: int, dimensions: dict) -> tuple[list[list[Any]], list[bool]]:
+    def get_asked_points(
+        self, n_points: int, dimensions: dict
+    ) -> tuple[list[list[Any]], list[bool]]:
         """
         Enforce points returned from `self.opt.ask` have not been already evaluated
 
@@ -197,20 +199,19 @@ class Hyperopt:
         while i < 5 and len(asked_non_tried) < n_points:
             if i < 3:
                 self.opt.cache_ = {}
-                asked = unique_list(self.get_optuna_asked_points(n_points=n_points * 5 if i > 0 else n_points,
-                                                                 dimensions=dimensions))
+                asked = unique_list(
+                    self.get_optuna_asked_points(
+                        n_points=n_points * 5 if i > 0 else n_points, dimensions=dimensions
+                    )
+                )
                 is_random = [False for _ in range(len(asked))]
             else:
                 asked = unique_list(self.opt.space.rvs(n_samples=n_points * 5))
                 is_random = [True for _ in range(len(asked))]
             is_random_non_tried += [
-                rand
-                for x, rand in zip(asked, is_random, strict=False)
-                if x not in asked_non_tried
+                rand for x, rand in zip(asked, is_random, strict=False) if x not in asked_non_tried
             ]
-            asked_non_tried += [
-                x for x in asked if x not in asked_non_tried
-            ]
+            asked_non_tried += [x for x in asked if x not in asked_non_tried]
             i += 1
 
         if asked_non_tried:
@@ -219,7 +220,9 @@ class Hyperopt:
                 is_random_non_tried[: min(len(asked_non_tried), n_points)],
             )
         else:
-            return self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions), [False for _ in range(n_points)]
+            return self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions), [
+                False for _ in range(n_points)
+            ]
 
     def evaluate_result(self, val: dict[str, Any], current: int, is_random: bool):
         """
@@ -281,7 +284,9 @@ class Hyperopt:
                     if self.analyze_per_epoch:
                         # First analysis not in parallel mode when using --analyze-per-epoch.
                         # This allows dataprovider to load it's informative cache.
-                        asked, is_random = self.get_asked_points(n_points=1, dimensions=self.hyperopter.o_dimensions)
+                        asked, is_random = self.get_asked_points(
+                            n_points=1, dimensions=self.hyperopter.o_dimensions
+                        )
                         f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
@@ -296,9 +301,12 @@ class Hyperopt:
                         current_jobs = jobs - n_rest if n_rest > 0 else jobs
 
                         asked, is_random = self.get_asked_points(
-                            n_points=current_jobs, dimensions=self.hyperopter.o_dimensions)
-                        f_val = self.run_optimizer_parallel(parallel, [asked1.params for asked1 in asked])
-                        for o_ask, v in zip(asked, f_val):
+                            n_points=current_jobs, dimensions=self.hyperopter.o_dimensions
+                        )
+                        f_val = self.run_optimizer_parallel(
+                            parallel, [asked1.params for asked1 in asked]
+                        )
+                        for o_ask, v in zip(asked, f_val, strict=False):
                             self.opt.tell(o_ask, v["loss"])
                         # self.opt.tell(asked, [v["loss"] for v in f_val])
 
