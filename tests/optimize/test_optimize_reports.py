@@ -491,7 +491,12 @@ def test_text_table_exit_reason(capsys):
     )
 
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=22, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=22,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
+        skip_nan=False,
     )
     text_table_tags("exit_tag", exit_reason_stats, "BTC")
     text = capsys.readouterr().out
@@ -529,7 +534,12 @@ def test_generate_sell_reason_stats():
     )
 
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=22, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=22,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
+        skip_nan=False,
     )
     roi_result = exit_reason_stats[0]
     assert roi_result["key"] == "roi"
