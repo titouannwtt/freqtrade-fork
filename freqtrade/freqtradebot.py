@@ -781,6 +781,10 @@ class FreqtradeBot(LoggingMixin):
         )
 
         if stake_amount is not None and stake_amount > 0.0:
+            if self.state == State.PAUSED:
+                logger.debug("Position adjustment aborted because the bot is in PAUSED state")
+                return
+
             # We should increase our position
             if self.strategy.max_entry_position_adjustment > -1:
                 count_of_entries = trade.nr_of_successful_entries
