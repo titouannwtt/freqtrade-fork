@@ -71,7 +71,12 @@ def test_text_table_bt_results(capsys):
     )
 
     pair_results = generate_pair_metrics(
-        ["ETH/BTC"], stake_currency="BTC", starting_balance=4, results=results
+        ["ETH/BTC"],
+        stake_currency="BTC",
+        starting_balance=4,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
     )
     text_table_bt_results(pair_results, stake_currency="BTC", title="title")
     text = capsys.readouterr().out
@@ -388,7 +393,12 @@ def test_generate_pair_metrics():
     )
 
     pair_results = generate_pair_metrics(
-        ["ETH/BTC"], stake_currency="BTC", starting_balance=2, results=results
+        ["ETH/BTC"],
+        stake_currency="BTC",
+        starting_balance=2,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
     )
     assert isinstance(pair_results, list)
     assert len(pair_results) == 2
