@@ -170,7 +170,7 @@ class Hyperopt:
 
     def get_asked_points(
         self, n_points: int, dimensions: dict
-    ) -> tuple[list[list[Any]], list[bool]]:
+    ) -> tuple[list[Any], list[bool]]:
         """
         Enforce points returned from `self.opt.ask` have not been already evaluated
 
@@ -300,6 +300,8 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=current_jobs, dimensions=self.hyperopter.o_dimensions
                         )
+                        # asked_params = [asked1.params for asked1 in asked]
+                        # logger.info(f"asked iteration {i}: {asked_params}")
                         f_val = self.run_optimizer_parallel(
                             parallel, [asked1.params for asked1 in asked]
                         )

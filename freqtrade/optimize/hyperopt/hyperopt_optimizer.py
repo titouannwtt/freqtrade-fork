@@ -45,6 +45,14 @@ logger = logging.getLogger(__name__)
 
 MAX_LOSS = 100000  # just a big enough number to be bad result in loss optimization
 
+optuna_samplers_dict = {
+    "TPESampler": optuna.samplers.TPESampler,
+    "GPSampler": optuna.samplers.GPSampler,
+    "CmaEsSampler": optuna.samplers.CmaEsSampler,
+    "NSGAIISampler": optuna.samplers.NSGAIISampler,
+    "NSGAIIISampler": optuna.samplers.NSGAIIISampler,
+    "QMCSampler": optuna.samplers.QMCSampler
+}
 
 class HyperOptimizer:
     """
@@ -390,16 +398,16 @@ class HyperOptimizer:
     def convert_dimensions_to_optuna_space(self, s_dimensions: list[Dimension]) -> dict:
         o_dimensions = {}
         for original_dim in s_dimensions:
-            if isinstance(original_dim, Integer):
-                o_dimensions[original_dim.name] = optuna.distributions.IntDistribution(
-                    original_dim.low, original_dim.high, log=False, step=1
-                )
-            elif isinstance(original_dim, SKDecimal):
+            if isinstance(original_dim, SKDecimal):
                 o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
                     original_dim.low_orig,
                     original_dim.high_orig,
                     log=False,
                     step=1 / pow(10, original_dim.decimals),
+                )
+            elif isinstance(original_dim, Integer):
+                o_dimensions[original_dim.name] = optuna.distributions.IntDistribution(
+                    original_dim.low, original_dim.high, log=False, step=1
                 )
             elif isinstance(original_dim, Real):
                 o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
@@ -413,7 +421,7 @@ class HyperOptimizer:
                 )
             else:
                 raise Exception(f"Unknown search space {original_dim} / {type(original_dim)}")
-            # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
+        # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
         return o_dimensions
 
     def get_optimizer(
@@ -429,28 +437,11 @@ class HyperOptimizer:
         # restored_sampler = pickle.load(open("sampler.pkl", "rb"))
 
         if isinstance(o_sampler, str):
-            if o_sampler not in (
-                "TPESampler",
-                "GPSampler",
-                "CmaEsSampler",
-                "NSGAIISampler",
-                "NSGAIIISampler",
-                "QMCSampler",
-            ):
+            if o_sampler not in optuna_samplers_dict.keys():
                 raise OperationalException(f"Optuna Sampler {o_sampler} not supported.")
-
-        if o_sampler == "TPESampler":
-            sampler = optuna.samplers.TPESampler(seed=random_state)
-        elif o_sampler == "GPSampler":
-            sampler = optuna.samplers.GPSampler(seed=random_state)
-        elif o_sampler == "CmaEsSampler":
-            sampler = optuna.samplers.CmaEsSampler(seed=random_state)
-        elif o_sampler == "NSGAIISampler":
-            sampler = optuna.samplers.NSGAIISampler(seed=random_state)
-        elif o_sampler == "NSGAIIISampler":
-            sampler = optuna.samplers.NSGAIIISampler(seed=random_state)
-        elif o_sampler == "QMCSampler":
-            sampler = optuna.samplers.QMCSampler(seed=random_state)
+            sampler = optuna_samplers_dict[o_sampler](seed=random_state)
+        else:
+            sampler = o_sampler
 
         logger.info(f"Using optuna sampler {o_sampler}.")
         return optuna.create_study(sampler=sampler, direction="minimize")
