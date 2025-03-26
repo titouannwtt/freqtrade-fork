@@ -71,36 +71,18 @@ def test_worker_stopped(mocker, default_conf, caplog) -> None:
 
 
 @pytest.mark.parametrize(
-    "old_state, target_state, expected_state,startup_call, log_fragment",
+    "old_state,target_state,startup_call,log_fragment",
     [
-        (State.STOPPED, State.PAUSED, State.PAUSED, True, "Changing state from STOPPED to: PAUSED"),
-        (
-            State.RUNNING,
-            State.PAUSED,
-            State.PAUSED,
-            False,
-            "Changing state from RUNNING to: PAUSED",
-        ),
-        (
-            State.PAUSED,
-            State.RUNNING,
-            State.RUNNING,
-            False,
-            "Changing state from PAUSED to: RUNNING",
-        ),
-        (
-            State.PAUSED,
-            State.STOPPED,
-            State.STOPPED,
-            False,
-            "Changing state from PAUSED to: STOPPED",
-        ),
+        (State.STOPPED, State.PAUSED, True, "Changing state from STOPPED to: PAUSED"),
+        (State.RUNNING, State.PAUSED, False, "Changing state from RUNNING to: PAUSED"),
+        (State.PAUSED, State.RUNNING, False, "Changing state from PAUSED to: RUNNING"),
+        (State.PAUSED, State.STOPPED, False, "Changing state from PAUSED to: STOPPED"),
+        (State.RELOAD_CONFIG, State.RUNNING, True, "Changing state from RELOAD_CONFIG to: RUNNING"),
         (
             State.RELOAD_CONFIG,
-            State.RUNNING,
-            State.RUNNING,
-            True,
-            "Changing state from RELOAD_CONFIG to: RUNNING",
+            State.STOPPED,
+            False,
+            "Changing state from RELOAD_CONFIG to: STOPPED",
         ),
     ],
 )
@@ -110,7 +92,6 @@ def test_worker_lifecycle(
     caplog,
     old_state,
     target_state,
-    expected_state,
     startup_call,
     log_fragment,
 ):
@@ -124,13 +105,13 @@ def test_worker_lifecycle(
 
     new_state = worker._worker(old_state=old_state)
 
-    assert new_state is expected_state
+    assert new_state is target_state
     assert log_has(log_fragment, caplog)
     assert mock_throttle.call_count == 1
     assert startup.call_count == (1 if startup_call else 0)
 
     # For any state where the strategy should be initialized
-    if expected_state in (State.RUNNING, State.PAUSED):
+    if target_state in (State.RUNNING, State.PAUSED):
         assert worker.freqtrade.strategy
         assert isinstance(worker.freqtrade.strategy.dp, DataProvider)
     else:
