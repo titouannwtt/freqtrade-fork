@@ -48,7 +48,7 @@ class IHyperOpt(ABC):
         "NSGAIIISampler", "QMCSampler" or an instance of a class
         inheriting from BaseSampler (from optuna.samplers).
         """
-        return "NSGAIISampler"
+        return "NSGAIIISampler"
 
     def generate_roi_table(self, params: dict) -> dict[int, float]:
         """
