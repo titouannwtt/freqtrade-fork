@@ -35,9 +35,6 @@ logger = logging.getLogger(__name__)
 
 INITIAL_POINTS = 30
 
-# Keep no more than SKOPT_MODEL_QUEUE_SIZE models
-# in the skopt model queue, to optimize memory consumption
-# SKOPT_MODEL_QUEUE_SIZE = 10
 
 log_queue: Any
 
