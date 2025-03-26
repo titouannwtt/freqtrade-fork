@@ -71,20 +71,53 @@ def test_worker_stopped(mocker, default_conf, caplog) -> None:
 
 
 @pytest.mark.parametrize(
-    "old_state, target_state, expected_state, log_fragment",
+    "old_state, target_state, expected_state,startup_call, log_fragment",
     [
-        (State.STOPPED, State.PAUSED, State.PAUSED, "Changing state from STOPPED to: PAUSED"),
-        (State.RUNNING, State.PAUSED, State.PAUSED, "Changing state from RUNNING to: PAUSED"),
-        (State.PAUSED, State.RUNNING, State.RUNNING, "Changing state from PAUSED to: RUNNING"),
-        (State.PAUSED, State.STOPPED, State.STOPPED, "Changing state from PAUSED to: STOPPED"),
+        (State.STOPPED, State.PAUSED, State.PAUSED, True, "Changing state from STOPPED to: PAUSED"),
+        (
+            State.RUNNING,
+            State.PAUSED,
+            State.PAUSED,
+            False,
+            "Changing state from RUNNING to: PAUSED",
+        ),
+        (
+            State.PAUSED,
+            State.RUNNING,
+            State.RUNNING,
+            False,
+            "Changing state from PAUSED to: RUNNING",
+        ),
+        (
+            State.PAUSED,
+            State.STOPPED,
+            State.STOPPED,
+            False,
+            "Changing state from PAUSED to: STOPPED",
+        ),
+        (
+            State.RELOAD_CONFIG,
+            State.RUNNING,
+            State.RUNNING,
+            True,
+            "Changing state from RELOAD_CONFIG to: RUNNING",
+        ),
     ],
 )
 def test_worker_lifecycle(
-    mocker, default_conf, caplog, old_state, target_state, expected_state, log_fragment
+    mocker,
+    default_conf,
+    caplog,
+    old_state,
+    target_state,
+    expected_state,
+    startup_call,
+    log_fragment,
 ):
     mock_throttle = mocker.MagicMock()
     mocker.patch("freqtrade.worker.Worker._throttle", mock_throttle)
-    mocker.patch("freqtrade.persistence.Trade.stoploss_reinitialization", mocker.MagicMock())
+    mocker.patch("freqtrade.persistence.Trade.stoploss_reinitialization")
+    startup = mocker.patch("freqtrade.freqtradebot.FreqtradeBot.startup")
 
     worker = get_patched_worker(mocker, default_conf)
     worker.freqtrade.state = target_state
@@ -94,6 +127,7 @@ def test_worker_lifecycle(
     assert new_state is expected_state
     assert log_has(log_fragment, caplog)
     assert mock_throttle.call_count == 1
+    assert startup.call_count == (1 if startup_call else 0)
 
     # For any state where the strategy should be initialized
     if expected_state in (State.RUNNING, State.PAUSED):
