@@ -168,9 +168,7 @@ class Hyperopt:
             asked.append(self.opt.ask(dimensions))
         return asked
 
-    def get_asked_points(
-        self, n_points: int, dimensions: dict
-    ) -> tuple[list[Any], list[bool]]:
+    def get_asked_points(self, n_points: int, dimensions: dict) -> tuple[list[Any], list[bool]]:
         """
         Enforce points returned from `self.opt.ask` have not been already evaluated
 

@@ -51,7 +51,7 @@ optuna_samplers_dict = {
     "CmaEsSampler": optuna.samplers.CmaEsSampler,
     "NSGAIISampler": optuna.samplers.NSGAIISampler,
     "NSGAIIISampler": optuna.samplers.NSGAIIISampler,
-    "QMCSampler": optuna.samplers.QMCSampler
+    "QMCSampler": optuna.samplers.QMCSampler,
 }
 
 
