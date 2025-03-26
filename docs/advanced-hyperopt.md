@@ -161,29 +161,19 @@ class MyAwesomeStrategy(IStrategy):
 
 ### Overriding Base estimator
 
-You can define your own estimator for Hyperopt by implementing `generate_estimator()` in the Hyperopt subclass.
+You can define your own optuna sampler for Hyperopt by implementing `generate_estimator()` in the Hyperopt subclass.
 
 ```python
 class MyAwesomeStrategy(IStrategy):
     class HyperOpt:
         def generate_estimator(dimensions: List['Dimension'], **kwargs):
-            return "RF"
+            return "TPESampler"
 
 ```
 
-Possible values are either one of "GP", "RF", "ET", "GBRT" (Details can be found in the [scikit-optimize documentation](https://scikit-optimize.github.io/)), or "an instance of a class that inherits from `RegressorMixin` (from sklearn) and where the `predict` method has an optional `return_std` argument, which returns `std(Y | x)` along with `E[Y | x]`".
+Possible values are either one of "NSGAIISampler", "TPESampler", "GPSampler", "CmaEsSampler", "NSGAIIISampler", "QMCSampler" (Details can be found in the [optuna-samplers documentation](https://optuna.readthedocs.io/en/stable/reference/samplers/index.html)), or "an instance of a class that inherits from `optuna.samplers.BaseSampler`".
 
 Some research will be necessary to find additional Regressors.
-
-Example for `ExtraTreesRegressor` ("ET") with additional parameters:
-
-```python
-class MyAwesomeStrategy(IStrategy):
-    class HyperOpt:
-        def generate_estimator(dimensions: List['Dimension'], **kwargs):
-            from skopt.learning import ExtraTreesRegressor
-            # Corresponds to "ET" - but allows additional parameters.
-            return ExtraTreesRegressor(n_estimators=100)
 
 ```
 
