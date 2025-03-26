@@ -173,7 +173,7 @@ class MyAwesomeStrategy(IStrategy):
 
 Possible values are either one of "NSGAIISampler", "TPESampler", "GPSampler", "CmaEsSampler", "NSGAIIISampler", "QMCSampler" (Details can be found in the [optuna-samplers documentation](https://optuna.readthedocs.io/en/stable/reference/samplers/index.html)), or "an instance of a class that inherits from `optuna.samplers.BaseSampler`".
 
-Some research will be necessary to find additional Regressors.
+Some research will be necessary to find additional Samplers (from optunahub) for example.
 
 ```
 
