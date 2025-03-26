@@ -54,6 +54,7 @@ optuna_samplers_dict = {
     "QMCSampler": optuna.samplers.QMCSampler
 }
 
+
 class HyperOptimizer:
     """
     HyperoptOptimizer class
@@ -396,7 +397,7 @@ class HyperOptimizer:
         }
 
     def convert_dimensions_to_optuna_space(self, s_dimensions: list[Dimension]) -> dict:
-        o_dimensions = {}
+        o_dimensions: dict[str, optuna.distributions.BaseDistribution] = {}
         for original_dim in s_dimensions:
             if isinstance(original_dim, SKDecimal):
                 o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
