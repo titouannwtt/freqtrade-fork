@@ -139,6 +139,7 @@ jobs:
         ruff format --check
 
     - name: Mypy
+      if: ${{ matrix.os }} == 'ubuntu-24.04'
       run: |
         mypy freqtrade scripts tests
 
@@ -264,6 +265,7 @@ jobs:
         ruff format --check
 
     - name: Mypy
+      if: ${{ matrix.os }} == 'macos-15'
       run: |
         mypy freqtrade scripts
 
