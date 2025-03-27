@@ -29,7 +29,7 @@ classifiers = [
 
 dependencies = [
   # from requirements.txt
-  "ccxt>=4.3.24",
+  "ccxt>=4.4.60",
   "SQLAlchemy>=2.0.6",
   "python-telegram-bot>=20.1",
   "humanize>=4.0.0",
@@ -287,8 +287,6 @@ max-complexity = 12
 [tool.ruff.lint.per-file-ignores]
 "freqtrade/freqai/**/*.py" = [
   "S311",  # Standard pseudo-random generators are not suitable for cryptographic purposes
-  "B006",  # Bugbear - mutable default argument
-  "B008",  # bugbear - Do not perform function calls in argument defaults
 ]
 "tests/**/*.py" = [
   "S101",  # allow assert in tests

@@ -603,7 +603,7 @@ class Backtesting:
             # This should not be reached...
             return row[OPEN_IDX]
 
-    def _get_adjust_trade_entry_for_candle(
+    def _check_adjust_trade_for_candle(
         self, trade: LocalTrade, row: tuple, current_time: datetime
     ) -> LocalTrade:
         current_rate: float = row[OPEN_IDX]
@@ -714,7 +714,7 @@ class Backtesting:
                     exchange=self.exchange,
                     wallets=self.wallets,
                     stake_currency=self.config["stake_currency"],
-                    dry_run=self.config["dry_run"],
+                    dry_run=True,
                 )
             if not (order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount):
                 self._call_adjust_stop(current_date, trade, order.ft_price)
@@ -871,7 +871,7 @@ class Backtesting:
 
         # Check if we need to adjust our current positions
         if self.strategy.position_adjustment_enable:
-            trade = self._get_adjust_trade_entry_for_candle(trade, row, current_time)
+            trade = self._check_adjust_trade_for_candle(trade, row, current_time)
 
         if trade.is_open:
             enter = row[SHORT_IDX] if trade.is_short else row[LONG_IDX]
@@ -1552,7 +1552,9 @@ class Backtesting:
                     row_index += 1
                     indexes[pair] = row_index
                     is_last_row = current_time == end_date
-                    self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
+                    self.dataprovider._set_dataframe_max_index(
+                        pair, self.required_startup + row_index
+                    )
                     trade_dir = self.check_for_trade_entry(row)
                     pair_tradedir_cache[pair] = trade_dir
 
@@ -1790,6 +1792,7 @@ class Backtesting:
                     dt_appendix,
                     market_change_data=combined_res,
                     analysis_results=self.analysis_results,
+                    strategy_files={s.get_strategy_name(): s.__file__ for s in self.strategylist},
                 )
 
         # Results may be mixed up now. Sort them so they follow --strategy-list order.

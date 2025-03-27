@@ -16,8 +16,9 @@ from freqtrade.data.metrics import (
     calculate_max_drawdown,
     calculate_sharpe,
     calculate_sortino,
+    calculate_sqn,
 )
-from freqtrade.ft_types import BacktestResultType
+from freqtrade.ft_types import BacktestResultType, get_BacktestResultType_default
 from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
@@ -211,6 +212,8 @@ def _get_resample_from_period(period: str) -> str:
         return "1W-MON"
     if period == "month":
         return "1ME"
+    if period == "year":
+        return "1YE"
     raise ValueError(f"Period {period} is not supported.")
 
 
@@ -228,8 +231,11 @@ def generate_periodic_breakdown_stats(
         profit_abs = day["profit_abs"].sum().round(10)
         wins = sum(day["profit_abs"] > 0)
         draws = sum(day["profit_abs"] == 0)
-        loses = sum(day["profit_abs"] < 0)
-        trades = wins + draws + loses
+        losses = sum(day["profit_abs"] < 0)
+        trades = wins + draws + losses
+        winning_profit = day.loc[day["profit_abs"] > 0, "profit_abs"].sum()
+        losing_profit = day.loc[day["profit_abs"] < 0, "profit_abs"].sum()
+        profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
         stats.append(
             {
                 "date": name.strftime("%d/%m/%Y"),
@@ -237,8 +243,9 @@ def generate_periodic_breakdown_stats(
                 "profit_abs": profit_abs,
                 "wins": wins,
                 "draws": draws,
-                "loses": loses,
-                "winrate": wins / trades if trades else 0.0,
+                "losses": losses,
+                "trades": trades,
+                "profit_factor": round(profit_factor, 8),
             }
         )
     return stats
@@ -468,6 +475,7 @@ def generate_strategy_stats(
         "sortino": calculate_sortino(results, min_date, max_date, start_balance),
         "sharpe": calculate_sharpe(results, min_date, max_date, start_balance),
         "calmar": calculate_calmar(results, min_date, max_date, start_balance),
+        "sqn": calculate_sqn(results, start_balance),
         "profit_factor": profit_factor,
         "backtest_start": min_date.strftime(DATETIME_PRINT_FORMAT),
         "backtest_start_ts": int(min_date.timestamp() * 1000),
@@ -579,11 +587,7 @@ def generate_backtest_stats(
     :param max_date: Backtest end date
     :return: Dictionary containing results per strategy and a strategy summary.
     """
-    result: BacktestResultType = {
-        "metadata": {},
-        "strategy": {},
-        "strategy_comparison": [],
-    }
+    result: BacktestResultType = get_BacktestResultType_default()
     market_change = calculate_market_change(btdata, "close")
     metadata = {}
     pairlist = list(btdata.keys())

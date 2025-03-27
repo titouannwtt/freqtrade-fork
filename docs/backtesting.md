@@ -209,6 +209,7 @@ A backtesting result will look like that:
 | Sortino                     | 1.88                |
 | Sharpe                      | 2.97                |
 | Calmar                      | 6.29                |
+| SQN                         | 2.45                |
 | Profit factor               | 1.11                |
 | Expectancy (Ratio)          | -0.15 (-0.05)       |
 | Avg. stake amount           | 0.001      BTC      |
@@ -315,6 +316,7 @@ It contains some useful key metrics about performance of your strategy on backte
 | Sortino                     | 1.88                |
 | Sharpe                      | 2.97                |
 | Calmar                      | 6.29                |
+| SQN                         | 2.45                |
 | Profit factor               | 1.11                |
 | Expectancy (Ratio)          | -0.15 (-0.05)       |
 | Avg. stake amount           | 0.001      BTC      |
@@ -368,6 +370,7 @@ It contains some useful key metrics about performance of your strategy on backte
 - `Sortino`: Annualized Sortino ratio.
 - `Sharpe`: Annualized Sharpe ratio.
 - `Calmar`: Annualized Calmar ratio.
+- `SQN`: System Quality Number (SQN) - by Van Tharp.
 - `Profit factor`: profit / loss.
 - `Avg. stake amount`: Average stake amount, either `stake_amount` or the average when using dynamic stake amount.
 - `Total trade volume`: Volume generated on the exchange to reach the above profit.
@@ -431,6 +434,20 @@ To save time, by default backtest will reuse a cached result from within the las
 
 To further analyze your backtest results, freqtrade will export the trades to file by default.
 You can then load the trades to perform further analysis as shown in the [data analysis](strategy_analysis_example.md#load-backtest-results-to-pandas-dataframe) backtesting section.
+
+### Backtest output file
+
+The output file freqtrade produces is a zip file containing the following files:
+
+- The backtest report in json format
+- the market change data in feather format
+- a copy of the strategy file
+- a copy of the strategy parameters (if a parameter file was used)
+- a sanitized copy of the config file
+
+This will ensure results are reproducible - under the assumption that the same data is available.
+
+Only the strategy file and the config file are included in the zip file, eventual dependencies are not included.
 
 ## Assumptions made by backtesting
 

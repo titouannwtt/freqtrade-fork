@@ -25,6 +25,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
+    Message,
     ReplyKeyboardMarkup,
     Update,
 )
@@ -96,17 +97,17 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
     """
 
     @wraps(command_handler)
-    async def wrapper(self, *args, **kwargs):
+    async def wrapper(self, *args, **kwargs) -> None:
         """Decorator logic"""
         update = kwargs.get("update") or args[0]
 
         # Reject unauthorized messages
-        if update.callback_query:
-            cchat_id = int(update.callback_query.message.chat.id)
-            ctopic_id = update.callback_query.message.message_thread_id
-        else:
-            cchat_id = int(update.message.chat_id)
-            ctopic_id = update.message.message_thread_id
+        message: Message = (
+            update.message if update.callback_query is None else update.callback_query.message
+        )
+        cchat_id: int = int(message.chat_id)
+        ctopic_id: int | None = message.message_thread_id
+        from_user_id: str = str(update.effective_user.id if update.effective_user else "")
 
         chat_id = int(self._config["telegram"]["chat_id"])
         if cchat_id != chat_id:
@@ -118,6 +119,10 @@ def authorized_only(command_handler: Callable[..., Coroutine[Any, Any, None]]):
                 logger.debug(f"Rejected message from wrong channel: {cchat_id}, {ctopic_id}")
                 return None
 
+        authorized = self._config["telegram"].get("authorized_users", None)
+        if authorized is not None and from_user_id not in authorized:
+            logger.info(f"Unauthorized user tried to control the bot: {from_user_id}")
+            return None
         # Rollback session to avoid getting data stored in a transaction.
         Trade.rollback()
         logger.debug("Executing handler: %s for chat_id: %s", command_handler.__name__, chat_id)
@@ -1976,16 +1981,17 @@ class Telegram(RPCHandler):
             results = self._rpc._rpc_list_custom_data(trade_id, key)
             messages = []
             if len(results) > 0:
-                messages.append("Found custom-data entr" + ("ies: " if len(results) > 1 else "y: "))
-                for result in results:
+                trade_custom_data = results[0]["custom_data"]
+                messages.append(
+                    "Found custom-data entr" + ("ies: " if len(trade_custom_data) > 1 else "y: ")
+                )
+                for custom_data in trade_custom_data:
                     lines = [
-                        f"*Key:* `{result['cd_key']}`",
-                        f"*ID:* `{result['id']}`",
-                        f"*Trade ID:* `{result['ft_trade_id']}`",
-                        f"*Type:* `{result['cd_type']}`",
-                        f"*Value:* `{result['cd_value']}`",
-                        f"*Create Date:* `{format_date(result['created_at'])}`",
-                        f"*Update Date:* `{format_date(result['updated_at'])}`",
+                        f"*Key:* `{custom_data['key']}`",
+                        f"*Type:* `{custom_data['type']}`",
+                        f"*Value:* `{custom_data['value']}`",
+                        f"*Create Date:* `{format_date(custom_data['created_at'])}`",
+                        f"*Update Date:* `{format_date(custom_data['updated_at'])}`",
                     ]
                     # Filter empty lines using list-comprehension
                     messages.append("\n".join([line for line in lines if line]))
@@ -2153,6 +2159,9 @@ class Telegram(RPCHandler):
             return
         chat_id = update.message.chat_id
         topic_id = update.message.message_thread_id
+        user_id = (
+            update.effective_user.id if topic_id is not None and update.effective_user else None
+        )
 
         msg = f"""Freqtrade Bot Info:
         ```json
@@ -2160,7 +2169,8 @@ class Telegram(RPCHandler):
                 "enabled": true,
                 "token": "********",
                 "chat_id": "{chat_id}",
-                {f'"topic_id": "{topic_id}"' if topic_id else ""}
+                {f'"topic_id": "{topic_id}",' if topic_id else ""}
+                {f'//"authorized_users": ["{user_id}"]' if topic_id and user_id else ""}
             }}
         ```
         """
