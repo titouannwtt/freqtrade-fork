@@ -294,7 +294,7 @@ class Telegram(RPCHandler):
             CommandHandler(["unlock", "delete_locks"], self._delete_locks),
             CommandHandler(["reload_config", "reload_conf"], self._reload_config),
             CommandHandler(["show_config", "show_conf"], self._show_config),
-            CommandHandler(["stopbuy", "stopentry", "pause"], self._stopentry),
+            CommandHandler(["stopbuy", "stopentry", "pause"], self._pause),
             CommandHandler("whitelist", self._whitelist),
             CommandHandler("blacklist", self._blacklist),
             CommandHandler(["blacklist_delete", "bl_delete"], self._blacklist_delete),
@@ -1270,7 +1270,7 @@ class Telegram(RPCHandler):
         await self._send_msg(f"Status: `{msg['status']}`")
 
     @authorized_only
-    async def _stopentry(self, update: Update, context: CallbackContext) -> None:
+    async def _pause(self, update: Update, context: CallbackContext) -> None:
         """
         Handler for /stop_buy /stop_entry and /pause.
         Sets bot state to paused
@@ -1278,7 +1278,7 @@ class Telegram(RPCHandler):
         :param update: message update
         :return: None
         """
-        msg = self._rpc._rpc_stopentry()
+        msg = self._rpc._rpc_pause()
         await self._send_msg(f"Status: `{msg['status']}`")
 
     @authorized_only

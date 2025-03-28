@@ -849,9 +849,9 @@ class RPC:
         self._freqtrade.state = State.RELOAD_CONFIG
         return {"status": "Reloading config ..."}
 
-    def _rpc_stopentry(self) -> dict[str, str]:
+    def _rpc_pause(self) -> dict[str, str]:
         """
-        Handler to stop buying, but handle open trades gracefully.
+        Handler to pause trading (stop entering new trades), but handle open trades gracefully.
         """
         if self._freqtrade.state == State.RUNNING:
             self._freqtrade.state = State.PAUSED

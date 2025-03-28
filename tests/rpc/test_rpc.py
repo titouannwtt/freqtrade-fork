@@ -806,7 +806,7 @@ def test_rpc_stop(mocker, default_conf) -> None:
     assert freqtradebot.state == State.STOPPED
 
 
-def test_rpc_stopentry(mocker, default_conf) -> None:
+def test_rpc_pause(mocker, default_conf) -> None:
     mocker.patch("freqtrade.rpc.telegram.Telegram", MagicMock())
     mocker.patch.multiple(EXMS, fetch_ticker=MagicMock())
 
@@ -815,7 +815,7 @@ def test_rpc_stopentry(mocker, default_conf) -> None:
     rpc = RPC(freqtradebot)
     freqtradebot.state = State.PAUSED
 
-    result = rpc._rpc_stopentry()
+    result = rpc._rpc_pause()
     assert {
         "status": "No more entries will occur from now. Run /start to enable entries."
     } == result

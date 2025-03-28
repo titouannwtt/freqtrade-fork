@@ -533,14 +533,14 @@ def test_api_reloadconf(botclient):
     assert ftbot.state == State.RELOAD_CONFIG
 
 
-def test_api_stopentry(botclient):
+def test_api_pause(botclient):
     ftbot, client = botclient
 
-    rc = client_post(client, f"{BASE_URI}/stopbuy")
+    rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
     assert rc.json() == {"status": "pausing trader ..."}
 
-    rc = client_post(client, f"{BASE_URI}/stopbuy")
+    rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
     assert rc.json() == {
         "status": "No more entries will occur from now. Run /start to enable entries."
