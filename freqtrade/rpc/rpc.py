@@ -856,9 +856,6 @@ class RPC:
         if self._freqtrade.state == State.RUNNING:
             self._freqtrade.state = State.PAUSED
 
-        if self._freqtrade.state == State.PAUSED:
-            return {"status": "paused, no entries will occur. Run /start to enable entries."}
-
         if self._freqtrade.state == State.STOPPED:
             self._freqtrade.state = State.PAUSED
             return {
