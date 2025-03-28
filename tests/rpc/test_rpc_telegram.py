@@ -1230,7 +1230,7 @@ async def test_pause_handle(default_conf, update, mocker) -> None:
     assert freqtradebot.state == State.PAUSED
     assert msg_mock.call_count == 1
     assert (
-        "paused, no entries will occur. Run /start to enable entries."
+        "paused, no more entries will occur from now. Run /start to enable entries."
         in msg_mock.call_args_list[0][0][0]
     )
 
