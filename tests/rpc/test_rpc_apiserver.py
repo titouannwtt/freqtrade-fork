@@ -538,19 +538,15 @@ def test_api_pause(botclient):
 
     rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
-    assert rc.json() == {"status": "pausing trader ..."}
+    assert rc.json() == {"status": "paused, no entries will occur. Run /start to enable entries."}
 
     rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
-    assert rc.json() == {
-        "status": "No more entries will occur from now. Run /start to enable entries."
-    }
+    assert rc.json() == {"status": "paused, no entries will occur. Run /start to enable entries."}
 
     rc = client_post(client, f"{BASE_URI}/stopentry")
     assert_response(rc)
-    assert rc.json() == {
-        "status": "No more entries will occur from now. Run /start to enable entries."
-    }
+    assert rc.json() == {"status": "paused, no entries will occur. Run /start to enable entries."}
 
 
 def test_api_balance(botclient, mocker, rpc_balance, tickers):

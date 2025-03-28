@@ -816,9 +816,7 @@ def test_rpc_pause(mocker, default_conf) -> None:
     freqtradebot.state = State.PAUSED
 
     result = rpc._rpc_pause()
-    assert {
-        "status": "No more entries will occur from now. Run /start to enable entries."
-    } == result
+    assert {"status": "paused, no entries will occur. Run /start to enable entries."} == result
 
 
 def test_rpc_force_exit(default_conf, ticker, fee, mocker) -> None:

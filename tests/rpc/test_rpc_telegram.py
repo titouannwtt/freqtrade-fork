@@ -1229,7 +1229,10 @@ async def test_pause_handle(default_conf, update, mocker) -> None:
     await telegram._pause(update=update, context=MagicMock())
     assert freqtradebot.state == State.PAUSED
     assert msg_mock.call_count == 1
-    assert "pausing trader ..." in msg_mock.call_args_list[0][0][0]
+    assert (
+        "paused, no entries will occur. Run /start to enable entries."
+        in msg_mock.call_args_list[0][0][0]
+    )
 
 
 async def test_reload_config_handle(default_conf, update, mocker) -> None:
