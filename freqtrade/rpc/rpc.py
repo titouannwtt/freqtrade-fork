@@ -855,13 +855,20 @@ class RPC:
         """
         if self._freqtrade.state == State.RUNNING:
             self._freqtrade.state = State.PAUSED
-            return {"status": "pausing trader ..."}
+
+        if self._freqtrade.state == State.PAUSED:
+            return {"status": "paused, no entries will occur. Run /start to enable entries."}
 
         if self._freqtrade.state == State.STOPPED:
             self._freqtrade.state = State.PAUSED
-            return {"status": "starting bot with trader in paused state..."}
+            return {
+                "status": "starting bot with trader in paused state, no entries will occur. \
+                 Run /start to enable entries."
+            }
 
-        return {"status": "No more entries will occur from now. Run /start to enable entries."}
+        return {
+            "status": "paused, no more entries will occur from now. Run /start to enable entries."
+        }
 
     def _rpc_reload_trade_from_exchange(self, trade_id: int) -> dict[str, str]:
         """
