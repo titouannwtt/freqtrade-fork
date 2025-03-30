@@ -1792,6 +1792,7 @@ class Backtesting:
                     dt_appendix,
                     market_change_data=combined_res,
                     analysis_results=self.analysis_results,
+                    strategy_files={s.get_strategy_name(): s.__file__ for s in self.strategylist},
                 )
 
         # Results may be mixed up now. Sort them so they follow --strategy-list order.
