@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class ft_CategoricalDistribution(CategoricalDistribution):
     name: str
+
     def __init__(
         self,
         categories: Sequence[Any],
@@ -34,8 +35,10 @@ class ft_CategoricalDistribution(CategoricalDistribution):
     ):
         return super().__init__(categories)
 
+
 class ft_IntDistribution(IntDistribution):
     name: str
+
     def __init__(
         self,
         low: int,
@@ -43,6 +46,7 @@ class ft_IntDistribution(IntDistribution):
         **kwargs,
     ):
         return super().__init__(low, high, **kwargs)
+
 
 class BaseParameter(ABC):
     """
@@ -88,9 +92,9 @@ class BaseParameter(ABC):
         return f"{self.__class__.__name__}({self.value})"
 
     @abstractmethod
-    def get_space(self, name: str) -> Union[
-        "ft_IntDistribution", "Real", "SKDecimal", "ft_CategoricalDistribution"
-    ]:
+    def get_space(
+        self, name: str
+    ) -> Union["ft_IntDistribution", "Real", "SKDecimal", "ft_CategoricalDistribution"]:
         """
         Get-space - will be used by Hyperopt to get the hyperopt Space
         """
@@ -187,9 +191,7 @@ class IntParameter(NumericParameter):
         :param name: A name of parameter field.
         """
         # return Integer(low=self.low, high=self.high, name=name, **self._space_params)
-        result = ft_IntDistribution(
-                    self.low, self.high, **self._space_params
-                )
+        result = ft_IntDistribution(self.low, self.high, **self._space_params)
         result.name = name
         return result
 

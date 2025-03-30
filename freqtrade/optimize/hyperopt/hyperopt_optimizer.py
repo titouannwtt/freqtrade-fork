@@ -422,9 +422,9 @@ class HyperOptimizer:
                     list(original_dim.bounds)
                 )
             # for preparing to remove old skopt spaces
-            elif isinstance(
-                original_dim, ft_CategoricalDistribution
-            ) or isinstance(original_dim, ft_IntDistribution):
+            elif isinstance(original_dim, ft_CategoricalDistribution) or isinstance(
+                original_dim, ft_IntDistribution
+            ):
                 o_dimensions[original_dim.name] = original_dim
             else:
                 raise Exception(f"Unknown search space {original_dim} / {type(original_dim)}")
