@@ -39,6 +39,7 @@ with warnings.catch_warnings():
     from skopt.space import Categorical, Dimension, Integer, Real
 
     from freqtrade.optimize.space.decimalspace import SKDecimal
+    from freqtrade.strategy.parameters import ft_CategoricalDistribution, ft_IntDistribution
 
 logger = logging.getLogger(__name__)
 
@@ -420,6 +421,11 @@ class HyperOptimizer:
                 o_dimensions[original_dim.name] = optuna.distributions.CategoricalDistribution(
                     list(original_dim.bounds)
                 )
+            # for preparing to remove old skopt spaces
+            elif isinstance(
+                original_dim, ft_CategoricalDistribution
+            ) or isinstance(original_dim, ft_IntDistribution):
+                o_dimensions[original_dim.name] = original_dim
             else:
                 raise Exception(f"Unknown search space {original_dim} / {type(original_dim)}")
         # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
@@ -429,7 +435,9 @@ class HyperOptimizer:
         self,
         random_state: int,
     ):
-        o_sampler = self.custom_hyperopt.generate_estimator(dimensions=self.dimensions)
+        o_sampler = self.custom_hyperopt.generate_estimator(
+            dimensions=self.dimensions, random_state=random_state
+        )
         self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
         # for save/restore

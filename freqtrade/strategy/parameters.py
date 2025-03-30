@@ -14,7 +14,8 @@ from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
 
 
 with suppress(ImportError):
-    from skopt.space import Categorical, Integer, Real
+    from optuna.distributions import CategoricalDistribution, IntDistribution
+    from skopt.space import Integer, Real  # Categorical
 
     from freqtrade.optimize.space import SKDecimal
 
@@ -23,6 +24,25 @@ from freqtrade.exceptions import OperationalException
 
 logger = logging.getLogger(__name__)
 
+
+class ft_CategoricalDistribution(CategoricalDistribution):
+    name: str
+    def __init__(
+        self,
+        categories: Sequence[Any],
+        **kwargs,
+    ):
+        return super().__init__(categories)
+
+class ft_IntDistribution(IntDistribution):
+    name: str
+    def __init__(
+        self,
+        low: int,
+        high: int,
+        **kwargs,
+    ):
+        return super().__init__(low, high, **kwargs)
 
 class BaseParameter(ABC):
     """
@@ -51,7 +71,8 @@ class BaseParameter(ABC):
          name is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to skopt.space.(Integer|Real|Categorical).
+        :param kwargs: Extra parameters to optuna.distributions.
+                (IntDistribution|Real|CategoricalDistribution).
         """
         if "name" in kwargs:
             raise OperationalException(
@@ -67,7 +88,9 @@ class BaseParameter(ABC):
         return f"{self.__class__.__name__}({self.value})"
 
     @abstractmethod
-    def get_space(self, name: str) -> Union["Integer", "Real", "SKDecimal", "Categorical"]:
+    def get_space(self, name: str) -> Union[
+        "ft_IntDistribution", "Real", "SKDecimal", "ft_CategoricalDistribution"
+    ]:
         """
         Get-space - will be used by Hyperopt to get the hyperopt Space
         """
@@ -151,7 +174,7 @@ class IntParameter(NumericParameter):
                       parameter fieldname is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to skopt.space.Integer.
+        :param kwargs: Extra parameters to optuna.distributions.IntDistribution.
         """
 
         super().__init__(
@@ -160,10 +183,15 @@ class IntParameter(NumericParameter):
 
     def get_space(self, name: str) -> "Integer":
         """
-        Create skopt optimization space.
+        Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return Integer(low=self.low, high=self.high, name=name, **self._space_params)
+        # return Integer(low=self.low, high=self.high, name=name, **self._space_params)
+        result = ft_IntDistribution(
+                    self.low, self.high, **self._space_params
+                )
+        result.name = name
+        return result
 
     @property
     def range(self):
@@ -174,7 +202,7 @@ class IntParameter(NumericParameter):
         calculating 100ds of indicators.
         """
         if self.can_optimize():
-            # Scikit-optimize ranges are "inclusive", while python's "range" is exclusive
+            # optuna distributions ranges are "inclusive", while python's "range" is exclusive
             return range(self.low, self.high + 1)
         else:
             return range(self.value, self.value + 1)
@@ -305,7 +333,7 @@ class CategoricalParameter(BaseParameter):
          name is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to skopt.space.Categorical.
+        :param kwargs: Extra parameters to optuna.distributions.CategoricalDistribution.
         """
         if len(categories) < 2:
             raise OperationalException(
@@ -314,12 +342,15 @@ class CategoricalParameter(BaseParameter):
         self.opt_range = categories
         super().__init__(default=default, space=space, optimize=optimize, load=load, **kwargs)
 
-    def get_space(self, name: str) -> "Categorical":
+    def get_space(self, name: str) -> "ft_CategoricalDistribution":
         """
-        Create skopt optimization space.
+        Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return Categorical(self.opt_range, name=name, **self._space_params)
+        # Categorical(self.opt_range, name=name, **self._space_params)
+        result = ft_CategoricalDistribution(self.opt_range)
+        result.name = name
+        return result
 
     @property
     def range(self):
@@ -355,7 +386,7 @@ class BooleanParameter(CategoricalParameter):
          name is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to skopt.space.Categorical.
+        :param kwargs: Extra parameters to optuna.distributions.CategoricalDistribution.
         """
 
         categories = [True, False]
