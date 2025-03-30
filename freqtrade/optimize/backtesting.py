@@ -360,8 +360,9 @@ class Backtesting:
             )
             # Combine data to avoid combining the data per trade.
             unavailable_pairs = []
+            uses_leverage_tiers = self.exchange.get_option("uses_leverage_tiers", True)
             for pair in self.pairlists.whitelist:
-                if pair not in self.exchange._leverage_tiers:
+                if uses_leverage_tiers and pair not in self.exchange._leverage_tiers:
                     unavailable_pairs.append(pair)
                     continue
 
