@@ -7,7 +7,6 @@ from unittest.mock import ANY, MagicMock, PropertyMock
 import pandas as pd
 import pytest
 from filelock import Timeout
-from skopt.space import Integer
 
 from freqtrade.commands.optimize_commands import setup_optimize_configuration, start_hyperopt
 from freqtrade.data.history import load_data
@@ -19,6 +18,9 @@ from freqtrade.optimize.hyperopt_tools import HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.optimize.space import SKDecimal
 from freqtrade.strategy import IntParameter
+
+# from skopt.space import Integer
+from freqtrade.strategy.parameters import ft_IntDistribution
 from freqtrade.util import dt_utc
 from tests.conftest import (
     CURRENT_TEST_STRATEGY,
@@ -1304,7 +1306,8 @@ def test_max_open_trades_consistency(mocker, hyperopt_conf, tmp_path, fee) -> No
     assert isinstance(hyperopt.hyperopter.custom_hyperopt, HyperOptAuto)
 
     hyperopt.hyperopter.custom_hyperopt.max_open_trades_space = lambda: [
-        Integer(1, 10, name="max_open_trades")
+        # Integer(1, 10, name="max_open_trades")
+        ft_IntDistribution("max_open_trades", 1, 10)
     ]
 
     first_time_evaluated = False

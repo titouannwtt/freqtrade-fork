@@ -36,10 +36,14 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     # from skopt import Optimizer
     import optuna
-    from skopt.space import Categorical, Dimension, Integer, Real
+    from skopt.space import Dimension
 
     from freqtrade.optimize.space.decimalspace import SKDecimal
-    from freqtrade.strategy.parameters import ft_CategoricalDistribution, ft_IntDistribution
+    from freqtrade.strategy.parameters import (
+        ft_CategoricalDistribution,
+        ft_FloatDistribution,
+        ft_IntDistribution,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -407,27 +411,18 @@ class HyperOptimizer:
                     log=False,
                     step=1 / pow(10, original_dim.decimals),
                 )
-            elif isinstance(original_dim, Integer):
-                o_dimensions[original_dim.name] = optuna.distributions.IntDistribution(
-                    original_dim.low, original_dim.high, log=False, step=1
-                )
-            elif isinstance(original_dim, Real):
-                o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
-                    original_dim.low,
-                    original_dim.high,
-                    log=False,
-                )
-            elif isinstance(original_dim, Categorical):
-                o_dimensions[original_dim.name] = optuna.distributions.CategoricalDistribution(
-                    list(original_dim.bounds)
-                )
             # for preparing to remove old skopt spaces
-            elif isinstance(original_dim, ft_CategoricalDistribution) or isinstance(
-                original_dim, ft_IntDistribution
+            elif (
+                isinstance(original_dim, ft_CategoricalDistribution)
+                or isinstance(original_dim, ft_IntDistribution)
+                or isinstance(original_dim, ft_FloatDistribution)
             ):
                 o_dimensions[original_dim.name] = original_dim
             else:
-                raise Exception(f"Unknown search space {original_dim} / {type(original_dim)}")
+                raise Exception(
+                    f"Unknown search space {original_dim.name} - {original_dim} / \
+                        {type(original_dim)}"
+                )
         # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
         return o_dimensions
 

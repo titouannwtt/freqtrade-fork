@@ -9,13 +9,17 @@ from abc import ABC
 from typing import TypeAlias
 
 from sklearn.base import RegressorMixin
-from skopt.space import Categorical, Dimension, Integer
+from skopt.space import Dimension  # , Integer, Categorical,
 
 from freqtrade.constants import Config
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.misc import round_dict
 from freqtrade.optimize.space import SKDecimal
 from freqtrade.strategy import IStrategy
+from freqtrade.strategy.parameters import (
+    ft_CategoricalDistribution,
+    ft_IntDistribution,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -133,9 +137,12 @@ class IHyperOpt(ABC):
         logger.info(f"Max roi table: {round_dict(self.generate_roi_table(p), 3)}")
 
         return [
-            Integer(roi_limits["roi_t1_min"], roi_limits["roi_t1_max"], name="roi_t1"),
-            Integer(roi_limits["roi_t2_min"], roi_limits["roi_t2_max"], name="roi_t2"),
-            Integer(roi_limits["roi_t3_min"], roi_limits["roi_t3_max"], name="roi_t3"),
+            # Integer(roi_limits["roi_t1_min"], roi_limits["roi_t1_max"], name="roi_t1"),
+            ft_IntDistribution("roi_t1", roi_limits["roi_t1_min"], roi_limits["roi_t1_max"]),
+            # Integer(roi_limits["roi_t2_min"], roi_limits["roi_t2_max"], name="roi_t2"),
+            ft_IntDistribution("roi_t2", roi_limits["roi_t2_min"], roi_limits["roi_t2_max"]),
+            # Integer(roi_limits["roi_t3_min"], roi_limits["roi_t3_max"], name="roi_t3"),
+            ft_IntDistribution("roi_t3", roi_limits["roi_t3_min"], roi_limits["roi_t3_max"]),
             SKDecimal(
                 roi_limits["roi_p1_min"], roi_limits["roi_p1_max"], decimals=3, name="roi_p1"
             ),
@@ -184,7 +191,8 @@ class IHyperOpt(ABC):
             # This parameter is included into the hyperspace dimensions rather than assigning
             # it explicitly in the code in order to have it printed in the results along with
             # other 'trailing' hyperspace parameters.
-            Categorical([True], name="trailing_stop"),
+            # Categorical([True], name="trailing_stop"),
+            ft_CategoricalDistribution("trailing_stop", [True]),
             SKDecimal(0.01, 0.35, decimals=3, name="trailing_stop_positive"),
             # 'trailing_stop_positive_offset' should be greater than 'trailing_stop_positive',
             # so this intermediate parameter is used as the value of the difference between
@@ -192,7 +200,8 @@ class IHyperOpt(ABC):
             # generate_trailing_params() method.
             # This is similar to the hyperspace dimensions used for constructing the ROI tables.
             SKDecimal(0.001, 0.1, decimals=3, name="trailing_stop_positive_offset_p1"),
-            Categorical([True, False], name="trailing_only_offset_is_reached"),
+            # Categorical([True, False], name="trailing_only_offset_is_reached"),
+            ft_CategoricalDistribution("trailing_only_offset_is_reached", [True, False]),
         ]
 
     def max_open_trades_space(self) -> list[Dimension]:
@@ -201,9 +210,10 @@ class IHyperOpt(ABC):
 
         You may override it in your custom Hyperopt class.
         """
-        return [
-            Integer(-1, 10, name="max_open_trades"),
-        ]
+        # return [
+        #     Integer(-1, 10, name="max_open_trades"),
+        # ]
+        return [ft_IntDistribution("max_open_trades", -1, 10)]
 
     # This is needed for proper unpickling the class attribute timeframe
     # which is set to the actual value by the resolver.
