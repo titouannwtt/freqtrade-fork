@@ -859,8 +859,10 @@ class RPC:
         if self._freqtrade.state == State.STOPPED:
             self._freqtrade.state = State.PAUSED
             return {
-                "status": "starting bot with trader in paused state, no entries will occur. \
-                 Run /start to enable entries."
+                "status": (
+                    "starting bot with trader in paused state, no entries will occur. "
+                    "Run /start to enable entries."
+                )
             }
 
         return {
