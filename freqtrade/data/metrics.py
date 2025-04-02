@@ -118,7 +118,7 @@ def _calc_drawdown_series(
 ) -> pd.DataFrame:
     max_drawdown_df = pd.DataFrame()
     max_drawdown_df["cumulative"] = profit_results[value_col].cumsum()
-    max_drawdown_df["high_value"] = max_drawdown_df["cumulative"].cummax()
+    max_drawdown_df["high_value"] = np.maximum(0, max_drawdown_df["cumulative"].cummax())
     max_drawdown_df["drawdown"] = max_drawdown_df["cumulative"] - max_drawdown_df["high_value"]
     max_drawdown_df["date"] = profit_results.loc[:, date_col]
     if starting_balance:
