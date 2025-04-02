@@ -148,6 +148,7 @@ class Exchange:
         "trades_has_history": False,
         "l2_limit_range": None,
         "l2_limit_range_required": True,  # Allow Empty L2 limit (kucoin)
+        "l2_limit_upper": None,  # Upper limit for L2 limit
         "mark_ohlcv_price": "mark",
         "mark_ohlcv_timeframe": "8h",
         "funding_fee_timeframe": "8h",
@@ -1955,14 +1956,17 @@ class Exchange:
 
     @staticmethod
     def get_next_limit_in_list(
-        limit: int, limit_range: list[int] | None, range_required: bool = True
+        limit: int,
+        limit_range: list[int] | None,
+        range_required: bool = True,
+        upper_limit: int | None = None,
     ):
         """
         Get next greater value in the list.
         Used by fetch_l2_order_book if the api only supports a limited range
         """
         if not limit_range:
-            return limit
+            return min(limit, upper_limit) if upper_limit else limit
 
         result = min([x for x in limit_range if limit <= x] + [max(limit_range)])
         if not range_required and limit > result:
@@ -1979,7 +1983,10 @@ class Exchange:
         {'asks': [price, volume], 'bids': [price, volume]}
         """
         limit1 = self.get_next_limit_in_list(
-            limit, self._ft_has["l2_limit_range"], self._ft_has["l2_limit_range_required"]
+            limit,
+            self._ft_has["l2_limit_range"],
+            self._ft_has["l2_limit_range_required"],
+            self._ft_has["l2_limit_upper"],
         )
         try:
             return self._api.fetch_l2_order_book(pair, limit1)
