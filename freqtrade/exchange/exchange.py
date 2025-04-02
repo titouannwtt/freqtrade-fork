@@ -1964,6 +1964,7 @@ class Exchange:
         """
         Get next greater value in the list.
         Used by fetch_l2_order_book if the api only supports a limited range
+        if both limit_range and upper_limit is provided, limit_range wins.
         """
         if not limit_range:
             return min(limit, upper_limit) if upper_limit else limit
