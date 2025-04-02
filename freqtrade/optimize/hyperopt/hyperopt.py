@@ -4,6 +4,7 @@
 This module contains the hyperopt logic
 """
 
+import gc
 import logging
 import random
 from datetime import datetime
@@ -19,6 +20,7 @@ from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import file_dump_json, plural
+from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
 from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
 from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
@@ -29,6 +31,9 @@ from freqtrade.optimize.hyperopt_tools import (
 )
 from freqtrade.util import get_progress_tracker
 
+
+# import multiprocessing as mp
+# mp.set_start_method('fork', force=True) # spawn fork forkserver
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,7 @@ class Hyperopt:
         self.print_json = self.config.get("print_json", False)
 
         self.hyperopter = HyperOptimizer(self.config)
+        self.hyperopter.data_pickle_file = self.data_pickle_file
 
     @staticmethod
     def get_lock_filename(config: Config) -> str:
@@ -146,7 +152,9 @@ class Hyperopt:
                 self.print_all,
             )
 
-    def run_optimizer_parallel(self, parallel: Parallel, asked: list[list]) -> list[dict[str, Any]]:
+    def run_optimizer_parallel(
+        self, parallel: Parallel, backtesting: Backtesting, asked: list[list]
+    ) -> list[dict[str, Any]]:
         """Start optimizer in a parallel way"""
 
         def optimizer_wrapper(*args, **kwargs):
@@ -157,7 +165,9 @@ class Hyperopt:
 
             return self.hyperopter.generate_optimizer(*args, **kwargs)
 
-        return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
+        return parallel(
+            delayed(wrap_non_picklable_objects(optimizer_wrapper))(backtesting, v) for v in asked
+        )
 
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
@@ -282,7 +292,9 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=1, dimensions=self.hyperopter.o_dimensions
                         )
-                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
+                        f_val0 = self.hyperopter.generate_optimizer(
+                            self.hyperopter.backtesting, asked[0].params
+                        )
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
@@ -299,13 +311,17 @@ class Hyperopt:
                             n_points=current_jobs, dimensions=self.hyperopter.o_dimensions
                         )
                         # asked_params = [asked1.params for asked1 in asked]
-                        # logger.info(f"asked iteration {i}: {asked_params}")
+                        # logger.info(f"asked iteration {i}: {asked} {asked_params}")
+
                         f_val = self.run_optimizer_parallel(
-                            parallel, [asked1.params for asked1 in asked]
+                            parallel,
+                            self.hyperopter.backtesting,
+                            [asked1.params for asked1 in asked],
                         )
-                        for o_ask, v in zip(asked, f_val, strict=False):
-                            self.opt.tell(o_ask, v["loss"])
-                        # self.opt.tell(asked, [v["loss"] for v in f_val])
+                        f_val_loss = [v["loss"] for v in f_val]
+                        for o_ask, v in zip(asked, f_val_loss, strict=False):
+                            self.opt.tell(o_ask, v)
+                        # logger.info(f"result iteration {i}: {asked} {f_val_loss}")
 
                         for j, val in enumerate(f_val):
                             # Use human-friendly indexes here (starting from 1)
@@ -314,6 +330,7 @@ class Hyperopt:
                             self.evaluate_result(val, current, is_random[j])
                             pbar.update(task, advance=1)
                         logging_mp_handle(log_queue)
+                        gc.collect()
 
         except KeyboardInterrupt:
             print("User interrupted..")

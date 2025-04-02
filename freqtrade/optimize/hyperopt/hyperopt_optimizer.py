@@ -7,12 +7,14 @@ import logging
 import sys
 import warnings
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from joblib import dump, load
 from joblib.externals import cloudpickle
 from pandas import DataFrame
 
+# from memory_profiler import profile
 from freqtrade.constants import DATETIME_PRINT_FORMAT, Config
 from freqtrade.data.converter import trim_dataframes
 from freqtrade.data.history import get_timerange
@@ -31,10 +33,12 @@ from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
 
-# Suppress scikit-learn FutureWarnings from skopt
+# Suppress optuna ExperimentalWarning from skopt
 with warnings.catch_warnings():
+    from optuna.exceptions import ExperimentalWarning
+
     warnings.filterwarnings("ignore", category=FutureWarning)
-    # from skopt import Optimizer
+    # warnings.filterwarnings("ignore", category=ExperimentalWarning)
     import optuna
     from skopt.space import Dimension
 
@@ -102,12 +106,8 @@ class HyperOptimizer:
             self.config
         )
         self.calculate_loss = self.custom_hyperoptloss.hyperopt_loss_function
-
-        self.data_pickle_file = (
-            self.config["user_data_dir"] / "hyperopt_results" / "hyperopt_tickerdata.pkl"
-        )
-
         self.market_change = 0.0
+        self.data_pickle_file = ""
 
         if HyperoptTools.has_space(self.config, "sell"):
             # Make sure use_exit_signal is enabled
@@ -260,16 +260,23 @@ class HyperOptimizer:
             + self.max_open_trades_space
         )
 
-    def assign_params(self, params_dict: dict[str, Any], category: str) -> None:
+    def assign_params(
+        self, backtesting: Backtesting, params_dict: dict[str, Any], category: str
+    ) -> None:
         """
         Assign hyperoptable parameters
         """
-        for attr_name, attr in self.backtesting.strategy.enumerate_parameters(category):
+        for attr_name, attr in backtesting.strategy.enumerate_parameters(category):
             if attr.optimize:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
 
-    def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:  # list[Any]
+    # @profile
+    # fp=open('memory_profiler.log','w+')
+    # @profile(stream=fp)
+    def generate_optimizer(
+        self, backtesting: Backtesting, raw_params: dict[str, Any]
+    ) -> dict[str, Any]:  # list[Any]
         """
         Used Optimize function.
         Called once per epoch to optimize whatever is configured.
@@ -281,30 +288,26 @@ class HyperOptimizer:
 
         # Apply parameters
         if HyperoptTools.has_space(self.config, "buy"):
-            self.assign_params(params_dict, "buy")
+            self.assign_params(backtesting, params_dict, "buy")
 
         if HyperoptTools.has_space(self.config, "sell"):
-            self.assign_params(params_dict, "sell")
+            self.assign_params(backtesting, params_dict, "sell")
 
         if HyperoptTools.has_space(self.config, "protection"):
-            self.assign_params(params_dict, "protection")
+            self.assign_params(backtesting, params_dict, "protection")
 
         if HyperoptTools.has_space(self.config, "roi"):
-            self.backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(
-                params_dict
-            )
+            backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(params_dict)
 
         if HyperoptTools.has_space(self.config, "stoploss"):
-            self.backtesting.strategy.stoploss = params_dict["stoploss"]
+            backtesting.strategy.stoploss = params_dict["stoploss"]
 
         if HyperoptTools.has_space(self.config, "trailing"):
             d = self.custom_hyperopt.generate_trailing_params(params_dict)
-            self.backtesting.strategy.trailing_stop = d["trailing_stop"]
-            self.backtesting.strategy.trailing_stop_positive = d["trailing_stop_positive"]
-            self.backtesting.strategy.trailing_stop_positive_offset = d[
-                "trailing_stop_positive_offset"
-            ]
-            self.backtesting.strategy.trailing_only_offset_is_reached = d[
+            backtesting.strategy.trailing_stop = d["trailing_stop"]
+            backtesting.strategy.trailing_stop_positive = d["trailing_stop_positive"]
+            backtesting.strategy.trailing_stop_positive_offset = d["trailing_stop_positive_offset"]
+            backtesting.strategy.trailing_only_offset_is_reached = d[
                 "trailing_only_offset_is_reached"
             ]
 
@@ -323,15 +326,15 @@ class HyperOptimizer:
 
             self.config.update({"max_open_trades": updated_max_open_trades})
 
-            self.backtesting.strategy.max_open_trades = updated_max_open_trades
+            backtesting.strategy.max_open_trades = updated_max_open_trades
 
-        with self.data_pickle_file.open("rb") as f:
+        with Path(self.data_pickle_file).open("rb") as f:
             processed = load(f, mmap_mode="r")
-            if self.analyze_per_epoch:
-                # Data is not yet analyzed, rerun populate_indicators.
-                processed = self.advise_and_trim(processed)
+        if self.analyze_per_epoch:
+            # Data is not yet analyzed, rerun populate_indicators.
+            processed = self.advise_and_trim(processed)
 
-        bt_results = self.backtesting.backtest(
+        bt_results = backtesting.backtest(
             processed=processed, start_date=self.min_date, end_date=self.max_date
         )
         backtest_end_time = datetime.now(timezone.utc)
@@ -341,10 +344,10 @@ class HyperOptimizer:
                 "backtest_end_time": int(backtest_end_time.timestamp()),
             }
         )
-
-        return self._get_results_dict(
+        result = self._get_results_dict(
             bt_results, self.min_date, self.max_date, params_dict, processed=processed
         )
+        return result
 
     def _get_results_dict(
         self,
@@ -443,7 +446,9 @@ class HyperOptimizer:
         if isinstance(o_sampler, str):
             if o_sampler not in optuna_samplers_dict.keys():
                 raise OperationalException(f"Optuna Sampler {o_sampler} not supported.")
-            sampler = optuna_samplers_dict[o_sampler](seed=random_state)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", category=ExperimentalWarning)
+                sampler = optuna_samplers_dict[o_sampler](seed=random_state)
         else:
             sampler = o_sampler
 
