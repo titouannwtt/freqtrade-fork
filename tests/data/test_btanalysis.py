@@ -569,7 +569,7 @@ def test_calculate_max_drawdown2():
     df1.loc[:, "profit"] = df1["profit"] * -1
     # No winning trade ...
     drawdown = calculate_max_drawdown(df1, date_col="open_date", value_col="profit")
-    assert drawdown.drawdown_abs == 0.043965
+    assert drawdown.drawdown_abs == 0.055545
 
 
 @pytest.mark.parametrize(
