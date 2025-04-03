@@ -116,7 +116,9 @@ def start_install_ui(args: dict[str, Any]) -> None:
 
     dest_folder = Path(__file__).parents[1] / "rpc/api_server/ui/installed/"
     # First make sure the assets are removed.
-    dl_url, latest_version = get_ui_download_url(args.get("ui_version"))
+    dl_url, latest_version = get_ui_download_url(
+        args.get("ui_version"), args.get("ui_prerelease", False)
+    )
 
     curr_version = read_ui_version(dest_folder)
     if curr_version == latest_version and not args.get("erase_ui_only"):

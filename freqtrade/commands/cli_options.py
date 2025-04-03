@@ -527,6 +527,15 @@ AVAILABLE_CLI_OPTIONS = {
         ),
         type=str,
     ),
+    "ui_prerelease": Arg(
+        "--prerelease",
+        help=(
+            "Install the latest pre-release version of FreqUI. "
+            "This is not recommended for production use."
+        ),
+        action="store_true",
+        default=False,
+    ),
     # Templating options
     "template": Arg(
         "--template",
