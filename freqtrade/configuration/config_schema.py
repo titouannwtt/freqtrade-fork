@@ -689,7 +689,7 @@ CONF_SCHEMA = {
         "initial_state": {
             "description": "Initial state of the system.",
             "type": "string",
-            "enum": ["running", "stopped"],
+            "enum": ["running", "paused", "stopped"],
         },
         "force_entry_enable": {
             "description": "Force enable entry.",

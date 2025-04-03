@@ -533,23 +533,26 @@ def test_api_reloadconf(botclient):
     assert ftbot.state == State.RELOAD_CONFIG
 
 
-def test_api_stopentry(botclient):
+def test_api_pause(botclient):
     ftbot, client = botclient
-    assert ftbot.config["max_open_trades"] != 0
 
-    rc = client_post(client, f"{BASE_URI}/stopbuy")
+    rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
     assert rc.json() == {
-        "status": "No more entries will occur from now. Run /reload_config to reset."
+        "status": "paused, no more entries will occur from now. Run /start to enable entries."
     }
-    assert ftbot.config["max_open_trades"] == 0
+
+    rc = client_post(client, f"{BASE_URI}/pause")
+    assert_response(rc)
+    assert rc.json() == {
+        "status": "paused, no more entries will occur from now. Run /start to enable entries."
+    }
 
     rc = client_post(client, f"{BASE_URI}/stopentry")
     assert_response(rc)
     assert rc.json() == {
-        "status": "No more entries will occur from now. Run /reload_config to reset."
+        "status": "paused, no more entries will occur from now. Run /start to enable entries."
     }
-    assert ftbot.config["max_open_trades"] == 0
 
 
 def test_api_balance(botclient, mocker, rpc_balance, tickers):
