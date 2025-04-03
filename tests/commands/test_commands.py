@@ -711,7 +711,21 @@ def test_get_ui_download_url(mocker):
     response = MagicMock()
     response.json = MagicMock(
         side_effect=[
-            [{"assets_url": "http://whatever.json", "name": "0.0.1"}],
+            [
+                {
+                    # Pre-release is ignored
+                    "assets_url": "http://whatever.json",
+                    "name": "0.0.2",
+                    "created_at": "2024-02-01T00:00:00Z",
+                    "prerelease": True,
+                },
+                {
+                    "assets_url": "http://whatever.json",
+                    "name": "0.0.1",
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "prerelease": False,
+                },
+            ],
             [{"browser_download_url": "http://download.zip"}],
         ]
     )
@@ -729,11 +743,15 @@ def test_get_ui_download_url_direct(mocker):
             {
                 "assets_url": "http://whatever.json",
                 "name": "0.0.2",
+                "created_at": "2024-02-01T00:00:00Z",
+                "prerelease": False,
                 "assets": [{"browser_download_url": "http://download22.zip"}],
             },
             {
                 "assets_url": "http://whatever.json",
                 "name": "0.0.1",
+                "created_at": "2024-01-01T00:00:00Z",
+                "prerelease": False,
                 "assets": [{"browser_download_url": "http://download1.zip"}],
             },
         ]
