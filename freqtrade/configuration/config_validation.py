@@ -6,7 +6,7 @@ from typing import Any
 from jsonschema import Draft4Validator, validators
 from jsonschema.exceptions import ValidationError, best_match
 
-from freqtrade.configuration.config_schema import (
+from freqtrade.config_schema.config_schema import (
     CONF_SCHEMA,
     SCHEMA_BACKTEST_REQUIRED,
     SCHEMA_BACKTEST_REQUIRED_FINAL,
