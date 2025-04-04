@@ -1,6 +1,5 @@
 """Script to extract the configuration json schema from config_schema.py file."""
 
-import sys
 from pathlib import Path
 
 import rapidjson
@@ -13,6 +12,8 @@ def extract_config_json_schema():
     except ImportError:
         # If freqtrade is not installed, add the parent directory to sys.path
         # to import directly from the source
+        import sys
+
         script_dir = Path(__file__).parent
         freqtrade_dir = script_dir.parent
         sys.path.insert(0, str(freqtrade_dir))
