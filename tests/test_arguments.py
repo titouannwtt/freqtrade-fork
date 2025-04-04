@@ -34,6 +34,21 @@ def test_available_cli_options():
         )
 
 
+def test_arguments_match_available_cli_options(monkeypatch):
+    """All entries in AVAILABLE_CLI_OPTIONS are used in argument parsing."""
+    parsed_options = set()
+    actual_build_args = Arguments._build_args
+
+    def build_args_monitor(self, optionlist, parser):
+        parsed_options.update(optionlist)
+        return actual_build_args(self, optionlist=optionlist, parser=parser)
+
+    monkeypatch.setattr(Arguments, "_build_args", build_args_monitor)
+    # this will result in a parser being built so we can check the arguments used
+    Arguments([]).get_parsed_arg()
+    assert parsed_options == set(AVAILABLE_CLI_OPTIONS)
+
+
 # Parse common command-line-arguments. Used for all tools
 def test_parse_args_none() -> None:
     arguments = Arguments(["trade"])
