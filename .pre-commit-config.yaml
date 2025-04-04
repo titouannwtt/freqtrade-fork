@@ -3,6 +3,8 @@
 repos:
 
   - repo: local
+    # Keep json schema in sync with the config schema
+    # This will write the files - and fail pre-commit if a file has been changed.
     hooks:
       - id: Extract config json schema
         name: extract-config-json-schema
