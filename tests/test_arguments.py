@@ -5,9 +5,33 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from freqtrade.commands import Arguments
-from freqtrade.commands.cli_options import check_int_nonzero, check_int_positive
+from freqtrade.commands import Arguments, arguments
+from freqtrade.commands.cli_options import (
+    check_int_nonzero,
+    check_int_positive,
+    AVAILABLE_CLI_OPTIONS,
+)
 from tests.conftest import CURRENT_TEST_STRATEGY
+
+
+def test_available_cli_options():
+    """AVAILABLE_CLI_OPTIONS has keys that are the union of the values in all ARGS_* - required by CLI"""
+    # each of the ARGS_* lists has a list of members which is assumed to also be in AVAILABLE_CLI_OPTIONS
+    args_union = {
+        arg
+        for variable, value in vars(arguments).items()
+        if variable.startswith("ARGS_")
+        for arg in value
+    }
+    expected_options = set(AVAILABLE_CLI_OPTIONS)
+    only_in_command_args = expected_options.difference(args_union)
+    only_in_all_args = args_union.difference(expected_options)
+    if only_in_all_args or only_in_command_args:
+        pytest.fail(
+            "variables around command line arguments not kept in sync:\n"
+            f" * args only in some ARGS_* list but not AVAILABLE_CLI_OPTIONS: {only_in_all_args}\n"
+            f" * args only in AVAILABLE_CLI_OPTIONS but not some ARGS_* list: {only_in_command_args}"
+        )
 
 
 # Parse common command-line-arguments. Used for all tools

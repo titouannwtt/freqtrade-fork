@@ -21,6 +21,8 @@ ARGS_COMMON = [
     "user_data_dir",
 ]
 
+ARGS_MAIN = ["version_main"]
+
 ARGS_STRATEGY = [
     "strategy",
     "strategy_path",
@@ -347,7 +349,7 @@ class Arguments:
         self.parser = ArgumentParser(
             prog="freqtrade", description="Free, open source crypto trading bot"
         )
-        self._build_args(optionlist=["version_main"], parser=self.parser)
+        self._build_args(optionlist=ARGS_MAIN, parser=self.parser)
 
         from freqtrade.commands import (
             start_analysis_entries_exits,
