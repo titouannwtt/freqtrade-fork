@@ -7,16 +7,19 @@ import pytest
 
 from freqtrade.commands import Arguments, arguments
 from freqtrade.commands.cli_options import (
+    AVAILABLE_CLI_OPTIONS,
     check_int_nonzero,
     check_int_positive,
-    AVAILABLE_CLI_OPTIONS,
 )
 from tests.conftest import CURRENT_TEST_STRATEGY
 
 
 def test_available_cli_options():
-    """AVAILABLE_CLI_OPTIONS has keys that are the union of the values in all ARGS_* - required by CLI"""
-    # each of the ARGS_* lists has a list of members which is assumed to also be in AVAILABLE_CLI_OPTIONS
+    """
+    AVAILABLE_CLI_OPTIONS has keys that are the union of the values in all ARGS_* - required by CLI
+    each of the ARGS_* lists has a list of members which is assumed to also
+    be in AVAILABLE_CLI_OPTIONS
+    """
     args_union = {
         arg
         for variable, value in vars(arguments).items()
@@ -30,7 +33,8 @@ def test_available_cli_options():
         pytest.fail(
             "variables around command line arguments not kept in sync:\n"
             f" * args only in some ARGS_* list but not AVAILABLE_CLI_OPTIONS: {only_in_all_args}\n"
-            f" * args only in AVAILABLE_CLI_OPTIONS but not some ARGS_* list: {only_in_command_args}"
+            " * args only in AVAILABLE_CLI_OPTIONS but not some ARGS_* list: "
+            f"{only_in_command_args}"
         )
 
 
