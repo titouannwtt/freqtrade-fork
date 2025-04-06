@@ -1162,11 +1162,12 @@ class LocalTrade:
         )
         total_profit_ratio = float(f"{total_profit_ratio:.8f}")
         profit_abs = float(f"{profit_abs:.8f}")
+        total_profit_abs = float(f"{total_profit_abs:.8f}")
 
         return ProfitStruct(
             profit_abs=profit_abs,
             profit_ratio=profit_ratio,
-            total_profit=profit_abs + self.realized_profit,
+            total_profit=total_profit_abs,
             total_profit_ratio=total_profit_ratio,
         )
 
