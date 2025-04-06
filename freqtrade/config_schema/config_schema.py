@@ -1146,6 +1146,14 @@ CONF_SCHEMA = {
                             "type": "boolean",
                             "default": False,
                         },
+                        "indicator_periods_candles": {
+                            "description": (
+                                "Time periods to calculate indicators for. "
+                                "The indicators are added to the base indicator dataset."
+                            ),
+                            "type": "array",
+                            "items": {"type": "number", "minimum": 1},
+                        },
                         "use_SVM_to_remove_outliers": {
                             "description": "Use SVM to remove outliers from the features.",
                             "type": "boolean",
