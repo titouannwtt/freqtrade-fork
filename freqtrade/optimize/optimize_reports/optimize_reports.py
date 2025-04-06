@@ -18,7 +18,11 @@ from freqtrade.data.metrics import (
     calculate_sortino,
     calculate_sqn,
 )
-from freqtrade.ft_types import BacktestResultType, get_BacktestResultType_default
+from freqtrade.ft_types import (
+    BacktestContentType,
+    BacktestResultType,
+    get_BacktestResultType_default,
+)
 from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_trade_signal_candles(
-    preprocessed_df: dict[str, DataFrame], bt_results: dict[str, Any], date_col: str
+    preprocessed_df: dict[str, DataFrame], bt_results: BacktestContentType, date_col: str
 ) -> dict[str, DataFrame]:
     signal_candles_only = {}
     for pair in preprocessed_df.keys():
@@ -407,7 +411,7 @@ def generate_daily_stats(results: DataFrame) -> dict[str, Any]:
 def generate_strategy_stats(
     pairlist: list[str],
     strategy: str,
-    content: dict[str, Any],
+    content: BacktestContentType,
     min_date: datetime,
     max_date: datetime,
     market_change: float,
@@ -632,7 +636,7 @@ def generate_strategy_stats(
 
 def generate_backtest_stats(
     btdata: dict[str, DataFrame],
-    all_results: dict[str, dict[str, DataFrame | dict]],
+    all_results: dict[str, BacktestContentType],
     min_date: datetime,
     max_date: datetime,
 ) -> BacktestResultType:
