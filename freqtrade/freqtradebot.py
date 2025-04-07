@@ -293,6 +293,7 @@ class FreqtradeBot(LoggingMixin):
             trades = Trade.get_open_trades()
             # First process current opened trades (positions)
             self.exit_positions(trades)
+            Trade.commit()
 
         # Check if we need to adjust our current positions before attempting to enter new trades.
         if self.strategy.position_adjustment_enable:
