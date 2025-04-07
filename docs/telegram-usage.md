@@ -253,7 +253,11 @@ Below, example of Telegram message you will receive for each command.
 
 ### /pause
 
-> **Status:** `paused`
+> **Status:** `paused, no more entries will occur from now. Run /start to enable entries.`
+
+Prevents the bot from opening new trades by changing the state to `paused`.
+Open trades will continue to be managed according to their regular rules (ROI/exit signals, stop-loss, etc.).
+Note that position adjustment remains active, but only on the exit side—meaning that when the bot is `paused`, it can only reduce the position size of open trades.
 
 ### /stop
 
@@ -262,14 +266,12 @@ Below, example of Telegram message you will receive for each command.
 
 ### /stopbuy
 
-> **status:** `Setting max_open_trades to 0. Run /reload_config to reset.`
-
-Prevents the bot from opening new trades by temporarily setting "max_open_trades" to 0. Open trades will be handled via their regular rules (ROI / Sell-signal, stoploss, ...).
+Alias of the `/pause` command.
 
 After this, give the bot time to close off open trades (can be checked via `/status table`).
 Once all positions are sold, run `/stop` to completely stop the bot.
 
-`/reload_config` resets "max_open_trades" to the value set in the configuration and resets this command.
+`/start` resume the bot to the `running` state, allowing it to open new positions while handling existing ones.
 
 !!! Warning
     The stop-buy signal is ONLY active while the bot is running, and is not persisted anyway, so restarting the bot will cause this to reset.
