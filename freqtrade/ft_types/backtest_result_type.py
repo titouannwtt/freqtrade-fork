@@ -57,4 +57,5 @@ class BacktestContentTypeIcomplete(TypedDict, total=False):
     run_id: str
 
 
-class BacktestContentType(BacktestContentTypeIcomplete, total=True): ...
+class BacktestContentType(BacktestContentTypeIcomplete, total=True):
+    pass
