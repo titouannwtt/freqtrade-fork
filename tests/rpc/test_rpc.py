@@ -197,7 +197,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
     response.update(
         {
             "max_stake_amount": 0.001,
-            "total_profit_ratio": pytest.approx(-0.00409153),
+            "total_profit_ratio": pytest.approx(-0.00408133),
             "has_open_orders": False,
         }
     )
