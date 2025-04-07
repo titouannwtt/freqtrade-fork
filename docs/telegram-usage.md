@@ -200,7 +200,7 @@ official commands. You can ask at any moment for help with `/help`.
 |----------|-------------|
 | **System commands**
 | `/start` | Starts the trader
-| `/pause | /stopbuy | /stopentry` | Pause the trader. Gracefully handle open trades according to their rules. Do not enter new positions.
+| `/pause | /stopentry | /stopbuy` | Pause the trader. Gracefully handle open trades according to their rules. Do not enter new positions.
 | `/stop` | Stops the trader
 | `/reload_config` | Reloads the configuration file
 | `/show_config` | Shows part of the current configuration with relevant settings to operation
