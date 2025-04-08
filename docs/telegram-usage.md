@@ -256,12 +256,12 @@ Below, example of Telegram message you will receive for each command.
 
 Prevents the bot from opening new trades by changing the state to `paused`.
 Open trades will continue to be managed according to their regular rules (ROI/exit signals, stop-loss, etc.).
-Note that position adjustment remains active, but only on the exit side—meaning that when the bot is `paused`, it can only reduce the position size of open trades.
+Note that position adjustment remains active, but only on the exit side — meaning that when the bot is `paused`, it can only reduce the position size of open trades.
 
 After this, give the bot time to close off open trades (can be checked via `/status table`).
 Once all positions are closed, run `/stop` to completely stop the bot.
 
-`/start` resume the bot to the `running` state, allowing it to open new positions while handling existing ones.
+Use `/start` to resume the bot to the `running` state, allowing it to open new positions.
 
 !!! Warning
     The pause/stopentry signal is ONLY active while the bot is running, and is not persisted anyway, so restarting the bot will cause this to reset.
