@@ -6,6 +6,7 @@ Hyperoptimization.
 """
 
 from typing import Any, Dict
+
 from freqtrade.optimize.hyperopt import IHyperOptLoss
 
 class MaxDrawDownPerPairHyperOptLoss(IHyperOptLoss):
@@ -22,8 +23,7 @@ class MaxDrawDownPerPairHyperOptLoss(IHyperOptLoss):
     """
 
     @staticmethod
-    def hyperopt_loss_function(backtest_stats: Dict[str, Any],
-                               *args, **kwargs) -> float:
+    def hyperopt_loss_function(backtest_stats: dict[str, Any], *args, **kwargs) -> float:
         """
         Objective function, returns smaller number for better results.
         """
