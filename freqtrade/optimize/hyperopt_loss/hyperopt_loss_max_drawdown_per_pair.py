@@ -5,16 +5,17 @@ This module defines the alternative HyperOptLoss class which can be used for
 Hyperoptimization.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from freqtrade.optimize.hyperopt import IHyperOptLoss
+
 
 class MaxDrawDownPerPairHyperOptLoss(IHyperOptLoss):
     """
     Defines the loss function for hyperopt.
 
     This implementation calculates the profit/drawdown ratio per pair and
-    returns the worst result as objetive, forcing hyperopt to optimize
+    returns the worst result as objective, forcing hyperopt to optimize
     the parameters for all pairs in the pairlist.
 
     This way, we prevent one or more pairs with good results from inflating
@@ -56,4 +57,3 @@ class MaxDrawDownPerPairHyperOptLoss(IHyperOptLoss):
                 score_per_pair.append(score)
 
         return -min(score_per_pair)
-
