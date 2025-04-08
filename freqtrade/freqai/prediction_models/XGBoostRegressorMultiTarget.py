@@ -19,6 +19,7 @@ class XGBoostRegressorMultiTarget(BaseRegressionModel):
     `predict()` methods to add their custom data handling tools or change
     various aspects of the training that cannot be configured via the
     top level config.json file.
+    This is an exact copy of XGBoostRegressor kept for compatibility reasons.
     """
 
     def fit(self, data_dictionary: dict, dk: FreqaiDataKitchen, **kwargs) -> Any:
