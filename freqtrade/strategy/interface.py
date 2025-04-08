@@ -1700,12 +1700,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         dataframe = self.advise_exit(dataframe, metadata)
         return dataframe
 
-    def _if_enabled_populate_trades(self, dataframe: DataFrame, metadata: dict):
+    def _if_enabled_populate_trades(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         use_public_trades = self.config.get("exchange", {}).get("use_public_trades", False)
         if use_public_trades:
-            trades = self.dp.trades(pair=metadata["pair"], copy=False)
-
             pair = metadata["pair"]
+            trades = self.dp.trades(pair=pair, copy=False)
+
             # TODO: slice trades to size of dataframe for faster backtesting
             cached_grouped_trades: DataFrame | None = self._cached_grouped_trades_per_pair.get(pair)
             dataframe, cached_grouped_trades = populate_dataframe_with_trades(
@@ -1718,6 +1718,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             self._cached_grouped_trades_per_pair[pair] = cached_grouped_trades
 
             logger.debug("Populated dataframe with trades.")
+        return dataframe
 
     def advise_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -1735,7 +1736,7 @@ class IStrategy(ABC, HyperStrategyMixin):
                 self, dataframe, metadata, inf_data, populate_fn
             )
 
-        self._if_enabled_populate_trades(dataframe, metadata)
+        dataframe = self._if_enabled_populate_trades(dataframe, metadata)
         dataframe = self.populate_indicators(dataframe, metadata)
         if self.config.get("reduce_df_footprint", False) and self.config.get("runmode") not in [
             RunMode.DRY_RUN,
