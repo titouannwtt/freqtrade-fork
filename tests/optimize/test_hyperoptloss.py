@@ -176,7 +176,7 @@ def test_loss_functions_better_profits(default_conf, hyperopt_results, lossfunct
             "key": "BTC/USDT",
             "max_drawdown_abs": 50.0,
             "profit_total_abs": 100.0,
-        }
+        },
     ]
     pair_results_over = [
         {
@@ -188,7 +188,7 @@ def test_loss_functions_better_profits(default_conf, hyperopt_results, lossfunct
             "key": "BTC/USDT",
             "max_drawdown_abs": 25.0,
             "profit_total_abs": 200.0,
-        }
+        },
     ]
     pair_results_under = [
         {
@@ -200,7 +200,7 @@ def test_loss_functions_better_profits(default_conf, hyperopt_results, lossfunct
             "key": "BTC/USDT",
             "max_drawdown_abs": 100.0,
             "profit_total_abs": 50.0,
-        }
+        },
     ]
 
     default_conf.update({"hyperopt_loss": lossfunction})
