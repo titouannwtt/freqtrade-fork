@@ -48,7 +48,7 @@ from tests.conftest_trades_usdt import (
 logging.getLogger("").setLevel(logging.INFO)
 
 
-# Do not mask numpy errors as warnings that no one read, raise the exсeption
+# Do not mask numpy errors as warnings that no one read, raise the exception
 np.seterr(all="raise")
 
 CURRENT_TEST_STRATEGY = "StrategyTestV3"
