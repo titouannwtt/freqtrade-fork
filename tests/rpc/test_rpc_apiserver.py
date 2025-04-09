@@ -2206,8 +2206,8 @@ def test_api_pair_history(botclient, tmp_path, mocker):
         assert len(result["columns"]) == col_count
         assert len(result["all_columns"]) == 25
         assert len(data[0]) == col_count
-        date_col_idx = [idx for idx, c in enumerate(result["columns"]) if c == "date"][0]
-        rsi_col_idx = [idx for idx, c in enumerate(result["columns"]) if c == "rsi"][0]
+        date_col_idx = next(idx for idx, c in enumerate(result["columns"]) if c == "date")
+        rsi_col_idx = next(idx for idx, c in enumerate(result["columns"]) if c == "rsi")
 
         assert data[0][date_col_idx] == "2018-01-11T00:00:00Z"
         assert data[0][rsi_col_idx] is not None
@@ -2432,7 +2432,7 @@ def test_api_exchanges(botclient):
     response = rc.json()
     assert isinstance(response["exchanges"], list)
     assert len(response["exchanges"]) > 20
-    okx = [x for x in response["exchanges"] if x["classname"] == "okx"][0]
+    okx = next(x for x in response["exchanges"] if x["classname"] == "okx")
     assert okx == {
         "classname": "okx",
         "name": "OKX",
@@ -2448,7 +2448,7 @@ def test_api_exchanges(botclient):
         ],
     }
 
-    mexc = [x for x in response["exchanges"] if x["classname"] == "mexc"][0]
+    mexc = next(x for x in response["exchanges"] if x["classname"] == "mexc")
     assert mexc == {
         "classname": "mexc",
         "name": "MEXC Global",
@@ -2460,7 +2460,7 @@ def test_api_exchanges(botclient):
         "alias_for": None,
         "trade_modes": [{"trading_mode": "spot", "margin_mode": ""}],
     }
-    waves = [x for x in response["exchanges"] if x["classname"] == "wavesexchange"][0]
+    waves = next(x for x in response["exchanges"] if x["classname"] == "wavesexchange")
     assert waves == {
         "classname": "wavesexchange",
         "name": "Waves.Exchange",
@@ -2554,10 +2554,10 @@ def test_api_pairlists_available(botclient, tmp_path):
     assert len([r for r in response["pairlists"] if r["name"] == "VolumePairList"]) == 1
     assert len([r for r in response["pairlists"] if r["name"] == "StaticPairList"]) == 1
 
-    volumepl = [r for r in response["pairlists"] if r["name"] == "VolumePairList"][0]
+    volumepl = next(r for r in response["pairlists"] if r["name"] == "VolumePairList")
     assert volumepl["is_pairlist_generator"] is True
     assert len(volumepl["params"]) > 1
-    age_pl = [r for r in response["pairlists"] if r["name"] == "AgeFilter"][0]
+    age_pl = next(r for r in response["pairlists"] if r["name"] == "AgeFilter")
     assert age_pl["is_pairlist_generator"] is False
     assert len(volumepl["params"]) > 2
 

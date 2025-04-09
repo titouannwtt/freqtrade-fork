@@ -1366,8 +1366,8 @@ class Exchange:
             ordertype = available_order_Types[user_order_type]
         else:
             # Otherwise pick only one available
-            ordertype = list(available_order_Types.values())[0]
-            user_order_type = list(available_order_Types.keys())[0]
+            ordertype = next(iter(available_order_Types.values()))
+            user_order_type = next(iter(available_order_Types.keys()))
         return ordertype, user_order_type
 
     def _get_stop_limit_rate(self, stop_price: float, order_types: dict, side: str) -> float:
