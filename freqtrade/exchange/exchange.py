@@ -2798,7 +2798,7 @@ class Exchange:
         pair, timeframe, candle_type = pairwt
         since_ms = None
         new_ticks: list = []
-        all_stored_ticks_df = DataFrame(columns=DEFAULT_TRADES_COLUMNS + ["date"])
+        all_stored_ticks_df = DataFrame(columns=[*DEFAULT_TRADES_COLUMNS, "date"])
         first_candle_ms = self.needed_candle_for_trades_ms(timeframe, candle_type)
         # refresh, if
         # a. not in _trades
@@ -2843,7 +2843,7 @@ class Exchange:
                         else:
                             # Skip cache, it's too old
                             all_stored_ticks_df = DataFrame(
-                                columns=DEFAULT_TRADES_COLUMNS + ["date"]
+                                columns=[*DEFAULT_TRADES_COLUMNS, "date"]
                             )
 
                 # from_id overrules with exchange set to id paginate

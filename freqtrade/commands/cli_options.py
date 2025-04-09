@@ -463,7 +463,7 @@ AVAILABLE_CLI_OPTIONS = {
     "format_from_trades": Arg(
         "--format-from",
         help="Source format for data conversion.",
-        choices=constants.AVAILABLE_DATAHANDLERS + ["kraken_csv"],
+        choices=[*constants.AVAILABLE_DATAHANDLERS, "kraken_csv"],
         required=True,
     ),
     "format_from": Arg(

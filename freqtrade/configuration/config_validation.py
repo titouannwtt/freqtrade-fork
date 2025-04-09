@@ -361,7 +361,7 @@ def _validate_freqai_include_timeframes(conf: dict[str, Any], preliminary: bool)
         # Ensure that the base timeframe is included in the include_timeframes list
         if not preliminary and main_tf not in freqai_include_timeframes:
             feature_parameters = conf.get("freqai", {}).get("feature_parameters", {})
-            include_timeframes = [main_tf] + freqai_include_timeframes
+            include_timeframes = [main_tf, *freqai_include_timeframes]
             conf.get("freqai", {}).get("feature_parameters", {}).update(
                 {**feature_parameters, "include_timeframes": include_timeframes}
             )

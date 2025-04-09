@@ -99,7 +99,7 @@ DL_DATA_TIMEFRAMES = ["1m", "5m"]
 ENV_VAR_PREFIX = "FREQTRADE__"
 
 CANCELED_EXCHANGE_STATES = ("cancelled", "canceled", "expired", "rejected")
-NON_OPEN_EXCHANGE_STATES = CANCELED_EXCHANGE_STATES + ("closed",)
+NON_OPEN_EXCHANGE_STATES = (*CANCELED_EXCHANGE_STATES, "closed")
 
 # Define decimals per coin for outputs
 # Only used for outputs.
