@@ -37,6 +37,7 @@ HYPEROPT_LOSS_BUILTIN = [
     "CalmarHyperOptLoss",
     "MaxDrawDownHyperOptLoss",
     "MaxDrawDownRelativeHyperOptLoss",
+    "MaxDrawDownPerPairHyperOptLoss",
     "ProfitDrawDownHyperOptLoss",
     "MultiMetricHyperOptLoss",
 ]
