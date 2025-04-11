@@ -1,435 +1,238 @@
-import argparse
-import enum
-import json
+"""
+Various tool function for Freqtrade and scripts
+"""
+
+import gzip
 import logging
-import time
-import os
-import re
-from datetime import datetime
-from typing import Any, Callable, Dict, List
+from collections.abc import Iterator, Mapping
+from io import StringIO
+from pathlib import Path
+from typing import Any, TextIO
+from urllib.parse import urlparse
 
-import numpy as np
-from jsonschema import Draft4Validator, validate
-from jsonschema.exceptions import ValidationError, best_match
-from wrapt import synchronized
+import pandas as pd
+import rapidjson
 
-from freqtrade import __version__
+from freqtrade.enums import SignalTagType, SignalType
+
 
 logger = logging.getLogger(__name__)
 
 
-class State(enum.Enum):
-    RUNNING = 0
-    STOPPED = 1
-
-
-# Current application state
-_STATE = State.STOPPED
-
-
-############################################
-# Used by scripts                          #
-# Matplotlib doesn't support ::datetime64, #
-# so we need to convert it into ::datetime #
-############################################
-
-def datesarray_to_datetimearray(dates):
+def dump_json_to_file(file_obj: TextIO, data: Any) -> None:
     """
-    Convert an pandas-array of timestamps into
-    An numpy-array of datetimes
-    :return: numpy-array of datetime
+    Dump JSON data into a file object
+    :param file_obj: File object to write to
+    :param data: JSON Data to save
     """
-    times = []
-    dates = dates.astype(datetime)
-    for i in range(0, dates.size):
-        date = dates[i].to_pydatetime()
-        times.append(date)
-    return np.array(times)
+    rapidjson.dump(data, file_obj, default=str, number_mode=rapidjson.NM_NATIVE)
 
 
-def common_datearray(dfs):
-    alldates = {}
-    for pair, pair_data in dfs.items():
-        dates = datesarray_to_datetimearray(pair_data['date'])
-        for date in dates:
-            alldates[date] = 1
-    lst = []
-    for date, _ in alldates.items():
-        lst.append(date)
-    arr = np.array(lst)
-    return np.sort(arr, axis=0)
-
-
-def file_dump_json(filename, data) -> None:
-    with open(filename, 'w') as fp:
-        json.dump(data, fp)
-
-
-@synchronized
-def update_state(state: State) -> None:
+def file_dump_json(filename: Path, data: Any, is_zip: bool = False, log: bool = True) -> None:
     """
-    Updates the application state
-    :param state: new state
-    :return: None
-    """
-    global _STATE
-    _STATE = state
-
-
-@synchronized
-def get_state() -> State:
-    """
-    Gets the current application state
+    Dump JSON data into a file
+    :param filename: file to create
+    :param is_zip: if file should be zip
+    :param data: JSON Data to save
     :return:
     """
-    return _STATE
+
+    if is_zip:
+        if filename.suffix != ".gz":
+            filename = filename.with_suffix(".gz")
+        if log:
+            logger.info(f'dumping json to "{filename}"')
+
+        with gzip.open(filename, "wt", encoding="utf-8") as fpz:
+            dump_json_to_file(fpz, data)
+    else:
+        if log:
+            logger.info(f'dumping json to "{filename}"')
+        with filename.open("w") as fp:
+            dump_json_to_file(fp, data)
+
+    logger.debug(f'done json to "{filename}"')
 
 
-def load_config(path: str) -> Dict:
+def json_load(datafile: TextIO) -> Any:
     """
-    Loads a config file from the given path
-    :param path: path as str
-    :return: configuration as dictionary
+    load data with rapidjson
+    Use this to have a consistent experience,
+    set number_mode to "NM_NATIVE" for greatest speed
     """
-    with open(path) as file:
-        conf = json.load(file)
-    if 'internals' not in conf:
-        conf['internals'] = {}
-    logger.info('Validating configuration ...')
-    try:
-        validate(conf, CONF_SCHEMA)
-        return conf
-    except ValidationError as exception:
-        logger.fatal('Invalid configuration. See config.json.example. Reason: %s', exception)
-        raise ValidationError(
-            best_match(Draft4Validator(CONF_SCHEMA).iter_errors(conf)).message
-        )
+    return rapidjson.load(datafile, number_mode=rapidjson.NM_NATIVE)
 
 
-def throttle(func: Callable[..., Any], min_secs: float, *args, **kwargs) -> Any:
-    """
-    Throttles the given callable that it
-    takes at least `min_secs` to finish execution.
-    :param func: Any callable
-    :param min_secs: minimum execution time in seconds
-    :return: Any
-    """
-    start = time.time()
-    result = func(*args, **kwargs)
-    end = time.time()
-    duration = max(min_secs - (end - start), 0.0)
-    logger.debug('Throttling %s for %.2f seconds', func.__name__, duration)
-    time.sleep(duration)
-    return result
-
-
-def common_args_parser(description: str):
-    """
-    Parses given common arguments and returns them as a parsed object.
-    """
-    parser = argparse.ArgumentParser(
-        description=description
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        help='be verbose',
-        action='store_const',
-        dest='loglevel',
-        const=logging.DEBUG,
-        default=logging.INFO,
-    )
-    parser.add_argument(
-        '--version',
-        action='version',
-        version='%(prog)s {}'.format(__version__),
-    )
-    parser.add_argument(
-        '-c', '--config',
-        help='specify configuration file (default: %(default)s)',
-        dest='config',
-        default='config.json',
-        type=str,
-        metavar='PATH',
-    )
-    parser.add_argument(
-        '-d', '--datadir',
-        help='path to backtest data (default: %(default)s',
-        dest='datadir',
-        default=os.path.join('freqtrade', 'tests', 'testdata'),
-        type=str,
-        metavar='PATH',
-    )
-    parser.add_argument(
-        '-s', '--strategy',
-        help='specify strategy file (default: %(default)s)',
-        dest='strategy',
-        default='default_strategy',
-        type=str,
-        metavar='PATH',
-    )
-    return parser
-
-
-def parse_args(args: List[str], description: str):
-    """
-    Parses given arguments and returns an argparse Namespace instance.
-    Returns None if a sub command has been selected and executed.
-    """
-    parser = common_args_parser(description)
-    parser.add_argument(
-        '--dry-run-db',
-        help='Force dry run to use a local DB "tradesv3.dry_run.sqlite" \
-             instead of memory DB. Work only if dry_run is enabled.',
-        action='store_true',
-        dest='dry_run_db',
-    )
-    parser.add_argument(
-        '--dynamic-whitelist',
-        help='dynamically generate and update whitelist \
-             based on 24h BaseVolume (Default 20 currencies)',  # noqa
-        dest='dynamic_whitelist',
-        const=20,
-        type=int,
-        metavar='INT',
-        nargs='?',
-    )
-
-    build_subcommands(parser)
-    return parser.parse_args(args)
-
-
-def scripts_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        '-p', '--pair',
-        help='Show profits for only this pairs. Pairs are comma-separated.',
-        dest='pair',
-        default=None
-    )
-
-
-def optimizer_shared_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        '-i', '--ticker-interval',
-        help='specify ticker interval in minutes (1, 5, 30, 60, 1440)',
-        dest='ticker_interval',
-        type=int,
-        metavar='INT',
-    )
-    parser.add_argument(
-        '--realistic-simulation',
-        help='uses max_open_trades from config to simulate real world limitations',
-        action='store_true',
-        dest='realistic_simulation',
-    )
-    parser.add_argument(
-        '--timerange',
-        help='Specify what timerange of data to use.',
-        default=None,
-        type=str,
-        dest='timerange',
-    )
-
-
-def backtesting_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        '-l', '--live',
-        action='store_true',
-        dest='live',
-        help='using live data',
-    )
-    parser.add_argument(
-        '-r', '--refresh-pairs-cached',
-        help='refresh the pairs files in tests/testdata with the latest data from Bittrex. \
-              Use it if you want to run your backtesting with up-to-date data.',
-        action='store_true',
-        dest='refresh_pairs',
-    )
-    parser.add_argument(
-        '--export',
-        help='Export backtest results, argument are: trades\
-              Example --export=trades',
-        type=str,
-        default=None,
-        dest='export',
-    )
-
-
-def hyperopt_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        '-e', '--epochs',
-        help='specify number of epochs (default: %(default)d)',
-        dest='epochs',
-        default=100,
-        type=int,
-        metavar='INT',
-    )
-    parser.add_argument(
-        '--use-mongodb',
-        help='parallelize evaluations with mongodb (requires mongod in PATH)',
-        dest='mongodb',
-        action='store_true',
-    )
-    parser.add_argument(
-        '-s', '--spaces',
-        help='Specify which parameters to hyperopt. Space separate list. \
-              Default: %(default)s',
-        choices=['all', 'buy', 'roi', 'stoploss'],
-        default='all',
-        nargs='+',
-        dest='spaces',
-    )
-
-
-def parse_timerange(text):
-    if text is None:
+def file_load_json(file: Path):
+    if file.suffix != ".gz":
+        gzipfile = file.with_suffix(file.suffix + ".gz")
+    else:
+        gzipfile = file
+    # Try gzip file first, otherwise regular json file.
+    if gzipfile.is_file():
+        logger.debug(f"Loading historical data from file {gzipfile}")
+        with gzip.open(gzipfile, "rt", encoding="utf-8") as datafile:
+            pairdata = json_load(datafile)
+    elif file.is_file():
+        logger.debug(f"Loading historical data from file {file}")
+        with file.open() as datafile:
+            pairdata = json_load(datafile)
+    else:
         return None
-    syntax = [(r'^-(\d{8})$', (None, 'date')),
-              (r'^(\d{8})-$', ('date', None)),
-              (r'^(\d{8})-(\d{8})$', ('date', 'date')),
-              (r'^(-\d+)$', (None, 'line')),
-              (r'^(\d+)-$', ('line', None)),
-              (r'^(\d+)-(\d+)$', ('index', 'index'))]
-    for rex, stype in syntax:
-        # Apply the regular expression to text
-        match = re.match(rex, text)
-        if match:  # Regex has matched
-            rvals = match.groups()
-            index = 0
-            start = None
-            stop = None
-            if stype[0]:
-                start = rvals[index]
-                if stype[0] != 'date':
-                    start = int(start)
-                index += 1
-            if stype[1]:
-                stop = rvals[index]
-                if stype[1] != 'date':
-                    stop = int(stop)
-            return (stype, start, stop)
-    raise Exception('Incorrect syntax for timerange "%s"' % text)
+    return pairdata
 
 
-def build_subcommands(parser: argparse.ArgumentParser) -> None:
-    """ Builds and attaches all subcommands """
-    from freqtrade.optimize import backtesting, hyperopt
-
-    subparsers = parser.add_subparsers(dest='subparser')
-
-    # Add backtesting subcommand
-    backtesting_cmd = subparsers.add_parser('backtesting', help='backtesting module')
-    backtesting_cmd.set_defaults(func=backtesting.start)
-    optimizer_shared_options(backtesting_cmd)
-    backtesting_options(backtesting_cmd)
-
-    # Add hyperopt subcommand
-    hyperopt_cmd = subparsers.add_parser('hyperopt', help='hyperopt module')
-    hyperopt_cmd.set_defaults(func=hyperopt.start)
-    optimizer_shared_options(hyperopt_cmd)
-    hyperopt_options(hyperopt_cmd)
+def is_file_in_dir(file: Path, directory: Path) -> bool:
+    """
+    Helper function to check if file is in directory.
+    """
+    return file.is_file() and file.parent.samefile(directory)
 
 
-# Required json-schema for user specified config
-CONF_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'max_open_trades': {'type': 'integer', 'minimum': 0},
-        'ticker_interval': {'type': 'integer', 'enum': [1, 5, 30, 60, 1440]},
-        'stake_currency': {'type': 'string', 'enum': ['BTC', 'ETH', 'USDT']},
-        'stake_amount': {'type': 'number', 'minimum': 0.0005},
-        'fiat_display_currency': {'type': 'string', 'enum': ['AUD', 'BRL', 'CAD', 'CHF',
-                                                             'CLP', 'CNY', 'CZK', 'DKK',
-                                                             'EUR', 'GBP', 'HKD', 'HUF',
-                                                             'IDR', 'ILS', 'INR', 'JPY',
-                                                             'KRW', 'MXN', 'MYR', 'NOK',
-                                                             'NZD', 'PHP', 'PKR', 'PLN',
-                                                             'RUB', 'SEK', 'SGD', 'THB',
-                                                             'TRY', 'TWD', 'ZAR', 'USD']},
-        'dry_run': {'type': 'boolean'},
-        'minimal_roi': {
-            'type': 'object',
-            'patternProperties': {
-                '^[0-9.]+$': {'type': 'number'}
-            },
-            'minProperties': 1
-        },
-        'stoploss': {'type': 'number', 'maximum': 0, 'exclusiveMaximum': True},
-        'unfilledtimeout': {'type': 'integer', 'minimum': 0},
-        'bid_strategy': {
-            'type': 'object',
-            'properties': {
-                'ask_last_balance': {
-                    'type': 'number',
-                    'minimum': 0,
-                    'maximum': 1,
-                    'exclusiveMaximum': False
-                },
-            },
-            'required': ['ask_last_balance']
-        },
-        'exchange': {'$ref': '#/definitions/exchange'},
-        'experimental': {
-            'type': 'object',
-            'properties': {
-                'use_sell_signal': {'type': 'boolean'},
-                'sell_profit_only': {'type': 'boolean'}
-            }
-        },
-        'telegram': {
-            'type': 'object',
-            'properties': {
-                'enabled': {'type': 'boolean'},
-                'token': {'type': 'string'},
-                'chat_id': {'type': 'string'},
-            },
-            'required': ['enabled', 'token', 'chat_id']
-        },
-        'initial_state': {'type': 'string', 'enum': ['running', 'stopped']},
-        'internals': {
-            'type': 'object',
-            'properties': {
-                'process_throttle_secs': {'type': 'number'},
-                'interval': {'type': 'integer'}
-            }
-        }
-    },
-    'definitions': {
-        'exchange': {
-            'type': 'object',
-            'properties': {
-                'name': {'type': 'string'},
-                'key': {'type': 'string'},
-                'secret': {'type': 'string'},
-                'pair_whitelist': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'string',
-                        'pattern': '^[0-9A-Z]+_[0-9A-Z]+$'
-                    },
-                    'uniqueItems': True
-                },
-                'pair_blacklist': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'string',
-                        'pattern': '^[0-9A-Z]+_[0-9A-Z]+$'
-                    },
-                    'uniqueItems': True
-                }
-            },
-            'required': ['name', 'key', 'secret', 'pair_whitelist']
-        }
-    },
-    'anyOf': [
-        {'required': ['exchange']}
-    ],
-    'required': [
-        'max_open_trades',
-        'stake_currency',
-        'stake_amount',
-        'fiat_display_currency',
-        'dry_run',
-        'bid_strategy',
-        'telegram'
-    ]
-}
+def pair_to_filename(pair: str) -> str:
+    for ch in ["/", " ", ".", "@", "$", "+", ":"]:
+        pair = pair.replace(ch, "_")
+    return pair
+
+
+def deep_merge_dicts(source, destination, allow_null_overrides: bool = True):
+    """
+    Values from Source override destination, destination is returned (and modified!!)
+    Sample:
+    >>> a = { 'first' : { 'rows' : { 'pass' : 'dog', 'number' : '1' } } }
+    >>> b = { 'first' : { 'rows' : { 'fail' : 'cat', 'number' : '5' } } }
+    >>> merge(b, a) == { 'first' : { 'rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
+    True
+    """
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # get node or create one
+            node = destination.setdefault(key, {})
+            deep_merge_dicts(value, node, allow_null_overrides)
+        elif value is not None or allow_null_overrides:
+            destination[key] = value
+
+    return destination
+
+
+def round_dict(d, n):
+    """
+    Rounds float values in the dict to n digits after the decimal point.
+    """
+    return {k: (round(v, n) if isinstance(v, float) else v) for k, v in d.items()}
+
+
+DictMap = dict[str, Any] | Mapping[str, Any]
+
+
+def safe_value_fallback(obj: DictMap, key1: str, key2: str | None = None, default_value=None):
+    """
+    Search a value in obj, return this if it's not None.
+    Then search key2 in obj - return that if it's not none - then use default_value.
+    Else falls back to None.
+    """
+    if key1 in obj and obj[key1] is not None:
+        return obj[key1]
+    else:
+        if key2 and key2 in obj and obj[key2] is not None:
+            return obj[key2]
+    return default_value
+
+
+def safe_value_fallback2(dict1: DictMap, dict2: DictMap, key1: str, key2: str, default_value=None):
+    """
+    Search a value in dict1, return this if it's not None.
+    Fall back to dict2 - return key2 from dict2 if it's not None.
+    Else falls back to None.
+
+    """
+    if key1 in dict1 and dict1[key1] is not None:
+        return dict1[key1]
+    else:
+        if key2 in dict2 and dict2[key2] is not None:
+            return dict2[key2]
+    return default_value
+
+
+def plural(num: float, singular: str, plural: str | None = None) -> str:
+    return singular if (num == 1 or num == -1) else plural or singular + "s"
+
+
+def chunks(lst: list[Any], n: int) -> Iterator[list[Any]]:
+    """
+    Split lst into chunks of the size n.
+    :param lst: list to split into chunks
+    :param n: number of max elements per chunk
+    :return: None
+    """
+    for chunk in range(0, len(lst), n):
+        yield (lst[chunk : chunk + n])
+
+
+def parse_db_uri_for_logging(uri: str):
+    """
+    Helper method to parse the DB URI and return the same DB URI with the password censored
+    if it contains it. Otherwise, return the DB URI unchanged
+    :param uri: DB URI to parse for logging
+    """
+    parsed_db_uri = urlparse(uri)
+    if not parsed_db_uri.netloc:  # No need for censoring as no password was provided
+        return uri
+    pwd = parsed_db_uri.netloc.split(":")[1].split("@")[0]
+    return parsed_db_uri.geturl().replace(f":{pwd}@", ":*****@")
+
+
+def dataframe_to_json(dataframe: pd.DataFrame) -> str:
+    """
+    Serialize a DataFrame for transmission over the wire using JSON
+    :param dataframe: A pandas DataFrame
+    :returns: A JSON string of the pandas DataFrame
+    """
+    return dataframe.to_json(orient="split")
+
+
+def json_to_dataframe(data: str) -> pd.DataFrame:
+    """
+    Deserialize JSON into a DataFrame
+    :param data: A JSON string
+    :returns: A pandas DataFrame from the JSON string
+    """
+    dataframe = pd.read_json(StringIO(data), orient="split")
+    if "date" in dataframe.columns:
+        dataframe["date"] = pd.to_datetime(dataframe["date"], unit="ms", utc=True)
+
+    return dataframe
+
+
+def remove_entry_exit_signals(dataframe: pd.DataFrame):
+    """
+    Remove Entry and Exit signals from a DataFrame
+
+    :param dataframe: The DataFrame to remove signals from
+    """
+    dataframe[SignalType.ENTER_LONG.value] = 0
+    dataframe[SignalType.EXIT_LONG.value] = 0
+    dataframe[SignalType.ENTER_SHORT.value] = 0
+    dataframe[SignalType.EXIT_SHORT.value] = 0
+    dataframe[SignalTagType.ENTER_TAG.value] = None
+    dataframe[SignalTagType.EXIT_TAG.value] = None
+
+    return dataframe
+
+
+def append_candles_to_dataframe(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
+    """
+    Append the `right` dataframe to the `left` dataframe
+
+    :param left: The full dataframe you want appended to
+    :param right: The new dataframe containing the data you want appended
+    :returns: The dataframe with the right data in it
+    """
+    if left.iloc[-1]["date"] != right.iloc[-1]["date"]:
+        left = pd.concat([left, right])
+
+    # Only keep the last 1500 candles in memory
+    left = left[-1500:] if len(left) > 1500 else left
+    left.reset_index(drop=True, inplace=True)
+
+    return left

@@ -1,168 +1,136 @@
-# Bot usage
-This page explains the difference parameters of the bot and how to run 
-it.
+# Start the bot
 
-## Table of Contents
-- [Bot commands](#bot-commands)
-- [Backtesting commands](#backtesting-commands)
-- [Hyperopt commands](#hyperopt-commands)
+This page explains the different parameters of the bot and how to run it.
+
+!!! Note
+    If you've used `setup.sh`, don't forget to activate your virtual environment (`source .venv/bin/activate`) before running freqtrade commands.
+
+!!! Warning "Up-to-date clock"
+    The clock on the system running the bot must be accurate, synchronized to a NTP server frequently enough to avoid problems with communication to the exchanges.
 
 ## Bot commands
-```
-usage: main.py [-h] [-c PATH] [-v] [--version] [--dynamic-whitelist [INT]]
-               [--dry-run-db]
-               {backtesting,hyperopt} ...
 
-Simple High Frequency Trading Bot for crypto currencies
+--8<-- "commands/main.md"
 
-positional arguments:
-  {backtesting,hyperopt}
-    backtesting         backtesting module
-    hyperopt            hyperopt module
+### Bot trading commands
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         be verbose
-  --version             show program's version number and exit
-  -c PATH, --config PATH
-                        specify configuration file (default: config.json)
-  -s PATH, --strategy PATH
-                        specify strategy file (default:
-                        freqtrade/strategy/default_strategy.py)
-  --dry-run-db          Force dry run to use a local DB
-                        "tradesv3.dry_run.sqlite" instead of memory DB. Work
-                        only if dry_run is enabled.
-  --datadir PATH
-                        path to backtest data (default freqdata/tests/testdata
-  --dynamic-whitelist [INT]
-                        dynamically generate and update whitelist based on 24h
-                        BaseVolume (Default 20 currencies)
-```
+--8<-- "commands/trade.md"
 
-### How to use a different config file?
-The bot allows you to select which config file you want to use. Per 
-default, the bot will load the file `./config.json`
+### How to specify which configuration file be used?
+
+The bot allows you to select which configuration file you want to use by means of
+the `-c/--config` command line option:
 
 ```bash
-python3 ./freqtrade/main.py -c path/far/far/away/config.json 
+freqtrade trade -c path/far/far/away/config.json
 ```
 
-### How to use --strategy?
-This parameter will allow you to load your custom strategy file. Per 
-default without `--strategy` or `-s` the bot will load the 
-`default_strategy` included with the bot (`freqtrade/strategy/default_strategy.py`). 
+Per default, the bot loads the `config.json` configuration file from the current
+working directory.
 
-The bot will search your strategy file into `user_data/strategies` and 
-`freqtrade/strategy`.
+### How to use multiple configuration files?
 
-To load a strategy, simply pass the file name (without .py) in this 
-parameters.
+The bot allows you to use multiple configuration files by specifying multiple
+`-c/--config` options in the command line. Configuration parameters
+defined in the latter configuration files override parameters with the same name
+defined in the previous configuration files specified in the command line earlier.
 
-**Example:**  
-In `user_data/strategies` you have a file `my_awesome_strategy.py` to 
-load it:  
+For example, you can make a separate configuration file with your key and secret
+for the Exchange you use for trading, specify default configuration file with
+empty key and secret values while running in the Dry Mode (which does not actually
+require them):
+
 ```bash
-python3 ./freqtrade/main.py --strategy my_awesome_strategy
+freqtrade trade -c ./config.json
+```
+
+and specify both configuration files when running in the normal Live Trade Mode:
+
+```bash
+freqtrade trade -c ./config.json -c path/to/secrets/keys.config.json
+```
+
+This could help you hide your private Exchange key and Exchange secret on you local machine
+by setting appropriate file permissions for the file which contains actual secrets and, additionally,
+prevent unintended disclosure of sensitive private data when you publish examples
+of your configuration in the project issues or in the Internet.
+
+See more details on this technique with examples in the documentation page on
+[configuration](configuration.md).
+
+### Where to store custom data
+
+Freqtrade allows the creation of a user-data directory using `freqtrade create-userdir --userdir someDirectory`.
+This directory will look as follows:
+
+```
+user_data/
+├── backtest_results
+├── data
+├── hyperopts
+├── hyperopt_results
+├── plot
+└── strategies
+```
+
+You can add the entry "user_data_dir" setting to your configuration, to always point your bot to this directory.
+Alternatively, pass in `--userdir` to every command.
+The bot will fail to start if the directory does not exist, but will create necessary subdirectories.
+
+This directory should contain your custom strategies, custom hyperopts and hyperopt loss functions, backtesting historical data (downloaded using either backtesting command or the download script) and plot outputs.
+
+It is recommended to use version control to keep track of changes to your strategies.
+
+### How to use **--strategy**?
+
+This parameter will allow you to load your custom strategy class.
+To test the bot installation, you can use the `SampleStrategy` installed by the `create-userdir` subcommand (usually `user_data/strategy/sample_strategy.py`).
+
+The bot will search your strategy file within `user_data/strategies`.
+To use other directories, please read the next section about `--strategy-path`.
+
+To load a strategy, simply pass the class name (e.g.: `CustomStrategy`) in this parameter.
+
+**Example:**
+In `user_data/strategies` you have a file `my_awesome_strategy.py` which has
+a strategy class called `AwesomeStrategy` to load it:
+
+```bash
+freqtrade trade --strategy AwesomeStrategy
 ```
 
 If the bot does not find your strategy file, it will display in an error
- message the reason (File not found, or errors in your code).
+message the reason (File not found, or errors in your code).
 
-Learn more about strategy file in [optimize your bot](https://github.com/gcarq/freqtrade/blob/develop/docs/bot-optimization.md).
+Learn more about strategy file in
+[Strategy Customization](strategy-customization.md).
+
+### How to use **--strategy-path**?
+
+This parameter allows you to add an additional strategy lookup path, which gets
+checked before the default locations (The passed path must be a directory!):
+
+```bash
+freqtrade trade --strategy AwesomeStrategy --strategy-path /some/directory
+```
 
 #### How to install a strategy?
-This is very simple. Copy paste your strategy file into the folder 
-`user_data/strategies`. And voila, the bot is ready to use it.
 
-### How to use --dynamic-whitelist?
-Per default `--dynamic-whitelist` will retrieve the 20 currencies based 
-on BaseVolume. This value can be changed when you run the script.
+This is very simple. Copy paste your strategy file into the directory
+`user_data/strategies` or use `--strategy-path`. And voila, the bot is ready to use it.
 
-**By Default**  
-Get the 20 currencies based on BaseVolume.  
-```bash
-python3 ./freqtrade/main.py --dynamic-whitelist
-```
+### How to use **--db-url**?
 
-**Customize the number of currencies to retrieve**  
-Get the 30 currencies based on BaseVolume.  
-```bash
-python3 ./freqtrade/main.py --dynamic-whitelist 30
-```
-
-**Exception**  
-`--dynamic-whitelist` must be greater than 0. If you enter 0 or a
-negative value (e.g -2), `--dynamic-whitelist` will use the default
-value (20).
-
-### How to use --dry-run-db?
-When you run the bot in Dry-run mode, per default no transactions are 
-stored in a database. If you want to store your bot actions in a DB 
-using `--dry-run-db`. This command will use a separate database file 
-`tradesv3.dry_run.sqlite`
+When you run the bot in Dry-run mode, per default no transactions are
+stored in a database. If you want to store your bot actions in a DB
+using `--db-url`. This can also be used to specify a custom database
+in production mode. Example command:
 
 ```bash
-python3 ./freqtrade/main.py -c config.json --dry-run-db
+freqtrade trade -c config.json --db-url sqlite:///tradesv3.dry_run.sqlite
 ```
-
-
-## Backtesting commands
-
-Backtesting also uses the config specified via `-c/--config`.
-
-```
-usage: freqtrade backtesting [-h] [-l] [-i INT] [--realistic-simulation]
-                             [-r]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -l, --live            using live data
-  -i INT, --ticker-interval INT
-                        specify ticker interval in minutes (default: 5)
-  --realistic-simulation
-                        uses max_open_trades from config to simulate real
-                        world limitations
-  -r, --refresh-pairs-cached
-                        refresh the pairs files in tests/testdata with 
-                        the latest data from Bittrex. Use it if you want
-                        to run your backtesting with up-to-date data.
-```
-
-### How to use --refresh-pairs-cached parameter?
-The first time your run Backtesting, it will take the pairs you have 
-set in your config file and download data from Bittrex. 
-
-If for any reason you want to update your data set, you use 
-`--refresh-pairs-cached` to force Backtesting to update the data it has. 
-**Use it only if you want to update your data set. You will not be able
-to come back to the previous version.**
-
-To test your strategy with latest data, we recommend continuing using 
-the parameter `-l` or `--live`.
-
-
-## Hyperopt commands
-
-It is possible to use hyperopt for trading strategy optimization.
-Hyperopt uses an internal json config return by `hyperopt_optimize_conf()` 
-located in `freqtrade/optimize/hyperopt_conf.py`.
-
-```
-usage: freqtrade hyperopt [-h] [-e INT] [--use-mongodb]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -e INT, --epochs INT  specify number of epochs (default: 100)
-  --use-mongodb         parallelize evaluations with mongodb (requires mongod
-                        in PATH)
-
-```
-
-## A parameter missing in the configuration?
-All parameters for `main.py`, `backtesting`, `hyperopt` are referenced
-in [misc.py](https://github.com/gcarq/freqtrade/blob/develop/freqtrade/misc.py#L84)
 
 ## Next step
-The optimal strategy of the bot will change with time depending of the
-market trends. The next step is to 
-[optimize your bot](https://github.com/gcarq/freqtrade/blob/develop/docs/bot-optimization.md).
+
+The optimal strategy of the bot will change with time depending of the market trends. The next step is to
+[Strategy Customization](strategy-customization.md).
