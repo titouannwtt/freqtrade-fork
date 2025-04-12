@@ -485,7 +485,7 @@ def _download_all_pairs_history_parallel(
         needed_pairs: ListPairsWithTimeframes = [
             (p, timeframe, CandleType.get_default(trading_mode)) for p in [p for p in pairs]
         ]
-        candles = exchange.refresh_ohlcv_with_cache(needed_pairs, since)
+        candles = exchange.refresh_latest_ohlcv(needed_pairs, since_ms=since, cache=False)
 
     return candles
 
