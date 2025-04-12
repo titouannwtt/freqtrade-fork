@@ -16,7 +16,6 @@ from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
 with suppress(ImportError):
     from optuna.distributions import CategoricalDistribution, FloatDistribution, IntDistribution
 
-    # from skopt.space import Integer, Real  # Categorical
     from freqtrade.optimize.space import SKDecimal
 
 from freqtrade.exceptions import OperationalException
@@ -255,7 +254,7 @@ class RealParameter(NumericParameter):
 
     def get_space(self, name: str) -> "ft_FloatDistribution":
         """
-        Create skopt optimization space.
+        Create optimization space.
         :param name: A name of parameter field.
         """
         return ft_FloatDistribution(name, self.low, self.high, **self._space_params)
@@ -289,7 +288,7 @@ class DecimalParameter(NumericParameter):
                       parameter fieldname is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to skopt.space.Integer.
+        :param kwargs: Extra parameters to optuna's NumericParameter.
         """
         self._decimals = decimals
         default = round(default, self._decimals)
@@ -300,7 +299,7 @@ class DecimalParameter(NumericParameter):
 
     def get_space(self, name: str) -> "SKDecimal":
         """
-        Create skopt optimization space.
+        Create optimization space.
         :param name: A name of parameter field.
         """
         return SKDecimal(
