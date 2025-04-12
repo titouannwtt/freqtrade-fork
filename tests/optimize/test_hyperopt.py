@@ -1190,19 +1190,16 @@ def test_in_strategy_auto_hyperopt_per_epoch(mocker, hyperopt_conf, tmp_path, fe
 
 def test_SKDecimal():
     space = SKDecimal(1, 2, decimals=2)
-    assert 1.5 in space
-    assert 2.5 not in space
-    assert space.low == 100
-    assert space.high == 200
+    assert space._contains(1.5)
+    assert not space._contains(2.5)
+    assert space.low == 1
+    assert space.high == 2
 
-    assert space.inverse_transform([200]) == [2.0]
-    assert space.inverse_transform([100]) == [1.0]
-    assert space.inverse_transform([150, 160]) == [1.5, 1.6]
-
-    assert space.transform([1.5]) == [150]
-    assert space.transform([2.0]) == [200]
-    assert space.transform([1.0]) == [100]
-    assert space.transform([1.5, 1.6]) == [150, 160]
+    assert space._contains(1.51)
+    assert space._contains(1.01)
+    # Falls out of the space with 2 decimals
+    assert not space._contains(1.511)
+    assert not space._contains(1.111222)
 
 
 def test_stake_amount_unlimited_max_open_trades(mocker, hyperopt_conf, tmp_path, fee) -> None:
