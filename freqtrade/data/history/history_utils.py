@@ -290,6 +290,7 @@ def _download_pair_history(
         if (
             pair_candles is None
             or len(pair_candles.index) == 0
+            or data.empty
             or prepend is True
             or erase is True
             or pair_candles_since_ms > (since_ms if since_ms else 0)
