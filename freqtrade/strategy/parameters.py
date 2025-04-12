@@ -7,7 +7,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from contextlib import suppress
-from typing import Any, Union
+from typing import Any, Protocol, Union
 
 from freqtrade.enums import HyperoptState
 from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
@@ -22,6 +22,10 @@ from freqtrade.exceptions import OperationalException
 
 
 logger = logging.getLogger(__name__)
+
+
+class DimensionProtocol(Protocol):
+    name: str
 
 
 class ft_CategoricalDistribution(CategoricalDistribution):

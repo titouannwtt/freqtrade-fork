@@ -9,7 +9,6 @@ from abc import ABC
 from typing import TypeAlias
 
 from sklearn.base import RegressorMixin
-from skopt.space import Dimension  # , Integer, Categorical,
 
 from freqtrade.constants import Config
 from freqtrade.exchange import timeframe_to_minutes
@@ -17,6 +16,7 @@ from freqtrade.misc import round_dict
 from freqtrade.optimize.space import SKDecimal
 from freqtrade.strategy import IStrategy
 from freqtrade.strategy.parameters import (
+    DimensionProtocol,
     ft_CategoricalDistribution,
     ft_IntDistribution,
 )
@@ -45,7 +45,7 @@ class IHyperOpt(ABC):
         # Assign timeframe to be used in hyperopt
         IHyperOpt.timeframe = str(config["timeframe"])
 
-    def generate_estimator(self, dimensions: list[Dimension], **kwargs) -> EstimatorType:
+    def generate_estimator(self, dimensions: list[DimensionProtocol], **kwargs) -> EstimatorType:
         """
         Return base_estimator.
         Can be any of "TPESampler", "GPSampler", "CmaEsSampler", "NSGAIISampler"
@@ -69,7 +69,7 @@ class IHyperOpt(ABC):
 
         return roi_table
 
-    def roi_space(self) -> list[Dimension]:
+    def roi_space(self) -> list[DimensionProtocol]:
         """
         Create a ROI space.
 
@@ -154,7 +154,7 @@ class IHyperOpt(ABC):
             ),
         ]
 
-    def stoploss_space(self) -> list[Dimension]:
+    def stoploss_space(self) -> list[DimensionProtocol]:
         """
         Create a stoploss space.
 
@@ -178,7 +178,7 @@ class IHyperOpt(ABC):
             "trailing_only_offset_is_reached": params["trailing_only_offset_is_reached"],
         }
 
-    def trailing_space(self) -> list[Dimension]:
+    def trailing_space(self) -> list[DimensionProtocol]:
         """
         Create a trailing stoploss space.
 
@@ -204,7 +204,7 @@ class IHyperOpt(ABC):
             ft_CategoricalDistribution("trailing_only_offset_is_reached", [True, False]),
         ]
 
-    def max_open_trades_space(self) -> list[Dimension]:
+    def max_open_trades_space(self) -> list[DimensionProtocol]:
         """
         Create a max open trades space.
 

@@ -30,6 +30,7 @@ from freqtrade.optimize.hyperopt_loss.hyperopt_loss_interface import IHyperOptLo
 from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer, HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
+from freqtrade.strategy.parameters import DimensionProtocol
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
 
@@ -40,7 +41,6 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     # warnings.filterwarnings("ignore", category=ExperimentalWarning)
     import optuna
-    from skopt.space import Dimension
 
     from freqtrade.optimize.space.decimalspace import SKDecimal
     from freqtrade.strategy.parameters import (
@@ -71,14 +71,14 @@ class HyperOptimizer:
     """
 
     def __init__(self, config: Config) -> None:
-        self.buy_space: list[Dimension] = []
-        self.sell_space: list[Dimension] = []
-        self.protection_space: list[Dimension] = []
-        self.roi_space: list[Dimension] = []
-        self.stoploss_space: list[Dimension] = []
-        self.trailing_space: list[Dimension] = []
-        self.max_open_trades_space: list[Dimension] = []
-        self.dimensions: list[Dimension] = []
+        self.buy_space: list[DimensionProtocol] = []
+        self.sell_space: list[DimensionProtocol] = []
+        self.protection_space: list[DimensionProtocol] = []
+        self.roi_space: list[DimensionProtocol] = []
+        self.stoploss_space: list[DimensionProtocol] = []
+        self.trailing_space: list[DimensionProtocol] = []
+        self.max_open_trades_space: list[DimensionProtocol] = []
+        self.dimensions: list[DimensionProtocol] = []
         self.o_dimensions: dict = {}
 
         self.config = config
@@ -146,7 +146,7 @@ class HyperOptimizer:
 
     def _get_params_dict(
         self,
-        dimensions: list[Dimension],
+        dimensions: list[DimensionProtocol],
         raw_params: dict[str, Any],
     ) -> dict[str, Any]:
         # logger.info(f"_get_params_dict: {raw_params}")
@@ -404,7 +404,7 @@ class HyperOptimizer:
             "total_profit": total_profit,
         }
 
-    def convert_dimensions_to_optuna_space(self, s_dimensions: list[Dimension]) -> dict:
+    def convert_dimensions_to_optuna_space(self, s_dimensions: list[DimensionProtocol]) -> dict:
         o_dimensions: dict[str, optuna.distributions.BaseDistribution] = {}
         for original_dim in s_dimensions:
             if isinstance(original_dim, SKDecimal):
