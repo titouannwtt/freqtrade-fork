@@ -207,7 +207,6 @@ class IntParameter(NumericParameter):
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        # return Integer(low=self.low, high=self.high, name=name, **self._space_params)
         return ft_IntDistribution(name, self.low, self.high, **self._space_params)
 
     @property
@@ -262,7 +261,6 @@ class RealParameter(NumericParameter):
         :param name: A name of parameter field.
         """
         return ft_FloatDistribution(name, self.low, self.high, **self._space_params)
-        # return Real(low=self.low, high=self.high, name=name, **self._space_params)
 
 
 class DecimalParameter(NumericParameter):
@@ -365,7 +363,6 @@ class CategoricalParameter(BaseParameter):
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        # return Categorical(self.opt_range, name=name, **self._space_params)
         return ft_CategoricalDistribution(name, self.opt_range)
 
     @property
