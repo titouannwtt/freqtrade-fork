@@ -407,18 +407,9 @@ class HyperOptimizer:
     def convert_dimensions_to_optuna_space(self, s_dimensions: list[DimensionProtocol]) -> dict:
         o_dimensions: dict[str, optuna.distributions.BaseDistribution] = {}
         for original_dim in s_dimensions:
-            if isinstance(original_dim, SKDecimal):
-                o_dimensions[original_dim.name] = optuna.distributions.FloatDistribution(
-                    original_dim.low_orig,
-                    original_dim.high_orig,
-                    log=False,
-                    step=1 / pow(10, original_dim.decimals),
-                )
-            # for preparing to remove old skopt spaces
-            elif (
-                isinstance(original_dim, ft_CategoricalDistribution)
-                or isinstance(original_dim, ft_IntDistribution)
-                or isinstance(original_dim, ft_FloatDistribution)
+            if isinstance(
+                original_dim,
+                ft_CategoricalDistribution | ft_IntDistribution | ft_FloatDistribution | SKDecimal,
             ):
                 o_dimensions[original_dim.name] = original_dim
             else:
