@@ -114,7 +114,7 @@ class Backtesting:
     """
 
     def __init__(self, config: Config, exchange: Exchange | None = None) -> None:
-        LoggingMixin.show_output = False
+        LoggingMixin.show_info_output = False
         self.config = config
         self.results: BacktestResultType = get_BacktestResultType_default()
         self.trade_id_counter: int = 0
@@ -235,7 +235,7 @@ class Backtesting:
 
     @staticmethod
     def cleanup():
-        LoggingMixin.show_output = True
+        LoggingMixin.show_info_output = True
         enable_database_use()
 
     def init_backtest_detail(self) -> None:

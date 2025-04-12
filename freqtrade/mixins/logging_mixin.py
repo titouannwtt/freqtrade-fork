@@ -9,8 +9,8 @@ class LoggingMixin:
     Shows similar messages only once every `refresh_period`.
     """
 
-    # Disable output completely
-    show_output = True
+    # Disable INFO output when False
+    show_info_output = True
 
     def __init__(self, logger, refresh_period: int = 3600):
         """
@@ -35,6 +35,10 @@ class LoggingMixin:
 
         # Log as debug first
         self.logger.debug(message)
-        # Call hidden function.
-        if self.show_output:
+
+        # Determine if this is an INFO level message
+        is_info_message = getattr(logmethod, "__name__", "") == "info"
+
+        # For INFO messages, respect show_info_output flag
+        if not is_info_message or self.show_info_output:
             _log_once(message)
