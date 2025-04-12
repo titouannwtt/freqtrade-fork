@@ -782,6 +782,18 @@ def test_api_trades(botclient, mocker, fee, markets, is_short):
     assert rc.json()["trades_count"] == 1
     assert rc.json()["total_trades"] == 2
 
+    # Test ascending order (default)
+    rc = client_get(client, f"{BASE_URI}/trades?order_by_id=true")
+    assert_response(rc)
+    assert rc.json()["trades"][0]["trade_id"] == 2
+    assert rc.json()["trades"][1]["trade_id"] == 3
+
+    # Test descending order
+    rc = client_get(client, f"{BASE_URI}/trades?order_by_id=false")
+    assert_response(rc)
+    assert rc.json()["trades"][0]["trade_id"] == 3
+    assert rc.json()["trades"][1]["trade_id"] == 2
+
 
 @pytest.mark.parametrize("is_short", [True, False])
 def test_api_trade_single(botclient, mocker, fee, ticker, markets, is_short):
