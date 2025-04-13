@@ -200,9 +200,12 @@ def status(rpc: RPC = Depends(get_rpc)):
 def trades(
     limit: int = Query(500, ge=1, description="Maximum number of different trades to return data"),
     offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
+    order_by_id: bool = Query(
+        True, description="Sort trades by id (default: True). If False, sorts by latest timestamp"
+    ),
     rpc: RPC = Depends(get_rpc),
 ):
-    return rpc._rpc_trade_history(limit, offset=offset, order_by_id=True)
+    return rpc._rpc_trade_history(limit, offset=offset, order_by_id=order_by_id)
 
 
 @router.get("/trade/{tradeid}", response_model=OpenTradeSchema, tags=["info", "trading"])
