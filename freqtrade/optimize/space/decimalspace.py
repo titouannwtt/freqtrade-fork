@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from optuna.distributions import FloatDistribution
 
 
@@ -9,7 +7,7 @@ class SKDecimal(FloatDistribution):
         low: float,
         high: float,
         step: float | None = None,
-        decimals: int = 4,
+        decimals: int = 3,
         name=None,
     ):
         """
@@ -21,7 +19,6 @@ class SKDecimal(FloatDistribution):
         self.step = step or 1 / 10**decimals
         self.name = name
 
-        # with localcontext(prec=max(decimals, 4)) as ctx:
         super().__init__(
             low=low,
             high=high,
