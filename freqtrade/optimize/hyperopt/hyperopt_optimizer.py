@@ -30,7 +30,6 @@ from freqtrade.optimize.hyperopt_loss.hyperopt_loss_interface import IHyperOptLo
 from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer, HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
-from freqtrade.strategy.parameters import DimensionProtocol
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
 
@@ -43,7 +42,8 @@ with warnings.catch_warnings():
     import optuna
 
     from freqtrade.optimize.space.decimalspace import SKDecimal
-    from freqtrade.strategy.parameters import (
+    from freqtrade.optimize.space.optunaspaces import (
+        DimensionProtocol,
         ft_CategoricalDistribution,
         ft_FloatDistribution,
         ft_IntDistribution,

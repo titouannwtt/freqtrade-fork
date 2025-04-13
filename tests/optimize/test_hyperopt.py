@@ -17,10 +17,8 @@ from freqtrade.optimize.hyperopt.hyperopt_auto import HyperOptAuto
 from freqtrade.optimize.hyperopt_tools import HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
 from freqtrade.optimize.space import SKDecimal
+from freqtrade.optimize.space.optunaspaces import ft_IntDistribution
 from freqtrade.strategy import IntParameter
-
-# from skopt.space import Integer
-from freqtrade.strategy.parameters import ft_IntDistribution
 from freqtrade.util import dt_utc
 from tests.conftest import (
     CURRENT_TEST_STRATEGY,
@@ -1305,7 +1303,7 @@ def test_max_open_trades_consistency(mocker, hyperopt_conf, tmp_path, fee) -> No
     assert isinstance(hyperopt.hyperopter.custom_hyperopt, HyperOptAuto)
 
     hyperopt.hyperopter.custom_hyperopt.max_open_trades_space = lambda: [
-        ft_IntDistribution("max_open_trades", 1, 10)
+        ft_IntDistribution(1, 10, "max_open_trades")
     ]
 
     first_time_evaluated = False

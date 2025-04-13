@@ -7,16 +7,19 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from contextlib import suppress
-from typing import Any, Protocol, Union
+from typing import Any, Union
 
 from freqtrade.enums import HyperoptState
 from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
 
 
 with suppress(ImportError):
-    from optuna.distributions import CategoricalDistribution, FloatDistribution, IntDistribution
-
     from freqtrade.optimize.space import SKDecimal
+    from freqtrade.optimize.space.optunaspaces import (
+        ft_CategoricalDistribution,
+        ft_FloatDistribution,
+        ft_IntDistribution,
+    )
 
 from freqtrade.exceptions import OperationalException
 
@@ -24,43 +27,43 @@ from freqtrade.exceptions import OperationalException
 logger = logging.getLogger(__name__)
 
 
-class DimensionProtocol(Protocol):
-    name: str
+# class DimensionProtocol(Protocol):
+#     name: str
 
 
-class ft_CategoricalDistribution(CategoricalDistribution):
-    def __init__(
-        self,
-        name: str,
-        categories: Sequence[Any],
-        **kwargs,
-    ):
-        self.name = name
-        return super().__init__(categories)
+# class ft_CategoricalDistribution(CategoricalDistribution):
+#     def __init__(
+#         self,
+#         name: str,
+#         categories: Sequence[Any],
+#         **kwargs,
+#     ):
+#         self.name = name
+#         return super().__init__(categories)
 
 
-class ft_IntDistribution(IntDistribution):
-    def __init__(
-        self,
-        name: str,
-        low: int | float,
-        high: int | float,
-        **kwargs,
-    ):
-        self.name = name
-        return super().__init__(int(low), int(high), **kwargs)
+# class ft_IntDistribution(IntDistribution):
+#     def __init__(
+#         self,
+#         name: str,
+#         low: int | float,
+#         high: int | float,
+#         **kwargs,
+#     ):
+#         self.name = name
+#         return super().__init__(int(low), int(high), **kwargs)
 
 
-class ft_FloatDistribution(FloatDistribution):
-    def __init__(
-        self,
-        name: str,
-        low: float,
-        high: float,
-        **kwargs,
-    ):
-        self.name = name
-        return super().__init__(low, high, **kwargs)
+# class ft_FloatDistribution(FloatDistribution):
+#     def __init__(
+#         self,
+#         name: str,
+#         low: float,
+#         high: float,
+#         **kwargs,
+#     ):
+#         self.name = name
+#         return super().__init__(low, high, **kwargs)
 
 
 class BaseParameter(ABC):
@@ -207,7 +210,7 @@ class IntParameter(NumericParameter):
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return ft_IntDistribution(name, self.low, self.high, **self._space_params)
+        return ft_IntDistribution(self.low, self.high, name, **self._space_params)
 
     @property
     def range(self):
@@ -260,7 +263,7 @@ class RealParameter(NumericParameter):
         Create optimization space.
         :param name: A name of parameter field.
         """
-        return ft_FloatDistribution(name, self.low, self.high, **self._space_params)
+        return ft_FloatDistribution(self.low, self.high, name, **self._space_params)
 
 
 class DecimalParameter(NumericParameter):
@@ -363,7 +366,7 @@ class CategoricalParameter(BaseParameter):
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return ft_CategoricalDistribution(name, self.opt_range)
+        return ft_CategoricalDistribution(self.opt_range, name)
 
     @property
     def range(self):
