@@ -776,6 +776,10 @@ def test_api_trades(botclient, mocker, fee, markets, is_short):
     assert rc.json()["trades_count"] == 2
     assert rc.json()["total_trades"] == 2
     assert rc.json()["trades"][0]["is_short"] == is_short
+    # Ensure the trades are sorted by trade_id (the default, see below)
+    assert rc.json()["trades"][0]["trade_id"] == 2
+    assert rc.json()["trades"][1]["trade_id"] == 3
+
     rc = client_get(client, f"{BASE_URI}/trades?limit=1")
     assert_response(rc)
     assert len(rc.json()["trades"]) == 1
