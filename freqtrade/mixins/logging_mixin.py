@@ -29,6 +29,7 @@ class LoggingMixin:
         :param force_show: If True, sends the message regardless of show_output value.
         :return: None.
         """
+
         @cached(cache=self._log_cache)
         def _log_once(message: str):
             logmethod(message)
