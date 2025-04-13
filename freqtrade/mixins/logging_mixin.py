@@ -39,4 +39,3 @@ class LoggingMixin:
         # Call hidden function if show_output is True or force_show is True
         if self.show_output or force_show:
             _log_once(message)
-
