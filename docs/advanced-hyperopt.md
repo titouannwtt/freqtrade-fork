@@ -167,7 +167,7 @@ You can define your own optuna sampler for Hyperopt by implementing `generate_es
 class MyAwesomeStrategy(IStrategy):
     class HyperOpt:
         def generate_estimator(dimensions: List['Dimension'], **kwargs):
-            return "TPESampler"
+            return "NSGAIIISampler"
 
 ```
 
@@ -175,32 +175,10 @@ Possible values are either one of "NSGAIISampler", "TPESampler", "GPSampler", "C
 
 Some research will be necessary to find additional Samplers (from optunahub) for example.
 
-```
-
-The `dimensions` parameter is the list of `skopt.space.Dimension` objects corresponding to the parameters to be optimized. It can be used to create isotropic kernels for the `skopt.learning.GaussianProcessRegressor` estimator. Here's an example:
-
-```python
-class MyAwesomeStrategy(IStrategy):
-    class HyperOpt:
-        def generate_estimator(dimensions: List['Dimension'], **kwargs):
-            from skopt.utils import cook_estimator
-            from skopt.learning.gaussian_process.kernels import (Matern, ConstantKernel)
-            kernel_bounds = (0.0001, 10000)
-            kernel = (
-                ConstantKernel(1.0, kernel_bounds) * 
-                Matern(length_scale=np.ones(len(dimensions)), length_scale_bounds=[kernel_bounds for d in dimensions], nu=2.5)
-            )
-            kernel += (
-                ConstantKernel(1.0, kernel_bounds) * 
-                Matern(length_scale=np.ones(len(dimensions)), length_scale_bounds=[kernel_bounds for d in dimensions], nu=1.5)
-            )
-
-            return cook_estimator("GP", space=dimensions, kernel=kernel, n_restarts_optimizer=2)
-```
 
 !!! Note
     While custom estimators can be provided, it's up to you as User to do research on possible parameters and analyze / understand which ones should be used.
-    If you're unsure about this, best use one of the Defaults (`"ET"` has proven to be the most versatile) without further parameters.
+    If you're unsure about this, best use one of the Defaults (`"NSGAIIISampler"` has proven to be the most versatile) without further parameters.
 
 ## Space options
 
