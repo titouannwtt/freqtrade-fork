@@ -34,9 +34,9 @@ class ft_IntDistribution(IntDistribution):
         **kwargs,
     ):
         self.name = name
-        self.low = low
-        self.high = high
-        return super().__init__(int(low), int(high), **kwargs)
+        self.low = int(low)
+        self.high = int(high)
+        return super().__init__(self.low, self.high, **kwargs)
 
     def __repr__(self):
         return f"IntDistribution(low={self.low}, high={self.high})"
