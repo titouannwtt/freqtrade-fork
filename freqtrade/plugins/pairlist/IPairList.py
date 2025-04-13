@@ -237,6 +237,11 @@ class IPairList(LoggingMixin, ABC):
         :return: the list of pairs the user wants to trade without those unavailable or
         black_listed
         """
+
+        # Save show_output value and set it to True
+        prev_show_output = self.show_output
+        self.show_output = True
+
         markets = self._exchange.markets
         if not markets:
             raise OperationalException(
@@ -276,6 +281,9 @@ class IPairList(LoggingMixin, ABC):
                 continue
             if pair not in sanitized_whitelist:
                 sanitized_whitelist.append(pair)
+
+        # Return show_output to its previous value
+        self.show_output = prev_show_output
 
         # We need to remove pairs that are unknown
         return sanitized_whitelist
