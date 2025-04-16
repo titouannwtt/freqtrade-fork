@@ -42,7 +42,7 @@ Common arguments:
                         set to `-` to read config from stdin.
   -d PATH, --datadir PATH, --data-dir PATH
                         Path to the base directory of the exchange with historical backtesting data.
-                        To see futures data, use trading-mode additionally for example.
+                        To see futures data, use trading-mode additionally.
   --userdir PATH, --user-data-dir PATH
                         Path to userdata directory.
 
