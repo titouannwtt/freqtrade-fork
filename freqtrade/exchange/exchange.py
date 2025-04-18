@@ -3363,40 +3363,20 @@ class Exchange:
             if stake_amount == 0:
                 return pair_tiers[0]["maxLeverage"]  # Max lev for lowest amount
 
-            for tier_index in range(len(pair_tiers)):
-                tier = pair_tiers[tier_index]
-                lev = tier["maxLeverage"]
+            # Find the appropriate tier based on stake_amount
+            prior_max_lev = None
+            for tier in pair_tiers:
+                min_stake = tier["minNotional"] / (prior_max_lev or tier["maxLeverage"])
+                max_stake = tier["maxNotional"] / tier["maxLeverage"]
+                prior_max_lev = tier["maxLeverage"]
+                # Adjust notional by leverage to do a proper comparison
+                if min_stake <= stake_amount <= max_stake:
+                    return tier["maxLeverage"]
 
-                if tier_index < len(pair_tiers) - 1:
-                    next_tier = pair_tiers[tier_index + 1]
-                    next_floor = next_tier["minNotional"] / next_tier["maxLeverage"]
-                    if next_floor > stake_amount:  # Next tier min too high for stake amount
-                        return min((tier["maxNotional"] / stake_amount), lev)
-                        #
-                        # With the two leverage tiers below,
-                        # - a stake amount of 150 would mean a max leverage of (10000 / 150) = 66.66
-                        # - stakes below 133.33 = max_lev of 75
-                        # - stakes between 133.33-200 = max_lev of 10000/stake = 50.01-74.99
-                        # - stakes from 200 + 1000 = max_lev of 50
-                        #
-                        # {
-                        #     "min": 0,      # stake = 0.0
-                        #     "max": 10000,  # max_stake@75 = 10000/75 = 133.33333333333334
-                        #     "lev": 75,
-                        # },
-                        # {
-                        #     "min": 10000,  # stake = 200.0
-                        #     "max": 50000,  # max_stake@50 = 50000/50 = 1000.0
-                        #     "lev": 50,
-                        # }
-                        #
-
-                else:  # if on the last tier
-                    if stake_amount > tier["maxNotional"]:
-                        # If stake is > than max tradeable amount
-                        raise InvalidOrderException(f"Amount {stake_amount} too high for {pair}")
-                    else:
-                        return tier["maxLeverage"]
+            #     else:  # if on the last tier
+            if stake_amount > max_stake:
+                # If stake is > than max tradeable amount
+                raise InvalidOrderException(f"Amount {stake_amount} too high for {pair}")
 
             raise OperationalException(
                 "Looped through all tiers without finding a max leverage. Should never be reached"
