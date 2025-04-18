@@ -5599,11 +5599,13 @@ def test_liquidation_price_is_none(
 def test_get_max_pair_stake_amount(
     mocker,
     default_conf,
+    leverage_tiers,
 ):
     api_mock = MagicMock()
     default_conf["margin_mode"] = "isolated"
     default_conf["trading_mode"] = "futures"
     exchange = get_patched_exchange(mocker, default_conf, api_mock)
+    exchange._leverage_tiers = leverage_tiers
     markets = {
         "XRP/USDT:USDT": {
             "limits": {
@@ -5667,11 +5669,23 @@ def test_get_max_pair_stake_amount(
             "contractSize": 0.01,
             "spot": False,
         },
+        "ZEC/USDT:USDT": {
+            "limits": {
+                "amount": {"min": 0.001, "max": None},
+                "cost": {"min": 5, "max": None},
+            },
+            "contractSize": 1,
+            "spot": False,
+        },
     }
 
     mocker.patch(f"{EXMS}.markets", markets)
     assert exchange.get_max_pair_stake_amount("XRP/USDT:USDT", 2.0) == 20000
     assert exchange.get_max_pair_stake_amount("XRP/USDT:USDT", 2.0, 5) == 4000
+    # limit leverage tiers
+    assert exchange.get_max_pair_stake_amount("ZEC/USDT:USDT", 2.0, 5) == 100_000
+    assert exchange.get_max_pair_stake_amount("ZEC/USDT:USDT", 2.0, 50) == 1000
+
     assert exchange.get_max_pair_stake_amount("LTC/USDT:USDT", 2.0) == float("inf")
     assert exchange.get_max_pair_stake_amount("ETH/USDT:USDT", 2.0) == 200
     assert exchange.get_max_pair_stake_amount("DOGE/USDT:USDT", 2.0) == 500
