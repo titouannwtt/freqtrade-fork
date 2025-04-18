@@ -989,6 +989,8 @@ class Exchange:
         except KeyError:
             raise ValueError(f"Can't get market information for symbol {pair}")
 
+        stake_limits = []
+        limits = market["limits"]
         if isMin:
             # reserve some percent defined in config (5% default) + stoploss
             margin_reserve: float = 1.0 + self._config.get(
@@ -1001,8 +1003,6 @@ class Exchange:
             margin_reserve = 1.0
             stoploss_reserve = 1.0
 
-        stake_limits = []
-        limits = market["limits"]
         if limits["cost"][limit] is not None:
             stake_limits.append(
                 self._contracts_to_amount(pair, limits["cost"][limit]) * stoploss_reserve
