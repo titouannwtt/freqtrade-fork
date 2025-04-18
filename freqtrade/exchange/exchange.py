@@ -3361,7 +3361,7 @@ class Exchange:
             pair_tiers = self._leverage_tiers[pair]
 
             if stake_amount == 0:
-                return self._leverage_tiers[pair][0]["maxLeverage"]  # Max lev for lowest amount
+                return pair_tiers[0]["maxLeverage"]  # Max lev for lowest amount
 
             for tier_index in range(len(pair_tiers)):
                 tier = pair_tiers[tier_index]
