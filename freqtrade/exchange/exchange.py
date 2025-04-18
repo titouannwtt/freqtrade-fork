@@ -1000,8 +1000,11 @@ class Exchange:
             # it should not be more than 50%
             stoploss_reserve = max(min(stoploss_reserve, 1.5), 1)
         else:
+            # is_max
             margin_reserve = 1.0
             stoploss_reserve = 1.0
+            if max_from_tiers := self._get_max_notional_from_tiers(pair, leverage=leverage):
+                stake_limits.append(max_from_tiers)
 
         if limits["cost"][limit] is not None:
             stake_limits.append(
@@ -3390,6 +3393,23 @@ class Exchange:
                 return 1.0  # Default if max leverage cannot be found
         else:
             return 1.0
+
+    def _get_max_notional_from_tiers(self, pair: str, leverage: float) -> float | None:
+        """
+        get max_notional from leverage_tiers
+        :param pair: The base/quote currency pair being traded
+        :param leverage: The leverage to be used
+        :return: The maximum notional value for the given leverage or None if not found
+        """
+        if self.trading_mode != TradingMode.FUTURES:
+            return None
+        if pair not in self._leverage_tiers:
+            return None
+        pair_tiers = self._leverage_tiers[pair]
+        for tier in reversed(pair_tiers):
+            if leverage <= tier["maxLeverage"]:
+                return tier["maxNotional"]
+        return None
 
     @retrier
     def _set_leverage(
