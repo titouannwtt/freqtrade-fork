@@ -961,7 +961,7 @@ class Exchange:
             return 1 / pow(10, precision)
 
     def get_min_pair_stake_amount(
-        self, pair: str, price: float, stoploss: float, leverage: float | None = 1.0
+        self, pair: str, price: float, stoploss: float, leverage: float = 1.0
     ) -> float | None:
         return self._get_stake_amount_limit(pair, price, stoploss, "min", leverage)
 
@@ -980,7 +980,7 @@ class Exchange:
         price: float,
         stoploss: float,
         limit: Literal["min", "max"],
-        leverage: float | None = 1.0,
+        leverage: float = 1.0,
     ) -> float | None:
         isMin = limit == "min"
 
