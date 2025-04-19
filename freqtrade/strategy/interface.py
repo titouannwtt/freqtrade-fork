@@ -28,7 +28,7 @@ from freqtrade.enums import (
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_next_date, timeframe_to_seconds
 from freqtrade.misc import remove_entry_exit_signals
-from freqtrade.persistence import LocalTrade, Order, PairLocks, Trade
+from freqtrade.persistence import Order, PairLocks, Trade
 from freqtrade.strategy.hyper import HyperStrategyMixin
 from freqtrade.strategy.informative_decorator import (
     InformativeData,
@@ -468,7 +468,7 @@ class IStrategy(ABC, HyperStrategyMixin):
     def custom_roi(
         self,
         pair: str,
-        trade: Trade | LocalTrade,
+        trade: Trade,
         current_time: datetime,
         entry_tag: str | None,
         side: str,
@@ -1648,7 +1648,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
     def min_roi_reached_entry(
         self,
-        trade: Trade | LocalTrade,
+        trade: Trade,
         trade_dur: int,
         current_time: datetime,
     ) -> tuple[int | None, float | None]:
