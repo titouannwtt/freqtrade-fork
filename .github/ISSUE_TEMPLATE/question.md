@@ -8,7 +8,7 @@ assignees: ''
 ---
 <!-- 
 Have you searched for similar issues before posting it?
-Did you have a VERY good look at the [documentation](https://www.freqtrade.io/en/latest/) and are sure that the question is not explained there
+Did you have a VERY good look at the [documentation](https://www.freqtrade.io/) and are sure that the question is not explained there
 
 Please do not use the question template to report bugs or to request new features.
 -->
