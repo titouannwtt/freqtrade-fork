@@ -504,7 +504,7 @@ Called for open trade every iteration (roughly every 5 seconds) until a trade is
 
 The usage of the custom ROI method must be enabled by setting `use_custom_roi=True` on the strategy object.
 
-This method allows you to define a custom minimum ROI threshold for exiting a trade, expressed as a ratio (e.g., `0.05` for 5% profit). If both `minimal_roi` and `custom_roi` are defined, the lower of the two thresholds will trigger an exit. For example, if `minimal_roi` is set to `{"0": 0.10}` (10% at 0 minutes) and `custom_roi` returns `0.05`, the trade will exit when the profit reaches 5%.
+This method allows you to define a custom minimum ROI threshold for exiting a trade, expressed as a ratio (e.g., `0.05` for 5% profit). If both `minimal_roi` and `custom_roi` are defined, the lower of the two thresholds will trigger an exit. For example, if `minimal_roi` is set to `{"0": 0.10}` (10% at 0 minutes) and `custom_roi` returns `0.05`, the trade will exit when the profit reaches 5%. Also, if `custom_roi` returns `0.10` and `minimal_roi` is set to `{"0": 0.05}` (5% at 0 minutes), the trade will be closed when the profit reaches 5%.
 
 The method must return a float representing the new ROI threshold as a ratio, or `None` to fall back to the `minimal_roi` logic. Returning `NaN` or `inf` values is considered invalid and will be treated as `None`, causing the bot to use the `minimal_roi` configuration.
 
