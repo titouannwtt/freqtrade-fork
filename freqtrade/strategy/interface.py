@@ -1686,7 +1686,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
         # The lowest available value is used to trigger an exit.
         if custom_roi is not None and (min_roi is None or custom_roi < min_roi):
-            return 0, custom_roi
+            return trade_dur, custom_roi
         else:
             return roi_entry, min_roi
 
