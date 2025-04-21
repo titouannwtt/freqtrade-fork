@@ -59,4 +59,4 @@ websockets==15.0.1
 janus==2.0.0
 
 ast-comments==1.2.2
-packaging==24.2
+packaging==25.0
