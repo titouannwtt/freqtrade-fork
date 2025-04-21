@@ -46,7 +46,7 @@ psutil==7.0.0
 
 # Building config files interactively
 questionary==2.1.0
-prompt-toolkit==3.0.50
+prompt-toolkit==3.0.51
 # Extensions to datetime library
 python-dateutil==2.9.0.post0
 pytz==2025.2
