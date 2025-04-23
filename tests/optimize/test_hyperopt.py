@@ -609,8 +609,6 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
     generate_optimizer_value = hyperopt.hyperopter.generate_optimizer(
         hyperopt.hyperopter.backtesting, optimizer_param
     )
-    # list(optimizer_param.values())
-
     assert generate_optimizer_value == response_expected
 
 
@@ -1312,7 +1310,7 @@ def test_max_open_trades_consistency(mocker, hyperopt_conf, tmp_path, fee) -> No
         @wraps(func)
         def wrapper(*args, **kwargs):
             nonlocal first_time_evaluated
-            print(f"max_open_trades: {hyperopt.hyperopter.backtesting.strategy.max_open_trades}")
+
             stake_amount = func(*args, **kwargs)
             if first_time_evaluated is False:
                 assert stake_amount == 2
