@@ -306,8 +306,6 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=current_jobs, dimensions=self.hyperopter.o_dimensions
                         )
-                        # asked_params = [asked1.params for asked1 in asked]
-                        # logger.info(f"asked iteration {i}: {asked} {asked_params}")
 
                         f_val = self.run_optimizer_parallel(
                             parallel,
@@ -317,7 +315,6 @@ class Hyperopt:
                         f_val_loss = [v["loss"] for v in f_val]
                         for o_ask, v in zip(asked, f_val_loss, strict=False):
                             self.opt.tell(o_ask, v)
-                        # logger.info(f"result iteration {i}: {asked} {f_val_loss}")
 
                         for j, val in enumerate(f_val):
                             # Use human-friendly indexes here (starting from 1)

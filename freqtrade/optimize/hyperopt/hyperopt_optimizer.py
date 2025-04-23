@@ -147,11 +147,8 @@ class HyperOptimizer:
                 self.hyperopt_pickle_magic(modules.__bases__)
 
     def _get_params_dict(
-        self,
-        dimensions: list[DimensionProtocol],
-        raw_params: dict[str, Any],
+        self, dimensions: list[DimensionProtocol], raw_params: dict[str, Any]
     ) -> dict[str, Any]:
-        # logger.info(f"_get_params_dict: {raw_params}")
         # Ensure the number of dimensions match
         # the number of parameters in the list.
         if len(raw_params) != len(dimensions):
@@ -159,9 +156,6 @@ class HyperOptimizer:
 
         # Return a dict where the keys are the names of the dimensions
         # and the values are taken from the list of parameters.
-        # result = {d.name: v for d, v in zip(dimensions, raw_params, strict=False)}
-        # logger.info(f"d_get_params_dict: {result}")
-        # return {d.name: v for d, v in zip(dimensions, raw_params.params, strict=False)}
         return raw_params
 
     def _get_params_details(self, params: dict) -> dict:
@@ -273,12 +267,9 @@ class HyperOptimizer:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
 
-    # @profile
-    # fp=open('memory_profiler.log','w+')
-    # @profile(stream=fp)
     def generate_optimizer(
         self, backtesting: Backtesting, raw_params: dict[str, Any]
-    ) -> dict[str, Any]:  # list[Any]
+    ) -> dict[str, Any]:
         """
         Used Optimize function.
         Called once per epoch to optimize whatever is configured.
@@ -330,7 +321,7 @@ class HyperOptimizer:
 
             backtesting.strategy.max_open_trades = updated_max_open_trades
 
-        with Path(self.data_pickle_file).open("rb") as f:
+        with self.data_pickle_file.open("rb") as f:
             processed = load(f, mmap_mode="r")
         if self.analyze_per_epoch:
             # Data is not yet analyzed, rerun populate_indicators.
@@ -419,7 +410,6 @@ class HyperOptimizer:
                     f"Unknown search space {original_dim.name} - {original_dim} / \
                         {type(original_dim)}"
                 )
-        # logger.info(f"convert_dimensions_to_optuna_space: {s_dimensions} - {o_dimensions}")
         return o_dimensions
 
     def get_optimizer(
@@ -430,11 +420,6 @@ class HyperOptimizer:
             dimensions=self.dimensions, random_state=random_state
         )
         self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
-
-        # for save/restore
-        # with open("sampler.pkl", "wb") as fout:
-        #     pickle.dump(study.sampler, fout)
-        # restored_sampler = pickle.load(open("sampler.pkl", "rb"))
 
         if isinstance(o_sampler, str):
             if o_sampler not in optuna_samplers_dict.keys():
