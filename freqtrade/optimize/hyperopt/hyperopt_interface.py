@@ -13,12 +13,7 @@ from optuna.samplers import BaseSampler
 from freqtrade.constants import Config
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.misc import round_dict
-from freqtrade.optimize.space import (
-    DimensionProtocol,
-    SKDecimal,
-    ft_CategoricalDistribution,
-    ft_IntDistribution,
-)
+from freqtrade.optimize.space import Categorical, Dimension, Integer, SKDecimal
 from freqtrade.strategy import IStrategy
 
 
@@ -45,7 +40,7 @@ class IHyperOpt(ABC):
         # Assign timeframe to be used in hyperopt
         IHyperOpt.timeframe = str(config["timeframe"])
 
-    def generate_estimator(self, dimensions: list[DimensionProtocol], **kwargs) -> EstimatorType:
+    def generate_estimator(self, dimensions: list[Dimension], **kwargs) -> EstimatorType:
         """
         Return base_estimator.
         Can be any of "TPESampler", "GPSampler", "CmaEsSampler", "NSGAIISampler"
@@ -69,7 +64,7 @@ class IHyperOpt(ABC):
 
         return roi_table
 
-    def roi_space(self) -> list[DimensionProtocol]:
+    def roi_space(self) -> list[Dimension]:
         """
         Create a ROI space.
 
@@ -137,9 +132,9 @@ class IHyperOpt(ABC):
         logger.info(f"Max roi table: {round_dict(self.generate_roi_table(p), 3)}")
 
         return [
-            ft_IntDistribution(roi_limits["roi_t1_min"], roi_limits["roi_t1_max"], "roi_t1"),
-            ft_IntDistribution(roi_limits["roi_t2_min"], roi_limits["roi_t2_max"], "roi_t2"),
-            ft_IntDistribution(roi_limits["roi_t3_min"], roi_limits["roi_t3_max"], "roi_t3"),
+            Integer(roi_limits["roi_t1_min"], roi_limits["roi_t1_max"], name="roi_t1"),
+            Integer(roi_limits["roi_t2_min"], roi_limits["roi_t2_max"], name="roi_t2"),
+            Integer(roi_limits["roi_t3_min"], roi_limits["roi_t3_max"], name="roi_t3"),
             SKDecimal(
                 roi_limits["roi_p1_min"], roi_limits["roi_p1_max"], decimals=3, name="roi_p1"
             ),
@@ -151,7 +146,7 @@ class IHyperOpt(ABC):
             ),
         ]
 
-    def stoploss_space(self) -> list[DimensionProtocol]:
+    def stoploss_space(self) -> list[Dimension]:
         """
         Create a stoploss space.
 
@@ -175,7 +170,7 @@ class IHyperOpt(ABC):
             "trailing_only_offset_is_reached": params["trailing_only_offset_is_reached"],
         }
 
-    def trailing_space(self) -> list[DimensionProtocol]:
+    def trailing_space(self) -> list[Dimension]:
         """
         Create a trailing stoploss space.
 
@@ -188,7 +183,7 @@ class IHyperOpt(ABC):
             # This parameter is included into the hyperspace dimensions rather than assigning
             # it explicitly in the code in order to have it printed in the results along with
             # other 'trailing' hyperspace parameters.
-            ft_CategoricalDistribution([True], name="trailing_stop"),
+            Categorical([True], name="trailing_stop"),
             SKDecimal(0.01, 0.35, decimals=3, name="trailing_stop_positive"),
             # 'trailing_stop_positive_offset' should be greater than 'trailing_stop_positive',
             # so this intermediate parameter is used as the value of the difference between
@@ -196,17 +191,17 @@ class IHyperOpt(ABC):
             # generate_trailing_params() method.
             # This is similar to the hyperspace dimensions used for constructing the ROI tables.
             SKDecimal(0.001, 0.1, decimals=3, name="trailing_stop_positive_offset_p1"),
-            ft_CategoricalDistribution([True, False], name="trailing_only_offset_is_reached"),
+            Categorical([True, False], name="trailing_only_offset_is_reached"),
         ]
 
-    def max_open_trades_space(self) -> list[DimensionProtocol]:
+    def max_open_trades_space(self) -> list[Dimension]:
         """
         Create a max open trades space.
 
         You may override it in your custom Hyperopt class.
         """
         return [
-            ft_IntDistribution(-1, 10, name="max_open_trades"),
+            Integer(-1, 10, name="max_open_trades"),
         ]
 
     # This is needed for proper unpickling the class attribute timeframe
