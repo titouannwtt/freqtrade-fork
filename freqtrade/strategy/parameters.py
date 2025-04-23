@@ -15,10 +15,10 @@ from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
 
 with suppress(ImportError):
     from freqtrade.optimize.space import (
+        Categorical,
+        Integer,
+        Real,
         SKDecimal,
-        ft_CategoricalDistribution,
-        ft_FloatDistribution,
-        ft_IntDistribution,
     )
 
 from freqtrade.exceptions import OperationalException
@@ -71,11 +71,7 @@ class BaseParameter(ABC):
         return f"{self.__class__.__name__}({self.value})"
 
     @abstractmethod
-    def get_space(
-        self, name: str
-    ) -> Union[
-        "ft_IntDistribution", "ft_FloatDistribution", "SKDecimal", "ft_CategoricalDistribution"
-    ]:
+    def get_space(self, name: str) -> Union["Integer", "Real", "SKDecimal", "Categorical"]:
         """
         Get-space - will be used by Hyperopt to get the hyperopt Space
         """
@@ -166,12 +162,12 @@ class IntParameter(NumericParameter):
             low=low, high=high, default=default, space=space, optimize=optimize, load=load, **kwargs
         )
 
-    def get_space(self, name: str) -> "ft_IntDistribution":
+    def get_space(self, name: str) -> "Integer":
         """
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return ft_IntDistribution(self.low, self.high, name, **self._space_params)
+        return Integer(low=self.low, high=self.high, name=name, **self._space_params)
 
     @property
     def range(self):
@@ -219,12 +215,12 @@ class RealParameter(NumericParameter):
             low=low, high=high, default=default, space=space, optimize=optimize, load=load, **kwargs
         )
 
-    def get_space(self, name: str) -> "ft_FloatDistribution":
+    def get_space(self, name: str) -> "Real":
         """
         Create optimization space.
         :param name: A name of parameter field.
         """
-        return ft_FloatDistribution(self.low, self.high, name, **self._space_params)
+        return Real(low=self.low, high=self.high, name=name, **self._space_params)
 
 
 class DecimalParameter(NumericParameter):
@@ -313,7 +309,8 @@ class CategoricalParameter(BaseParameter):
          name is prefixed with 'buy_' or 'sell_'.
         :param optimize: Include parameter in hyperopt optimizations.
         :param load: Load parameter value from {space}_params.
-        :param kwargs: Extra parameters to optuna.distributions.CategoricalDistribution.
+        :param kwargs: Compatibility. Optuna's CategoricalDistribution does not
+                       accept extra parameters
         """
         if len(categories) < 2:
             raise OperationalException(
@@ -322,12 +319,12 @@ class CategoricalParameter(BaseParameter):
         self.opt_range = categories
         super().__init__(default=default, space=space, optimize=optimize, load=load, **kwargs)
 
-    def get_space(self, name: str) -> "ft_CategoricalDistribution":
+    def get_space(self, name: str) -> "Categorical":
         """
         Create optuna distribution space.
         :param name: A name of parameter field.
         """
-        return ft_CategoricalDistribution(self.opt_range, name)
+        return Categorical(self.opt_range, name=name)
 
     @property
     def range(self):
