@@ -27,45 +27,6 @@ from freqtrade.exceptions import OperationalException
 logger = logging.getLogger(__name__)
 
 
-# class DimensionProtocol(Protocol):
-#     name: str
-
-
-# class ft_CategoricalDistribution(CategoricalDistribution):
-#     def __init__(
-#         self,
-#         name: str,
-#         categories: Sequence[Any],
-#         **kwargs,
-#     ):
-#         self.name = name
-#         return super().__init__(categories)
-
-
-# class ft_IntDistribution(IntDistribution):
-#     def __init__(
-#         self,
-#         name: str,
-#         low: int | float,
-#         high: int | float,
-#         **kwargs,
-#     ):
-#         self.name = name
-#         return super().__init__(int(low), int(high), **kwargs)
-
-
-# class ft_FloatDistribution(FloatDistribution):
-#     def __init__(
-#         self,
-#         name: str,
-#         low: float,
-#         high: float,
-#         **kwargs,
-#     ):
-#         self.name = name
-#         return super().__init__(low, high, **kwargs)
-
-
 class BaseParameter(ABC):
     """
     Defines a parameter that can be optimized by hyperopt.
