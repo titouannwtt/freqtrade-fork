@@ -32,9 +32,6 @@ from freqtrade.optimize.hyperopt_tools import (
 from freqtrade.util import get_progress_tracker
 
 
-# import multiprocessing as mp
-# mp.set_start_method('fork', force=True) # spawn fork forkserver
-
 logger = logging.getLogger(__name__)
 
 
