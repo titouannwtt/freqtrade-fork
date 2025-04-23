@@ -14,8 +14,8 @@ from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
 
 
 with suppress(ImportError):
-    from freqtrade.optimize.space import SKDecimal
-    from freqtrade.optimize.space.optunaspaces import (
+    from freqtrade.optimize.space import (
+        SKDecimal,
         ft_CategoricalDistribution,
         ft_FloatDistribution,
         ft_IntDistribution,

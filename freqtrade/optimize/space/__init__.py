@@ -1,5 +1,22 @@
-from .decimalspace import SKDecimal  # noqa: F401
-from .optunaspaces import DimensionProtocol as Dimension  # noqa: F401
-from .optunaspaces import ft_CategoricalDistribution as Categorical  # noqa: F401
-from .optunaspaces import ft_FloatDistribution as Real  # noqa: F401
-from .optunaspaces import ft_IntDistribution as Integer  # noqa: F401
+from .decimalspace import SKDecimal
+from .optunaspaces import (
+    DimensionProtocol,
+    ft_CategoricalDistribution,
+    ft_FloatDistribution,
+    ft_IntDistribution,
+)
+
+
+# Alias for the distribution classes
+Dimension = DimensionProtocol
+Categorical = ft_CategoricalDistribution
+Integer = ft_IntDistribution
+Real = ft_FloatDistribution
+
+__all__ = [
+    "Categorical",
+    "Dimension",
+    "Integer",
+    "Real",
+    "SKDecimal",
+]

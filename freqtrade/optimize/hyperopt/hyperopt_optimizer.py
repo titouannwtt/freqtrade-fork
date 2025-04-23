@@ -41,9 +41,9 @@ with warnings.catch_warnings():
     # warnings.filterwarnings("ignore", category=ExperimentalWarning)
     import optuna
 
-    from freqtrade.optimize.space.decimalspace import SKDecimal
-    from freqtrade.optimize.space.optunaspaces import (
+    from freqtrade.optimize.space import (
         DimensionProtocol,
+        SKDecimal,
         ft_CategoricalDistribution,
         ft_FloatDistribution,
         ft_IntDistribution,

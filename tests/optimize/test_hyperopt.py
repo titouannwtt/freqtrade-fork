@@ -16,8 +16,7 @@ from freqtrade.optimize.hyperopt import Hyperopt
 from freqtrade.optimize.hyperopt.hyperopt_auto import HyperOptAuto
 from freqtrade.optimize.hyperopt_tools import HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
-from freqtrade.optimize.space import SKDecimal
-from freqtrade.optimize.space.optunaspaces import ft_IntDistribution
+from freqtrade.optimize.space import SKDecimal, ft_IntDistribution
 from freqtrade.strategy import IntParameter
 from freqtrade.util import dt_utc
 from tests.conftest import (

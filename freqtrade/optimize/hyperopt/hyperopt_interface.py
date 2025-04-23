@@ -13,9 +13,9 @@ from optuna.samplers import BaseSampler
 from freqtrade.constants import Config
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.misc import round_dict
-from freqtrade.optimize.space import SKDecimal
-from freqtrade.optimize.space.optunaspaces import (
+from freqtrade.optimize.space import (
     DimensionProtocol,
+    SKDecimal,
     ft_CategoricalDistribution,
     ft_IntDistribution,
 )
