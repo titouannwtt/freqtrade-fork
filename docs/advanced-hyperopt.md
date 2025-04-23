@@ -175,7 +175,6 @@ Possible values are either one of "NSGAIISampler", "TPESampler", "GPSampler", "C
 
 Some research will be necessary to find additional Samplers (from optunahub) for example.
 
-
 !!! Note
     While custom estimators can be provided, it's up to you as User to do research on possible parameters and analyze / understand which ones should be used.
     If you're unsure about this, best use one of the Defaults (`"NSGAIIISampler"` has proven to be the most versatile) without further parameters.
