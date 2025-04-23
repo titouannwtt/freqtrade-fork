@@ -406,7 +406,7 @@ class HyperOptimizer:
             ):
                 o_dimensions[original_dim.name] = original_dim
             else:
-                raise Exception(
+                raise OperationalException(
                     f"Unknown search space {original_dim.name} - {original_dim} / \
                         {type(original_dim)}"
                 )
