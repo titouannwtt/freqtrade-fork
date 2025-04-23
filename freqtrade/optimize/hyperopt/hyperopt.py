@@ -94,8 +94,7 @@ class Hyperopt:
         self.hyperopt_table_header = 0
         self.print_json = self.config.get("print_json", False)
 
-        self.hyperopter = HyperOptimizer(self.config)
-        self.hyperopter.data_pickle_file = self.data_pickle_file
+        self.hyperopter = HyperOptimizer(self.config, self.data_pickle_file)
 
     @staticmethod
     def get_lock_filename(config: Config) -> str:

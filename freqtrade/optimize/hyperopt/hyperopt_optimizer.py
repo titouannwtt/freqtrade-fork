@@ -70,7 +70,7 @@ class HyperOptimizer:
     This class is sent to the hyperopt worker processes.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, data_pickle_file: Path) -> None:
         self.buy_space: list[DimensionProtocol] = []
         self.sell_space: list[DimensionProtocol] = []
         self.protection_space: list[DimensionProtocol] = []
@@ -106,8 +106,10 @@ class HyperOptimizer:
             self.config
         )
         self.calculate_loss = self.custom_hyperoptloss.hyperopt_loss_function
+
+        self.data_pickle_file = data_pickle_file
+
         self.market_change = 0.0
-        self.data_pickle_file = ""
 
         if HyperoptTools.has_space(self.config, "sell"):
             # Make sure use_exit_signal is enabled
