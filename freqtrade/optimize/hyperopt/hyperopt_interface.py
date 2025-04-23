@@ -8,7 +8,7 @@ import math
 from abc import ABC
 from typing import TypeAlias
 
-from sklearn.base import RegressorMixin
+from optuna.samplers import BaseSampler
 
 from freqtrade.constants import Config
 from freqtrade.exchange import timeframe_to_minutes
@@ -24,7 +24,7 @@ from freqtrade.strategy import IStrategy
 
 logger = logging.getLogger(__name__)
 
-EstimatorType: TypeAlias = RegressorMixin | str
+EstimatorType: TypeAlias = BaseSampler | str
 
 
 class IHyperOpt(ABC):
@@ -188,7 +188,7 @@ class IHyperOpt(ABC):
             # This parameter is included into the hyperspace dimensions rather than assigning
             # it explicitly in the code in order to have it printed in the results along with
             # other 'trailing' hyperspace parameters.
-            ft_CategoricalDistribution([True], "trailing_stop"),
+            ft_CategoricalDistribution([True], name="trailing_stop"),
             SKDecimal(0.01, 0.35, decimals=3, name="trailing_stop_positive"),
             # 'trailing_stop_positive_offset' should be greater than 'trailing_stop_positive',
             # so this intermediate parameter is used as the value of the difference between
@@ -196,7 +196,7 @@ class IHyperOpt(ABC):
             # generate_trailing_params() method.
             # This is similar to the hyperspace dimensions used for constructing the ROI tables.
             SKDecimal(0.001, 0.1, decimals=3, name="trailing_stop_positive_offset_p1"),
-            ft_CategoricalDistribution([True, False], "trailing_only_offset_is_reached"),
+            ft_CategoricalDistribution([True, False], name="trailing_only_offset_is_reached"),
         ]
 
     def max_open_trades_space(self) -> list[DimensionProtocol]:
@@ -205,7 +205,9 @@ class IHyperOpt(ABC):
 
         You may override it in your custom Hyperopt class.
         """
-        return [ft_IntDistribution(-1, 10, "max_open_trades")]
+        return [
+            ft_IntDistribution(-1, 10, name="max_open_trades"),
+        ]
 
     # This is needed for proper unpickling the class attribute timeframe
     # which is set to the actual value by the resolver.
