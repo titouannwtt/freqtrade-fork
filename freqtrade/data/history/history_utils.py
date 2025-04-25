@@ -359,6 +359,7 @@ def refresh_backtest_ohlcv_data(
     data_format: str | None = None,
     prepend: bool = False,
     progress_tracker: CustomProgress | None = None,
+    use_parallel_download: bool = False,
 ) -> list[str]:
     """
     Refresh stored ohlcv data for backtesting and hyperopt operations.
@@ -387,7 +388,7 @@ def refresh_backtest_ohlcv_data(
             for timeframe in timeframes:
                 # Get fast candles via parallel method on first loop through per timeframe
                 # and candle type. Downloads all the pairs in the list and stores them.
-                if (
+                if use_parallel_download and (
                     ((pair, timeframe, candle_type) not in fast_candles)
                     and (erase is False)
                     and (prepend is False)
@@ -785,6 +786,7 @@ def download_data(
                 trading_mode=config.get("trading_mode", "spot"),
                 prepend=config.get("prepend_data", False),
                 progress_tracker=progress_tracker,
+                use_parallel_download=config.get("use_parallel_download", False),
             )
     finally:
         if pairs_not_available:

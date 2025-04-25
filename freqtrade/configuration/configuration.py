@@ -377,6 +377,7 @@ class Configuration:
             ("timeframes", "timeframes --timeframes: {}"),
             ("days", "Detected --days: {}"),
             ("include_inactive", "Detected --include-inactive-pairs: {}"),
+            ("use_parallel_download", "Detected --use-parallel-download: {}"),
             ("download_trades", "Detected --dl-trades: {}"),
             ("convert_trades", "Detected --convert: {} - Converting Trade data to OHCV {}"),
             ("dataformat_ohlcv", 'Using "{}" to store OHLCV data.'),
