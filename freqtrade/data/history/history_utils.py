@@ -403,11 +403,7 @@ def refresh_backtest_ohlcv_data(
                     )
 
                 # get the already downloaded pair candles if they exist
-                pair_candles = (
-                    fast_candles[(pair, timeframe, candle_type)]
-                    if (pair, timeframe, candle_type) in fast_candles
-                    else None
-                )
+                pair_candles = fast_candles.pop((pair, timeframe, candle_type), None)
 
                 progress.update(timeframe_task, description=f"Timeframe {timeframe}")
                 logger.debug(f"Downloading pair {pair}, {candle_type}, interval {timeframe}.")
