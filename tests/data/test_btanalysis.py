@@ -268,6 +268,14 @@ def test_calculate_market_change(testdatadir):
     assert isinstance(result, float)
     assert pytest.approx(result) == 0.01100002
 
+    result = calculate_market_change(data, min_date=dt_utc(2018, 1, 20))
+    assert isinstance(result, float)
+    assert pytest.approx(result) == 0.0375149
+
+    # Move min-date after the last date
+    result = calculate_market_change(data, min_date=dt_utc(2018, 2, 20))
+    assert pytest.approx(result) == 0.0
+
 
 def test_combine_dataframes_with_mean(testdatadir):
     pairs = ["ETH/BTC", "ADA/BTC"]
