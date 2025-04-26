@@ -712,7 +712,7 @@ class FreqaiDataKitchen:
         for s in ['trades', 'orderflow', 'imbalances', 'stacked_imbalances_bid',
                     'stacked_imbalances_ask', 'max_delta', 'min_delta', 'bid', 'ask',
                     'delta', 'total_trades']:
-            if s in dataframe.columns and f"{s}_{suffix}" in df_to_merge.columns:
+            if s in dataframe.columns and f"{s}_{suffix}" in dataframe.columns:
                 skip_columns.append(f"{s}_{suffix}")
         dataframe = dataframe.drop(columns=skip_columns)
         return dataframe
