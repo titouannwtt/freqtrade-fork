@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import DOCS_LINK, Config
-from freqtrade.data.converter import reduce_dataframe_footprint
+from freqtrade.data.converter import ORDERFLOW_ADDED_COLUMNS, reduce_dataframe_footprint
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_seconds
 from freqtrade.strategy import merge_informative_pair
@@ -709,11 +709,7 @@ class FreqaiDataKitchen:
         skip_columns = [
             (f"{s}_{suffix}") for s in ["date", "open", "high", "low", "close", "volume"]
         ]
-        for s in [
-            'trades', 'orderflow', 'imbalances', 'stacked_imbalances_bid',
-            'stacked_imbalances_ask', 'max_delta', 'min_delta', 'bid', 'ask',
-            'delta', 'total_trades'
-        ]:
+        for s in ORDERFLOW_ADDED_COLUMNS:
             if s in dataframe.columns and f"{s}_{suffix}" in dataframe.columns:
                 skip_columns.append(f"{s}_{suffix}")
         dataframe = dataframe.drop(columns=skip_columns)
