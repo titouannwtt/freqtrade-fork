@@ -709,9 +709,11 @@ class FreqaiDataKitchen:
         skip_columns = [
             (f"{s}_{suffix}") for s in ["date", "open", "high", "low", "close", "volume"]
         ]
-        for s in ['trades', 'orderflow', 'imbalances', 'stacked_imbalances_bid',
-                    'stacked_imbalances_ask', 'max_delta', 'min_delta', 'bid', 'ask',
-                    'delta', 'total_trades']:
+        for s in [
+            'trades', 'orderflow', 'imbalances', 'stacked_imbalances_bid',
+            'stacked_imbalances_ask', 'max_delta', 'min_delta', 'bid', 'ask',
+            'delta', 'total_trades'
+        ]:
             if s in dataframe.columns and f"{s}_{suffix}" in dataframe.columns:
                 skip_columns.append(f"{s}_{suffix}")
         dataframe = dataframe.drop(columns=skip_columns)
