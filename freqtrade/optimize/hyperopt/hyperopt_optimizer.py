@@ -10,8 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import optuna
 from joblib import dump, load
 from joblib.externals import cloudpickle
+from optuna.exceptions import ExperimentalWarning
 from pandas import DataFrame
 
 # from memory_profiler import profile
@@ -29,25 +31,16 @@ from freqtrade.optimize.hyperopt.hyperopt_auto import HyperOptAuto
 from freqtrade.optimize.hyperopt_loss.hyperopt_loss_interface import IHyperOptLoss
 from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer, HyperoptTools
 from freqtrade.optimize.optimize_reports import generate_strategy_stats
+from freqtrade.optimize.space import (
+    DimensionProtocol,
+    SKDecimal,
+    ft_CategoricalDistribution,
+    ft_FloatDistribution,
+    ft_IntDistribution,
+)
 from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
-
-# Suppress optuna ExperimentalWarning from skopt
-with warnings.catch_warnings():
-    from optuna.exceptions import ExperimentalWarning
-
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    # warnings.filterwarnings("ignore", category=ExperimentalWarning)
-    import optuna
-
-    from freqtrade.optimize.space import (
-        DimensionProtocol,
-        SKDecimal,
-        ft_CategoricalDistribution,
-        ft_FloatDistribution,
-        ft_IntDistribution,
-    )
 
 logger = logging.getLogger(__name__)
 
