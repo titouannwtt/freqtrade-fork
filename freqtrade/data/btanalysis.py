@@ -491,11 +491,12 @@ def load_exit_signal_candles(backtest_dir: Path) -> dict[str, dict[str, pd.DataF
     return load_backtest_analysis_data(backtest_dir, "exited")
 
 
-def analyze_trade_parallelism(results: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+def analyze_trade_parallelism(trades: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Find overlapping trades by expanding each trade once per period it was open
     and then counting overlaps.
-    :param results: Results Dataframe - can be loaded
+    :param trades: Trades Dataframe - can be loaded from backtest, or created
+        via trade_list_to_dataframe
     :param timeframe: Timeframe used for backtest
     :return: dataframe with open-counts per time-period in timeframe
     """
@@ -512,11 +513,11 @@ def analyze_trade_parallelism(results: pd.DataFrame, timeframe: str) -> pd.DataF
                 inclusive="left",
             )
         )
-        for row in results[["open_date", "close_date"]].iterrows()
+        for row in trades[["open_date", "close_date"]].iterrows()
     ]
     deltas = [len(x) for x in dates]
     dates = pd.Series(pd.concat(dates).values, name="date")
-    df2 = pd.DataFrame(np.repeat(results.values, deltas, axis=0), columns=results.columns)
+    df2 = pd.DataFrame(np.repeat(trades.values, deltas, axis=0), columns=trades.columns)
 
     df2 = pd.concat([dates, df2], axis=1)
     df2 = df2.set_index("date")
@@ -526,17 +527,18 @@ def analyze_trade_parallelism(results: pd.DataFrame, timeframe: str) -> pd.DataF
 
 
 def evaluate_result_multi(
-    results: pd.DataFrame, timeframe: str, max_open_trades: IntOrInf
+    trades: pd.DataFrame, timeframe: str, max_open_trades: IntOrInf
 ) -> pd.DataFrame:
     """
     Find overlapping trades by expanding each trade once per period it was open
     and then counting overlaps
-    :param results: Results Dataframe - can be loaded
+    :param trades: Trades Dataframe - can be loaded from backtest, or created
+        via trade_list_to_dataframe
     :param timeframe: Frequency used for the backtest
     :param max_open_trades: parameter max_open_trades used during backtest run
     :return: dataframe with open-counts per time-period in freq
     """
-    df_final = analyze_trade_parallelism(results, timeframe)
+    df_final = analyze_trade_parallelism(trades, timeframe)
     return df_final[df_final["open_trades"] > max_open_trades]
 
 
