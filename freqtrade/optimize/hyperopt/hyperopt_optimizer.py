@@ -267,9 +267,7 @@ class HyperOptimizer:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
 
-    def generate_optimizer(
-        self, backtesting: Backtesting, raw_params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:
         """
         Used Optimize function.
         Called once per epoch to optimize whatever is configured.
@@ -281,26 +279,30 @@ class HyperOptimizer:
 
         # Apply parameters
         if HyperoptTools.has_space(self.config, "buy"):
-            self.assign_params(backtesting, params_dict, "buy")
+            self.assign_params(self.backtesting, params_dict, "buy")
 
         if HyperoptTools.has_space(self.config, "sell"):
-            self.assign_params(backtesting, params_dict, "sell")
+            self.assign_params(self.backtesting, params_dict, "sell")
 
         if HyperoptTools.has_space(self.config, "protection"):
-            self.assign_params(backtesting, params_dict, "protection")
+            self.assign_params(self.backtesting, params_dict, "protection")
 
         if HyperoptTools.has_space(self.config, "roi"):
-            backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(params_dict)
+            self.backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(
+                params_dict
+            )
 
         if HyperoptTools.has_space(self.config, "stoploss"):
-            backtesting.strategy.stoploss = params_dict["stoploss"]
+            self.backtesting.strategy.stoploss = params_dict["stoploss"]
 
         if HyperoptTools.has_space(self.config, "trailing"):
             d = self.custom_hyperopt.generate_trailing_params(params_dict)
-            backtesting.strategy.trailing_stop = d["trailing_stop"]
-            backtesting.strategy.trailing_stop_positive = d["trailing_stop_positive"]
-            backtesting.strategy.trailing_stop_positive_offset = d["trailing_stop_positive_offset"]
-            backtesting.strategy.trailing_only_offset_is_reached = d[
+            self.backtesting.strategy.trailing_stop = d["trailing_stop"]
+            self.backtesting.strategy.trailing_stop_positive = d["trailing_stop_positive"]
+            self.backtesting.strategy.trailing_stop_positive_offset = d[
+                "trailing_stop_positive_offset"
+            ]
+            self.backtesting.strategy.trailing_only_offset_is_reached = d[
                 "trailing_only_offset_is_reached"
             ]
 
@@ -319,7 +321,7 @@ class HyperOptimizer:
 
             self.config.update({"max_open_trades": updated_max_open_trades})
 
-            backtesting.strategy.max_open_trades = updated_max_open_trades
+            self.backtesting.strategy.max_open_trades = updated_max_open_trades
 
         with self.data_pickle_file.open("rb") as f:
             processed = load(f, mmap_mode="r")
@@ -327,7 +329,7 @@ class HyperOptimizer:
             # Data is not yet analyzed, rerun populate_indicators.
             processed = self.advise_and_trim(processed)
 
-        bt_results = backtesting.backtest(
+        bt_results = self.backtesting.backtest(
             processed=processed, start_date=self.min_date, end_date=self.max_date
         )
         backtest_end_time = datetime.now(timezone.utc)

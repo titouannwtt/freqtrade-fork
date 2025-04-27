@@ -20,7 +20,6 @@ from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import file_dump_json, plural
-from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
 from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
 from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
@@ -149,7 +148,7 @@ class Hyperopt:
             )
 
     def run_optimizer_parallel(
-        self, parallel: Parallel, backtesting: Backtesting, asked: list[list]
+        self, parallel: Parallel, asked: list[list]
     ) -> list[dict[str, Any]]:
         """Start optimizer in a parallel way"""
 
@@ -162,7 +161,7 @@ class Hyperopt:
             return self.hyperopter.generate_optimizer(*args, **kwargs)
 
         return parallel(
-            delayed(wrap_non_picklable_objects(optimizer_wrapper))(backtesting, v) for v in asked
+            delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked
         )
 
     def _set_random_state(self, random_state: int | None) -> int:
@@ -289,7 +288,7 @@ class Hyperopt:
                             n_points=1, dimensions=self.hyperopter.o_dimensions
                         )
                         f_val0 = self.hyperopter.generate_optimizer(
-                            self.hyperopter.backtesting, asked[0].params
+                            asked[0].params
                         )
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
@@ -309,7 +308,7 @@ class Hyperopt:
 
                         f_val = self.run_optimizer_parallel(
                             parallel,
-                            self.hyperopter.backtesting,
+                            # self.hyperopter.backtesting,
                             [asked1.params for asked1 in asked],
                         )
                         f_val_loss = [v["loss"] for v in f_val]
