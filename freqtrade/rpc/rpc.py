@@ -33,7 +33,7 @@ from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import CustomDataWrapper, KeyStoreKeys, KeyValueStore, PairLocks, Trade
+from freqtrade.persistence import CustomDataWrapper, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
@@ -635,7 +635,7 @@ class RPC:
         first_date = trades[0].open_date_utc if trades else None
         last_date = trades[-1].open_date_utc if trades else None
         num = float(len(durations) or 1)
-        bot_start = KeyValueStore.get_datetime_value(KeyStoreKeys.BOT_START_TIME)
+        bot_start = KeyValueStore.get_datetime_value("bot_start_time")
         return {
             "profit_closed_coin": profit_closed_coin_sum,
             "profit_closed_percent_mean": round(profit_closed_ratio_mean * 100, 2),
@@ -1601,7 +1601,7 @@ class RPC:
                 }
             )
 
-        if bot_start := KeyValueStore.get_datetime_value(KeyStoreKeys.BOT_START_TIME):
+        if bot_start := KeyValueStore.get_datetime_value("bot_start_time"):
             res.update(
                 {
                     "bot_start": str(bot_start),
@@ -1609,7 +1609,7 @@ class RPC:
                     "bot_start_ts": int(bot_start.timestamp()),
                 }
             )
-        if bot_startup := KeyValueStore.get_datetime_value(KeyStoreKeys.STARTUP_TIME):
+        if bot_startup := KeyValueStore.get_datetime_value("startup_time"):
             res.update(
                 {
                     "bot_startup": str(bot_startup),

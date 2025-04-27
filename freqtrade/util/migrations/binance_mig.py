@@ -6,8 +6,8 @@ from sqlalchemy import select
 from freqtrade.constants import DOCS_LINK, Config
 from freqtrade.enums import TradingMode
 from freqtrade.exceptions import OperationalException
+from freqtrade.persistence import KeyValueStore, Trade
 from freqtrade.persistence.pairlock import PairLock
-from freqtrade.persistence.trade_model import Trade
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,9 @@ def migrate_binance_futures_names(config: Config):
     ):
         # only act on new futures
         return
+    if KeyValueStore.get_int_value("binance_migration"):
+        # already migrated
+        return
     import ccxt
 
     if version.parse("2.6.26") > version.parse(ccxt.__version__):
@@ -29,6 +32,7 @@ def migrate_binance_futures_names(config: Config):
         )
     _migrate_binance_futures_db(config)
     migrate_binance_futures_data(config)
+    KeyValueStore.store_value("binance_migration", 1)
 
 
 def _migrate_binance_futures_db(config: Config):
