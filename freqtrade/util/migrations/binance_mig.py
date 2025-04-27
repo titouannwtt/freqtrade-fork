@@ -36,7 +36,7 @@ def migrate_binance_futures_names(config: Config):
 
 
 def _migrate_binance_futures_db(config: Config):
-    logger.warning("Migrating binance futures pairs in database.")
+    logger.info("Migrating binance futures pairs in database.")
     trades = Trade.get_trades([Trade.exchange == "binance", Trade.trading_mode == "FUTURES"]).all()
     for trade in trades:
         if ":" in trade.pair:
@@ -56,7 +56,7 @@ def _migrate_binance_futures_db(config: Config):
     # print(pls)
     # pls.update({'pair': concat(PairLock.pair,':USDT')})
     Trade.commit()
-    logger.warning("Done migrating binance futures pairs in database.")
+    logger.info("Done migrating binance futures pairs in database.")
 
 
 def migrate_binance_futures_data(config: Config):
