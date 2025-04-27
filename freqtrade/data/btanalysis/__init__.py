@@ -1,9 +1,7 @@
 # flake8: noqa: F401
 from .btanalysis import (
     BT_DATA_COLUMNS,
-    analyze_trade_parallelism,
     delete_backtest_result,
-    evaluate_result_multi,
     extract_trades_of_period,
     find_existing_backtest_stats,
     get_backtest_market_change,
@@ -26,4 +24,8 @@ from .btanalysis import (
     load_trades_from_db,
     trade_list_to_dataframe,
     update_backtest_metadata,
+)
+from .trade_parallelism import (
+    analyze_trade_parallelism,
+    evaluate_result_multi,
 )
