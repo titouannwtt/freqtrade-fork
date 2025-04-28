@@ -40,6 +40,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -172,6 +173,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -298,6 +300,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -445,6 +448,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: "3.12"
         cache-dependency-glob: "requirements**.txt"
