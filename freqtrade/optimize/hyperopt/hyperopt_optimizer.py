@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import optuna
-from joblib import dump, load, delayed, wrap_non_picklable_objects
+from joblib import dump, load
 from joblib.externals import cloudpickle
 from optuna.exceptions import ExperimentalWarning
 from pandas import DataFrame
@@ -260,8 +260,6 @@ class HyperOptimizer:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
 
-    @delayed
-    @wrap_non_picklable_objects
     def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:
         """
         Used Optimize function.

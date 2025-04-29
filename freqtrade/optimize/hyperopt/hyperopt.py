@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import rapidjson
-from joblib import Parallel, cpu_count
+from joblib import Parallel, cpu_count, delayed, wrap_non_picklable_objects
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
@@ -160,7 +160,9 @@ class Hyperopt:
 
             return self.hyperopter.generate_optimizer(*args, **kwargs)
 
-        return parallel(optimizer_wrapper(v) for v in asked)
+        return parallel(
+            delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked
+        )
 
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
