@@ -16,8 +16,8 @@ from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
 from freqtrade.configuration import TimeRange
-from freqtrade.constants import DOCS_LINK, Config
-from freqtrade.data.converter import ORDERFLOW_ADDED_COLUMNS, reduce_dataframe_footprint
+from freqtrade.constants import DOCS_LINK, ORDERFLOW_ADDED_COLUMNS, Config
+from freqtrade.data.converter import reduce_dataframe_footprint
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_seconds
 from freqtrade.strategy import merge_informative_pair
