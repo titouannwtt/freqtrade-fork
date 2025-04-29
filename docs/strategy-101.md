@@ -178,7 +178,7 @@ Once your bot is running in dry or live mode, Freqtrade has six mechanisms to co
 
 Freqtrade generates extensive debugging logs to help you understand what's happening. Please familiarise yourself with the information and error messages you might see in your bot logs.
 
-Logging by default occurs on standard out (the command line). If you want to write out to a file instead, many freqtrade commands, including the `trade` command, accepts the `--logfile` option to write to a file.
+Logging by default occurs on standard out (the command line). If you want to write out to a file instead, many freqtrade commands, including the `trade` command, accept the `--logfile` option to write to a file.
 
 Check the [FAQ](https://www.freqtrade.io/en/stable/faq/#how-do-i-search-the-bot-logs-for-something) for examples.
 
