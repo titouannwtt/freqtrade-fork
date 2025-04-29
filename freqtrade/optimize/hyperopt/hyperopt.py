@@ -147,9 +147,7 @@ class Hyperopt:
                 self.print_all,
             )
 
-    def run_optimizer_parallel(
-        self, parallel: Parallel, asked: list[list]
-    ) -> list[dict[str, Any]]:
+    def run_optimizer_parallel(self, parallel: Parallel, asked: list[list]) -> list[dict[str, Any]]:
         """Start optimizer in a parallel way"""
 
         def optimizer_wrapper(*args, **kwargs):
@@ -160,9 +158,7 @@ class Hyperopt:
 
             return self.hyperopter.generate_optimizer(*args, **kwargs)
 
-        return parallel(
-            delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked
-        )
+        return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
 
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
@@ -287,9 +283,7 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=1, dimensions=self.hyperopter.o_dimensions
                         )
-                        f_val0 = self.hyperopter.generate_optimizer(
-                            asked[0].params
-                        )
+                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
@@ -308,7 +302,6 @@ class Hyperopt:
 
                         f_val = self.run_optimizer_parallel(
                             parallel,
-                            # self.hyperopter.backtesting,
                             [asked1.params for asked1 in asked],
                         )
                         f_val_loss = [v["loss"] for v in f_val]
