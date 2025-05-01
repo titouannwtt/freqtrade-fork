@@ -1,6 +1,6 @@
 # pragma pylint: disable=missing-docstring,W0212,C0103
 from datetime import datetime, timedelta
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, PropertyMock
 
@@ -1236,9 +1236,15 @@ def test_max_open_trades_dump(mocker, hyperopt_conf, tmp_path, fee, capsys) -> N
         }
     )
     hyperopt = Hyperopt(hyperopt_conf)
+
+    def optuna_mock(hyperopt, *args, **kwargs):
+        a = hyperopt.get_optuna_asked_points(*args, **kwargs)
+        a[0]._cached_frozen_trial.params["max_open_trades"] = -1
+        return a, [True]
+
     mocker.patch(
-        "freqtrade.optimize.hyperopt.hyperopt_optimizer.HyperOptimizer._get_params_dict",
-        return_value={"max_open_trades": -1},
+        "freqtrade.optimize.hyperopt.Hyperopt.get_asked_points",
+        side_effect=partial(optuna_mock, hyperopt),
     )
 
     assert isinstance(hyperopt.hyperopter.custom_hyperopt, HyperOptAuto)
@@ -1256,8 +1262,8 @@ def test_max_open_trades_dump(mocker, hyperopt_conf, tmp_path, fee, capsys) -> N
 
     hyperopt = Hyperopt(hyperopt_conf)
     mocker.patch(
-        "freqtrade.optimize.hyperopt.hyperopt_optimizer.HyperOptimizer._get_params_dict",
-        return_value={"max_open_trades": -1},
+        "freqtrade.optimize.hyperopt.Hyperopt.get_asked_points",
+        side_effect=partial(optuna_mock, hyperopt),
     )
 
     assert isinstance(hyperopt.hyperopter.custom_hyperopt, HyperOptAuto)
