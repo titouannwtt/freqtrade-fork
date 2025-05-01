@@ -139,18 +139,6 @@ class HyperOptimizer:
                     cloudpickle.register_pickle_by_value(mod)
                 self.hyperopt_pickle_magic(modules.__bases__)
 
-    def _get_params_dict(
-        self, dimensions: list[DimensionProtocol], raw_params: dict[str, Any]
-    ) -> dict[str, Any]:
-        # Ensure the number of dimensions match
-        # the number of parameters in the list.
-        if len(raw_params) != len(dimensions):
-            raise ValueError("Mismatch in number of search-space dimensions.")
-
-        # Return a dict where the keys are the names of the dimensions
-        # and the values are taken from the list of parameters.
-        return raw_params
-
     def _get_params_details(self, params: dict) -> dict:
         """
         Return the params for each space
@@ -268,7 +256,7 @@ class HyperOptimizer:
         """
         HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
         backtest_start_time = datetime.now(timezone.utc)
-        params_dict = self._get_params_dict(self.dimensions, raw_params)
+        params_dict = raw_params
 
         # Apply parameters
         if HyperoptTools.has_space(self.config, "buy"):
