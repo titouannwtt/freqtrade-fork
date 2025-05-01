@@ -434,7 +434,7 @@ jobs:
 
   build-linux-online:
     # Run pytest with "live" checks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:

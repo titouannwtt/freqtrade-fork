@@ -410,7 +410,6 @@ EXCHANGES = {
     },
     "htx": {
         "pair": "ETH/BTC",
-        "use_ci_proxy": True,
         "stake_currency": "BTC",
         "hasQuoteVolume": True,
         "timeframe": "1h",
