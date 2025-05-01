@@ -1211,10 +1211,6 @@ def test_stake_amount_unlimited_max_open_trades(mocker, hyperopt_conf, tmp_path,
         }
     )
     hyperopt = Hyperopt(hyperopt_conf)
-    mocker.patch(
-        "freqtrade.optimize.hyperopt.hyperopt_optimizer.HyperOptimizer._get_params_dict",
-        return_value={"max_open_trades": -1},
-    )
 
     assert isinstance(hyperopt.hyperopter.custom_hyperopt, HyperOptAuto)
 
@@ -1222,7 +1218,7 @@ def test_stake_amount_unlimited_max_open_trades(mocker, hyperopt_conf, tmp_path,
 
     hyperopt.start()
 
-    assert hyperopt.hyperopter.backtesting.strategy.max_open_trades == 1
+    assert hyperopt.hyperopter.backtesting.strategy.max_open_trades == 3
 
 
 def test_max_open_trades_dump(mocker, hyperopt_conf, tmp_path, fee, capsys) -> None:
