@@ -1170,3 +1170,53 @@ class AwesomeStrategy(IStrategy):
         return annotations
 
 ```
+
+!!! Warning "Many annotations"
+    Using too many annotations can cause the UI to hang, especially when plotting large amounts of historic data.
+    Use the annotation feature with care.
+
+
+### Plot annotations example
+
+![FreqUI - plot Annotations](assets/frequi-chart-annotations-dark.png#only-dark)
+![FreqUI - plot Annotations](assets/frequi-chart-annotations-light.png#only-light)
+
+??? Info "Code used for the plot above"
+    This is an example code and should be treated as such.
+
+    ``` python
+    # Default imports
+
+    class AwesomeStrategy(IStrategy):
+        def plot_annotations(
+            self, pair: str, start_date: datetime, end_date: datetime, dataframe: DataFrame, **kwargs
+        ) -> list[AnnotationType]:
+            annotations = []
+            while start_dt < end_date:
+                start_dt += timedelta(hours=1)
+                if (start_dt.hour % 4) == 0:
+                    mark_areas.append(
+                        {
+                            "type": "area",
+                            "label": "4h",
+                            "start": start_dt,
+                            "end": start_dt + timedelta(hours=1),
+                            "color": "rgba(133, 133, 133, 0.4)",
+                        }
+                    )
+                elif (start_dt.hour % 2) == 0:
+                    mark_areas.append(
+                        {
+                            "type": "area",
+                            "label": "2h",
+                            "start": start_dt,
+                            "end": start_dt + timedelta(hours=1),
+                            "y_end": 1830,
+                            "y_start": 1860,
+                            "color": "rgba(0, 255, 0, 0.4)",
+                        }
+                    )
+
+            return annotations
+
+    ```
