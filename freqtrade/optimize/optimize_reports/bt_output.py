@@ -102,7 +102,9 @@ def text_table_tags(
         [
             *(
                 (
-                    (t["key"] if isinstance(t["key"], list) else [t["key"], ""])
+                    list(t["key"])
+                    if isinstance(t["key"], list | tuple)
+                    else [t["key"], ""]
                     if is_list
                     else [t["key"]]
                 )
@@ -132,18 +134,18 @@ def text_table_periodic_breakdown(
     """
     headers = [
         period.capitalize(),
+        "Trades",
         f"Tot Profit {stake_currency}",
-        "Wins",
-        "Draws",
-        "Losses",
+        "Profit Factor",
+        "Win  Draw  Loss  Win%",
     ]
     output = [
         [
             d["date"],
+            d.get("trades", "N/A"),
             fmt_coin(d["profit_abs"], stake_currency, False),
-            d["wins"],
-            d["draws"],
-            d["loses"],
+            round(d["profit_factor"], 2) if "profit_factor" in d else "N/A",
+            generate_wins_draws_losses(d["wins"], d["draws"], d.get("losses", d.get("loses", 0))),
         ]
         for d in days_breakdown_stats
     ]
@@ -312,6 +314,7 @@ def text_table_add_metrics(strat_results: dict) -> None:
             ("Sortino", f"{strat_results['sortino']:.2f}" if "sortino" in strat_results else "N/A"),
             ("Sharpe", f"{strat_results['sharpe']:.2f}" if "sharpe" in strat_results else "N/A"),
             ("Calmar", f"{strat_results['calmar']:.2f}" if "calmar" in strat_results else "N/A"),
+            ("SQN", f"{strat_results['sqn']:.2f}" if "sqn" in strat_results else "N/A"),
             (
                 "Profit factor",
                 (

@@ -2,7 +2,7 @@
 usage: freqtrade backtesting-show [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                   [-c PATH] [-d PATH] [--userdir PATH]
                                   [--export-filename PATH] [--show-pair-list]
-                                  [--breakdown {day,week,month} [{day,week,month} ...]]
+                                  [--breakdown {day,week,month,year} [{day,week,month,year} ...]]
 
 options:
   -h, --help            show this help message and exit
@@ -11,8 +11,9 @@ options:
                         `--export` to be set as well. Example: `--export-filen
                         ame=user_data/backtest_results/backtest_today.json`
   --show-pair-list      Show backtesting pairlist sorted by profit.
-  --breakdown {day,week,month} [{day,week,month} ...]
-                        Show backtesting breakdown per [day, week, month].
+  --breakdown {day,week,month,year} [{day,week,month,year} ...]
+                        Show backtesting breakdown per [day, week, month,
+                        year].
 
 Common arguments:
   -v, --verbose         Verbose mode (-vv for more, -vvv to get all messages).
@@ -29,7 +30,9 @@ Common arguments:
                         exists). Multiple --config options may be used. Can be
                         set to `-` to read config from stdin.
   -d PATH, --datadir PATH, --data-dir PATH
-                        Path to directory with historical backtesting data.
+                        Path to the base directory of the exchange with
+                        historical backtesting data. To see futures data, use
+                        trading-mode additionally.
   --userdir PATH, --user-data-dir PATH
                         Path to userdata directory.
 

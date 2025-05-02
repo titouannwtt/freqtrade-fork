@@ -30,6 +30,7 @@ from freqtrade.data.metrics import (
     calculate_max_drawdown,
     calculate_sharpe,
     calculate_sortino,
+    calculate_sqn,
     calculate_underwater,
     combine_dataframes_with_mean,
     combined_dataframes_with_rel_mean,
@@ -55,7 +56,7 @@ def test_get_latest_backtest_filename(testdatadir, mocker):
     res = get_latest_backtest_filename(str(testdir_bt))
     assert res == "backtest-result.json"
 
-    mocker.patch("freqtrade.data.btanalysis.json_load", return_value={})
+    mocker.patch("freqtrade.data.btanalysis.bt_fileutils.json_load", return_value={})
 
     with pytest.raises(ValueError, match=r"Invalid '.last_result.json' format."):
         get_latest_backtest_filename(testdir_bt)
@@ -83,8 +84,8 @@ def test_load_backtest_metadata(mocker, testdatadir):
     res = load_backtest_metadata(testdatadir / "nonexistent.file.json")
     assert res == {}
 
-    mocker.patch("freqtrade.data.btanalysis.get_backtest_metadata_filename")
-    mocker.patch("freqtrade.data.btanalysis.json_load", side_effect=Exception())
+    mocker.patch("freqtrade.data.btanalysis.bt_fileutils.get_backtest_metadata_filename")
+    mocker.patch("freqtrade.data.btanalysis.bt_fileutils.json_load", side_effect=Exception())
     with pytest.raises(
         OperationalException, match=r"Unexpected error.*loading backtest metadata\."
     ):
@@ -93,7 +94,7 @@ def test_load_backtest_metadata(mocker, testdatadir):
 
 def test_load_backtest_data_old_format(testdatadir, mocker):
     filename = testdatadir / "backtest-result_test222.json"
-    mocker.patch("freqtrade.data.btanalysis.load_backtest_stats", return_value=[])
+    mocker.patch("freqtrade.data.btanalysis.bt_fileutils.load_backtest_stats", return_value=[])
 
     with pytest.raises(
         OperationalException,
@@ -148,7 +149,7 @@ def test_load_backtest_data_multi(testdatadir):
 def test_load_trades_from_db(default_conf, fee, is_short, mocker):
     create_mock_trades(fee, is_short)
     # remove init so it does not init again
-    init_mock = mocker.patch("freqtrade.data.btanalysis.init_db", MagicMock())
+    init_mock = mocker.patch("freqtrade.data.btanalysis.bt_fileutils.init_db", MagicMock())
 
     trades = load_trades_from_db(db_url=default_conf["db_url"])
     assert init_mock.call_count == 1
@@ -220,8 +221,10 @@ def test_analyze_trade_parallelism(testdatadir):
 
 
 def test_load_trades(default_conf, mocker):
-    db_mock = mocker.patch("freqtrade.data.btanalysis.load_trades_from_db", MagicMock())
-    bt_mock = mocker.patch("freqtrade.data.btanalysis.load_backtest_data", MagicMock())
+    db_mock = mocker.patch(
+        "freqtrade.data.btanalysis.bt_fileutils.load_trades_from_db", MagicMock()
+    )
+    bt_mock = mocker.patch("freqtrade.data.btanalysis.bt_fileutils.load_backtest_data", MagicMock())
 
     load_trades(
         "DB",
@@ -266,6 +269,14 @@ def test_calculate_market_change(testdatadir):
     result = calculate_market_change(data)
     assert isinstance(result, float)
     assert pytest.approx(result) == 0.01100002
+
+    result = calculate_market_change(data, min_date=dt_utc(2018, 1, 20))
+    assert isinstance(result, float)
+    assert pytest.approx(result) == 0.0375149
+
+    # Move min-date after the last date
+    result = calculate_market_change(data, min_date=dt_utc(2018, 2, 20))
+    assert pytest.approx(result) == 0.0
 
 
 def test_combine_dataframes_with_mean(testdatadir):
@@ -457,6 +468,42 @@ def test_calculate_calmar(testdatadir):
     assert pytest.approx(calmar) == 559.040508
 
 
+def test_calculate_sqn(testdatadir):
+    filename = testdatadir / "backtest_results/backtest-result.json"
+    bt_data = load_backtest_data(filename)
+
+    sqn = calculate_sqn(DataFrame(), 0)
+    assert sqn == 0.0
+
+    sqn = calculate_sqn(
+        bt_data,
+        0.01,
+    )
+    assert isinstance(sqn, float)
+    assert pytest.approx(sqn) == 3.2991
+
+
+@pytest.mark.parametrize(
+    "profits,starting_balance,expected_sqn,description",
+    [
+        ([1.0, -0.5, 2.0, -1.0, 0.5, 1.5, -0.5, 1.0], 100, 1.3229, "Mixed profits/losses"),
+        ([], 100, 0.0, "Empty dataframe"),
+        ([1.0, 0.5, 2.0, 1.5, 0.8], 100, 4.3657, "All winning trades"),
+        ([-1.0, -0.5, -2.0, -1.5, -0.8], 100, -4.3657, "All losing trades"),
+        ([1.0], 100, -100, "Single trade"),
+    ],
+)
+def test_calculate_sqn_cases(profits, starting_balance, expected_sqn, description):
+    """
+    Test SQN calculation with various scenarios:
+    """
+    trades = DataFrame({"profit_abs": profits})
+    sqn = calculate_sqn(trades, starting_balance=starting_balance)
+
+    assert isinstance(sqn, float)
+    assert pytest.approx(sqn, rel=1e-4) == expected_sqn
+
+
 @pytest.mark.parametrize(
     "start,end,days, expected",
     [
@@ -525,14 +572,15 @@ def test_calculate_max_drawdown2():
     assert pytest.approx(drawdown.relative_account_drawdown) == 0.32129575
 
     df = DataFrame(zip(values[:5], dates[:5], strict=False), columns=["profit", "open_date"])
-    with pytest.raises(ValueError, match="No losing trade, therefore no drawdown."):
-        calculate_max_drawdown(df, date_col="open_date", value_col="profit")
+    # No losing trade ...
+    drawdown = calculate_max_drawdown(df, date_col="open_date", value_col="profit")
+    assert drawdown.drawdown_abs == 0.0
 
     df1 = DataFrame(zip(values[:5], dates[:5], strict=False), columns=["profit", "open_date"])
     df1.loc[:, "profit"] = df1["profit"] * -1
     # No winning trade ...
     drawdown = calculate_max_drawdown(df1, date_col="open_date", value_col="profit")
-    assert drawdown.drawdown_abs == 0.043965
+    assert drawdown.drawdown_abs == 0.055545
 
 
 @pytest.mark.parametrize(

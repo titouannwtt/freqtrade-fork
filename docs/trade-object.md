@@ -25,6 +25,7 @@ The following attributes / properties are available for each individual trade - 
 | `close_date_utc` | datetime | Timestamp when trade was closed - in UTC. |
 | `close_profit` | float | Relative profit at the time of trade closure. `0.01` == 1% |
 | `close_profit_abs` | float | Absolute profit (in stake currency) at the time of trade closure. |
+| `realized_profit` | float | Absolute already realized profit (in stake currency) while the trade is still open. |
 | `leverage` | float | Leverage used for this trade - defaults to 1.0 in spot markets. |
 | `enter_tag` | string | Tag provided on entry via the `enter_tag` column in the dataframe. |
 | `is_short` | boolean | True for short trades, False otherwise. |
@@ -35,6 +36,7 @@ The following attributes / properties are available for each individual trade - 
 | `trade_direction` | "long" / "short" | Trade direction in text - long or short. |
 | `nr_of_successful_entries` | int | Number of successful (filled) entry orders. |
 | `nr_of_successful_exits` | int | Number of successful (filled) exit orders. |
+| `has_open_orders` | boolean | Has the trade open orders (excluding stoploss orders). |
 
 ## Class methods
 

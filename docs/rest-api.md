@@ -268,6 +268,9 @@ show_config
 start
 	Start the bot if it's in the stopped state.
 
+pause
+	Pause the bot if it's in the running state. If triggered on stopped state will handle open positions.
+
 stats
 	Return the stats report (durations, sell-reasons).
 
@@ -302,6 +305,19 @@ trades
         :param limit: Limits trades to the X last trades. Max 500 trades.
         :param offset: Offset by this amount of trades.
 
+list_open_trades_custom_data
+    Return a dict containing open trades custom-datas
+
+        :param key: str, optional - Key of the custom-data
+        :param limit: Limits trades to X trades.
+        :param offset: Offset by this amount of trades.
+
+list_custom_data
+    Return a dict containing custom-datas of a specified trade
+
+        :param trade_id: int - ID of the trade
+        :param key: str, optional - Key of the custom-data
+
 version
 	Return the version of the bot.
 
@@ -320,6 +336,7 @@ All endpoints in the below table need to be prefixed with the base URL of the AP
 |-----------|--------|--------------------------|
 | `/ping` | GET | Simple command testing the API Readiness - requires no authentication.
 | `/start` | POST | Starts the trader.
+| `/pause` | POST | Pause the trader. Gracefully handle open trades according to their rules. Do not enter new positions.
 | `/stop` | POST | Stops the trader.
 | `/stopbuy` | POST | Stops the trader from opening new trades. Gracefully closes open trades according to their rules.
 | `/reload_config` | POST | Reloads the configuration file.

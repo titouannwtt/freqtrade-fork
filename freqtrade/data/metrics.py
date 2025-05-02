@@ -10,7 +10,9 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def calculate_market_change(data: dict[str, pd.DataFrame], column: str = "close") -> float:
+def calculate_market_change(
+    data: dict[str, pd.DataFrame], column: str = "close", min_date: datetime | None = None
+) -> float:
     """
     Calculate market change based on "column".
     Calculation is done by taking the first non-null and the last non-null element of each column
@@ -19,14 +21,24 @@ def calculate_market_change(data: dict[str, pd.DataFrame], column: str = "close"
 
     :param data: Dict of Dataframes, dict key should be pair.
     :param column: Column in the original dataframes to use
+    :param min_date: Minimum date to consider for calculations. Market change should only be
+        calculated for data actually backtested, excluding startup periods.
     :return:
     """
     tmp_means = []
     for pair, df in data.items():
-        start = df[column].dropna().iloc[0]
-        end = df[column].dropna().iloc[-1]
+        df1 = df
+        if min_date is not None:
+            df1 = df1[df1["date"] >= min_date]
+        if df1.empty:
+            logger.warning(f"Pair {pair} has no data after {min_date}.")
+            continue
+        start = df1[column].dropna().iloc[0]
+        end = df1[column].dropna().iloc[-1]
         tmp_means.append((end - start) / start)
 
+    if not tmp_means:
+        return 0.0
     return float(np.mean(tmp_means))
 
 
@@ -118,7 +130,7 @@ def _calc_drawdown_series(
 ) -> pd.DataFrame:
     max_drawdown_df = pd.DataFrame()
     max_drawdown_df["cumulative"] = profit_results[value_col].cumsum()
-    max_drawdown_df["high_value"] = max_drawdown_df["cumulative"].cummax()
+    max_drawdown_df["high_value"] = np.maximum(0, max_drawdown_df["cumulative"].cummax())
     max_drawdown_df["drawdown"] = max_drawdown_df["cumulative"] - max_drawdown_df["high_value"]
     max_drawdown_df["date"] = profit_results.loc[:, date_col]
     if starting_balance:
@@ -201,13 +213,11 @@ def calculate_max_drawdown(
         if relative
         else max_drawdown_df["drawdown"].idxmin()
     )
-    if idxmin == 0:
-        raise ValueError("No losing trade, therefore no drawdown.")
-    high_date = profit_results.loc[max_drawdown_df.iloc[:idxmin]["high_value"].idxmax(), date_col]
+
+    high_idx = max_drawdown_df.iloc[: idxmin + 1]["high_value"].idxmax()
+    high_date = profit_results.loc[high_idx, date_col]
     low_date = profit_results.loc[idxmin, date_col]
-    high_val = max_drawdown_df.loc[
-        max_drawdown_df.iloc[:idxmin]["high_value"].idxmax(), "cumulative"
-    ]
+    high_val = max_drawdown_df.loc[high_idx, "cumulative"]
     low_val = max_drawdown_df.loc[idxmin, "cumulative"]
     max_drawdown_rel = max_drawdown_df.loc[idxmin, "drawdown_relative"]
 
@@ -375,3 +385,32 @@ def calculate_calmar(
 
     # print(expected_returns_mean, max_drawdown, calmar_ratio)
     return calmar_ratio
+
+
+def calculate_sqn(trades: pd.DataFrame, starting_balance: float) -> float:
+    """
+    Calculate System Quality Number (SQN) - Van K. Tharp.
+    SQN measures systematic trading quality and takes into account both
+    the number of trades and their standard deviation.
+
+    :param trades: DataFrame containing trades (requires column profit_abs)
+    :param starting_balance: Starting balance of the trading system
+    :return: SQN value
+    """
+    if len(trades) == 0:
+        return 0.0
+
+    total_profit = trades["profit_abs"] / starting_balance
+    number_of_trades = len(trades)
+
+    # Calculate average trade and standard deviation
+    average_profits = total_profit.mean()
+    profits_std = total_profit.std()
+
+    if profits_std != 0 and not np.isnan(profits_std):
+        sqn = math.sqrt(number_of_trades) * (average_profits / profits_std)
+    else:
+        # Define negative SQN to indicate this is NOT optimal
+        sqn = -100.0
+
+    return round(sqn, 4)

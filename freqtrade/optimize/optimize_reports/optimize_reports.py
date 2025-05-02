@@ -16,8 +16,13 @@ from freqtrade.data.metrics import (
     calculate_max_drawdown,
     calculate_sharpe,
     calculate_sortino,
+    calculate_sqn,
 )
-from freqtrade.ft_types import BacktestResultType
+from freqtrade.ft_types import (
+    BacktestContentType,
+    BacktestResultType,
+    get_BacktestResultType_default,
+)
 from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
 
 
@@ -25,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_trade_signal_candles(
-    preprocessed_df: dict[str, DataFrame], bt_results: dict[str, Any], date_col: str
+    preprocessed_df: dict[str, DataFrame], bt_results: BacktestContentType, date_col: str
 ) -> dict[str, DataFrame]:
     signal_candles_only = {}
     for pair in preprocessed_df.keys():
@@ -69,7 +74,11 @@ def generate_rejected_signals(
 
 
 def _generate_result_line(
-    result: DataFrame, starting_balance: float, first_column: str | list[str]
+    result: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
+    starting_balance: float,
+    first_column: str | list[str],
 ) -> dict:
     """
     Generate one result dict, with "first_column" as key.
@@ -77,6 +86,20 @@ def _generate_result_line(
     profit_sum = result["profit_ratio"].sum()
     # (end-capital - starting capital) / starting capital
     profit_total = result["profit_abs"].sum() / starting_balance
+    backtest_days = (max_date - min_date).days or 1
+    final_balance = starting_balance + result["profit_abs"].sum()
+    expectancy, expectancy_ratio = calculate_expectancy(result)
+    winning_profit = result.loc[result["profit_abs"] > 0, "profit_abs"].sum()
+    losing_profit = result.loc[result["profit_abs"] < 0, "profit_abs"].sum()
+    profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
+
+    try:
+        drawdown = calculate_max_drawdown(
+            result, value_col="profit_abs", starting_balance=starting_balance
+        )
+
+    except ValueError:
+        drawdown = None
 
     return {
         "key": first_column,
@@ -105,6 +128,16 @@ def _generate_result_line(
         "draws": len(result[result["profit_abs"] == 0]),
         "losses": len(result[result["profit_abs"] < 0]),
         "winrate": len(result[result["profit_abs"] > 0]) / len(result) if len(result) else 0.0,
+        "cagr": calculate_cagr(backtest_days, starting_balance, final_balance),
+        "expectancy": expectancy,
+        "expectancy_ratio": expectancy_ratio,
+        "sortino": calculate_sortino(result, min_date, max_date, starting_balance),
+        "sharpe": calculate_sharpe(result, min_date, max_date, starting_balance),
+        "calmar": calculate_calmar(result, min_date, max_date, starting_balance),
+        "sqn": calculate_sqn(result, starting_balance),
+        "profit_factor": profit_factor,
+        "max_drawdown_account": drawdown.relative_account_drawdown if drawdown else 0.0,
+        "max_drawdown_abs": drawdown.drawdown_abs if drawdown else 0.0,
     }
 
 
@@ -120,6 +153,8 @@ def generate_pair_metrics(  #
     stake_currency: str,
     starting_balance: float,
     results: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
     skip_nan: bool = False,
 ) -> list[dict]:
     """
@@ -139,13 +174,18 @@ def generate_pair_metrics(  #
         if skip_nan and result["profit_abs"].isnull().all():
             continue
 
-        tabular_data.append(_generate_result_line(result, starting_balance, pair))
+        tabular_data.append(
+            _generate_result_line(result, min_date, max_date, starting_balance, pair)
+        )
 
     # Sort by total profit %:
     tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
     # Append Total
-    tabular_data.append(_generate_result_line(results, starting_balance, "TOTAL"))
+    tabular_data.append(
+        _generate_result_line(results, min_date, max_date, starting_balance, "TOTAL")
+    )
+
     return tabular_data
 
 
@@ -153,6 +193,8 @@ def generate_tag_metrics(
     tag_type: Literal["enter_tag", "exit_reason"] | list[Literal["enter_tag", "exit_reason"]],
     starting_balance: float,
     results: DataFrame,
+    min_date: datetime,
+    max_date: datetime,
     skip_nan: bool = False,
 ) -> list[dict]:
     """
@@ -172,13 +214,17 @@ def generate_tag_metrics(
             if skip_nan and group["profit_abs"].isnull().all():
                 continue
 
-            tabular_data.append(_generate_result_line(group, starting_balance, tags))
+            tabular_data.append(
+                _generate_result_line(group, min_date, max_date, starting_balance, tags)
+            )
 
         # Sort by total profit %:
         tabular_data = sorted(tabular_data, key=lambda k: k["profit_total_abs"], reverse=True)
 
         # Append Total
-        tabular_data.append(_generate_result_line(results, starting_balance, "TOTAL"))
+        tabular_data.append(
+            _generate_result_line(results, min_date, max_date, starting_balance, "TOTAL")
+        )
         return tabular_data
     else:
         return []
@@ -211,6 +257,8 @@ def _get_resample_from_period(period: str) -> str:
         return "1W-MON"
     if period == "month":
         return "1ME"
+    if period == "year":
+        return "1YE"
     raise ValueError(f"Period {period} is not supported.")
 
 
@@ -228,8 +276,11 @@ def generate_periodic_breakdown_stats(
         profit_abs = day["profit_abs"].sum().round(10)
         wins = sum(day["profit_abs"] > 0)
         draws = sum(day["profit_abs"] == 0)
-        loses = sum(day["profit_abs"] < 0)
-        trades = wins + draws + loses
+        losses = sum(day["profit_abs"] < 0)
+        trades = wins + draws + losses
+        winning_profit = day.loc[day["profit_abs"] > 0, "profit_abs"].sum()
+        losing_profit = day.loc[day["profit_abs"] < 0, "profit_abs"].sum()
+        profit_factor = winning_profit / abs(losing_profit) if losing_profit else 0.0
         stats.append(
             {
                 "date": name.strftime("%d/%m/%Y"),
@@ -237,8 +288,9 @@ def generate_periodic_breakdown_stats(
                 "profit_abs": profit_abs,
                 "wins": wins,
                 "draws": draws,
-                "loses": loses,
-                "winrate": wins / trades if trades else 0.0,
+                "losses": losses,
+                "trades": trades,
+                "profit_factor": round(profit_factor, 8),
             }
         )
     return stats
@@ -359,7 +411,7 @@ def generate_daily_stats(results: DataFrame) -> dict[str, Any]:
 def generate_strategy_stats(
     pairlist: list[str],
     strategy: str,
-    content: dict[str, Any],
+    content: BacktestContentType,
     min_date: datetime,
     max_date: datetime,
     market_change: float,
@@ -388,19 +440,33 @@ def generate_strategy_stats(
         stake_currency=stake_currency,
         starting_balance=start_balance,
         results=results,
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=False,
     )
 
     enter_tag_stats = generate_tag_metrics(
-        "enter_tag", starting_balance=start_balance, results=results, skip_nan=False
+        "enter_tag",
+        starting_balance=start_balance,
+        results=results,
+        min_date=min_date,
+        max_date=max_date,
+        skip_nan=False,
     )
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=start_balance, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=start_balance,
+        results=results,
+        min_date=min_date,
+        max_date=max_date,
+        skip_nan=False,
     )
     mix_tag_stats = generate_tag_metrics(
         ["enter_tag", "exit_reason"],
         starting_balance=start_balance,
         results=results,
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=False,
     )
     left_open_results = generate_pair_metrics(
@@ -408,6 +474,8 @@ def generate_strategy_stats(
         stake_currency=stake_currency,
         starting_balance=start_balance,
         results=results.loc[results["exit_reason"] == "force_exit"],
+        min_date=min_date,
+        max_date=max_date,
         skip_nan=True,
     )
 
@@ -468,6 +536,7 @@ def generate_strategy_stats(
         "sortino": calculate_sortino(results, min_date, max_date, start_balance),
         "sharpe": calculate_sharpe(results, min_date, max_date, start_balance),
         "calmar": calculate_calmar(results, min_date, max_date, start_balance),
+        "sqn": calculate_sqn(results, start_balance),
         "profit_factor": profit_factor,
         "backtest_start": min_date.strftime(DATETIME_PRINT_FORMAT),
         "backtest_start_ts": int(min_date.timestamp() * 1000),
@@ -567,7 +636,7 @@ def generate_strategy_stats(
 
 def generate_backtest_stats(
     btdata: dict[str, DataFrame],
-    all_results: dict[str, dict[str, DataFrame | dict]],
+    all_results: dict[str, BacktestContentType],
     min_date: datetime,
     max_date: datetime,
 ) -> BacktestResultType:
@@ -579,12 +648,8 @@ def generate_backtest_stats(
     :param max_date: Backtest end date
     :return: Dictionary containing results per strategy and a strategy summary.
     """
-    result: BacktestResultType = {
-        "metadata": {},
-        "strategy": {},
-        "strategy_comparison": [],
-    }
-    market_change = calculate_market_change(btdata, "close")
+    result: BacktestResultType = get_BacktestResultType_default()
+    market_change = calculate_market_change(btdata, "close", min_date=min_date)
     metadata = {}
     pairlist = list(btdata.keys())
     for strategy, content in all_results.items():

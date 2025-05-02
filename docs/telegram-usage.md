@@ -81,6 +81,19 @@ Without this, the bot will always respond to the general channel in the group if
 
 Similar to the group-id - you can use `/tg_info` from the topic/thread to get the correct topic-id.
 
+#### Authorized users
+
+For groups, it can be useful to limit who can send commands to the bot.
+
+If `"authorized_users": []` is present and empty, no user will be allowed to control the bot.
+In the below example, only the user with the id "1234567" is allowed to control the bot - all other users will only be able to receive messages.
+
+```json
+   "chat_id": "-1001332619709",
+   "topic_id": "3",
+   "authorized_users": ["1234567"]
+```
+
 ## Control telegram noise
 
 Freqtrade provides means to control the verbosity of your telegram bot.
@@ -175,7 +188,7 @@ You can create your own keyboard in `config.json`:
 !!! Note "Supported Commands"
     Only the following commands are allowed. Command arguments are not supported!
 
-    `/start`, `/stop`, `/status`, `/status table`, `/trades`, `/profit`, `/performance`, `/daily`, `/stats`, `/count`, `/locks`, `/balance`, `/stopentry`, `/reload_config`, `/show_config`, `/logs`, `/whitelist`, `/blacklist`, `/edge`, `/help`, `/version`, `/marketdir`
+    `/start`, `/pause`, `/stop`, `/status`, `/status table`, `/trades`, `/profit`, `/performance`, `/daily`, `/stats`, `/count`, `/locks`, `/balance`, `/stopentry`, `/reload_config`, `/show_config`, `/logs`, `/whitelist`, `/blacklist`, `/edge`, `/help`, `/version`, `/marketdir`
 
 ## Telegram commands
 
@@ -187,8 +200,8 @@ official commands. You can ask at any moment for help with `/help`.
 |----------|-------------|
 | **System commands**
 | `/start` | Starts the trader
+| `/pause | /stopentry | /stopbuy` | Pause the trader. Gracefully handle open trades according to their rules. Do not enter new positions.
 | `/stop` | Stops the trader
-| `/stopbuy | /stopentry` | Stops the trader from opening new trades. Gracefully closes open trades according to their rules.
 | `/reload_config` | Reloads the configuration file
 | `/show_config` | Shows part of the current configuration with relevant settings to operation
 | `/logs [limit]` | Show last log messages.
@@ -237,24 +250,26 @@ Below, example of Telegram message you will receive for each command.
 
 > **Status:** `running`
 
+### /pause | /stopentry | /stopbuy
+
+> **Status:** `paused, no more entries will occur from now. Run /start to enable entries.`
+
+Prevents the bot from opening new trades by changing the state to `paused`.
+Open trades will continue to be managed according to their regular rules (ROI/exit signals, stop-loss, etc.).
+Note that position adjustment remains active, but only on the exit side — meaning that when the bot is `paused`, it can only reduce the position size of open trades.
+
+After this, give the bot time to close off open trades (can be checked via `/status table`).
+Once all positions are closed, run `/stop` to completely stop the bot.
+
+Use `/start` to resume the bot to the `running` state, allowing it to open new positions.
+
+!!! Warning
+    The pause/stopentry signal is ONLY active while the bot is running, and is not persisted anyway, so restarting the bot will cause this to reset.
+
 ### /stop
 
 > `Stopping trader ...`
 > **Status:** `stopped`
-
-### /stopbuy
-
-> **status:** `Setting max_open_trades to 0. Run /reload_config to reset.`
-
-Prevents the bot from opening new trades by temporarily setting "max_open_trades" to 0. Open trades will be handled via their regular rules (ROI / Sell-signal, stoploss, ...).
-
-After this, give the bot time to close off open trades (can be checked via `/status table`).
-Once all positions are sold, run `/stop` to completely stop the bot.
-
-`/reload_config` resets "max_open_trades" to the value set in the configuration and resets this command.
-
-!!! Warning
-    The stop-buy signal is ONLY active while the bot is running, and is not persisted anyway, so restarting the bot will cause this to reset.
 
 ### /status
 

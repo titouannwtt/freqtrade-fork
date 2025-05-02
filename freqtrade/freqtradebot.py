@@ -64,7 +64,7 @@ from freqtrade.rpc.rpc_types import (
 )
 from freqtrade.strategy.interface import IStrategy
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
-from freqtrade.util import FtPrecise, MeasureTime, dt_from_ts
+from freqtrade.util import FtPrecise, MeasureTime, PeriodicCache, dt_from_ts, dt_now
 from freqtrade.util.migrations.binance_mig import migrate_binance_futures_names
 from freqtrade.wallets import Wallets
 
@@ -145,7 +145,11 @@ class FreqtradeBot(LoggingMixin):
             else None
         )
 
-        self.active_pair_whitelist = self._refresh_active_whitelist()
+        logger.info("Starting initial pairlist refresh")
+        with MeasureTime(
+            lambda duration, _: logger.info(f"Initial Pairlist refresh took {duration:.2f}s"), 0
+        ):
+            self.active_pair_whitelist = self._refresh_active_whitelist()
 
         # Set initial bot state from config
         initial_state = self.config.get("initial_state")
@@ -154,6 +158,7 @@ class FreqtradeBot(LoggingMixin):
         # Protect exit-logic from forcesell and vice versa
         self._exit_lock = Lock()
         timeframe_secs = timeframe_to_seconds(self.strategy.timeframe)
+        self._exit_reason_cache = PeriodicCache(100, ttl=timeframe_secs)
         LoggingMixin.__init__(self, logger, timeframe_secs)
 
         self._schedule = Scheduler()
@@ -288,6 +293,7 @@ class FreqtradeBot(LoggingMixin):
             trades = Trade.get_open_trades()
             # First process current opened trades (positions)
             self.exit_positions(trades)
+            Trade.commit()
 
         # Check if we need to adjust our current positions before attempting to enter new trades.
         if self.strategy.position_adjustment_enable:
@@ -295,7 +301,7 @@ class FreqtradeBot(LoggingMixin):
                 self.process_open_trade_positions()
 
         # Then looking for entry opportunities
-        if self.get_free_open_trades():
+        if self.state == State.RUNNING and self.get_free_open_trades():
             self.enter_positions()
         self._schedule.run_pending()
         Trade.commit()
@@ -754,12 +760,14 @@ class FreqtradeBot(LoggingMixin):
         current_exit_profit = trade.calc_profit_ratio(current_exit_rate)
 
         min_entry_stake = self.exchange.get_min_pair_stake_amount(
-            trade.pair, current_entry_rate, 0.0
+            trade.pair, current_entry_rate, 0.0, trade.leverage
         )
         min_exit_stake = self.exchange.get_min_pair_stake_amount(
-            trade.pair, current_exit_rate, self.strategy.stoploss
+            trade.pair, current_exit_rate, self.strategy.stoploss, trade.leverage
         )
-        max_entry_stake = self.exchange.get_max_pair_stake_amount(trade.pair, current_entry_rate)
+        max_entry_stake = self.exchange.get_max_pair_stake_amount(
+            trade.pair, current_entry_rate, trade.leverage
+        )
         stake_available = self.wallets.get_available_stake_amount()
         logger.debug(f"Calling adjust_trade_position for pair {trade.pair}")
         stake_amount, order_tag = self.strategy._adjust_trade_position_internal(
@@ -776,6 +784,10 @@ class FreqtradeBot(LoggingMixin):
         )
 
         if stake_amount is not None and stake_amount > 0.0:
+            if self.state == State.PAUSED:
+                logger.debug("Position adjustment aborted because the bot is in PAUSED state")
+                return
+
             # We should increase our position
             if self.strategy.max_entry_position_adjustment > -1:
                 count_of_entries = trade.nr_of_successful_entries
@@ -784,6 +796,7 @@ class FreqtradeBot(LoggingMixin):
                     return
                 else:
                     logger.debug("Max adjustment entries is set to unlimited.")
+
             self.execute_entry(
                 trade.pair,
                 stake_amount,
@@ -898,14 +911,14 @@ class FreqtradeBot(LoggingMixin):
 
         msg = (
             f"Position adjust: about to create a new order for {pair} with stake_amount: "
-            f"{stake_amount} for {trade}"
+            f"{stake_amount} and price: {enter_limit_requested} for {trade}"
             if mode == "pos_adjust"
             else (
                 f"Replacing {side} order: about create a new order for {pair} with stake_amount: "
-                f"{stake_amount} ..."
+                f"{stake_amount} and price: {enter_limit_requested} ..."
                 if mode == "replace"
                 else f"{name} signal found: about create a new trade for {pair} with stake_amount: "
-                f"{stake_amount} ..."
+                f"{stake_amount} and price: {enter_limit_requested} ..."
             )
         )
         logger.info(msg)
@@ -1374,6 +1387,15 @@ class FreqtradeBot(LoggingMixin):
         for should_exit in exits:
             if should_exit.exit_flag:
                 exit_tag1 = exit_tag if should_exit.exit_type == ExitType.EXIT_SIGNAL else None
+                if trade.has_open_orders:
+                    if prev_eval := self._exit_reason_cache.get(
+                        f"{trade.pair}_{trade.id}_{exit_tag1 or should_exit.exit_reason}", None
+                    ):
+                        logger.debug(
+                            f"Exit reason already seen this candle, first seen at {prev_eval}"
+                        )
+                        continue
+
                 logger.info(
                     f"Exit for {trade.pair} detected. Reason: {should_exit.exit_type}"
                     f"{f' Tag: {exit_tag1}' if exit_tag1 is not None else ''}"
@@ -1593,27 +1615,29 @@ class FreqtradeBot(LoggingMixin):
                         self.replace_order(order, open_order, trade)
 
     def handle_cancel_order(
-        self, order: CcxtOrder, order_obj: Order, trade: Trade, reason: str
-    ) -> None:
+        self, order: CcxtOrder, order_obj: Order, trade: Trade, reason: str, replacing: bool = False
+    ) -> bool:
         """
         Check if current analyzed order timed out and cancel if necessary.
         :param order: Order dict grabbed with exchange.fetch_order()
         :param order_obj: Order object from the database.
         :param trade: Trade object.
-        :return: None
+        :return: True if the order was canceled, False otherwise.
         """
         if order["side"] == trade.entry_side:
-            self.handle_cancel_enter(trade, order, order_obj, reason)
+            return self.handle_cancel_enter(trade, order, order_obj, reason, replacing)
         else:
             canceled = self.handle_cancel_exit(trade, order, order_obj, reason)
-            canceled_count = trade.get_canceled_exit_order_count()
-            max_timeouts = self.config.get("unfilledtimeout", {}).get("exit_timeout_count", 0)
-            if canceled and max_timeouts > 0 and canceled_count >= max_timeouts:
-                logger.warning(
-                    f"Emergency exiting trade {trade}, as the exit order "
-                    f"timed out {max_timeouts} times. force selling {order['amount']}."
-                )
-                self.emergency_exit(trade, order["price"], order["amount"])
+            if not replacing:
+                canceled_count = trade.get_canceled_exit_order_count()
+                max_timeouts = self.config.get("unfilledtimeout", {}).get("exit_timeout_count", 0)
+                if canceled and max_timeouts > 0 and canceled_count >= max_timeouts:
+                    logger.warning(
+                        f"Emergency exiting trade {trade}, as the exit order "
+                        f"timed out {max_timeouts} times. force selling {order['amount']}."
+                    )
+                    self.emergency_exit(trade, order["price"], order["amount"])
+            return canceled
 
     def emergency_exit(
         self, trade: Trade, price: float, sub_trade_amt: float | None = None
@@ -1649,9 +1673,9 @@ class FreqtradeBot(LoggingMixin):
     def replace_order(self, order: CcxtOrder, order_obj: Order | None, trade: Trade) -> None:
         """
         Check if current analyzed entry order should be replaced or simply cancelled.
-        To simply cancel the existing order(no replacement) adjust_entry_price() should return None
-        To maintain existing order adjust_entry_price() should return order_obj.price
-        To replace existing order adjust_entry_price() should return desired price for limit order
+        To simply cancel the existing order(no replacement) adjust_order_price() should return None
+        To maintain existing order adjust_order_price() should return order_obj.price
+        To replace existing order adjust_order_price() should return desired price for limit order
         :param order: Order dict grabbed with exchange.fetch_order()
         :param order_obj: Order object.
         :param trade: Trade object.
@@ -1665,17 +1689,17 @@ class FreqtradeBot(LoggingMixin):
             self.strategy.timeframe, latest_candle_open_date
         )
         # Check if new candle
-        if (
-            order_obj
-            and order_obj.side == trade.entry_side
-            and latest_candle_close_date > order_obj.order_date_utc
-        ):
+        if order_obj and latest_candle_close_date > order_obj.order_date_utc:
+            is_entry = order_obj.side == trade.entry_side
             # New candle
             proposed_rate = self.exchange.get_rate(
-                trade.pair, side="entry", is_short=trade.is_short, refresh=True
+                trade.pair,
+                side="entry" if is_entry else "exit",
+                is_short=trade.is_short,
+                refresh=True,
             )
-            adjusted_entry_price = strategy_safe_wrapper(
-                self.strategy.adjust_entry_price, default_retval=order_obj.safe_placement_price
+            adjusted_price = strategy_safe_wrapper(
+                self.strategy.adjust_order_price, default_retval=order_obj.safe_placement_price
             )(
                 trade=trade,
                 order=order_obj,
@@ -1685,42 +1709,78 @@ class FreqtradeBot(LoggingMixin):
                 current_order_rate=order_obj.safe_placement_price,
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
+                is_entry=is_entry,
             )
 
             replacing = True
             cancel_reason = constants.CANCEL_REASON["REPLACE"]
-            if not adjusted_entry_price:
+            if not adjusted_price:
                 replacing = False
                 cancel_reason = constants.CANCEL_REASON["USER_CANCEL"]
-            if order_obj.safe_placement_price != adjusted_entry_price:
-                # cancel existing order if new price is supplied or None
-                res = self.handle_cancel_enter(
-                    trade, order, order_obj, cancel_reason, replacing=replacing
+
+            if order_obj.safe_placement_price != adjusted_price:
+                self.handle_replace_order(
+                    order,
+                    order_obj,
+                    trade,
+                    adjusted_price,
+                    is_entry,
+                    cancel_reason,
+                    replacing=replacing,
                 )
-                if not res:
-                    self.replace_order_failed(
-                        trade, f"Could not fully cancel order for {trade}, therefore not replacing."
+
+    def handle_replace_order(
+        self,
+        order: CcxtOrder | None,
+        order_obj: Order,
+        trade: Trade,
+        new_order_price: float | None,
+        is_entry: bool,
+        cancel_reason: str,
+        replacing: bool = False,
+    ) -> None:
+        """
+        Cancel existing order if new price is supplied, and if the cancel is successful,
+        places a new order with the remaining capital.
+        """
+        if not order:
+            order = self.exchange.fetch_order(order_obj.order_id, trade.pair)
+        res = self.handle_cancel_order(order, order_obj, trade, cancel_reason, replacing=replacing)
+        if not res:
+            self.replace_order_failed(
+                trade, f"Could not fully cancel order for {trade}, therefore not replacing."
+            )
+            return
+        if new_order_price:
+            # place new order only if new price is supplied
+            try:
+                if is_entry:
+                    succeeded = self.execute_entry(
+                        pair=trade.pair,
+                        stake_amount=(
+                            order_obj.safe_remaining * order_obj.safe_price / trade.leverage
+                        ),
+                        price=new_order_price,
+                        trade=trade,
+                        is_short=trade.is_short,
+                        mode="replace",
                     )
-                    return
-                if adjusted_entry_price:
-                    # place new order only if new price is supplied
-                    try:
-                        if not self.execute_entry(
-                            pair=trade.pair,
-                            stake_amount=(
-                                order_obj.safe_remaining * order_obj.safe_price / trade.leverage
-                            ),
-                            price=adjusted_entry_price,
-                            trade=trade,
-                            is_short=trade.is_short,
-                            mode="replace",
-                        ):
-                            self.replace_order_failed(
-                                trade, f"Could not replace order for {trade}."
-                            )
-                    except DependencyException as exception:
-                        logger.warning(f"Unable to replace order for {trade.pair}: {exception}")
-                        self.replace_order_failed(trade, f"Could not replace order for {trade}.")
+                else:
+                    succeeded = self.execute_trade_exit(
+                        trade,
+                        new_order_price,
+                        exit_check=ExitCheckTuple(
+                            exit_type=ExitType.CUSTOM_EXIT,
+                            exit_reason=order_obj.ft_order_tag or "order_replaced",
+                        ),
+                        ordertype="limit",
+                        sub_trade_amt=order_obj.safe_remaining,
+                    )
+                if not succeeded:
+                    self.replace_order_failed(trade, f"Could not replace order for {trade}.")
+            except DependencyException as exception:
+                logger.warning(f"Unable to replace order for {trade.pair}: {exception}")
+                self.replace_order_failed(trade, f"Could not replace order for {trade}.")
 
     def cancel_open_orders_of_trade(
         self, trade: Trade, sides: list[str], reason: str, replacing: bool = False
@@ -1774,7 +1834,7 @@ class FreqtradeBot(LoggingMixin):
         if trade.has_open_orders:
             oo = trade.select_order(side, True)
             if oo is not None:
-                if (price == oo.price) and (side == oo.side) and (amount == oo.amount):
+                if price == oo.price and side == oo.side and amount == oo.amount:
                     logger.info(
                         f"A similar open order was found for {trade.pair}. "
                         f"Keeping existing {trade.exit_side} order. {price=},  {amount=}"
@@ -1870,7 +1930,10 @@ class FreqtradeBot(LoggingMixin):
             # to the trade object
             self.update_trade_state(trade, order_id, corder)
 
-            logger.info(f"Partial {trade.entry_side} order timeout for {trade}.")
+            logger.info(
+                f"Partial {trade.entry_side} order timeout for {trade}. Filled: {filled_amount}, "
+                f"total: {order_obj.ft_amount}"
+            )
             order_obj.ft_cancel_reason += f", {constants.CANCEL_REASON['PARTIALLY_FILLED']}"
 
         self.wallets.update()
@@ -2092,6 +2155,7 @@ class FreqtradeBot(LoggingMixin):
             self.handle_insufficient_funds(trade)
             return False
 
+        self._exit_reason_cache[f"{trade.pair}_{trade.id}_{exit_reason}"] = dt_now()
         order_obj = Order.parse_from_ccxt_object(order, trade.pair, trade.exit_side, amount, limit)
         order_obj.ft_order_tag = exit_reason
         trade.orders.append(order_obj)
@@ -2555,4 +2619,15 @@ class FreqtradeBot(LoggingMixin):
         max_custom_price_allowed = proposed_price + (proposed_price * cust_p_max_dist_r)
 
         # Bracket between min_custom_price_allowed and max_custom_price_allowed
-        return max(min(valid_custom_price, max_custom_price_allowed), min_custom_price_allowed)
+        final_price = max(
+            min(valid_custom_price, max_custom_price_allowed), min_custom_price_allowed
+        )
+
+        # Log a warning if the custom price was adjusted by clamping.
+        if final_price != valid_custom_price:
+            logger.info(
+                f"Custom price adjusted from {valid_custom_price} to {final_price} based on "
+                "custom_price_max_distance_ratio of {cust_p_max_dist_r}."
+            )
+
+        return final_price

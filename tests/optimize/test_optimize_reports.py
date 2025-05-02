@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 from datetime import timedelta
 from pathlib import Path
 from shutil import copyfile
@@ -41,7 +42,7 @@ from freqtrade.optimize.optimize_reports.optimize_reports import (
 from freqtrade.resolvers.strategy_resolver import StrategyResolver
 from freqtrade.util import dt_ts
 from freqtrade.util.datetime_helpers import dt_from_ts, dt_utc
-from tests.conftest import CURRENT_TEST_STRATEGY
+from tests.conftest import CURRENT_TEST_STRATEGY, log_has_re
 from tests.data.test_history import _clean_test_file
 
 
@@ -67,11 +68,21 @@ def test_text_table_bt_results(capsys):
             "profit_ratio": [0.1, 0.2, -0.05],
             "profit_abs": [0.2, 0.4, -0.1],
             "trade_duration": [10, 30, 20],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
         }
     )
 
     pair_results = generate_pair_metrics(
-        ["ETH/BTC"], stake_currency="BTC", starting_balance=4, results=results
+        ["ETH/BTC"],
+        stake_currency="BTC",
+        starting_balance=4,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
     )
     text_table_bt_results(pair_results, stake_currency="BTC", title="title")
     text = capsys.readouterr().out
@@ -253,8 +264,9 @@ def test_store_backtest_results(testdatadir, mocker):
     dump_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.file_dump_json")
     zip_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.ZipFile")
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-
-    store_backtest_results({"exportfilename": testdatadir}, data, "2022_01_01_15_05_13")
+    store_backtest_results(
+        {"exportfilename": testdatadir, "original_config": {}}, data, "2022_01_01_15_05_13"
+    )
 
     assert dump_mock.call_count == 2
     assert zip_mock.call_count == 1
@@ -264,7 +276,9 @@ def test_store_backtest_results(testdatadir, mocker):
     dump_mock.reset_mock()
     zip_mock.reset_mock()
     filename = testdatadir / "testresult.json"
-    store_backtest_results({"exportfilename": filename}, data, "2022_01_01_15_05_13")
+    store_backtest_results(
+        {"exportfilename": filename, "original_config": {}}, data, "2022_01_01_15_05_13"
+    )
     assert dump_mock.call_count == 2
     assert zip_mock.call_count == 1
     assert isinstance(dump_mock.call_args_list[0][0][0], Path)
@@ -272,9 +286,16 @@ def test_store_backtest_results(testdatadir, mocker):
     assert str(dump_mock.call_args_list[0][0][0]).startswith(str(testdatadir / "testresult"))
 
 
-def test_store_backtest_results_real(tmp_path):
+def test_store_backtest_results_real(tmp_path, caplog):
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
-    store_backtest_results({"exportfilename": tmp_path}, data, "2022_01_01_15_05_13")
+    config = {
+        "exportfilename": tmp_path,
+        "original_config": {},
+    }
+    store_backtest_results(
+        config, data, "2022_01_01_15_05_13", strategy_files={"DefStrat": "NoFile"}
+    )
+    assert log_has_re(r"Strategy file .* does not exist\. Skipping\.", caplog)
 
     zip_file = tmp_path / "backtest-result-2022_01_01_15_05_13.zip"
     assert zip_file.is_file()
@@ -287,8 +308,19 @@ def test_store_backtest_results_real(tmp_path):
     fn = get_latest_backtest_filename(tmp_path)
     assert fn == "backtest-result-2022_01_01_15_05_13.zip"
 
+    strategy_test_dir = Path(__file__).parent.parent / "strategy" / "strats"
+
+    shutil.copy(strategy_test_dir / "strategy_test_v3.py", tmp_path)
+    params_file = tmp_path / "strategy_test_v3.json"
+    with params_file.open("w") as f:
+        f.write("""{"strategy_name": "TurtleStrategyX5","params":{}}""")
+
     store_backtest_results(
-        {"exportfilename": tmp_path}, data, "2024_01_01_15_05_25", market_change_data=pd.DataFrame()
+        config,
+        data,
+        "2024_01_01_15_05_25",
+        market_change_data=pd.DataFrame(),
+        strategy_files={"DefStrat": str(tmp_path / "strategy_test_v3.py")},
     )
     zip_file = tmp_path / "backtest-result-2024_01_01_15_05_25.zip"
     assert zip_file.is_file()
@@ -298,6 +330,22 @@ def test_store_backtest_results_real(tmp_path):
     with ZipFile(zip_file, "r") as zipf:
         assert "backtest-result-2024_01_01_15_05_25.json" in zipf.namelist()
         assert "backtest-result-2024_01_01_15_05_25_market_change.feather" in zipf.namelist()
+        assert "backtest-result-2024_01_01_15_05_25_config.json" in zipf.namelist()
+        # strategy file is copied to the zip file
+        assert "backtest-result-2024_01_01_15_05_25_DefStrat.py" in zipf.namelist()
+        # compare the content of the strategy file
+        with zipf.open("backtest-result-2024_01_01_15_05_25_DefStrat.py") as strategy_file:
+            strategy_content = strategy_file.read()
+            with (strategy_test_dir / "strategy_test_v3.py").open("rb") as original_file:
+                original_content = original_file.read()
+                assert strategy_content == original_content
+        assert "backtest-result-2024_01_01_15_05_25_DefStrat.py" in zipf.namelist()
+        with zipf.open("backtest-result-2024_01_01_15_05_25_DefStrat.json") as pf:
+            params_content = pf.read()
+            with params_file.open("rb") as original_file:
+                original_content = original_file.read()
+                assert params_content == original_content
+
     assert (tmp_path / LAST_BT_RESULT_FN).is_file()
 
     # Last file reference should be updated
@@ -313,6 +361,7 @@ def test_write_read_backtest_candles(tmp_path):
         "exportfilename": tmp_path,
         "export": "signals",
         "runmode": "backtest",
+        "original_config": {},
     }
     # test directory exporting
     sample_date = "2022_01_01_15_05_13"
@@ -381,6 +430,10 @@ def test_generate_pair_metrics():
             "profit_ratio": [0.1, 0.2],
             "profit_abs": [0.2, 0.4],
             "trade_duration": [10, 30],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+            ],
             "wins": [2, 0],
             "draws": [0, 0],
             "losses": [0, 0],
@@ -388,7 +441,12 @@ def test_generate_pair_metrics():
     )
 
     pair_results = generate_pair_metrics(
-        ["ETH/BTC"], stake_currency="BTC", starting_balance=2, results=results
+        ["ETH/BTC"],
+        stake_currency="BTC",
+        starting_balance=2,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
     )
     assert isinstance(pair_results, list)
     assert len(pair_results) == 2
@@ -473,6 +531,11 @@ def test_text_table_exit_reason(capsys):
             "profit_ratio": [0.1, 0.2, -0.1],
             "profit_abs": [0.2, 0.4, -0.2],
             "trade_duration": [10, 30, 10],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
             "wins": [2, 0, 0],
             "draws": [0, 0, 0],
             "losses": [0, 0, 1],
@@ -481,7 +544,12 @@ def test_text_table_exit_reason(capsys):
     )
 
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=22, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=22,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
+        skip_nan=False,
     )
     text_table_tags("exit_tag", exit_reason_stats, "BTC")
     text = capsys.readouterr().out
@@ -511,6 +579,11 @@ def test_generate_sell_reason_stats():
             "profit_ratio": [0.1, 0.2, -0.1],
             "profit_abs": [0.2, 0.4, -0.2],
             "trade_duration": [10, 30, 10],
+            "close_date": [
+                dt_utc(2017, 11, 14, 21, 35, 00),
+                dt_utc(2017, 11, 14, 22, 10, 00),
+                dt_utc(2017, 11, 14, 22, 43, 00),
+            ],
             "wins": [2, 0, 0],
             "draws": [0, 0, 0],
             "losses": [0, 0, 1],
@@ -519,7 +592,12 @@ def test_generate_sell_reason_stats():
     )
 
     exit_reason_stats = generate_tag_metrics(
-        "exit_reason", starting_balance=22, results=results, skip_nan=False
+        "exit_reason",
+        starting_balance=22,
+        results=results,
+        min_date=dt_from_ts(1510688220),
+        max_date=dt_from_ts(1510700340),
+        skip_nan=False,
     )
     roi_result = exit_reason_stats[0]
     assert roi_result["key"] == "roi"
@@ -587,7 +665,7 @@ def test_generate_periodic_breakdown_stats(testdatadir):
     day = res[0]
     assert "date" in day
     assert "draws" in day
-    assert "loses" in day
+    assert "losses" in day
     assert "wins" in day
     assert "profit_abs" in day
 

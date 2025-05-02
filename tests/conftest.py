@@ -48,7 +48,7 @@ from tests.conftest_trades_usdt import (
 logging.getLogger("").setLevel(logging.INFO)
 
 
-# Do not mask numpy errors as warnings that no one read, raise the exсeption
+# Do not mask numpy errors as warnings that no one read, raise the exception
 np.seterr(all="raise")
 
 CURRENT_TEST_STRATEGY = "StrategyTestV3"
@@ -165,7 +165,7 @@ def generate_trades_history(n_rows, start_date: datetime | None = None, days=5):
     )
     df["date"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     df = df.sort_values("timestamp").reset_index(drop=True)
-    assert list(df.columns) == constants.DEFAULT_TRADES_COLUMNS + ["date"]
+    assert list(df.columns) == [*constants.DEFAULT_TRADES_COLUMNS, "date"]
     return df
 
 
@@ -549,6 +549,14 @@ def user_dir(mocker, tmp_path) -> Path:
     return user_dir
 
 
+@pytest.fixture()
+def keep_log_config_loggers(mocker):
+    # Mock the _handle_existing_loggers function to prevent it from disabling all loggers.
+    # This is necessary to keep all loggers active, and avoid random failures if
+    # this file is ran before the test_rest_client file.
+    mocker.patch("logging.config._handle_existing_loggers")
+
+
 @pytest.fixture(autouse=True)
 def patch_coingecko(mocker) -> None:
     """
@@ -644,6 +652,7 @@ def get_default_conf(testdatadir):
         "trading_mode": "spot",
         "margin_mode": "",
         "candle_type_def": CandleType.SPOT,
+        "original_config": {},
     }
     return configuration
 

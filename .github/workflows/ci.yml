@@ -24,11 +24,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "ubuntu-20.04", "ubuntu-22.04", "ubuntu-24.04" ]
+        os: [ "ubuntu-22.04", "ubuntu-24.04" ]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -36,8 +38,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -71,17 +74,17 @@ jobs:
         python build_helpers/freqtrade_client_version_align.py
 
     - name: Tests
-      if: (!(runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-22.04'))
+      if: (!(runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04'))
       run: |
         pytest --random-order
 
     - name: Tests with Coveralls
-      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-22.04')
+      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
       run: |
         pytest --random-order --cov=freqtrade --cov=freqtrade_client --cov-config=.coveragerc
 
     - name: Coveralls
-      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-22.04')
+      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
       env:
         # Coveralls token. Not used as secret due to github not providing secrets to forked repositories
         COVERALLS_REPO_TOKEN: 6D1m0xupS3FgutfuGao8keFf9Hc0FpIXu
@@ -137,11 +140,12 @@ jobs:
         ruff format --check
 
     - name: Mypy
+      if: matrix.os == 'ubuntu-24.04'
       run: |
         mypy freqtrade scripts tests
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -157,6 +161,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -165,8 +171,9 @@ jobs:
         check-latest: true
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -260,11 +267,12 @@ jobs:
         ruff format --check
 
     - name: Mypy
+      if: matrix.os == 'macos-15'
       run: |
         mypy freqtrade scripts
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: info
@@ -281,6 +289,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -288,8 +298,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -355,7 +366,7 @@ jobs:
       shell: powershell
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -366,6 +377,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -381,16 +394,20 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - uses: actions/setup-python@v5
       with:
         python-version: "3.12"
-    - uses: pre-commit/action@v3.0.1
+    - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   docs-check:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Documentation syntax
       run: |
@@ -407,7 +424,7 @@ jobs:
         mkdocs build
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -417,9 +434,11 @@ jobs:
 
   build-linux-online:
     # Run pytest with "live" checks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -427,8 +446,9 @@ jobs:
         python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: "3.12"
         cache-dependency-glob: "requirements**.txt"
@@ -485,14 +505,14 @@ jobs:
 
     - name: Check user permission
       id: check
-      uses: scherermichael-oss/action-has-permission@1.0.6
+      uses: scherermichael-oss/action-has-permission@136e061bfe093832d87f090dd768e14e27a740d3 # 1.0.6
       with:
         required-permission: write
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: always() && steps.check.outputs.has-permission && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: info
@@ -506,6 +526,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -551,6 +573,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Download artifact  📦
       uses: actions/download-artifact@v4
@@ -560,7 +584,7 @@ jobs:
         merge-multiple: true
 
     - name: Publish to PyPI (Test)
-      uses: pypa/gh-action-pypi-publish@v1.12.4
+      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
       with:
         repository-url: https://test.pypi.org/legacy/
 
@@ -578,6 +602,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Download artifact  📦
       uses: actions/download-artifact@v4
@@ -587,7 +613,7 @@ jobs:
         merge-multiple: true
 
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.12.4
+      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
 
 
   deploy-docker:
@@ -598,6 +624,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -626,14 +654,16 @@ jobs:
           docker version -f '{{.Server.Experimental}}'
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
 
     - name: Set up Docker Buildx
       id: buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 #v3.10.0
 
     - name: Available platforms
-      run: echo ${{ steps.buildx.outputs.platforms }}
+      run: echo ${PLATFORMS}
+      env:
+        PLATFORMS: ${{ steps.buildx.outputs.platforms }}
 
     - name: Build and test and push docker images
       env:
@@ -652,6 +682,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Extract branch name
       id: extract-branch
@@ -675,7 +707,7 @@ jobs:
         build_helpers/publish_docker_arm64.sh
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@1399c1b2d57cc05894d506d2cfdc33c5f012b993 #v1.1.1
       if: always() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) && (github.event_name != 'schedule')
       with:
           severity: info

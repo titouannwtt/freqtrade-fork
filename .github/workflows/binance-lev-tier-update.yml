@@ -16,6 +16,8 @@ jobs:
       name: develop
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - uses: actions/setup-python@v5
       with:
@@ -32,7 +34,7 @@ jobs:
       run: python build_helpers/binance_update_lev_tiers.py
 
 
-    - uses: peter-evans/create-pull-request@v7
+    - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
       with:
         token: ${{ secrets.REPO_SCOPED_TOKEN }}
         add-paths: freqtrade/exchange/binance_leverage_tiers.json
@@ -42,6 +44,7 @@ jobs:
         branch: update/binance-leverage-tiers
         title: Update Binance Leverage Tiers
         commit-message: "chore: update pre-commit hooks"
-        committer: Freqtrade Bot <noreply@github.com>
+        committer: Freqtrade Bot <154552126+freqtrade-bot@users.noreply.github.com>
+        author: Freqtrade Bot <154552126+freqtrade-bot@users.noreply.github.com>
         body: Update binance leverage tiers.
         delete-branch: true

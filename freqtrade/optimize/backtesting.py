@@ -8,7 +8,6 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import Any
 
 from numpy import nan
 from pandas import DataFrame
@@ -37,7 +36,12 @@ from freqtrade.exchange import (
     timeframe_to_seconds,
 )
 from freqtrade.exchange.exchange import Exchange
-from freqtrade.ft_types import BacktestResultType, get_BacktestResultType_default
+from freqtrade.ft_types import (
+    BacktestContentType,
+    BacktestContentTypeIcomplete,
+    BacktestResultType,
+    get_BacktestResultType_default,
+)
 from freqtrade.leverage.liquidation_price import update_liquidation_prices
 from freqtrade.mixins import LoggingMixin
 from freqtrade.optimize.backtest_caching import get_strategy_run_id
@@ -119,7 +123,7 @@ class Backtesting:
         config["dry_run"] = True
         self.run_ids: dict[str, str] = {}
         self.strategylist: list[IStrategy] = []
-        self.all_results: dict[str, dict] = {}
+        self.all_bt_content: dict[str, BacktestContentType] = {}
         self.analysis_results: dict[str, dict[str, DataFrame]] = {
             "signals": {},
             "rejected": {},
@@ -360,8 +364,9 @@ class Backtesting:
             )
             # Combine data to avoid combining the data per trade.
             unavailable_pairs = []
+            uses_leverage_tiers = self.exchange.get_option("uses_leverage_tiers", True)
             for pair in self.pairlists.whitelist:
-                if pair not in self.exchange._leverage_tiers:
+                if uses_leverage_tiers and pair not in self.exchange._leverage_tiers:
                     unavailable_pairs.append(pair)
                     continue
 
@@ -396,6 +401,8 @@ class Backtesting:
         self.canceled_trade_entries = 0
         self.canceled_entry_orders = 0
         self.replaced_entry_orders = 0
+        self.canceled_exit_orders = 0
+        self.replaced_exit_orders = 0
         self.dataprovider.clear_cache()
         if enable_protections:
             self._load_protections(self.strategy)
@@ -601,7 +608,7 @@ class Backtesting:
             # This should not be reached...
             return row[OPEN_IDX]
 
-    def _get_adjust_trade_entry_for_candle(
+    def _check_adjust_trade_for_candle(
         self, trade: LocalTrade, row: tuple, current_time: datetime
     ) -> LocalTrade:
         current_rate: float = row[OPEN_IDX]
@@ -712,7 +719,7 @@ class Backtesting:
                     exchange=self.exchange,
                     wallets=self.wallets,
                     stake_currency=self.config["stake_currency"],
-                    dry_run=self.config["dry_run"],
+                    dry_run=True,
                 )
             if not (order.ft_order_side == trade.exit_side and order.safe_amount == trade.amount):
                 self._call_adjust_stop(current_date, trade, order.ft_price)
@@ -869,7 +876,7 @@ class Backtesting:
 
         # Check if we need to adjust our current positions
         if self.strategy.position_adjustment_enable:
-            trade = self._get_adjust_trade_entry_for_candle(trade, row, current_time)
+            trade = self._check_adjust_trade_for_candle(trade, row, current_time)
 
         if trade.is_open:
             enter = row[SHORT_IDX] if trade.is_short else row[LONG_IDX]
@@ -1234,8 +1241,8 @@ class Backtesting:
         for order in [o for o in trade.orders if o.ft_is_open]:
             if order.side == trade.entry_side:
                 self.canceled_entry_orders += 1
-            # elif order.side == trade.exit_side:
-            #     self.canceled_exit_orders += 1
+            elif order.side == trade.exit_side:
+                self.canceled_exit_orders += 1
             # canceled orders are removed from the trade
             del trade.orders[trade.orders.index(order)]
 
@@ -1299,9 +1306,10 @@ class Backtesting:
         Returns True if the trade should be deleted.
         """
         # only check on new candles for open entry orders
-        if order.side == trade.entry_side and current_time > order.order_date_utc:
+        if current_time > order.order_date_utc:
+            is_entry = order.side == trade.entry_side
             requested_rate = strategy_safe_wrapper(
-                self.strategy.adjust_entry_price, default_retval=order.ft_price
+                self.strategy.adjust_order_price, default_retval=order.ft_price
             )(
                 trade=trade,  # type: ignore[arg-type]
                 order=order,
@@ -1311,6 +1319,7 @@ class Backtesting:
                 current_order_rate=order.ft_price,
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
+                is_entry=is_entry,
             )  # default value is current order price
 
             # cancel existing order whenever a new rate is requested (or None)
@@ -1319,22 +1328,35 @@ class Backtesting:
                 return False
             else:
                 del trade.orders[trade.orders.index(order)]
-                self.canceled_entry_orders += 1
+                if is_entry:
+                    self.canceled_entry_orders += 1
+                else:
+                    self.canceled_exit_orders += 1
 
             # place new order if result was not None
             if requested_rate:
-                self._enter_trade(
-                    pair=trade.pair,
-                    row=row,
-                    trade=trade,
-                    requested_rate=requested_rate,
-                    requested_stake=(order.safe_remaining * order.ft_price / trade.leverage),
-                    direction="short" if trade.is_short else "long",
-                )
+                if is_entry:
+                    self._enter_trade(
+                        pair=trade.pair,
+                        row=row,
+                        trade=trade,
+                        requested_rate=requested_rate,
+                        requested_stake=(order.safe_remaining * order.ft_price / trade.leverage),
+                        direction="short" if trade.is_short else "long",
+                    )
+                    self.replaced_entry_orders += 1
+                else:
+                    self._exit_trade(
+                        trade=trade,
+                        sell_row=row,
+                        close_rate=requested_rate,
+                        amount=order.safe_remaining,
+                        exit_reason=order.ft_order_tag,
+                    )
+                    self.replaced_exit_orders += 1
                 # Delete trade if no successful entries happened (if placing the new order failed)
-                if not trade.has_open_orders and trade.nr_of_successful_entries == 0:
+                if not trade.has_open_orders and is_entry and trade.nr_of_successful_entries == 0:
                     return True
-                self.replaced_entry_orders += 1
             else:
                 # assumption: there can't be multiple open entry orders at any given time
                 return trade.nr_of_successful_entries == 0
@@ -1535,7 +1557,9 @@ class Backtesting:
                     row_index += 1
                     indexes[pair] = row_index
                     is_last_row = current_time == end_date
-                    self.dataprovider._set_dataframe_max_index(self.required_startup + row_index)
+                    self.dataprovider._set_dataframe_max_index(
+                        pair, self.required_startup + row_index
+                    )
                     trade_dir = self.check_for_trade_entry(row)
                     pair_tradedir_cache[pair] = trade_dir
 
@@ -1591,7 +1615,9 @@ class Backtesting:
                 yield current_time_det, pair, row, is_last_row, trade_dir
             self.progress.increment()
 
-    def backtest(self, processed: dict, start_date: datetime, end_date: datetime) -> dict[str, Any]:
+    def backtest(
+        self, processed: dict, start_date: datetime, end_date: datetime
+    ) -> BacktestContentTypeIcomplete:
         """
         Implement backtesting functionality
 
@@ -1691,7 +1717,7 @@ class Backtesting:
                 "backtest_end_time": int(backtest_end_time.timestamp()),
             }
         )
-        self.all_results[strategy_name] = results
+        self.all_bt_content[strategy_name] = results
 
         if (
             self.config.get("export", "none") == "signals"
@@ -1754,9 +1780,9 @@ class Backtesting:
             min_date, max_date = self.backtest_one_strategy(strat, data, timerange)
 
         # Update old results with new ones.
-        if len(self.all_results) > 0:
+        if len(self.all_bt_content) > 0:
             results = generate_backtest_stats(
-                data, self.all_results, min_date=min_date, max_date=max_date
+                data, self.all_bt_content, min_date=min_date, max_date=max_date
             )
             if self.results:
                 self.results["metadata"].update(results["metadata"])
@@ -1773,6 +1799,7 @@ class Backtesting:
                     dt_appendix,
                     market_change_data=combined_res,
                     analysis_results=self.analysis_results,
+                    strategy_files={s.get_strategy_name(): s.__file__ for s in self.strategylist},
                 )
 
         # Results may be mixed up now. Sort them so they follow --strategy-list order.
