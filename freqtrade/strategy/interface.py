@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from math import isinf, isnan
 
 from pandas import DataFrame
+from pydantic import ValidationError
 
 from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH, Config, IntOrInf, ListPairsWithTimeframes
 from freqtrade.data.converter import populate_dataframe_with_trades
@@ -1805,10 +1806,23 @@ class IStrategy(ABC, HyperStrategyMixin):
         Internal wrapper around plot_dataframe
         """
         if len(dataframe) > 0:
-            return strategy_safe_wrapper(self.plot_annotations)(
+            annotations = strategy_safe_wrapper(self.plot_annotations)(
                 pair=pair,
                 dataframe=dataframe,
                 start_date=dataframe.iloc[0]["date"].to_pydatetime(),
                 end_date=dataframe.iloc[-1]["date"].to_pydatetime(),
             )
+            annotations_new = []
+            for annotation in annotations:
+                if isinstance(annotation, dict):
+                    # Convert to AnnotationType
+                    try:
+                        annotations_new.append(AnnotationType(**annotation))
+                    except ValidationError as e:
+                        logger.error(f"Invalid annotation data: {annotation}. Error: {e}")
+                else:
+                    # Already an AnnotationType
+                    annotations_new.append(annotation)
+
+            return annotations_new
         return []
