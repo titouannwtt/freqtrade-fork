@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Literal
 
-from typing_extensions import NotRequired, TypedDict
+from pydantic import BaseModel
 
 
-class AnnotationType(TypedDict):
+class AnnotationType(BaseModel):
     type: Literal["area"]
-    start: NotRequired[str | datetime]
-    end: NotRequired[str | datetime]
-    y_start: NotRequired[float]
-    y_end: NotRequired[float]
-    color: NotRequired[str]
-    label: NotRequired[str]
+    start: None | str | datetime = None
+    end: None | str | datetime = None
+    y_start: None | float = None
+    y_end: None | float = None
+    color: None | str = None
+    label: None | str = None
