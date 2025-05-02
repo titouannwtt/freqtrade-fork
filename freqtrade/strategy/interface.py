@@ -840,9 +840,10 @@ class IStrategy(ABC, HyperStrategyMixin):
     ) -> list[AnnotationType]:
         """
         Retrieve area annotations for a chart.
-        Must be returned as array, with label, start, end, y_start, y_end and color.
-        All settings are optional - though it usually makes sense to include either "start and end"
-        or "y_start and y_end" for either horizontal or vertical plots (or all 4 for boxes).
+        Must be returned as array, with type, label, color, start, end, y_start, y_end.
+        All settings except for type are optional - though it usually makes sense to include either
+        "start and end" or "y_start and y_end" for either horizontal or vertical plots
+        (or all 4 for boxes).
         :param pair: Pair that's currently analyzed
         :param start_date: Start date of the chart data being requested
         :param end_date: End date of the chart data being requested
