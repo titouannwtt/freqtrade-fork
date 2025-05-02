@@ -8,6 +8,7 @@ import gc
 import logging
 import random
 from datetime import datetime
+from inspect import unwrap
 from math import ceil
 from multiprocessing import Manager
 from pathlib import Path
@@ -15,7 +16,6 @@ from typing import Any
 
 import rapidjson
 from joblib import Parallel, cpu_count
-from inspect import unwrap
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState

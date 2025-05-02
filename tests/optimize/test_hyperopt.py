@@ -605,7 +605,9 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
     hyperopt.hyperopter.min_date = dt_utc(2017, 12, 10)
     hyperopt.hyperopter.max_date = dt_utc(2017, 12, 13)
     hyperopt.hyperopter.init_spaces()
-    generate_optimizer_value = hyperopt.hyperopter.generate_optimizer._obj(hyperopt.hyperopter, raw_params=optimizer_param)
+    generate_optimizer_value = hyperopt.hyperopter.generate_optimizer._obj(
+        hyperopt.hyperopter, raw_params=optimizer_param
+    )
     assert generate_optimizer_value == response_expected
 
 

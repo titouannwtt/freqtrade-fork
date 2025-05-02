@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import optuna
-from joblib import dump, load, delayed, wrap_non_picklable_objects
+from joblib import delayed, dump, load, wrap_non_picklable_objects
 from joblib.externals import cloudpickle
 from optuna.exceptions import ExperimentalWarning
 from pandas import DataFrame
