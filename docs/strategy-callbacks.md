@@ -1172,10 +1172,11 @@ class AwesomeStrategy(IStrategy):
 
 ```
 
+Entries will be validated, and won't be passed to the UI if they don't correspond to the expected schema and will log an error if they don't.
+
 !!! Warning "Many annotations"
     Using too many annotations can cause the UI to hang, especially when plotting large amounts of historic data.
     Use the annotation feature with care.
-
 
 ### Plot annotations example
 
