@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import rapidjson
-from joblib import Parallel, cpu_count, delayed, wrap_non_picklable_objects
+from joblib import Parallel, cpu_count
+from inspect import unwrap
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
@@ -158,7 +159,8 @@ class Hyperopt:
 
             return self.hyperopter.generate_optimizer(*args, **kwargs)
 
-        return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
+        # return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
+        return parallel(optimizer_wrapper(v) for v in asked)
 
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
@@ -283,7 +285,7 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=1, dimensions=self.hyperopter.o_dimensions
                         )
-                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
+                        f_val0 = unwrap(self.hyperopter.generate_optimizer)(asked[0].params)
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
