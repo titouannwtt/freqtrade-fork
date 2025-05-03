@@ -238,12 +238,12 @@ class HyperOptimizer:
         )
 
     def assign_params(
-        self, backtesting: Backtesting, params_dict: dict[str, Any], category: str
+        self, params_dict: dict[str, Any], category: str
     ) -> None:
         """
         Assign hyperoptable parameters
         """
-        for attr_name, attr in backtesting.strategy.enumerate_parameters(category):
+        for attr_name, attr in self.backtesting.strategy.enumerate_parameters(category):
             if attr.optimize:
                 # noinspection PyProtectedMember
                 attr.value = params_dict[attr_name]
@@ -262,13 +262,13 @@ class HyperOptimizer:
 
         # Apply parameters
         if HyperoptTools.has_space(self.config, "buy"):
-            self.assign_params(self.backtesting, params_dict, "buy")
+            self.assign_params(params_dict, "buy")
 
         if HyperoptTools.has_space(self.config, "sell"):
-            self.assign_params(self.backtesting, params_dict, "sell")
+            self.assign_params(params_dict, "sell")
 
         if HyperoptTools.has_space(self.config, "protection"):
-            self.assign_params(self.backtesting, params_dict, "protection")
+            self.assign_params(params_dict, "protection")
 
         if HyperoptTools.has_space(self.config, "roi"):
             self.backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(
