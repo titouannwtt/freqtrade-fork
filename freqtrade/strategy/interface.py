@@ -1813,14 +1813,14 @@ class IStrategy(ABC, HyperStrategyMixin):
                 end_date=dataframe.iloc[-1]["date"].to_pydatetime(),
             )
 
-            from freqtrade.ft_types.plot_annotation_type import AnnotationTypePA
+            from freqtrade.ft_types.plot_annotation_type import AnnotationTypeTA
 
             annotations_new: list[AnnotationType] = []
             for annotation in annotations:
                 if isinstance(annotation, dict):
                     # Convert to AnnotationType
                     try:
-                        AnnotationTypePA.validate_python(annotation)
+                        AnnotationTypeTA.validate_python(annotation)
                         annotations_new.append(annotation)
                     except ValidationError as e:
                         logger.error(f"Invalid annotation data: {annotation}. Error: {e}")

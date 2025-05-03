@@ -15,4 +15,4 @@ class AnnotationType(TypedDict, total=False):
     label: str
 
 
-AnnotationTypePA = TypeAdapter(AnnotationType)
+AnnotationTypeTA = TypeAdapter(AnnotationType)
