@@ -61,6 +61,19 @@ After setting the baseline it will then do additional runs for every entry and e
 When a verification-backtest is done, it will compare the indicators as the signal (either entry or exit) and report the bias.
 After all signals have been verified or falsified a result-table will be generated for the user to see.
 
+### What do the columns in the results table mean?
+
+- `filename`: name of the checked strategy file
+- `strategy`: checked strategy class
+- `has_bias`: result of the lookahead-analysis. `No` would be good, `Yes` would be bad.
+- `total_signals`: amount of checked signals (default is 20)
+- `biased_entry_signals`: found bias in that many entries
+- `biased_exit_signals`: found bias in that many exits. 
+This might be a false positive if you have biased entry signals. A biased entry will usually result in a biased exit too, even if the exit itself does not produce the bias.
+**Please take care of the bias in the entries first, then regard this column after.**
+
+- `biased_indicators`: shows you the indicators themselves that are defined in populate_indicators
+
 ### Caveats
 
 - `lookahead-analysis` can only verify / falsify the trades it calculated and verified.
