@@ -8,7 +8,6 @@ import gc
 import logging
 import random
 from datetime import datetime
-from inspect import unwrap
 from math import ceil
 from multiprocessing import Manager
 from pathlib import Path
@@ -285,7 +284,7 @@ class Hyperopt:
                         asked, is_random = self.get_asked_points(
                             n_points=1, dimensions=self.hyperopter.o_dimensions
                         )
-                        f_val0 = unwrap(self.hyperopter.generate_optimizer)(asked[0].params)
+                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
                         self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
