@@ -19,7 +19,7 @@ def get_significant_digits_over_time(candles: DataFrame) -> Series:
 
     candles1 = candles.set_index("date", drop=True)
     # Group by month and calculate the average number of significant digits
-    monthly_count_avg1 = candles1["max_count"].resample("ME").max()
+    monthly_count_avg1 = candles1["max_count"].resample("MS").max()
     # monthly_open_count_avg
     # convert monthly_open_count_avg from 5.0 to 0.00001, 4.0 to 0.0001, ...
     monthly_open_count_avg = 1 / 10**monthly_count_avg1
