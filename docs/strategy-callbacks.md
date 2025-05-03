@@ -1180,8 +1180,8 @@ Entries will be validated, and won't be passed to the UI if they don't correspon
 
 ### Plot annotations example
 
-![FreqUI - plot Annotations](assets/frequi-chart-annotations-dark.png#only-dark)
-![FreqUI - plot Annotations](assets/frequi-chart-annotations-light.png#only-light)
+![FreqUI - plot Annotations](assets/freqUI-chart-annotations-dark.png#only-dark)
+![FreqUI - plot Annotations](assets/freqUI-chart-annotations-light.png#only-light)
 
 ??? Info "Code used for the plot above"
     This is an example code and should be treated as such.
@@ -1207,14 +1207,15 @@ Entries will be validated, and won't be passed to the UI if they don't correspon
                         }
                     )
                 elif (start_dt.hour % 2) == 0:
+                price = dataframe.loc[dataframe["date"] == start_dt, ["close"]].mean()
                     mark_areas.append(
                         {
                             "type": "area",
                             "label": "2h",
                             "start": start_dt,
                             "end": start_dt + timedelta(hours=1),
-                            "y_end": 1830,
-                            "y_start": 1860,
+                            "y_end": price * 1.01,
+                            "y_start": price * 0.99,
                             "color": "rgba(0, 255, 0, 0.4)",
                         }
                     )
