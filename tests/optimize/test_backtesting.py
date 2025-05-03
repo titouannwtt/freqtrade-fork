@@ -828,6 +828,7 @@ def test_backtest_one(default_conf, mocker, testdatadir) -> None:
                     },
                 ],
             ],
+            "funding_fees": [0.0, 0.0],
         }
     )
     pd.testing.assert_frame_equal(results, expected)
