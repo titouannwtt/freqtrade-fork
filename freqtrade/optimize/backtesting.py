@@ -322,7 +322,8 @@ class Backtesting:
         self._load_bt_data_detail()
         self.price_pair_prec = {}
         for pair in self.pairlists.whitelist:
-            self.price_pair_prec[pair] = get_significant_digits_over_time(data[pair])
+            if pair in data:
+                self.price_pair_prec[pair] = get_significant_digits_over_time(data[pair])
         return data, self.timerange
 
     def _load_bt_data_detail(self) -> None:
@@ -403,9 +404,9 @@ class Backtesting:
         if precision_series is not None:
             precision = precision_series.asof(current_time)
 
-        if not isnan(precision):
-            # Force tick size if we define the precision
-            return precision, TICK_SIZE
+            if not isnan(precision):
+                # Force tick size if we define the precision
+                return precision, TICK_SIZE
         return self.exchange.get_precision_price(pair), self.exchange.precision_mode_price
 
     def disable_database_use(self):
