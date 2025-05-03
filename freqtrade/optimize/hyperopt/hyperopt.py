@@ -157,7 +157,7 @@ class Hyperopt:
                 log_queue, logging.INFO if self.config["verbosity"] < 1 else logging.DEBUG
             )
 
-            return self.hyperopter.generate_optimizer(*args, **kwargs)
+            return self.hyperopter.generate_optimizer_wrapped(*args, **kwargs)
 
         # return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
         return parallel(optimizer_wrapper(v) for v in asked)

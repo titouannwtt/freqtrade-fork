@@ -237,9 +237,7 @@ class HyperOptimizer:
             + self.max_open_trades_space
         )
 
-    def assign_params(
-        self, params_dict: dict[str, Any], category: str
-    ) -> None:
+    def assign_params(self, params_dict: dict[str, Any], category: str) -> None:
         """
         Assign hyperoptable parameters
         """
@@ -250,6 +248,9 @@ class HyperOptimizer:
 
     @delayed
     @wrap_non_picklable_objects
+    def generate_optimizer_wrapped(self, raw_params: dict[str, Any]) -> dict[str, Any]:
+        return self.generate_optimizer(raw_params)
+
     def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:
         """
         Used Optimize function.
