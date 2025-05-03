@@ -18,7 +18,7 @@ from freqtrade.constants import DATETIME_PRINT_FORMAT, Config, IntOrInf, LongSho
 from freqtrade.data import history
 from freqtrade.data.btanalysis import (
     find_existing_backtest_stats,
-    get_significant_digits_over_time,
+    get_tick_size_over_time,
     trade_list_to_dataframe,
 )
 from freqtrade.data.converter import trim_dataframe, trim_dataframes
@@ -323,7 +323,8 @@ class Backtesting:
         self.price_pair_prec = {}
         for pair in self.pairlists.whitelist:
             if pair in data:
-                self.price_pair_prec[pair] = get_significant_digits_over_time(data[pair])
+                # Load price precision logic
+                self.price_pair_prec[pair] = get_tick_size_over_time(data[pair])
         return data, self.timerange
 
     def _load_bt_data_detail(self) -> None:

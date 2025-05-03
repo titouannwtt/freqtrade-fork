@@ -6,12 +6,12 @@ import pandas as pd
 from numpy import nan
 from pandas import DataFrame, Timestamp
 
-from freqtrade.data.btanalysis.historic_precision import get_significant_digits_over_time
+from freqtrade.data.btanalysis.historic_precision import get_tick_size_over_time
 
 
-def test_get_significant_digits_over_time():
+def test_get_tick_size_over_time():
     """
-    Test the get_significant_digits_over_time function with predefined data
+    Test the get_tick_size_over_time function with predefined data
     """
     # Create test dataframe with different levels of precision
     data = {
@@ -36,7 +36,7 @@ def test_get_significant_digits_over_time():
     candles = DataFrame(data)
 
     # Calculate significant digits
-    result = get_significant_digits_over_time(candles)
+    result = get_tick_size_over_time(candles)
 
     # Check that the result is a pandas Series
     assert isinstance(result, pd.Series)
@@ -60,9 +60,9 @@ def test_get_significant_digits_over_time():
     assert result.iloc[0] == 0.00001
 
 
-def test_get_significant_digits_over_time_real_data(testdatadir):
+def test_get_tick_size_over_time_real_data(testdatadir):
     """
-    Test the get_significant_digits_over_time function with real data from the testdatadir
+    Test the get_tick_size_over_time function with real data from the testdatadir
     """
     from freqtrade.data.history import load_pair_history
 
@@ -80,7 +80,7 @@ def test_get_significant_digits_over_time_real_data(testdatadir):
     assert not candles.empty, "No test data found, cannot run test"
 
     # Calculate significant digits
-    result = get_significant_digits_over_time(candles)
+    result = get_tick_size_over_time(candles)
 
     assert isinstance(result, pd.Series)
 

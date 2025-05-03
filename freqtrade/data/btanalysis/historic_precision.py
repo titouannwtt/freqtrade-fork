@@ -1,7 +1,7 @@
 from pandas import DataFrame, Series
 
 
-def get_significant_digits_over_time(candles: DataFrame) -> Series:
+def get_tick_size_over_time(candles: DataFrame) -> Series:
     """
     Calculate the number of significant digits for candles over time.
     It's using the Monthly maximum of the number of significant digits for each month.
