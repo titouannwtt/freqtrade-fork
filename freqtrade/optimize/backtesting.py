@@ -394,7 +394,7 @@ class Backtesting:
         else:
             self.futures_data = {}
 
-    def get_pair_precision(self, pair: str, current_time: datetime) -> tuple[float, int]:
+    def get_pair_precision(self, pair: str, current_time: datetime) -> tuple[float | None, int]:
         """
         Get pair precision at that moment in time
         :param pair: Pair to get precision for
