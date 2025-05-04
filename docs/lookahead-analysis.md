@@ -68,10 +68,9 @@ After all signals have been verified or falsified a result-table will be generat
 - `has_bias`: result of the lookahead-analysis. `No` would be good, `Yes` would be bad.
 - `total_signals`: amount of checked signals (default is 20)
 - `biased_entry_signals`: found bias in that many entries
-- `biased_exit_signals`: found bias in that many exits. 
-This might be a false positive if you have biased entry signals. A biased entry will usually result in a biased exit too, even if the exit itself does not produce the bias.
+- `biased_exit_signals`: found bias in that many exits.  
+This might be a false positive if you have biased entry signals. A biased entry will usually result in a biased exit too, even if the exit itself does not produce the bias.  
 **Please take care of the bias in the entries first, then regard this column after.**
-
 - `biased_indicators`: shows you the indicators themselves that are defined in populate_indicators
 
 ### Caveats
