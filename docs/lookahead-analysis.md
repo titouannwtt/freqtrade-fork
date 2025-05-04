@@ -69,7 +69,7 @@ You might be able to salvage it partially if the biased indicators or parts are 
 - shift(-10) looks 10 candles into the future.
 - iloc[] accesses a specific row in the dataframe, be very careful with this.
 - For-loops are prone to introduce lookahead-bias if you don't tightly control which numbers are looped through.
-- Aggregation funktions like .mean() .min(), .max(), without a rolling window,
+- Aggregation functions like .mean() .min(), .max(), without a rolling window,
   will show you the respective pointers of the **whole** dataframe.    
   A non-biased example of .mean() would be the following line. 
   It just looks back 12 candles and takes its mean instead of the mean of the whole dataframe.  
