@@ -16,7 +16,6 @@ from joblib.externals import cloudpickle
 from optuna.exceptions import ExperimentalWarning
 from pandas import DataFrame
 
-# from memory_profiler import profile
 from freqtrade.constants import DATETIME_PRINT_FORMAT, Config
 from freqtrade.data.converter import trim_dataframes
 from freqtrade.data.history import get_timerange
@@ -248,10 +247,10 @@ class HyperOptimizer:
 
     @delayed
     @wrap_non_picklable_objects
-    def generate_optimizer_wrapped(self, raw_params: dict[str, Any]) -> dict[str, Any]:
-        return self.generate_optimizer(raw_params)
+    def generate_optimizer_wrapped(self, params_dict: dict[str, Any]) -> dict[str, Any]:
+        return self.generate_optimizer(params_dict)
 
-    def generate_optimizer(self, raw_params: dict[str, Any]) -> dict[str, Any]:
+    def generate_optimizer(self, params_dict: dict[str, Any]) -> dict[str, Any]:
         """
         Used Optimize function.
         Called once per epoch to optimize whatever is configured.
@@ -259,7 +258,6 @@ class HyperOptimizer:
         """
         HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
         backtest_start_time = datetime.now(timezone.utc)
-        params_dict = raw_params
 
         # Apply parameters
         if HyperoptTools.has_space(self.config, "buy"):
