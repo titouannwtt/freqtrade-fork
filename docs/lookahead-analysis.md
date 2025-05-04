@@ -76,5 +76,5 @@ This would lead to a false-negative, i.e. the strategy will be reported as non-b
 - `lookahead-analysis` has access to the same backtesting options and this can introduce problems.
 Please don't use any options like enabling position stacking as this will distort the number of checked signals.
 If you decide to do so, then make doubly sure that you won't ever run out of `max_open_trades` slots, and that you have enough capital in the backtest wallet configuration.
-- In the results table, the `biased_indicators` column will falsely flag FreqAI target indicators defined in `set_freqai_targets()` as biased.
+- In the results table, the `biased_indicators` column will falsely flag FreqAI target indicators defined in `set_freqai_targets()` as biased.  
 **These are not biased and can safely be ignored.**
