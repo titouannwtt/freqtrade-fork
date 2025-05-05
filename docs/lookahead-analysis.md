@@ -34,11 +34,11 @@ These are set to avoid users accidentally generating false positives.
 
 ### Introduction
 
-Many strategies - without the programmer knowing - have fallen prey to lookahead bias.
-This typically make the strategy backtest look profitable, sometimes to extremes, 
+Many strategies, without the programmer knowing, have fallen prey to lookahead bias.
+This typically makes the strategy backtest look profitable, sometimes to extremes, 
 but this is not realistic as the strategy is "cheating" by looking at data it would not have in dry or live modes.
 
-The reason why strategies can "cheat" is, 
+The reason why strategies can "cheat" is
 because the freqtrade backtesting process populates the full dataframe including all candle timestamps at the outset.
 If the programmer is not careful or oblivious how things work internally 
 (which sometimes can be really hard to find out) then the strategy will look into the future.
@@ -57,24 +57,25 @@ When these verification backtests complete, it will compare the indicators at th
 and report the bias.  
 After all signals have been verified or falsified a result table will be generated for the user to see.
 
-### How to find and remove bias? How can I salvage the strategy?
-If you found a biased strategy online and want to have the same results - just without bias - 
+### How to find and remove bias? How can I salvage a biased strategy?
+
+If you found a biased strategy online and want to have the same results, just without bias,
 then you will be out of luck most of the time.
-Usually the bias in the strategy is THE driving factor for those outrageous profits.
-In the end it is pretty easy to produce amazing results if you can look into the future.  
-Removing that central part that pushed the profits up so hich will make it significantly worse. Right?  
-You might be able to salvage it partially if the biased indicators or parts are not the core of the strategy.
+Usually the bias in the strategy is THE driving factor for "too good to be true" profits.
+Removing conditions or indicators that push the profits up from bias will usually make the strategy significantly worse.
+You might be able to salvage it partially if the biased indicators or conditions are not the core of the strategy, or there
+are other entry and exit signals that are not biased.
 
 ### Examples of lookahead-bias
-- shift(-10) looks 10 candles into the future.
-- iloc[] accesses a specific row in the dataframe, be very careful with this.
-- For-loops are prone to introduce lookahead-bias if you don't tightly control which numbers are looped through.
-- Aggregation functions like .mean() .min(), .max(), without a rolling window,
-  will show you the respective pointers of the **whole** dataframe.    
-  A non-biased example of .mean() would be the following line. 
-  It just looks back 12 candles and takes its mean instead of the mean of the whole dataframe.  
-  dataframe['volume_mean_12'] = dataframe['volume'].rolling(12).mean()
-- ta.MACD(dataframe,12,26,1) will introduce bias with a signalperiod of 1.
+
+- `shift(-10)` looks 10 candles into the future.
+- Using `iloc[]` in populate_* functions to access a specific row in the dataframe.
+- For-loops are prone to introduce lookahead bias if you don't tightly control which numbers are looped through.
+- Aggregation functions like `.mean()`, `.min()` and `.max()`, without a rolling window,
+  will calculate the value over the **whole** dataframe, so the signal candle will "see" a value including future candles.
+  A non-biased example would be to look back candles using `rolling()` instead:
+  e.g. `dataframe['volume_mean_12'] = dataframe['volume'].rolling(12).mean()`
+- `ta.MACD(dataframe, 12, 26, 1)` will introduce bias with a signalperiod of 1.
 
 ### What do the columns in the results table mean?
 
@@ -87,7 +88,7 @@ You might be able to salvage it partially if the biased indicators or parts are 
 - `biased_indicators`: shows you the indicators themselves that are defined in populate_indicators
 
 You might get false positives in the `biased_exit_signals` if you have biased entry signals paired with those exits.
-However, a biased entry will usually result in a biased exit too,  
+However, a biased entry will usually result in a biased exit too,
 even if the exit itself does not produce the bias -
 especially if your entry and exit conditions use the same biased indicator.
 
