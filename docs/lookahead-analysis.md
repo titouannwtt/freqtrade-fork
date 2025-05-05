@@ -29,17 +29,15 @@ These are set to avoid users accidentally generating false positives.
 
 --8<-- "commands/lookahead-analysis.md"
 
-!!! Note ""
+!!! Note
     The above output was reduced to options that `lookahead-analysis` adds on top of regular backtesting commands.
 
 ### Introduction
 
 Many strategies, without the programmer knowing, have fallen prey to lookahead bias.
-This typically makes the strategy backtest look profitable, sometimes to extremes, 
-but this is not realistic as the strategy is "cheating" by looking at data it would not have in dry or live modes.
+This typically makes the strategy backtest look profitable, sometimes to extremes,  but this is not realistic as the strategy is "cheating" by looking at data it would not have in dry or live modes.
 
-The reason why strategies can "cheat" is
-because the freqtrade backtesting process populates the full dataframe including all candle timestamps at the outset.
+The reason why strategies can "cheat" is because the freqtrade backtesting process populates the full dataframe including all candle timestamps at the outset.
 If the programmer is not careful or oblivious how things work internally 
 (which sometimes can be really hard to find out) then the strategy will look into the future.
 
@@ -48,8 +46,7 @@ This command is made to try to verify the validity in the form of the aforementi
 ### How does the command work?
 
 It will start with a backtest of all pairs to generate a baseline for indicators and entries/exits.
-After this initial backtest runs, 
-it will look if the `minimum-trade-amount` is met and if not cancel the lookahead-analysis for this strategy.  
+After this initial backtest runs, it will look if the `minimum-trade-amount` is met and if not cancel the lookahead-analysis for this strategy.  
 If this happens, use a wider timerange to get more trades for the analysis, or use a timerange where more trades occur.
 
 After setting the baseline it will then do additional backtest runs for every entry and exit separately.  
@@ -97,8 +94,7 @@ especially if your entry and exit conditions use the same biased indicator.
 ### Caveats
 
 - `lookahead-analysis` can only verify / falsify the trades it calculated and verified.
-If the strategy has many different signals / signal types, it's up to you to select appropriate parameters 
-  to ensure that all signals have triggered at least once. Signals that are not triggered will not have been verified.
+If the strategy has many different signals / signal types, it's up to you to select appropriate parameters to ensure that all signals have triggered at least once. Signals that are not triggered will not have been verified.  
 This would lead to a false-negative, i.e. the strategy will be reported as non-biased.
 - `lookahead-analysis` has access to the same backtesting options and this can introduce problems.
 Please don't use any options like enabling position stacking as this will distort the number of checked signals.
