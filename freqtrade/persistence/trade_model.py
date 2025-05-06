@@ -1802,11 +1802,15 @@ class Trade(ModelBase, LocalTrade):
         close_date: datetime | None = None,
     ) -> list["LocalTrade"]:
         """
-        Helper function to query Trades.j
+        Helper function to query Trades.
         Returns a List of trades, filtered on the parameters given.
         In live mode, converts the filter to a database query and returns all rows
         In Backtest mode, uses filters on Trade.bt_trades to get the result.
-
+        :param pair: Filter by pair
+        :param is_open: Filter by open/closed status
+        :param open_date: Filter by open_date (filters via trade.open_date > input)
+        :param close_date: Filter by close_date (filters via trade.close_date > input)
+                           and will implicitly only return closed trades.
         :return: unsorted List[Trade]
         """
         if Trade.use_db:
