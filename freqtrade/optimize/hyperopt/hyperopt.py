@@ -158,7 +158,6 @@ class Hyperopt:
 
             return self.hyperopter.generate_optimizer_wrapped(*args, **kwargs)
 
-        # return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
         return parallel(optimizer_wrapper(v) for v in asked)
 
     def _set_random_state(self, random_state: int | None) -> int:
