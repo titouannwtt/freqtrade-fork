@@ -330,7 +330,6 @@ class Hyperopt:
                 self.config,
                 self.hyperopter.get_strategy_name(),
                 self.current_best_epoch,
-                self.hyperopter.o_dimensions,
             )
 
             HyperoptTools.show_epoch_details(
