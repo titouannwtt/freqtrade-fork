@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 import rapidjson
+from optuna.distributions import BaseDistribution
 from pandas import isna, json_normalize
 
 from freqtrade.constants import FTHYPT_FILEVERSION, Config
@@ -14,6 +15,7 @@ from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts, round_dict, safe_value_fallback2
 from freqtrade.optimize.hyperopt_epoch_filters import hyperopt_filter_epochs
+from freqtrade.optimize.space import SKDecimal, _adjust_discrete_uniform
 
 
 logger = logging.getLogger(__name__)
@@ -61,11 +63,26 @@ class HyperoptTools:
         return None
 
     @staticmethod
-    def export_params(params, strategy_name: str, filename: Path):
+    def export_params(
+        params,
+        strategy_name: str,
+        filename: Path,
+        o_dimensions: dict[str, BaseDistribution] | None = None,
+    ):
         """
         Generate files
         """
         final_params = deepcopy(params["params_not_optimized"])
+        if o_dimensions:
+            for key, val in params["params_details"].items():
+                if isinstance(val, dict):
+                    for key1, val1 in val.items():
+                        if isinstance(o_dimensions.get(key1), SKDecimal):
+                            step = getattr(o_dimensions.get(key1), "step", None)
+                            if step:
+                                params["params_details"][key][key1] = _adjust_discrete_uniform(
+                                    val1, step
+                                )
         final_params = deep_merge_dicts(params["params_details"], final_params)
         final_params = {
             "strategy_name": strategy_name,
@@ -73,6 +90,7 @@ class HyperoptTools:
             "ft_stratparam_v": 1,
             "export_time": datetime.now(timezone.utc),
         }
+
         logger.info(f"Dumping parameters to {filename}")
         with filename.open("w") as f:
             rapidjson.dump(
@@ -93,12 +111,19 @@ class HyperoptTools:
         return params
 
     @staticmethod
-    def try_export_params(config: Config, strategy_name: str, params: dict):
+    def try_export_params(
+        config: Config,
+        strategy_name: str,
+        params: dict,
+        o_dimensions: dict[str, BaseDistribution] | None = None,
+    ):
         if params.get(FTHYPT_FILEVERSION, 1) >= 2 and not config.get("disableparamexport", False):
             # Export parameters ...
             fn = HyperoptTools.get_strategy_filename(config, strategy_name)
             if fn:
-                HyperoptTools.export_params(params, strategy_name, fn.with_suffix(".json"))
+                HyperoptTools.export_params(
+                    params, strategy_name, fn.with_suffix(".json"), o_dimensions
+                )
             else:
                 logger.warning("Strategy not found, not exporting parameter file.")
 

@@ -1,3 +1,5 @@
+import decimal
+
 from optuna.distributions import FloatDistribution
 
 
@@ -20,7 +22,32 @@ class SKDecimal(FloatDistribution):
         self.name = name
 
         super().__init__(
-            low=low,
-            high=high,
+            low=_adjust_discrete_uniform(low, self.step),
+            high=_adjust_discrete_uniform_high(low, high, self.step),
             step=self.step,
         )
+
+
+def _adjust_discrete_uniform_high(low: float, high: float, step: float | None) -> float:
+    if step:
+        d_high = decimal.Decimal(str(high))
+        d_low = decimal.Decimal(str(low))
+        d_step = decimal.Decimal(str(step))
+
+        d_r = d_high - d_low
+
+        if d_r % d_step != decimal.Decimal("0"):
+            high = float((d_r // d_step) * d_step + d_low)
+
+    return high
+
+
+def _adjust_discrete_uniform(val: float, step: float | None) -> float:
+    if step:
+        d_val = decimal.Decimal(str(val))
+        d_step = decimal.Decimal(str(step))
+
+        if d_val % d_step != decimal.Decimal("0"):
+            val = float((d_val // d_step) * d_step)
+
+    return val
