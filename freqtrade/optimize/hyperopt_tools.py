@@ -61,11 +61,7 @@ class HyperoptTools:
         return None
 
     @staticmethod
-    def export_params(
-        params,
-        strategy_name: str,
-        filename: Path,
-    ):
+    def export_params(params, strategy_name: str, filename: Path):
         """
         Generate files
         """
@@ -77,7 +73,6 @@ class HyperoptTools:
             "ft_stratparam_v": 1,
             "export_time": datetime.now(timezone.utc),
         }
-
         logger.info(f"Dumping parameters to {filename}")
         with filename.open("w") as f:
             rapidjson.dump(
@@ -98,11 +93,7 @@ class HyperoptTools:
         return params
 
     @staticmethod
-    def try_export_params(
-        config: Config,
-        strategy_name: str,
-        params: dict,
-    ):
+    def try_export_params(config: Config, strategy_name: str, params: dict):
         if params.get(FTHYPT_FILEVERSION, 1) >= 2 and not config.get("disableparamexport", False):
             # Export parameters ...
             fn = HyperoptTools.get_strategy_filename(config, strategy_name)
