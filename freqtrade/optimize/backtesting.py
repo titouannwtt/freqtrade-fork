@@ -8,7 +8,6 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import Any
 
 from numpy import nan
 from pandas import DataFrame
@@ -37,7 +36,12 @@ from freqtrade.exchange import (
     timeframe_to_seconds,
 )
 from freqtrade.exchange.exchange import Exchange
-from freqtrade.ft_types import BacktestResultType, get_BacktestResultType_default
+from freqtrade.ft_types import (
+    BacktestContentType,
+    BacktestContentTypeIcomplete,
+    BacktestResultType,
+    get_BacktestResultType_default,
+)
 from freqtrade.leverage.liquidation_price import update_liquidation_prices
 from freqtrade.mixins import LoggingMixin
 from freqtrade.optimize.backtest_caching import get_strategy_run_id
@@ -119,7 +123,7 @@ class Backtesting:
         config["dry_run"] = True
         self.run_ids: dict[str, str] = {}
         self.strategylist: list[IStrategy] = []
-        self.all_results: dict[str, dict] = {}
+        self.all_bt_content: dict[str, BacktestContentType] = {}
         self.analysis_results: dict[str, dict[str, DataFrame]] = {
             "signals": {},
             "rejected": {},
@@ -311,9 +315,10 @@ class Backtesting:
         )
 
         self.progress.set_new_value(1)
+        self._load_bt_data_detail()
         return data, self.timerange
 
-    def load_bt_data_detail(self) -> None:
+    def _load_bt_data_detail(self) -> None:
         """
         Loads backtest detail data (smaller timeframe) if necessary.
         """
@@ -360,8 +365,9 @@ class Backtesting:
             )
             # Combine data to avoid combining the data per trade.
             unavailable_pairs = []
+            uses_leverage_tiers = self.exchange.get_option("uses_leverage_tiers", True)
             for pair in self.pairlists.whitelist:
-                if pair not in self.exchange._leverage_tiers:
+                if uses_leverage_tiers and pair not in self.exchange._leverage_tiers:
                     unavailable_pairs.append(pair)
                     continue
 
@@ -1610,7 +1616,9 @@ class Backtesting:
                 yield current_time_det, pair, row, is_last_row, trade_dir
             self.progress.increment()
 
-    def backtest(self, processed: dict, start_date: datetime, end_date: datetime) -> dict[str, Any]:
+    def backtest(
+        self, processed: dict, start_date: datetime, end_date: datetime
+    ) -> BacktestContentTypeIcomplete:
         """
         Implement backtesting functionality
 
@@ -1710,7 +1718,7 @@ class Backtesting:
                 "backtest_end_time": int(backtest_end_time.timestamp()),
             }
         )
-        self.all_results[strategy_name] = results
+        self.all_bt_content[strategy_name] = results
 
         if (
             self.config.get("export", "none") == "signals"
@@ -1760,7 +1768,6 @@ class Backtesting:
         data: dict[str, DataFrame] = {}
 
         data, timerange = self.load_bt_data()
-        self.load_bt_data_detail()
         logger.info("Dataload complete. Calculating indicators")
 
         self.load_prior_backtest()
@@ -1773,9 +1780,9 @@ class Backtesting:
             min_date, max_date = self.backtest_one_strategy(strat, data, timerange)
 
         # Update old results with new ones.
-        if len(self.all_results) > 0:
+        if len(self.all_bt_content) > 0:
             results = generate_backtest_stats(
-                data, self.all_results, min_date=min_date, max_date=max_date
+                data, self.all_bt_content, min_date=min_date, max_date=max_date
             )
             if self.results:
                 self.results["metadata"].update(results["metadata"])

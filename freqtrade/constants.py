@@ -37,6 +37,7 @@ HYPEROPT_LOSS_BUILTIN = [
     "CalmarHyperOptLoss",
     "MaxDrawDownHyperOptLoss",
     "MaxDrawDownRelativeHyperOptLoss",
+    "MaxDrawDownPerPairHyperOptLoss",
     "ProfitDrawDownHyperOptLoss",
     "MultiMetricHyperOptLoss",
 ]
@@ -70,6 +71,19 @@ DEFAULT_DATAFRAME_COLUMNS = ["date", "open", "high", "low", "close", "volume"]
 # it has wide consequences for stored trades files
 DEFAULT_TRADES_COLUMNS = ["timestamp", "id", "type", "side", "price", "amount", "cost"]
 DEFAULT_ORDERFLOW_COLUMNS = ["level", "bid", "ask", "delta"]
+ORDERFLOW_ADDED_COLUMNS = [
+    "trades",
+    "orderflow",
+    "imbalances",
+    "stacked_imbalances_bid",
+    "stacked_imbalances_ask",
+    "max_delta",
+    "min_delta",
+    "bid",
+    "ask",
+    "delta",
+    "total_trades",
+]
 TRADES_DTYPES = {
     "timestamp": "int64",
     "id": "str",
@@ -99,7 +113,7 @@ DL_DATA_TIMEFRAMES = ["1m", "5m"]
 ENV_VAR_PREFIX = "FREQTRADE__"
 
 CANCELED_EXCHANGE_STATES = ("cancelled", "canceled", "expired", "rejected")
-NON_OPEN_EXCHANGE_STATES = CANCELED_EXCHANGE_STATES + ("closed",)
+NON_OPEN_EXCHANGE_STATES = (*CANCELED_EXCHANGE_STATES, "closed")
 
 # Define decimals per coin for outputs
 # Only used for outputs.

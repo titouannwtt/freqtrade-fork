@@ -1027,12 +1027,12 @@ class LocalTrade:
         Calculate the open_rate including open_fee.
         :return: Price in of the open trade incl. Fees
         """
-        open_trade = FtPrecise(amount) * FtPrecise(open_rate)
-        fees = open_trade * FtPrecise(self.fee_open)
+        open_value = FtPrecise(amount) * FtPrecise(open_rate)
+        fees = open_value * FtPrecise(self.fee_open)
         if self.is_short:
-            return float(open_trade - fees)
+            return float(open_value - fees)
         else:
-            return float(open_trade + fees)
+            return float(open_value + fees)
 
     def recalc_open_trade_value(self) -> None:
         """
@@ -1062,13 +1062,13 @@ class LocalTrade:
         return interest(exchange_name=self.exchange, borrowed=borrowed, rate=rate, hours=hours)
 
     def _calc_base_close(self, amount: FtPrecise, rate: float, fee: float | None) -> FtPrecise:
-        close_trade = amount * FtPrecise(rate)
-        fees = close_trade * FtPrecise(fee or 0.0)
+        close_value = amount * FtPrecise(rate)
+        fees = close_value * FtPrecise(fee or 0.0)
 
         if self.is_short:
-            return close_trade + fees
+            return close_value + fees
         else:
-            return close_trade - fees
+            return close_value - fees
 
     def calc_close_trade_value(self, rate: float, amount: float | None = None) -> float:
         """
@@ -1155,18 +1155,21 @@ class LocalTrade:
             profit_ratio = 0.0
 
         total_profit_abs = profit_abs + self.realized_profit
-        total_profit_ratio = (
-            (total_profit_abs / self.max_stake_amount) * self.leverage
-            if self.max_stake_amount
-            else 0.0
-        )
-        total_profit_ratio = float(f"{total_profit_ratio:.8f}")
+        if self.max_stake_amount:
+            max_stake = self.max_stake_amount * (
+                (1 - self.fee_open) if self.is_short else (1 + self.fee_open)
+            )
+            total_profit_ratio = total_profit_abs / max_stake
+            total_profit_ratio = float(f"{total_profit_ratio:.8f}")
+        else:
+            total_profit_ratio = 0.0
         profit_abs = float(f"{profit_abs:.8f}")
+        total_profit_abs = float(f"{total_profit_abs:.8f}")
 
         return ProfitStruct(
             profit_abs=profit_abs,
             profit_ratio=profit_ratio,
-            total_profit=profit_abs + self.realized_profit,
+            total_profit=total_profit_abs,
             total_profit_ratio=total_profit_ratio,
         )
 
@@ -1799,11 +1802,15 @@ class Trade(ModelBase, LocalTrade):
         close_date: datetime | None = None,
     ) -> list["LocalTrade"]:
         """
-        Helper function to query Trades.j
+        Helper function to query Trades.
         Returns a List of trades, filtered on the parameters given.
         In live mode, converts the filter to a database query and returns all rows
         In Backtest mode, uses filters on Trade.bt_trades to get the result.
-
+        :param pair: Filter by pair
+        :param is_open: Filter by open/closed status
+        :param open_date: Filter by open_date (filters via trade.open_date > input)
+        :param close_date: Filter by close_date (filters via trade.close_date > input)
+                           and will implicitly only return closed trades.
         :return: unsorted List[Trade]
         """
         if Trade.use_db:

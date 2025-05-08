@@ -79,6 +79,7 @@ options:
                         SortinoHyperOptLoss, SortinoHyperOptLossDaily,
                         CalmarHyperOptLoss, MaxDrawDownHyperOptLoss,
                         MaxDrawDownRelativeHyperOptLoss,
+                        MaxDrawDownPerPairHyperOptLoss,
                         ProfitDrawDownHyperOptLoss, MultiMetricHyperOptLoss
   --disable-param-export
                         Disable automatic hyperopt parameter export.
@@ -102,7 +103,9 @@ Common arguments:
                         exists). Multiple --config options may be used. Can be
                         set to `-` to read config from stdin.
   -d PATH, --datadir PATH, --data-dir PATH
-                        Path to directory with historical backtesting data.
+                        Path to the base directory of the exchange with
+                        historical backtesting data. To see futures data, use
+                        trading-mode additionally.
   --userdir PATH, --user-data-dir PATH
                         Path to userdata directory.
 

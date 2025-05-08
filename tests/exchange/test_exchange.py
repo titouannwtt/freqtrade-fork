@@ -2838,6 +2838,11 @@ def test_get_next_limit_in_list():
     assert Exchange.get_next_limit_in_list(21, None) == 21
     assert Exchange.get_next_limit_in_list(100, None) == 100
     assert Exchange.get_next_limit_in_list(1000, None) == 1000
+    # With upper limit
+    assert Exchange.get_next_limit_in_list(1000, None, upper_limit=None) == 1000
+    assert Exchange.get_next_limit_in_list(1000, None, upper_limit=500) == 500
+    # with upper limit and range, limit_range wins
+    assert Exchange.get_next_limit_in_list(1000, limit_range, upper_limit=500) == 1000
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
@@ -5594,11 +5599,13 @@ def test_liquidation_price_is_none(
 def test_get_max_pair_stake_amount(
     mocker,
     default_conf,
+    leverage_tiers,
 ):
     api_mock = MagicMock()
     default_conf["margin_mode"] = "isolated"
     default_conf["trading_mode"] = "futures"
     exchange = get_patched_exchange(mocker, default_conf, api_mock)
+    exchange._leverage_tiers = leverage_tiers
     markets = {
         "XRP/USDT:USDT": {
             "limits": {
@@ -5662,11 +5669,23 @@ def test_get_max_pair_stake_amount(
             "contractSize": 0.01,
             "spot": False,
         },
+        "ZEC/USDT:USDT": {
+            "limits": {
+                "amount": {"min": 0.001, "max": None},
+                "cost": {"min": 5, "max": None},
+            },
+            "contractSize": 1,
+            "spot": False,
+        },
     }
 
     mocker.patch(f"{EXMS}.markets", markets)
     assert exchange.get_max_pair_stake_amount("XRP/USDT:USDT", 2.0) == 20000
     assert exchange.get_max_pair_stake_amount("XRP/USDT:USDT", 2.0, 5) == 4000
+    # limit leverage tiers
+    assert exchange.get_max_pair_stake_amount("ZEC/USDT:USDT", 2.0, 5) == 100_000
+    assert exchange.get_max_pair_stake_amount("ZEC/USDT:USDT", 2.0, 50) == 1000
+
     assert exchange.get_max_pair_stake_amount("LTC/USDT:USDT", 2.0) == float("inf")
     assert exchange.get_max_pair_stake_amount("ETH/USDT:USDT", 2.0) == 200
     assert exchange.get_max_pair_stake_amount("DOGE/USDT:USDT", 2.0) == 500
@@ -5897,8 +5916,8 @@ def test_get_max_leverage_futures(default_conf, mocker, leverage_tiers):
     assert exchange.get_max_leverage("XRP/USDT:USDT", 1.0) == 20.0
     assert exchange.get_max_leverage("BNB/USDT:USDT", 100.0) == 75.0
     assert exchange.get_max_leverage("BTC/USDT:USDT", 170.30) == 125.0
-    assert pytest.approx(exchange.get_max_leverage("XRP/USDT:USDT", 99999.9)) == 5.000005
-    assert pytest.approx(exchange.get_max_leverage("BNB/USDT:USDT", 1500)) == 33.333333333333333
+    assert pytest.approx(exchange.get_max_leverage("XRP/USDT:USDT", 99999.9)) == 5
+    assert pytest.approx(exchange.get_max_leverage("BNB/USDT:USDT", 1500)) == 25
     assert exchange.get_max_leverage("BTC/USDT:USDT", 300000000) == 2.0
     assert exchange.get_max_leverage("BTC/USDT:USDT", 600000000) == 1.0  # Last tier
 

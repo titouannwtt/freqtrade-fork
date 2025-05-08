@@ -22,6 +22,7 @@ from freqtrade.data.history import get_timerange
 from freqtrade.data.metrics import calculate_market_change
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
+from freqtrade.ft_types import BacktestContentType
 from freqtrade.misc import deep_merge_dicts, round_dict
 from freqtrade.optimize.backtesting import Backtesting
 
@@ -337,7 +338,7 @@ class HyperOptimizer:
 
     def _get_results_dict(
         self,
-        backtesting_results: dict[str, Any],
+        backtesting_results: BacktestContentType,
         min_date: datetime,
         max_date: datetime,
         params_dict: dict[str, Any],
@@ -443,7 +444,6 @@ class HyperOptimizer:
     def prepare_hyperopt_data(self) -> None:
         HyperoptStateContainer.set_state(HyperoptState.DATALOAD)
         data, self.timerange = self.backtesting.load_bt_data()
-        self.backtesting.load_bt_data_detail()
         logger.info("Dataload complete. Calculating indicators")
 
         if not self.analyze_per_epoch:
