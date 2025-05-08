@@ -22,7 +22,7 @@ from freqtrade.data.history import get_timerange
 from freqtrade.data.metrics import calculate_market_change
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
-from freqtrade.misc import deep_merge_dicts
+from freqtrade.misc import deep_merge_dicts, round_dict
 from freqtrade.optimize.backtesting import Backtesting
 
 # Import IHyperOptLoss to allow unpickling classes from these modules
@@ -145,27 +145,36 @@ class HyperOptimizer:
         result: dict = {}
 
         if HyperoptTools.has_space(self.config, "buy"):
-            result["buy"] = {p.name: params.get(p.name) for p in self.buy_space}
+            result["buy"] = round_dict({p.name: params.get(p.name) for p in self.buy_space}, 13)
         if HyperoptTools.has_space(self.config, "sell"):
-            result["sell"] = {p.name: params.get(p.name) for p in self.sell_space}
+            result["sell"] = round_dict({p.name: params.get(p.name) for p in self.sell_space}, 13)
         if HyperoptTools.has_space(self.config, "protection"):
-            result["protection"] = {p.name: params.get(p.name) for p in self.protection_space}
+            result["protection"] = round_dict(
+                {p.name: params.get(p.name) for p in self.protection_space}, 13
+            )
         if HyperoptTools.has_space(self.config, "roi"):
-            result["roi"] = {
-                str(k): v for k, v in self.custom_hyperopt.generate_roi_table(params).items()
-            }
+            result["roi"] = round_dict(
+                {str(k): v for k, v in self.custom_hyperopt.generate_roi_table(params).items()}, 13
+            )
         if HyperoptTools.has_space(self.config, "stoploss"):
-            result["stoploss"] = {p.name: params.get(p.name) for p in self.stoploss_space}
+            result["stoploss"] = round_dict(
+                {p.name: params.get(p.name) for p in self.stoploss_space}, 13
+            )
         if HyperoptTools.has_space(self.config, "trailing"):
-            result["trailing"] = self.custom_hyperopt.generate_trailing_params(params)
+            result["trailing"] = round_dict(
+                self.custom_hyperopt.generate_trailing_params(params), 13
+            )
         if HyperoptTools.has_space(self.config, "trades"):
-            result["max_open_trades"] = {
-                "max_open_trades": (
-                    self.backtesting.strategy.max_open_trades
-                    if self.backtesting.strategy.max_open_trades != float("inf")
-                    else -1
-                )
-            }
+            result["max_open_trades"] = round_dict(
+                {
+                    "max_open_trades": (
+                        self.backtesting.strategy.max_open_trades
+                        if self.backtesting.strategy.max_open_trades != float("inf")
+                        else -1
+                    )
+                },
+                13,
+            )
 
         return result
 

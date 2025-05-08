@@ -577,7 +577,7 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
                 "buy_plusdi": 0.02,
                 "buy_rsi": 35,
             },
-            "roi": {"0": 0.12000000000000001, "20.0": 0.02, "50.0": 0.01, "110.0": 0},
+            "roi": {"0": 0.12, "20.0": 0.02, "50.0": 0.01, "110.0": 0},
             "protection": {
                 "protection_cooldown_lookback": 20,
                 "protection_enabled": True,
