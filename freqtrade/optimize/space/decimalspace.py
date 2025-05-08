@@ -1,5 +1,3 @@
-from math import log10
-
 from optuna.distributions import FloatDistribution
 
 
@@ -22,7 +20,7 @@ class SKDecimal(FloatDistribution):
         self.name = name
 
         super().__init__(
-            low=round(low, int(log10(1 / self.step))) if self.step < 1 else low,
-            high=round(high, int(log10(1 / self.step))) if self.step < 1 else high,
+            low=round(low, decimals) if decimals else low,
+            high=round(high, decimals) if decimals else high,
             step=self.step,
         )
