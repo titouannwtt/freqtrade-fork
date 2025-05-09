@@ -179,6 +179,36 @@ Some research will be necessary to find additional Samplers (from optunahub) for
     While custom estimators can be provided, it's up to you as User to do research on possible parameters and analyze / understand which ones should be used.
     If you're unsure about this, best use one of the Defaults (`"NSGAIIISampler"` has proven to be the most versatile) without further parameters.
 
+??? Example "Using `AutoSampler` from Optunahub"
+
+    [AutoSampler docs](https://hub.optuna.org/samplers/auto_sampler/)
+    
+    Install the necessary dependencies 
+    ``` bash
+    pip install optunahub cmaes torch scipy
+    ```
+    Implement `generate_estimator()`  in your strategy
+
+    ``` python
+    # ...
+    from freqtrade.strategy.interface import IStrategy
+    from typing import List
+    import optunahub
+    # ... 
+
+    class my_strategy(IStrategy):
+        class HyperOpt:
+            def generate_estimator(dimensions: List["Dimension"], **kwargs):
+                if "random_state" in kwargs.keys():
+                    return optunahub.load_module("samplers/auto_sampler").AutoSampler(seed=kwargs["random_state"])
+                else:
+                    return optunahub.load_module("samplers/auto_sampler").AutoSampler()
+
+    ```
+
+    Obviously the same approach will work for all other Samplers optuna supports.
+
+
 ## Space options
 
 For the additional spaces, scikit-optimize (in combination with Freqtrade) provides the following space types:
