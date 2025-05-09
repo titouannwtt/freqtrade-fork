@@ -1194,6 +1194,14 @@ def test_SKDecimal():
     assert not space._contains(1.511)
     assert not space._contains(1.111222)
 
+    with pytest.raises(ValueError):
+        SKDecimal(1, 2, step=5, decimals=0.2)
+
+    s = SKDecimal(1, 2, step=0.1, decimals=None)
+    assert s.step == 0.1
+    assert s._contains(1.1)
+    assert not s._contains(1.11)
+
 
 def test_stake_amount_unlimited_max_open_trades(mocker, hyperopt_conf, tmp_path, fee) -> None:
     # This test is to ensure that unlimited max_open_trades are ignored for the backtesting
