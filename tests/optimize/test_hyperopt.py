@@ -1197,6 +1197,9 @@ def test_SKDecimal():
     with pytest.raises(ValueError):
         SKDecimal(1, 2, step=5, decimals=0.2)
 
+    with pytest.raises(ValueError):
+        SKDecimal(1, 2, step=None, decimals=None)
+
     s = SKDecimal(1, 2, step=0.1, decimals=None)
     assert s.step == 0.1
     assert s._contains(1.1)

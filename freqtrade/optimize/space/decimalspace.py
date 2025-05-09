@@ -8,7 +8,7 @@ class SKDecimal(FloatDistribution):
         high: float,
         *,
         step: float | None = None,
-        decimals: int = 3,
+        decimals: int | None = None,
         name=None,
     ):
         """
@@ -22,6 +22,8 @@ class SKDecimal(FloatDistribution):
         """
         if decimals is not None and step is not None:
             raise ValueError("You can only set one of decimals or step")
+        if decimals is None and step is None:
+            raise ValueError("You must set one of decimals or step")
         # Convert decimals to step
         self.step = step or 1 / 10**decimals
         self.name = name
