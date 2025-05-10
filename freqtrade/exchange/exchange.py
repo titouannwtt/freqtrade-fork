@@ -2449,7 +2449,11 @@ class Exchange:
         Check if we can use websocket for this pair.
         Acts as typeguard for exchangeWs
         """
-        if self._has_watch_ohlcv and exchange_ws:
+        if (
+            self._has_watch_ohlcv
+            and exchange_ws
+            and candle_type in (CandleType.SPOT, CandleType.FUTURES)
+        ):
             return True
         return False
 
@@ -2462,7 +2466,7 @@ class Exchange:
         cache: bool,
     ) -> Coroutine[Any, Any, OHLCVResponse]:
         not_all_data = cache and self.required_candle_call_count > 1
-        if cache and candle_type in (CandleType.SPOT, CandleType.FUTURES):
+        if cache:
             if self._can_use_websocket(self._exchange_ws, pair, timeframe, candle_type):
                 # Subscribe to websocket
                 self._exchange_ws.schedule_ohlcv(pair, timeframe, candle_type)
