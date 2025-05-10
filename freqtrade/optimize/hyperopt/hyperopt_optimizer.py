@@ -108,7 +108,7 @@ class HyperOptimizer:
         self.es_epochs = config.get("early_stop", 0)
         self.es_batches = self.es_epochs // config.get("hyperopt_jobs", 1)
         if self.es_epochs > 0 and self.es_epochs < 0.2 * config.get("epochs", 0):
-            logger.warning(f"Easly stop epochs {self.es_epochs} lower than 20% of total epochs")
+            logger.warning(f"Early stop epochs {self.es_epochs} lower than 20% of total epochs")
 
         if HyperoptTools.has_space(self.config, "sell"):
             # Make sure use_exit_signal is enabled
