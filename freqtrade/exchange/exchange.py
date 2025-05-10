@@ -267,11 +267,11 @@ class Exchange:
             exchange_conf.get("ccxt_async_config", {}), ccxt_async_config
         )
         self._api_async = self._init_ccxt(exchange_conf, False, ccxt_async_config)
-        self._has_watch_ohlcv = self.exchange_has("watchOHLCV") and self._ft_has["ws_enabled"]
+        _has_watch_ohlcv = self.exchange_has("watchOHLCV") and self._ft_has["ws_enabled"]
         if (
             self._config["runmode"] in TRADE_MODES
             and exchange_conf.get("enable_ws", True)
-            and self._has_watch_ohlcv
+            and _has_watch_ohlcv
         ):
             self._ws_async = self._init_ccxt(exchange_conf, False, ccxt_async_config)
             self._exchange_ws = ExchangeWS(self._config, self._ws_async)
@@ -2449,11 +2449,7 @@ class Exchange:
         Check if we can use websocket for this pair.
         Acts as typeguard for exchangeWs
         """
-        if (
-            self._has_watch_ohlcv
-            and exchange_ws
-            and candle_type in (CandleType.SPOT, CandleType.FUTURES)
-        ):
+        if exchange_ws and candle_type in (CandleType.SPOT, CandleType.FUTURES):
             return True
         return False
 
