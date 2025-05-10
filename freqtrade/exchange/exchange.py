@@ -2420,7 +2420,7 @@ class Exchange:
         """
         Try to build a coroutine to get data from websocket.
         """
-        if self._exchange_ws:
+        if self._can_use_websocket(self._exchange_ws, pair, timeframe, candle_type):
             candle_ts = dt_ts(timeframe_to_prev_date(timeframe))
             prev_candle_ts = dt_ts(date_minus_candles(timeframe, 1))
             candles = self._exchange_ws.ohlcvs(pair, timeframe)
@@ -2442,6 +2442,17 @@ class Exchange:
             )
         return None
 
+    def _can_use_websocket(
+        self, exchange_ws: ExchangeWS | None, pair: str, timeframe: str, candle_type: CandleType
+    ) -> TypeGuard[ExchangeWS]:
+        """
+        Check if we can use websocket for this pair.
+        Acts as typeguard for exchangeWs
+        """
+        if self._has_watch_ohlcv and exchange_ws:
+            return True
+        return False
+
     def _build_coroutine(
         self,
         pair: str,
@@ -2452,7 +2463,7 @@ class Exchange:
     ) -> Coroutine[Any, Any, OHLCVResponse]:
         not_all_data = cache and self.required_candle_call_count > 1
         if cache and candle_type in (CandleType.SPOT, CandleType.FUTURES):
-            if self._has_watch_ohlcv and self._exchange_ws:
+            if self._can_use_websocket(self._exchange_ws, pair, timeframe, candle_type):
                 # Subscribe to websocket
                 self._exchange_ws.schedule_ohlcv(pair, timeframe, candle_type)
 
