@@ -233,7 +233,7 @@ class AwesomeStrategy(IStrategy):
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         :return float: New stoploss value, relative to the current_rate
         """
-        return -0.04
+        return -0.04 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
 ```
 
 #### Time based trailing stop
@@ -255,9 +255,9 @@ class AwesomeStrategy(IStrategy):
 
         # Make sure you have the longest interval first - these conditions are evaluated from top to bottom.
         if current_time - timedelta(minutes=120) > trade.open_date_utc:
-            return -0.05
+            return -0.05 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
         elif current_time - timedelta(minutes=60) > trade.open_date_utc:
-            return -0.10
+            return -0.10 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
         return None
 ```
 
@@ -284,9 +284,9 @@ class AwesomeStrategy(IStrategy):
             return stoploss_from_open(0.10, current_profit, is_short=trade.is_short, leverage=trade.leverage)
         # Make sure you have the longest interval first - these conditions are evaluated from top to bottom.
         if current_time - timedelta(minutes=120) > trade.open_date_utc:
-            return -0.05
+            return -0.05 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
         elif current_time - timedelta(minutes=60) > trade.open_date_utc:
-            return -0.10
+            return -0.10 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
         return None
 ```
 
@@ -309,10 +309,10 @@ class AwesomeStrategy(IStrategy):
                         **kwargs) -> float | None:
 
         if pair in ("ETH/BTC", "XRP/BTC"):
-            return -0.10
+            return -0.10 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
         elif pair in ("LTC/BTC"):
-            return -0.05
-        return -0.15
+            return -0.05 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
+        return -0.15 * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
 ```
 
 #### Trailing stoploss with positive offset
@@ -341,7 +341,7 @@ class AwesomeStrategy(IStrategy):
         desired_stoploss = current_profit / 2
 
         # Use a minimum of 2.5% and a maximum of 5%
-        return max(min(desired_stoploss, 0.05), 0.025)
+        return max(min(desired_stoploss, 0.05), 0.025) * trade.leverage # if your leverage level is 1 or spot trading trade.leverage multiplier can be void.
 ```
 
 #### Stepped stoploss
@@ -368,7 +368,7 @@ class AwesomeStrategy(IStrategy):
 
         # evaluate highest to lowest, so that highest possible stop is used
         if current_profit > 0.40:
-            return stoploss_from_open(0.25, current_profit, is_short=trade.is_short, leverage=trade.leverage)
+            return stoploss_from_open(0.25, current_profit, is_short=trade.is_short, leverage=trade.leverage) 
         elif current_profit > 0.25:
             return stoploss_from_open(0.15, current_profit, is_short=trade.is_short, leverage=trade.leverage)
         elif current_profit > 0.20:
