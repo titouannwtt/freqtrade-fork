@@ -206,6 +206,14 @@ plugins = [
 module = "tests.*"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = [
+  "freqtrade.templates.*",
+  "tests.strategy.strats"
+]
+# Disable attr-defined check due to ta-lib not having type stubs
+disable_error_code = "attr-defined"
+
 [tool.pyright]
 include = ["freqtrade", "ft_client"]
 exclude = [
