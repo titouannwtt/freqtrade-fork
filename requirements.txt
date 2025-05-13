@@ -2,7 +2,7 @@ numpy==2.2.4
 pandas==2.2.3
 bottleneck==1.4.2
 numexpr==2.10.2
-pandas-ta==0.3.14b
+ft-pandas-ta==0.3.15
 
 ccxt==4.4.75
 cryptography==44.0.2
