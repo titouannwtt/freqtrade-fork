@@ -194,6 +194,7 @@ class Backtesting:
             self.fee = max(fee for fee in fees if fee is not None)
             logger.info(f"Using fee {self.fee:.4%} - worst case fee from exchange (lowest tier).")
         self.precision_mode = self.exchange.precisionMode
+        self.precision_mode_price = self.exchange.precision_mode_price
 
         if self.config.get("freqai_backtest_live_models", False):
             from freqtrade.freqai.utils import get_timerange_backtest_live_models
@@ -408,7 +409,7 @@ class Backtesting:
             if not isnan(precision):
                 # Force tick size if we define the precision
                 return precision, TICK_SIZE
-        return self.exchange.get_precision_price(pair), self.exchange.precision_mode_price
+        return self.exchange.get_precision_price(pair), self.precision_mode_price
 
     def disable_database_use(self):
         disable_database_use(self.timeframe)
