@@ -425,6 +425,57 @@ def test_min_roi_reached3(default_conf, fee) -> None:
     assert strategy.min_roi_reached(trade, 0.31, dt_now() - timedelta(minutes=2))
 
 
+def test_min_roi_reached_custom_roi(default_conf, fee) -> None:
+    strategy = StrategyResolver.load_strategy(default_conf)
+    # Move traditional ROI out of the way
+    strategy.minimal_roi = {0: 2000}
+    strategy.use_custom_roi = True
+
+    def custom_roi(*args, trade: Trade, current_time: datetime, **kwargs):
+        trade_dur = int((current_time.timestamp() - trade.open_date_utc.timestamp()) // 60)
+        # Profit is reduced after 30 minutes.
+        if trade.pair == "XRP/BTC":
+            return 0.2
+        if trade_dur > 30:
+            return 0.05
+        return 0.1
+
+    strategy.custom_roi = MagicMock(side_effect=custom_roi)
+
+    trade = Trade(
+        pair="ETH/BTC",
+        stake_amount=0.001,
+        amount=5,
+        open_date=dt_now() - timedelta(hours=1),
+        fee_open=fee.return_value,
+        fee_close=fee.return_value,
+        exchange="binance",
+        open_rate=1,
+    )
+
+    assert not strategy.min_roi_reached(trade, 0.02, dt_now() - timedelta(minutes=56))
+    assert strategy.custom_roi.call_count == 1
+    assert strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=56))
+
+    # after 30 minutes, the profit is reduced to 5%
+    assert strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=29))
+    assert strategy.min_roi_reached(trade, 0.06, dt_now() - timedelta(minutes=29))
+    assert strategy.min_roi_reached(trade, 0.051, dt_now() - timedelta(minutes=29))
+    # Comparison to exactly 5% should not trigger
+    assert not strategy.min_roi_reached(trade, 0.05, dt_now() - timedelta(minutes=29))
+
+    # XRP/BTC has a custom roi of 20%.
+
+    trade.pair = "XRP/BTC"
+    assert not strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=56))
+    assert not strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=1))
+    # XRP/BTC is not time related
+    assert strategy.min_roi_reached(trade, 0.201, dt_now() - timedelta(minutes=1))
+    assert strategy.min_roi_reached(trade, 0.201, dt_now() - timedelta(minutes=56))
+
+    assert strategy.custom_roi.call_count == 10
+
+
 @pytest.mark.parametrize(
     "profit,adjusted,expected,liq,trailing,custom,profit2,adjusted2,expected2,custom_stop",
     [
