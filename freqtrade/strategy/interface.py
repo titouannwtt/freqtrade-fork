@@ -472,6 +472,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         pair: str,
         trade: Trade,
         current_time: datetime,
+        trade_duration: int,
         entry_tag: str | None,
         side: str,
         **kwargs,
@@ -487,6 +488,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         :param pair: Pair that's currently analyzed.
         :param trade: trade object.
         :param current_time: datetime object, containing the current datetime.
+        :param trade_duration: Current trade duration in minutes.
         :param entry_tag: Optional entry_tag (buy_tag) if provided with the buy signal.
         :param side: 'long' or 'short' - indicating the direction of the current trade.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
@@ -1686,6 +1688,7 @@ class IStrategy(ABC, HyperStrategyMixin):
                 pair=trade.pair,
                 trade=trade,
                 current_time=current_time,
+                trade_duration=trade_dur,
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
             )

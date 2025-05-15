@@ -527,7 +527,7 @@ class AwesomeStrategy(IStrategy):
 
     # ... populate_* methods
 
-    def custom_roi(self, pair: str, trade: Trade, current_time: datetime,
+    def custom_roi(self, pair: str, trade: Trade, current_time: datetime, trade_duration: int,
                    entry_tag: str | None, side: str, **kwargs) -> float | None:
         """
         Custom ROI logic, returns a new minimum ROI threshold (as a ratio, e.g., 0.05 for +5%).
@@ -540,6 +540,7 @@ class AwesomeStrategy(IStrategy):
         :param pair: Pair that's currently analyzed.
         :param trade: trade object.
         :param current_time: datetime object, containing the current datetime.
+        :param trade_duration: Current trade duration in minutes.
         :param entry_tag: Optional entry_tag (buy_tag) if provided with the buy signal.
         :param side: 'long' or 'short' - indicating the direction of the current trade.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
@@ -561,7 +562,7 @@ class AwesomeStrategy(IStrategy):
 
     # ... populate_* methods
 
-    def custom_roi(self, pair: str, trade: Trade, current_time: datetime,
+    def custom_roi(self, pair: str, trade: Trade, current_time: datetime, trade_duration: int,
                    entry_tag: str | None, side: str, **kwargs) -> float | None:
 
         stake = trade.stake_currency
@@ -587,7 +588,7 @@ class AwesomeStrategy(IStrategy):
 
     # ... populate_* methods
 
-    def custom_roi(self, pair: str, trade: Trade, current_time: datetime,
+    def custom_roi(self, pair: str, trade: Trade, current_time: datetime, trade_duration: int,
                    entry_tag: str | None, side: str, **kwargs) -> float | None:
 
         roi_by_tag = {
@@ -616,7 +617,7 @@ class AwesomeStrategy(IStrategy):
         # <...>
         dataframe["atr"] = ta.ATR(dataframe, timeperiod=10)
 
-    def custom_roi(self, pair: str, trade: Trade, current_time: datetime,
+    def custom_roi(self, pair: str, trade: Trade, current_time: datetime, trade_duration: int,
                    entry_tag: str | None, side: str, **kwargs) -> float | None:
 
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
