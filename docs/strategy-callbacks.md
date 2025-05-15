@@ -179,6 +179,8 @@ Returning `None` will be interpreted as "no desire to change", and is the only s
 
 Stoploss on exchange works similar to `trailing_stop`, and the stoploss on exchange is updated as configured in `stoploss_on_exchange_interval` ([More details about stoploss on exchange](stoploss.md#stop-loss-on-exchangefreqtrade)).
 
+If you're on futures markets, please take note of the [stoploss and leverage](stoploss.md#stoploss-and-leverage) section, as the stoploss value returned from `custom_stoploss` is the risk for this trade - not the relative price movement.
+
 !!! Note "Use of dates"
     All time-based calculations should be done based on `current_time` - using `datetime.now()` or `datetime.utcnow()` is discouraged, as this will break backtesting support.
 
@@ -234,7 +236,7 @@ class AwesomeStrategy(IStrategy):
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         :return float: New stoploss value, relative to the current_rate
         """
-        return -0.04
+        return -0.04 * trade.leverage
 ```
 
 #### Time based trailing stop
@@ -256,9 +258,9 @@ class AwesomeStrategy(IStrategy):
 
         # Make sure you have the longest interval first - these conditions are evaluated from top to bottom.
         if current_time - timedelta(minutes=120) > trade.open_date_utc:
-            return -0.05
+            return -0.05 * trade.leverage
         elif current_time - timedelta(minutes=60) > trade.open_date_utc:
-            return -0.10
+            return -0.10 * trade.leverage
         return None
 ```
 
@@ -285,9 +287,9 @@ class AwesomeStrategy(IStrategy):
             return stoploss_from_open(0.10, current_profit, is_short=trade.is_short, leverage=trade.leverage)
         # Make sure you have the longest interval first - these conditions are evaluated from top to bottom.
         if current_time - timedelta(minutes=120) > trade.open_date_utc:
-            return -0.05
+            return -0.05 * trade.leverage
         elif current_time - timedelta(minutes=60) > trade.open_date_utc:
-            return -0.10
+            return -0.10 * trade.leverage
         return None
 ```
 
@@ -310,10 +312,10 @@ class AwesomeStrategy(IStrategy):
                         **kwargs) -> float | None:
 
         if pair in ("ETH/BTC", "XRP/BTC"):
-            return -0.10
+            return -0.10 * trade.leverage
         elif pair in ("LTC/BTC"):
-            return -0.05
-        return -0.15
+            return -0.05 * trade.leverage
+        return -0.15 * trade.leverage
 ```
 
 #### Trailing stoploss with positive offset
@@ -342,7 +344,7 @@ class AwesomeStrategy(IStrategy):
         desired_stoploss = current_profit / 2
 
         # Use a minimum of 2.5% and a maximum of 5%
-        return max(min(desired_stoploss, 0.05), 0.025)
+        return max(min(desired_stoploss, 0.05), 0.025) * trade.leverage
 ```
 
 #### Stepped stoploss
@@ -1236,3 +1238,119 @@ class AwesomeStrategy(IStrategy):
         return None
 
 ```
+
+## Plot annotations callback
+
+The plot annotations callback is called whenever freqUI requests data to display a chart.
+This callback has no meaning in the trade cycle context and is only used for charting purposes.
+
+The strategy can then return a list of `AnnotationType` objects to be displayed on the chart.
+Depending on the content returned - the chart can display horizontal areas, vertical areas, or boxes.
+
+The full object looks like this:
+
+``` json
+{
+    "type": "area", // Type of the annotation, currently only "area" is supported
+    "start": "2024-01-01 15:00:00", // Start date of the area
+    "end": "2024-01-01 16:00:00",  // End date of the area
+    "y_start": 94000.2,  // Price / y axis value
+    "y_end": 98000, // Price / y axis value
+    "color": "",
+    "label": "some label"
+}
+```
+
+The below example will mark the chart with areas for the hours 8 and 15, with a grey color, highlighting the market open and close hours.
+This is obviously a very basic example.
+
+``` python
+# Default imports
+
+class AwesomeStrategy(IStrategy):
+    def plot_annotations(
+        self, pair: str, start_date: datetime, end_date: datetime, dataframe: DataFrame, **kwargs
+    ) -> list[AnnotationType]:
+        """
+        Retrieve area annotations for a chart.
+        Must be returned as array, with type, label, color, start, end, y_start, y_end.
+        All settings except for type are optional - though it usually makes sense to include either
+        "start and end" or "y_start and y_end" for either horizontal or vertical plots
+        (or all 4 for boxes).
+        :param pair: Pair that's currently analyzed
+        :param start_date: Start date of the chart data being requested
+        :param end_date: End date of the chart data being requested
+        :param dataframe: DataFrame with the analyzed data for the chart
+        :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
+        :return: List of AnnotationType objects
+        """
+        annotations = []
+        while start_dt < end_date:
+            start_dt += timedelta(hours=1)
+            if start_dt.hour in (8, 15):
+                annotations.append(
+                    {
+                        "type": "area",
+                        "label": "Trade open and close hours",
+                        "start": start_dt,
+                        "end": start_dt + timedelta(hours=1),
+                        # Omitting y_start and y_end will result in a vertical area spanning the whole height of the main Chart
+                        "color": "rgba(133, 133, 133, 0.4)",
+                    }
+                )
+
+        return annotations
+
+```
+
+Entries will be validated, and won't be passed to the UI if they don't correspond to the expected schema and will log an error if they don't.
+
+!!! Warning "Many annotations"
+    Using too many annotations can cause the UI to hang, especially when plotting large amounts of historic data.
+    Use the annotation feature with care.
+
+### Plot annotations example
+
+![FreqUI - plot Annotations](assets/freqUI-chart-annotations-dark.png#only-dark)
+![FreqUI - plot Annotations](assets/freqUI-chart-annotations-light.png#only-light)
+
+??? Info "Code used for the plot above"
+    This is an example code and should be treated as such.
+
+    ``` python
+    # Default imports
+
+    class AwesomeStrategy(IStrategy):
+        def plot_annotations(
+            self, pair: str, start_date: datetime, end_date: datetime, dataframe: DataFrame, **kwargs
+        ) -> list[AnnotationType]:
+            annotations = []
+            while start_dt < end_date:
+                start_dt += timedelta(hours=1)
+                if (start_dt.hour % 4) == 0:
+                    mark_areas.append(
+                        {
+                            "type": "area",
+                            "label": "4h",
+                            "start": start_dt,
+                            "end": start_dt + timedelta(hours=1),
+                            "color": "rgba(133, 133, 133, 0.4)",
+                        }
+                    )
+                elif (start_dt.hour % 2) == 0:
+                price = dataframe.loc[dataframe["date"] == start_dt, ["close"]].mean()
+                    mark_areas.append(
+                        {
+                            "type": "area",
+                            "label": "2h",
+                            "start": start_dt,
+                            "end": start_dt + timedelta(hours=1),
+                            "y_end": price * 1.01,
+                            "y_start": price * 0.99,
+                            "color": "rgba(0, 255, 0, 0.4)",
+                        }
+                    )
+
+            return annotations
+
+    ```

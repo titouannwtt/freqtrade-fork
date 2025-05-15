@@ -62,7 +62,6 @@ def __run_backtest_bg(btconfig: Config):
             from freqtrade.optimize.backtesting import Backtesting
 
             ApiBG.bt["bt"] = Backtesting(btconfig)
-            ApiBG.bt["bt"].load_bt_data_detail()
         else:
             ApiBG.bt["bt"].config = btconfig
             ApiBG.bt["bt"].init_backtest()
@@ -96,7 +95,10 @@ def __run_backtest_bg(btconfig: Config):
             )
 
             ApiBG.bt["bt"].results = generate_backtest_stats(
-                ApiBG.bt["data"], ApiBG.bt["bt"].all_results, min_date=min_date, max_date=max_date
+                ApiBG.bt["data"],
+                ApiBG.bt["bt"].all_bt_content,
+                min_date=min_date,
+                max_date=max_date,
             )
 
             if btconfig.get("export", "none") == "trades":

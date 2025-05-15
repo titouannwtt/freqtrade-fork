@@ -32,8 +32,9 @@ from freqtrade.enums import (
 from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.exchange_utils import price_to_precision
+from freqtrade.ft_types import AnnotationType
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import CustomDataWrapper, KeyStoreKeys, KeyValueStore, PairLocks, Trade
+from freqtrade.persistence import CustomDataWrapper, KeyValueStore, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
@@ -635,7 +636,7 @@ class RPC:
         first_date = trades[0].open_date_utc if trades else None
         last_date = trades[-1].open_date_utc if trades else None
         num = float(len(durations) or 1)
-        bot_start = KeyValueStore.get_datetime_value(KeyStoreKeys.BOT_START_TIME)
+        bot_start = KeyValueStore.get_datetime_value("bot_start_time")
         return {
             "profit_closed_coin": profit_closed_coin_sum,
             "profit_closed_percent_mean": round(profit_closed_ratio_mean * 100, 2),
@@ -1356,6 +1357,7 @@ class RPC:
         dataframe: DataFrame,
         last_analyzed: datetime,
         selected_cols: list[str] | None,
+        annotations: list[AnnotationType],
     ) -> dict[str, Any]:
         has_content = len(dataframe) != 0
         dataframe_columns = list(dataframe.columns)
@@ -1411,6 +1413,7 @@ class RPC:
             "data_start_ts": 0,
             "data_stop": "",
             "data_stop_ts": 0,
+            "annotations": annotations,
         }
         if has_content:
             res.update(
@@ -1429,8 +1432,16 @@ class RPC:
         """Analyzed dataframe in Dict form"""
 
         _data, last_analyzed = self.__rpc_analysed_dataframe_raw(pair, timeframe, limit)
+        annotations = self._freqtrade.strategy.ft_plot_annotations(pair=pair, dataframe=_data)
+
         return RPC._convert_dataframe_to_dict(
-            self._freqtrade.config["strategy"], pair, timeframe, _data, last_analyzed, selected_cols
+            self._freqtrade.config["strategy"],
+            pair,
+            timeframe,
+            _data,
+            last_analyzed,
+            selected_cols,
+            annotations,
         )
 
     def __rpc_analysed_dataframe_raw(
@@ -1531,6 +1542,7 @@ class RPC:
                 )
             data = _data[pair]
 
+        annotations = []
         if config.get("strategy"):
             strategy.dp = DataProvider(config, exchange=exchange, pairlists=None)
             strategy.ft_bot_start()
@@ -1539,6 +1551,8 @@ class RPC:
             df_analyzed = trim_dataframe(
                 df_analyzed, timerange_parsed, startup_candles=startup_candles
             )
+            annotations = strategy.ft_plot_annotations(pair=pair, dataframe=df_analyzed)
+
         else:
             df_analyzed = data
 
@@ -1549,6 +1563,7 @@ class RPC:
             df_analyzed.copy(),
             dt_now(),
             selected_cols,
+            annotations,
         )
 
     def _rpc_plot_config(self) -> dict[str, Any]:
@@ -1601,7 +1616,7 @@ class RPC:
                 }
             )
 
-        if bot_start := KeyValueStore.get_datetime_value(KeyStoreKeys.BOT_START_TIME):
+        if bot_start := KeyValueStore.get_datetime_value("bot_start_time"):
             res.update(
                 {
                     "bot_start": str(bot_start),
@@ -1609,7 +1624,7 @@ class RPC:
                     "bot_start_ts": int(bot_start.timestamp()),
                 }
             )
-        if bot_startup := KeyValueStore.get_datetime_value(KeyStoreKeys.STARTUP_TIME):
+        if bot_startup := KeyValueStore.get_datetime_value("startup_time"):
             res.update(
                 {
                     "bot_startup": str(bot_startup),
