@@ -263,7 +263,6 @@ AVAILABLE_CLI_OPTIONS = {
         default=constants.HYPEROPT_EPOCH,
     ),
     "early_stop": Arg(
-        "-es",
         "--early-stop",
         help="Early stop hyperopt if no improvement after (default: %(default)d) epochs.",
         type=check_int_positive,

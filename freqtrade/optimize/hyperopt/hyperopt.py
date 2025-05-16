@@ -318,7 +318,7 @@ class Hyperopt:
                         gc.collect()
 
                         if (
-                            self.hyperopter.es_batches > 0
+                            self.hyperopter.es_epochs > 0
                             and self.hyperopter.es_terminator.should_terminate(self.opt)
                         ):
                             logger.info(f"Early stopping after {(i + 1) * jobs} epochs")

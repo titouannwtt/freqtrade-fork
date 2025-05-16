@@ -490,7 +490,7 @@ freqtrade hyperopt --config config.json --hyperopt-loss <hyperoptlossname> --str
 ```
 
 The `-e` option will set how many evaluations hyperopt will do. Since hyperopt uses Bayesian search, running too many epochs at once may not produce greater results. Experience has shown that best results are usually not improving much after 500-1000 epochs.  
-The `-es` option will set after how many epochs with no improvements hyperopt will stop. A good value is 20-30% of the total epochs. Early stop is by default disabled (`-es=0`)
+The `--early-stop` option will set after how many epochs with no improvements hyperopt will stop. A good value is 20-30% of the total epochs. Early stop is by default disabled (`--early-stop=0`)
 
 Doing multiple runs (executions) with a few 1000 epochs and different random state will most likely produce different results.
 

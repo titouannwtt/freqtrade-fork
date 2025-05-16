@@ -106,7 +106,6 @@ class HyperOptimizer:
         self.market_change = 0.0
 
         self.es_epochs = config.get("early_stop", 0)
-        self.es_batches = self.es_epochs // config.get("hyperopt_jobs", 1)
         if self.es_epochs > 0 and self.es_epochs < 0.2 * config.get("epochs", 0):
             logger.warning(f"Early stop epochs {self.es_epochs} lower than 20% of total epochs")
 
@@ -430,10 +429,10 @@ class HyperOptimizer:
         else:
             sampler = o_sampler
 
-        if self.es_batches > 0:
+        if self.es_epochs > 0:
             with warnings.catch_warnings():
                 warnings.filterwarnings(action="ignore", category=ExperimentalWarning)
-                self.es_terminator = Terminator(BestValueStagnationEvaluator(self.es_batches))
+                self.es_terminator = Terminator(BestValueStagnationEvaluator(self.es_epochs))
 
         logger.info(f"Using optuna sampler {o_sampler}.")
         return optuna.create_study(sampler=sampler, direction="minimize")
