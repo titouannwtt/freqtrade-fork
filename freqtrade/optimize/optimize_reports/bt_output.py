@@ -370,6 +370,7 @@ def text_table_add_metrics(strat_results: dict) -> None:
                 f"{strat_results['winning_days']} / "
                 f"{strat_results['draw_days']} / {strat_results['losing_days']}",
             ),
+            ("Max trade duration", f"{strat_results['holding_max']}"),
             ("Avg. Duration Winners", f"{strat_results['winner_holding_avg']}"),
             ("Avg. Duration Loser", f"{strat_results['loser_holding_avg']}"),
             (

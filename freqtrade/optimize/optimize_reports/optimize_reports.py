@@ -344,6 +344,11 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         if not results.empty
         else timedelta()
     )
+    holding_max = (
+        timedelta(minutes=round(results["trade_duration"].max()))
+        if not results.empty
+        else timedelta()
+    )
     winner_holding_avg = (
         timedelta(minutes=round(winning_trades["trade_duration"].mean()))
         if not winning_trades.empty
@@ -363,6 +368,8 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         "winrate": len(winning_trades) / len(results) if len(results) else 0.0,
         "holding_avg": holding_avg,
         "holding_avg_s": holding_avg.total_seconds(),
+        "holding_max": holding_max,
+        "holding_max_s": holding_max.total_seconds(),
         "winner_holding_avg": winner_holding_avg,
         "winner_holding_avg_s": winner_holding_avg.total_seconds(),
         "loser_holding_avg": loser_holding_avg,
