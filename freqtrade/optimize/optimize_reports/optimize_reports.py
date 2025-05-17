@@ -336,27 +336,44 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         }
 
     winning_trades = results.loc[results["profit_ratio"] > 0]
+    winning_duratios = winning_trades["trade_duration"]
     draw_trades = results.loc[results["profit_ratio"] == 0]
     losing_trades = results.loc[results["profit_ratio"] < 0]
+    losing_duratios = losing_trades["trade_duration"]
 
     holding_avg = (
         timedelta(minutes=round(results["trade_duration"].mean()))
         if not results.empty
         else timedelta()
     )
-    holding_max = (
-        timedelta(minutes=round(results["trade_duration"].max()))
-        if not results.empty
+    winner_holding_min = (
+        timedelta(minutes=round(winning_duratios[winning_duratios > 0].min()))
+        if not winning_duratios.empty
+        else timedelta()
+    )
+    winner_holding_max = (
+        timedelta(minutes=round(winning_duratios.max()))
+        if not winning_duratios.empty
         else timedelta()
     )
     winner_holding_avg = (
-        timedelta(minutes=round(winning_trades["trade_duration"].mean()))
-        if not winning_trades.empty
+        timedelta(minutes=round(winning_duratios.mean()))
+        if not winning_duratios.empty
+        else timedelta()
+    )
+    loser_holding_min = (
+        timedelta(minutes=round(losing_duratios[losing_duratios > 0].min()))
+        if not losing_duratios.empty
+        else timedelta()
+    )
+    loser_holding_max = (
+        timedelta(minutes=round(losing_duratios.max()))
+        if not losing_duratios.empty
         else timedelta()
     )
     loser_holding_avg = (
-        timedelta(minutes=round(losing_trades["trade_duration"].mean()))
-        if not losing_trades.empty
+        timedelta(minutes=round(losing_duratios.mean()))
+        if not losing_duratios.empty
         else timedelta()
     )
     winstreak, loss_streak = calc_streak(results)
@@ -368,10 +385,16 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         "winrate": len(winning_trades) / len(results) if len(results) else 0.0,
         "holding_avg": holding_avg,
         "holding_avg_s": holding_avg.total_seconds(),
-        "holding_max": holding_max,
-        "holding_max_s": holding_max.total_seconds(),
+        "winner_holding_min": winner_holding_min,
+        "winner_holding_min_s": winner_holding_min.total_seconds(),
+        "winner_holding_max": winner_holding_max,
+        "winner_holding_max_s": winner_holding_max.total_seconds(),
         "winner_holding_avg": winner_holding_avg,
         "winner_holding_avg_s": winner_holding_avg.total_seconds(),
+        "loser_holding_min": loser_holding_min,
+        "loser_holding_min_s": loser_holding_min.total_seconds(),
+        "loser_holding_max": loser_holding_max,
+        "loser_holding_max_s": loser_holding_max.total_seconds(),
         "loser_holding_avg": loser_holding_avg,
         "loser_holding_avg_s": loser_holding_avg.total_seconds(),
         "max_consecutive_wins": winstreak,

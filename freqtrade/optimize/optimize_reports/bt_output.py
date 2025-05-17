@@ -370,9 +370,18 @@ def text_table_add_metrics(strat_results: dict) -> None:
                 f"{strat_results['winning_days']} / "
                 f"{strat_results['draw_days']} / {strat_results['losing_days']}",
             ),
-            ("Max trade duration", f"{strat_results['holding_max']}"),
-            ("Avg. Duration Winners", f"{strat_results['winner_holding_avg']}"),
-            ("Avg. Duration Loser", f"{strat_results['loser_holding_avg']}"),
+            (
+                "Min/Max/Avg. Duration Winners",
+                f"{strat_results.get('winner_holding_min', 'N/A')} / "
+                f"{strat_results.get('winner_holding_max', 'N/A')} / "
+                f"{strat_results.get('winner_holding_avg', 'N/A')}",
+            ),
+            (
+                "Min/Max/Avg. Duration Losers",
+                f"{strat_results.get('loser_holding_min', 'N/A')} / "
+                f"{strat_results.get('loser_holding_max', 'N/A')} / "
+                f"{strat_results.get('loser_holding_avg', 'N/A')}",
+            ),
             (
                 "Max Consecutive Wins / Loss",
                 (
