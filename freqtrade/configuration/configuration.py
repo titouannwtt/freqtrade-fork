@@ -338,8 +338,7 @@ class Configuration:
         if es_epochs > 0:
             if es_epochs < 20:
                 logger.warning(
-                    f"Early stop epochs {es_epochs} lower than 20. "
-                    f"It will be replaced with 20."
+                    f"Early stop epochs {es_epochs} lower than 20. It will be replaced with 20."
                 )
                 config.update({"early_stop": 20})
             else:
