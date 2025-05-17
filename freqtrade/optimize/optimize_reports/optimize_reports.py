@@ -336,10 +336,10 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         }
 
     winning_trades = results.loc[results["profit_ratio"] > 0]
-    winning_duratios = winning_trades["trade_duration"]
+    winning_duration = winning_trades["trade_duration"]
     draw_trades = results.loc[results["profit_ratio"] == 0]
     losing_trades = results.loc[results["profit_ratio"] < 0]
-    losing_duratios = losing_trades["trade_duration"]
+    losing_duration = losing_trades["trade_duration"]
 
     holding_avg = (
         timedelta(minutes=round(results["trade_duration"].mean()))
@@ -347,33 +347,33 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         else timedelta()
     )
     winner_holding_min = (
-        timedelta(minutes=round(winning_duratios[winning_duratios > 0].min()))
-        if not winning_duratios.empty
+        timedelta(minutes=round(winning_duration[winning_duration > 0].min()))
+        if not winning_duration.empty
         else timedelta()
     )
     winner_holding_max = (
-        timedelta(minutes=round(winning_duratios.max()))
-        if not winning_duratios.empty
+        timedelta(minutes=round(winning_duration.max()))
+        if not winning_duration.empty
         else timedelta()
     )
     winner_holding_avg = (
-        timedelta(minutes=round(winning_duratios.mean()))
-        if not winning_duratios.empty
+        timedelta(minutes=round(winning_duration.mean()))
+        if not winning_duration.empty
         else timedelta()
     )
     loser_holding_min = (
-        timedelta(minutes=round(losing_duratios[losing_duratios > 0].min()))
-        if not losing_duratios.empty
+        timedelta(minutes=round(losing_duration[losing_duration > 0].min()))
+        if not losing_duration.empty
         else timedelta()
     )
     loser_holding_max = (
-        timedelta(minutes=round(losing_duratios.max()))
-        if not losing_duratios.empty
+        timedelta(minutes=round(losing_duration.max()))
+        if not losing_duration.empty
         else timedelta()
     )
     loser_holding_avg = (
-        timedelta(minutes=round(losing_duratios.mean()))
-        if not losing_duratios.empty
+        timedelta(minutes=round(losing_duration.mean()))
+        if not losing_duration.empty
         else timedelta()
     )
     winstreak, loss_streak = calc_streak(results)
