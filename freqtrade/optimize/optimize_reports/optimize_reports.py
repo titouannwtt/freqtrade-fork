@@ -23,7 +23,7 @@ from freqtrade.ft_types import (
     BacktestResultType,
     get_BacktestResultType_default,
 )
-from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
+from freqtrade.util import decimals_per_coin, fmt_coin, format_duration, get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -383,19 +383,19 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         "losses": len(losing_trades),
         "draws": len(draw_trades),
         "winrate": len(winning_trades) / len(results) if len(results) else 0.0,
-        "holding_avg": holding_avg,
+        "holding_avg": format_duration(holding_avg),
         "holding_avg_s": holding_avg.total_seconds(),
-        "winner_holding_min": winner_holding_min,
+        "winner_holding_min": format_duration(winner_holding_min),
         "winner_holding_min_s": winner_holding_min.total_seconds(),
-        "winner_holding_max": winner_holding_max,
+        "winner_holding_max": format_duration(winner_holding_max),
         "winner_holding_max_s": winner_holding_max.total_seconds(),
-        "winner_holding_avg": winner_holding_avg,
+        "winner_holding_avg": format_duration(winner_holding_avg),
         "winner_holding_avg_s": winner_holding_avg.total_seconds(),
-        "loser_holding_min": loser_holding_min,
+        "loser_holding_min": format_duration(loser_holding_min),
         "loser_holding_min_s": loser_holding_min.total_seconds(),
-        "loser_holding_max": loser_holding_max,
+        "loser_holding_max": format_duration(loser_holding_max),
         "loser_holding_max_s": loser_holding_max.total_seconds(),
-        "loser_holding_avg": loser_holding_avg,
+        "loser_holding_avg": format_duration(loser_holding_avg),
         "loser_holding_avg_s": loser_holding_avg.total_seconds(),
         "max_consecutive_wins": winstreak,
         "max_consecutive_losses": loss_streak,
