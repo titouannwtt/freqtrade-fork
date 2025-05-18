@@ -383,7 +383,7 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         "losses": len(losing_trades),
         "draws": len(draw_trades),
         "winrate": len(winning_trades) / len(results) if len(results) else 0.0,
-        "holding_avg": format_duration(holding_avg),
+        "holding_avg": holding_avg,
         "holding_avg_s": holding_avg.total_seconds(),
         "winner_holding_min": format_duration(winner_holding_min),
         "winner_holding_min_s": winner_holding_min.total_seconds(),
