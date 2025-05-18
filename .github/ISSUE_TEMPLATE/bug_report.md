@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a report to help us improve. Do not use this for strategy assistance.
 title: ''
 labels: "Triage Needed"
 assignees: ''
