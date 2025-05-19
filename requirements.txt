@@ -4,7 +4,7 @@ bottleneck==1.4.2
 numexpr==2.10.2
 pandas-ta==0.3.14b
 
-ccxt==4.4.80
+ccxt==4.4.82
 cryptography==45.0.2
 aiohttp==3.9.5
 SQLAlchemy==2.0.40
