@@ -5,7 +5,7 @@ numexpr==2.10.2
 pandas-ta==0.3.14b
 
 ccxt==4.4.80
-cryptography==44.0.3
+cryptography==45.0.2
 aiohttp==3.9.5
 SQLAlchemy==2.0.40
 python-telegram-bot==22.1
