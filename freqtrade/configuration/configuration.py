@@ -345,7 +345,7 @@ class Configuration:
                 config.update({"early_stop": self.args["early_stop"]})
             logger.info(
                 f"Parameter --early-stop detected ... Will early stop hyperopt if no improvement "
-                f"after {self.args.get('early_stop')} epochs ..."
+                f"after {config.get('early_stop')} epochs ..."
             )
 
         configurations = [
