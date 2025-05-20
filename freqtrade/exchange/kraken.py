@@ -12,7 +12,7 @@ from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import CcxtBalances, FtHas, Tickers
+from freqtrade.exchange.exchange_types import CcxtBalances, FtHas
 
 
 logger = logging.getLogger(__name__)
