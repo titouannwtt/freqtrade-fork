@@ -806,11 +806,6 @@ CONF_SCHEMA = {
             "type": "object",
             "properties": {
                 "name": {"description": "Name of the exchange.", "type": "string"},
-                "enable_ws": {
-                    "description": "Enable WebSocket connections to the exchange.",
-                    "type": "boolean",
-                    "default": True,
-                },
                 "key": {
                     "description": "API key for the exchange.",
                     "type": "string",
@@ -827,6 +822,23 @@ CONF_SCHEMA = {
                     "default": "",
                 },
                 "uid": {"description": "User ID for the exchange, if required.", "type": "string"},
+                "account_id": {
+                    "description": "Account ID for the exchange, if required.",
+                    "type": "string",
+                },
+                "wallet_address": {
+                    "description": (
+                        "Wallet address for the exchange, if required. "
+                        "Usually used by DEX exchanges."
+                    ),
+                    "type": "string",
+                },
+                "private_key": {
+                    "description": (
+                        "Private key for the exchange, if required. Usually used by DEX exchanges."
+                    ),
+                    "type": "string",
+                },
                 "pair_whitelist": {
                     "description": "List of whitelisted trading pairs.",
                     "type": "array",
@@ -846,6 +858,11 @@ CONF_SCHEMA = {
                     ),
                     "type": "boolean",
                     "default": False,
+                },
+                "enable_ws": {
+                    "description": "Enable WebSocket connections to the exchange.",
+                    "type": "boolean",
+                    "default": True,
                 },
                 "unknown_fee_rate": {
                     "description": "Fee rate for unknown markets.",
