@@ -470,11 +470,16 @@ CONF_SCHEMA = {
                 },
                 "token": {"description": "Telegram bot token.", "type": "string"},
                 "chat_id": {
-                    "description": "Telegram chat or group ID",
+                    "description": (
+                        f"Telegram chat or group ID. {__VIA_ENV} FREQTRADE__TELEGRAM__CHAT_ID"
+                    ),
                     "type": "string",
                 },
                 "topic_id": {
-                    "description": "Telegram topic ID - only applicable for group chats",
+                    "description": (
+                        "Telegram topic ID - only applicable for group chats. "
+                        f"{__VIA_ENV} FREQTRADE__TELEGRAM__TOPIC_ID"
+                    ),
                     "type": "string",
                 },
                 "authorized_users": {
@@ -576,8 +581,11 @@ CONF_SCHEMA = {
             "description": "Webhook settings.",
             "type": "object",
             "properties": {
-                "enabled": {"type": "boolean"},
-                "url": {"type": "string"},
+                "enabled": {"description": "Enable webhook notifications.", "type": "boolean"},
+                "url": {
+                    "description": f"Webhook URL. {__VIA_ENV} FREQTRADE__WEBHOOK__URL",
+                    "type": "string",
+                },
                 "format": {"type": "string", "enum": WEBHOOK_FORMAT_OPTIONS, "default": "form"},
                 "retries": {"type": "integer", "minimum": 0},
                 "retry_delay": {"type": "number", "minimum": 0},
@@ -589,7 +597,12 @@ CONF_SCHEMA = {
             "type": "object",
             "properties": {
                 "enabled": {"type": "boolean"},
-                "webhook_url": {"type": "string"},
+                "webhook_url": {
+                    "description": (
+                        f"Discord webhook URL. {__VIA_ENV} FREQTRADE__DISCORD__WEBHOOK_URL"
+                    ),
+                    "type": "string",
+                },
                 "exit_fill": {
                     "type": "array",
                     "items": {"type": "object"},

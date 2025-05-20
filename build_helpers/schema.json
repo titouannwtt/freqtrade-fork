@@ -610,11 +610,11 @@
           "type": "string"
         },
         "chat_id": {
-          "description": "Telegram chat or group ID",
+          "description": "Telegram chat or group ID. Recommended to be set via environment variable FREQTRADE__TELEGRAM__CHAT_ID",
           "type": "string"
         },
         "topic_id": {
-          "description": "Telegram topic ID - only applicable for group chats",
+          "description": "Telegram topic ID - only applicable for group chats. Recommended to be set via environment variable FREQTRADE__TELEGRAM__TOPIC_ID",
           "type": "string"
         },
         "authorized_users": {
@@ -773,9 +773,11 @@
       "type": "object",
       "properties": {
         "enabled": {
+          "description": "Enable webhook notifications.",
           "type": "boolean"
         },
         "url": {
+          "description": "Webhook URL. Recommended to be set via environment variable FREQTRADE__WEBHOOK__URL",
           "type": "string"
         },
         "format": {
@@ -853,6 +855,7 @@
           "type": "boolean"
         },
         "webhook_url": {
+          "description": "Discord webhook URL. Recommended to be set via environment variable FREQTRADE__DISCORD__WEBHOOK_URL",
           "type": "string"
         },
         "exit_fill": {
