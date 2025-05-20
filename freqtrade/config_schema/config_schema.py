@@ -26,6 +26,8 @@ __MESSAGE_TYPE_DICT: dict[str, dict[str, str]] = {x: {"type": "object"} for x in
 
 __IN_STRATEGY = "\nUsually specified in the strategy and missing in the configuration."
 
+__VIA_ENV = "Recommended to be set via environment variable"
+
 CONF_SCHEMA = {
     "type": "object",
     "properties": {
@@ -807,35 +809,53 @@ CONF_SCHEMA = {
             "properties": {
                 "name": {"description": "Name of the exchange.", "type": "string"},
                 "key": {
-                    "description": "API key for the exchange.",
+                    "description": (
+                        f"API key for the exchange. {__VIA_ENV} FREQTRADE__EXCHANGE__KEY"
+                    ),
                     "type": "string",
                     "default": "",
                 },
                 "secret": {
-                    "description": "API secret for the exchange.",
+                    "description": (
+                        f"API secret for the exchange. {__VIA_ENV} FREQTRADE__EXCHANGE__SECRET"
+                    ),
                     "type": "string",
                     "default": "",
                 },
                 "password": {
-                    "description": "Password for the exchange, if required.",
+                    "description": (
+                        "Password for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__PASSWORD"
+                    ),
                     "type": "string",
                     "default": "",
                 },
-                "uid": {"description": "User ID for the exchange, if required.", "type": "string"},
+                "uid": {
+                    "description": (
+                        "User ID for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__UID"
+                    ),
+                    "type": "string",
+                },
                 "account_id": {
-                    "description": "Account ID for the exchange, if required.",
+                    "description": (
+                        "Account ID for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__ACCOUNT_ID"
+                    ),
                     "type": "string",
                 },
                 "wallet_address": {
                     "description": (
                         "Wallet address for the exchange, if required. "
-                        "Usually used by DEX exchanges."
+                        "Usually used by DEX exchanges. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__WALLET_ADDRESS"
                     ),
                     "type": "string",
                 },
                 "private_key": {
                     "description": (
-                        "Private key for the exchange, if required. Usually used by DEX exchanges."
+                        "Private key for the exchange, if required. Usually used by DEX exchanges. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__PRIVATE_KEY"
                     ),
                     "type": "string",
                 },
