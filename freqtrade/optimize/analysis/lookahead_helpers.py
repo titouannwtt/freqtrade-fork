@@ -155,7 +155,7 @@ class LookaheadAnalysisSubFunctions:
             )
         config["max_open_trades"] = -1
         logger.info(
-            f"forced pairs to -1 (same amount of max_open_trades as there are pairs)"
+            f"Forced max_open_trades to -1 (same amount as there are pairs)"
         )
 
         min_dry_run_wallet = 1000000000
