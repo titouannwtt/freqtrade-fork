@@ -154,9 +154,7 @@ class LookaheadAnalysisSubFunctions:
                 "Targeted trade amount can't be smaller than minimum trade amount."
             )
         config["max_open_trades"] = -1
-        logger.info(
-            f"Forced max_open_trades to -1 (same amount as there are pairs)"
-        )
+        logger.info("Forced max_open_trades to -1 (same amount as there are pairs)")
 
         min_dry_run_wallet = 1000000000
         if get_dry_run_wallet(config) < min_dry_run_wallet:
