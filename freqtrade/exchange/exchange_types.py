@@ -38,6 +38,8 @@ class FtHas(TypedDict, total=False):
     l2_limit_range: list[int] | None
     l2_limit_range_required: bool
     l2_limit_upper: int | None
+    # fetch_orders
+    fetch_orders_limit_minutes: int | None
     # Futures
     ccxt_futures_name: str  # usually swap
     mark_ohlcv_price: str
