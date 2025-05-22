@@ -36,6 +36,7 @@ class Binance(Exchange):
         "trades_pagination": "id",
         "trades_pagination_arg": "fromId",
         "trades_has_history": True,
+        "fetch_orders_limit_minutes": None,
         "l2_limit_range": [5, 10, 20, 50, 100, 500, 1000],
         "ws_enabled": True,
     }
@@ -45,6 +46,7 @@ class Binance(Exchange):
         "order_time_in_force": ["GTC", "FOK", "IOC"],
         "tickers_have_price": False,
         "floor_leverage": True,
+        "fetch_orders_limit_minutes": 7 * 1440,  # "fetch_orders" is limited to 7 days
         "stop_price_type_field": "workingType",
         "order_props_in_contracts": ["amount", "cost", "filled", "remaining"],
         "stop_price_type_value_mapping": {
