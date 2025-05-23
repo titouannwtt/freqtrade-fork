@@ -1793,6 +1793,8 @@ class Exchange:
                 orders += self._fetch_orders(pair, since)
                 # Since with 1 minute overlap
                 since = since + timedelta(minutes=limit - 1)
+            # Ensure each order is unique based on order id
+            orders = list({order["id"]: order for order in orders}.values())
             return orders
 
         else:

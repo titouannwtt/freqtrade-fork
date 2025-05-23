@@ -1726,12 +1726,17 @@ def test_fetch_positions(default_conf, mocker, exchange_name):
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
     api_mock = MagicMock()
-    api_mock.fetch_orders = MagicMock(
-        return_value=[
-            limit_order["buy"],
-            limit_order["sell"],
+    call_count = 1
+
+    def return_value(*args, **kwargs):
+        nonlocal call_count
+        call_count += 2
+        return [
+            {**limit_order["buy"], "id": call_count},
+            {**limit_order["sell"], "id": call_count + 1},
         ]
-    )
+
+    api_mock.fetch_orders = MagicMock(side_effect=return_value)
     api_mock.fetch_open_orders = MagicMock(return_value=[limit_order["buy"]])
     api_mock.fetch_closed_orders = MagicMock(return_value=[limit_order["buy"]])
 
