@@ -38,6 +38,7 @@ from freqtrade.strategy.informative_decorator import (
     _create_and_merge_informative_pair,
     _format_pair_name,
 )
+from freqtrade.strategy.strategy_validation import StrategyResultValidator
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
 from freqtrade.util import dt_now
 from freqtrade.wallets import Wallets
@@ -1213,13 +1214,13 @@ class IStrategy(ABC, HyperStrategyMixin):
             return
 
         try:
-            df_len, df_close, df_date = self.preserve_df(dataframe)
+            validator = StrategyResultValidator(dataframe, self.disable_dataframe_checks)
 
             dataframe = strategy_safe_wrapper(self._analyze_ticker_internal, message="")(
                 dataframe, {"pair": pair}
             )
 
-            self.assert_df(dataframe, df_len, df_close, df_date)
+            validator.assert_df(dataframe)
         except StrategyError as error:
             logger.warning(f"Unable to analyze candle (OHLCV) data for pair {pair}: {error}")
             return
@@ -1235,31 +1236,6 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         for pair in pairs:
             self.analyze_pair(pair)
-
-    @staticmethod
-    def preserve_df(dataframe: DataFrame) -> tuple[int, float, datetime]:
-        """keep some data for dataframes"""
-        return len(dataframe), dataframe["close"].iloc[-1], dataframe["date"].iloc[-1]
-
-    def assert_df(self, dataframe: DataFrame, df_len: int, df_close: float, df_date: datetime):
-        """
-        Ensure dataframe (length, last candle) was not modified, and has all elements we need.
-        """
-        message_template = "Dataframe returned from strategy has mismatching {}."
-        message = ""
-        if dataframe is None:
-            message = "No dataframe returned (return statement missing?)."
-        elif df_len != len(dataframe):
-            message = message_template.format("length")
-        elif df_close != dataframe["close"].iloc[-1]:
-            message = message_template.format("last close price")
-        elif df_date != dataframe["date"].iloc[-1]:
-            message = message_template.format("last date")
-        if message:
-            if self.disable_dataframe_checks:
-                logger.warning(message)
-            else:
-                raise StrategyError(message)
 
     def get_latest_candle(
         self,
