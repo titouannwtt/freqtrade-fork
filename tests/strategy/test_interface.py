@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH
@@ -27,6 +27,7 @@ from freqtrade.strategy.parameters import (
     IntParameter,
     RealParameter,
 )
+from freqtrade.strategy.strategy_validation import StrategyResultValidator
 from freqtrade.util import dt_now
 from tests.conftest import CURRENT_TEST_STRATEGY, TRADE_SIDES, log_has, log_has_re
 
@@ -124,7 +125,7 @@ def test_returns_latest_signal(ohlcv_history):
 def test_analyze_pair_empty(mocker, caplog, ohlcv_history):
     mocker.patch.object(_STRATEGY.dp, "ohlcv", return_value=ohlcv_history)
     mocker.patch.object(_STRATEGY, "_analyze_ticker_internal", return_value=DataFrame([]))
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch("freqtrade.strategy.interface.StrategyResultValidator.assert_df")
 
     _STRATEGY.analyze_pair("ETH/BTC")
 
@@ -174,7 +175,7 @@ def test_get_signal_old_dataframe(default_conf, mocker, caplog, ohlcv_history):
     mocked_history.loc[1, "enter_long"] = 1
 
     caplog.set_level(logging.INFO)
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch("freqtrade.strategy.interface.StrategyResultValidator.assert_df")
 
     assert (None, None) == _STRATEGY.get_latest_candle(
         "xyz", default_conf["timeframe"], mocked_history
@@ -194,7 +195,9 @@ def test_get_signal_no_sell_column(default_conf, mocker, caplog, ohlcv_history):
     mocked_history.loc[1, "enter_long"] = 1
 
     caplog.set_level(logging.INFO)
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch(
+        "freqtrade.strategy.interface.StrategyResultValidator.assert_df",
+    )
 
     assert (SignalDirection.LONG, None) == _STRATEGY.get_entry_signal(
         "xyz", default_conf["timeframe"], mocked_history
@@ -237,7 +240,10 @@ def test_assert_df_raise(mocker, caplog, ohlcv_history):
     caplog.set_level(logging.INFO)
     mocker.patch.object(_STRATEGY.dp, "ohlcv", return_value=ohlcv_history)
     mocker.patch.object(_STRATEGY.dp, "get_analyzed_dataframe", return_value=(mocked_history, 0))
-    mocker.patch.object(_STRATEGY, "assert_df", side_effect=StrategyError("Dataframe returned..."))
+    mocker.patch(
+        "freqtrade.strategy.interface.StrategyResultValidator.assert_df",
+        side_effect=StrategyError("Dataframe returned..."),
+    )
     _STRATEGY.analyze_pair("xyz")
     assert log_has(
         "Unable to analyze candle (OHLCV) data for pair xyz: Dataframe returned...", caplog
@@ -248,59 +254,39 @@ def test_assert_df(ohlcv_history, caplog):
     df_len = len(ohlcv_history) - 1
     ohlcv_history.loc[:, "enter_long"] = 0
     ohlcv_history.loc[:, "exit_long"] = 0
+    validator = StrategyResultValidator(ohlcv_history, warn_only=False)
     # Ensure it's running when passed correctly
-    _STRATEGY.assert_df(
-        ohlcv_history,
-        len(ohlcv_history),
-        ohlcv_history.loc[df_len, "close"],
-        ohlcv_history.loc[df_len, "date"],
-    )
+    validator.assert_df(ohlcv_history)
 
     with pytest.raises(StrategyError, match=r"Dataframe returned from strategy.*length\."):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history) + 1,
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[df_len, "date"],
-        )
+        validator.assert_df(concat([ohlcv_history, ohlcv_history]))
 
     with pytest.raises(
         StrategyError, match=r"Dataframe returned from strategy.*last close price\."
     ):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"] + 0.01,
-            ohlcv_history.loc[df_len, "date"],
-        )
+        df = ohlcv_history.copy()
+        df.loc[df_len, "close"] += 0.01
+        validator.assert_df(df)
+
     with pytest.raises(StrategyError, match=r"Dataframe returned from strategy.*last date\."):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[0, "date"],
-        )
+        df = ohlcv_history.copy()
+        df.loc[df_len, "date"] = ohlcv_history.loc[0, "date"] - timedelta(days=1)
+        validator.assert_df(df)
+
     with pytest.raises(
         StrategyError, match=r"No dataframe returned \(return statement missing\?\)."
     ):
-        _STRATEGY.assert_df(
-            None,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[0, "date"],
-        )
+        validator.assert_df(None)
 
-    _STRATEGY.disable_dataframe_checks = True
+    validator = StrategyResultValidator(ohlcv_history, warn_only=True)
+
     caplog.clear()
-    _STRATEGY.assert_df(
-        ohlcv_history,
-        len(ohlcv_history),
-        ohlcv_history.loc[2, "close"],
-        ohlcv_history.loc[0, "date"],
-    )
+    df = ohlcv_history.copy()
+    df.loc[df_len, "date"] = ohlcv_history.loc[0, "date"] - timedelta(days=1)
+
+    validator.assert_df(df)
     assert log_has_re(r"Dataframe returned from strategy.*last date\.", caplog)
     # reset to avoid problems in other tests due to test leakage
-    _STRATEGY.disable_dataframe_checks = False
 
 
 def test_advise_all_indicators(default_conf, testdatadir) -> None:

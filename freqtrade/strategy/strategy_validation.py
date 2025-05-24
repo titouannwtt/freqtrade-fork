@@ -30,7 +30,7 @@ class StrategyResultValidator:
         if dataframe is None:
             message = "No dataframe returned (return statement missing?)."
         elif self._length != len(dataframe):
-            self.message = message_template.format("length")
+            message = message_template.format("length")
         elif self._close != dataframe["close"].iloc[-1]:
             message = message_template.format("last close price")
         elif self._date != dataframe["date"].iloc[-1]:
