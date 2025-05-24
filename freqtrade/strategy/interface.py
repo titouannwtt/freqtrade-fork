@@ -1214,7 +1214,9 @@ class IStrategy(ABC, HyperStrategyMixin):
             return
 
         try:
-            validator = StrategyResultValidator(dataframe, self.disable_dataframe_checks)
+            validator = StrategyResultValidator(
+                dataframe, warn_only=not self.disable_dataframe_checks
+            )
 
             dataframe = strategy_safe_wrapper(self._analyze_ticker_internal, message="")(
                 dataframe, {"pair": pair}
@@ -1677,10 +1679,14 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
-        return {
-            pair: self.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
-            for pair, pair_data in data.items()
-        }
+        res = {}
+        for pair, pair_data in data.items():
+            validator = StrategyResultValidator(
+                pair_data, warn_only=not self.disable_dataframe_checks
+            )
+            res[pair] = self.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
+            validator.assert_df(res[pair])
+        return res
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
