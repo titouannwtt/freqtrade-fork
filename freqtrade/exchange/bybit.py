@@ -49,6 +49,7 @@ class Bybit(Exchange):
         "funding_fee_candle_limit": 200,
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit", "market": "market"},
+        "stoploss_blocks_assets": False,
         # bybit response parsing fails to populate stopLossPrice
         "stop_price_prop": "stopPrice",
         "stop_price_type_field": "triggerBy",
