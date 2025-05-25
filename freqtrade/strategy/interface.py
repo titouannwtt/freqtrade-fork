@@ -1681,6 +1681,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
 
         # Get custom ROI if use_custom_roi is set to True
+        custom_roi = None
         if self.use_custom_roi:
             custom_roi = strategy_safe_wrapper(
                 self.custom_roi, default_retval=None, supress_error=True
@@ -1692,11 +1693,9 @@ class IStrategy(ABC, HyperStrategyMixin):
                 entry_tag=trade.enter_tag,
                 side=trade.trade_direction,
             )
-            if not custom_roi or isnan(custom_roi) or isinf(custom_roi):
+            if custom_roi is None or isnan(custom_roi) or isinf(custom_roi):
                 custom_roi = None
                 logger.debug(f"Custom ROI function did not return a valid ROI for {trade.pair}")
-        else:
-            custom_roi = None
 
         # Get highest entry in ROI dict where key <= trade-duration
         roi_list = [x for x in self.minimal_roi.keys() if x <= trade_dur]
