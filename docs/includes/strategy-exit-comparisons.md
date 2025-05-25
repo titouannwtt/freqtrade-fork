@@ -1,7 +1,7 @@
 ## Exit logic comparisons
 
 Freqtrade allows your strategy to implement different exit logic using signal-based or callback-based functions.
-This section aims to compare each different section, helping you to choose the one that best fits your needs.
+This section aims to compare each different function, helping you to choose the one that best fits your needs.
 
 * **`populate_exit_trend()`** - Vectorized signal-based exit logic using indicators in the main dataframe
   ✅ **Use** to define exit signals based on indicators or other data that can be calculated in a vectorized manner.
