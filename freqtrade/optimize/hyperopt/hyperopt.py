@@ -15,6 +15,7 @@ from typing import Any
 
 import rapidjson
 from joblib import Parallel, cpu_count
+from optuna.trial import Trial, TrialState
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
@@ -169,8 +170,20 @@ class Hyperopt:
             asked.append(self.opt.ask(dimensions))
         return asked
 
+    def check_optuna_asked_points(self, trial: Trial) -> bool:
+        trials_to_consider = trial.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+        # Check whether we already evaluated the sampled `params`.
+        for t in reversed(trials_to_consider):
+            if trial.params == t.params:
+                logger.warning(
+                    f"duplicate trial: Trial {trial.number} has same params as {t.number}"
+                )
+                return True
+        return False
+
     def get_asked_points(self, n_points: int, dimensions: dict) -> tuple[list[Any], list[bool]]:
         """
+        TBD: need to change
         Enforce points returned from `self.opt.ask` have not been already evaluated
 
         Steps:
@@ -181,44 +194,11 @@ class Hyperopt:
         5. Repeat until at least `n_points` points in the `asked_non_tried` list
         6. Return a list with length truncated at `n_points`
         """
-
-        def unique_list(a_list):
-            new_list = []
-            for item in a_list:
-                if item not in new_list:
-                    new_list.append(item)
-            return new_list
-
-        i = 0
         asked_non_tried: list[list[Any]] = []
-        is_random_non_tried: list[bool] = []
-        while i < 5 and len(asked_non_tried) < n_points:
-            if i < 3:
-                self.opt.cache_ = {}
-                asked = unique_list(
-                    self.get_optuna_asked_points(
-                        n_points=n_points * 5 if i > 0 else n_points, dimensions=dimensions
-                    )
-                )
-                is_random = [False for _ in range(len(asked))]
-            else:
-                asked = unique_list(self.opt.space.rvs(n_samples=n_points * 5))
-                is_random = [True for _ in range(len(asked))]
-            is_random_non_tried += [
-                rand for x, rand in zip(asked, is_random, strict=False) if x not in asked_non_tried
-            ]
-            asked_non_tried += [x for x in asked if x not in asked_non_tried]
-            i += 1
+        optuna_asked_trials = self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions)
+        asked_non_tried += [x for x in optuna_asked_trials if not self.check_optuna_asked_points(x)]
 
-        if asked_non_tried:
-            return (
-                asked_non_tried[: min(len(asked_non_tried), n_points)],
-                is_random_non_tried[: min(len(asked_non_tried), n_points)],
-            )
-        else:
-            return self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions), [
-                False for _ in range(n_points)
-            ]
+        return asked_non_tried, [False for _ in range(n_points)]
 
     def evaluate_result(self, val: dict[str, Any], current: int, is_random: bool):
         """
