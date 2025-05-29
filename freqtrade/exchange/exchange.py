@@ -2450,7 +2450,15 @@ class Exchange:
                 self._exchange_ws.klines_last_refresh.get((pair, timeframe, candle_type), 0)
             )
 
-            if candles and candles[-1][0] >= prev_candle_ts and last_refresh_time >= half_candle:
+            if (
+                candles
+                and (
+                    (len(candles) > 1 and candles[-1][0] >= prev_candle_ts)
+                    # Edgecase on reconnect, where 1 candle is available but it's the current one
+                    or (len(candles) == 1 and candles[-1][0] < candle_ts)
+                )
+                and last_refresh_time >= half_candle
+            ):
                 # Usable result, candle contains the previous candle.
                 # Also, we check if the last refresh time is no more than half the candle ago.
                 logger.debug(f"reuse watch result for {pair}, {timeframe}, {last_refresh_time}")
