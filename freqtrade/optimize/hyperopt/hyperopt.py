@@ -206,9 +206,8 @@ class Hyperopt:
                 asked_non_tried.append(asked_new)
             i += 1
         if len(asked_non_tried) < n_points:
-            logger.warning(
-                "duplicate params detected. Please check if search space is not too small!"
-            )
+            if self.count_skipped_epochs == 0:
+                logger.warning("Duplicate params detected. Maybe your search space is too small?")
             self.count_skipped_epochs += n_points - len(asked_non_tried)
 
         return asked_non_tried, [False for _ in range(len(asked_non_tried))]
