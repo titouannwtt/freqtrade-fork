@@ -637,9 +637,9 @@ class Exchange:
         if self._exchange_ws:
             self._exchange_ws.reset_connections()
 
-    async def _api_reload_markets(self, reload: bool = False) -> dict[str, Any]:
+    async def _api_reload_markets(self, reload: bool = False) -> None:
         try:
-            return await self._api_async.load_markets(reload=reload, params={})
+            await self._api_async.load_markets(reload=reload, params={})
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
         except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
@@ -649,14 +649,14 @@ class Exchange:
         except ccxt.BaseError as e:
             raise TemporaryError(e) from e
 
-    def _load_async_markets(self, reload: bool = False) -> dict[str, Any]:
+    def _load_async_markets(self, reload: bool = False) -> None:
         try:
             with self._loop_lock:
                 markets = self.loop.run_until_complete(self._api_reload_markets(reload=reload))
 
             if isinstance(markets, Exception):
                 raise markets
-            return markets
+            return None
         except asyncio.TimeoutError as e:
             logger.warning("Could not load markets. Reason: %s", e)
             raise TemporaryError from e
@@ -679,7 +679,8 @@ class Exchange:
             # on initial load, we retry 3 times to ensure we get the markets
             retries: int = 3 if force else 0
             # Reload async markets, then assign them to sync api
-            self._markets = retrier(self._load_async_markets, retries=retries)(reload=True)
+            retrier(self._load_async_markets, retries=retries)(reload=True)
+            self._markets = self._api_async.markets
             self._api.set_markets(self._api_async.markets, self._api_async.currencies)
             # Assign options array, as it contains some temporary information from the exchange.
             self._api.options = self._api_async.options
