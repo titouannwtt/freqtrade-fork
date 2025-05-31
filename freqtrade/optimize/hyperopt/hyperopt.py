@@ -22,7 +22,7 @@ from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import file_dump_json, plural
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
-from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
+from freqtrade.optimize.hyperopt.hyperopt_optimizer import INITIAL_POINTS, HyperOptimizer
 from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
 from freqtrade.optimize.hyperopt_tools import (
     HyperoptStateContainer,
@@ -33,9 +33,6 @@ from freqtrade.util import get_progress_tracker
 
 
 logger = logging.getLogger(__name__)
-
-
-INITIAL_POINTS = 30
 
 
 log_queue: Any
