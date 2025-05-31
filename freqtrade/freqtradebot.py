@@ -467,7 +467,7 @@ class FreqtradeBot(LoggingMixin):
                     order = trade.select_order("stoploss", False)
                 if order:
                     logger.info(
-                        f"Updating {trade.exit_side}-fee on trade {trade}"
+                        f"Updating {trade.exit_side}-fee on trade {trade} "
                         f"for order {order.order_id}."
                     )
                     self.update_trade_state(
@@ -485,7 +485,7 @@ class FreqtradeBot(LoggingMixin):
                     open_order = trade.select_order(trade.entry_side, True)
                     if order and open_order is None:
                         logger.info(
-                            f"Updating {trade.entry_side}-fee on trade {trade}"
+                            f"Updating {trade.entry_side}-fee on trade {trade} "
                             f"for order {order.order_id}."
                         )
                         self.update_trade_state(trade, order.order_id, send_msg=False)
@@ -1476,7 +1476,11 @@ class FreqtradeBot(LoggingMixin):
                 self.handle_protections(trade.pair, trade.trade_direction)
                 return True
 
-        if not trade.has_open_position or not trade.is_open:
+        if (
+            not trade.has_open_position
+            or not trade.is_open
+            or (trade.has_open_orders and self.exchange.get_option("stoploss_blocks_assets", True))
+        ):
             # The trade can be closed already (sell-order fill confirmation came in this iteration)
             return False
 

@@ -102,6 +102,14 @@ You can use "current" market data by using the [dataprovider](strategy-customiza
 
 You can use the `/stopentry` command in Telegram to prevent future trade entry, followed by `/forceexit all` (sell all open trades).
 
+### I sold the bot's capital and now there's errors in the log
+
+Freqtrade assumes that the trades it opens are managed only though the bot.  
+If you happen to (accidentally) sell the bot's capital, freqtrade will try to recover by trying to re-find on-exchange orders.
+
+This is a best-effort approach, and will not work in all cases, especially when using order types that are not supported by freqtrade (OCO, iceberg, etc.), or when working with older trades (where the exchange no longer provides full order information).
+The exact limits will vary between exchanges - with the details usually being documented in the exchange's API documentation.
+
 ### I want to run multiple bots on the same machine
 
 Please look at the [advanced setup documentation Page](advanced-setup.md#running-multiple-instances-of-freqtrade).
@@ -219,10 +227,7 @@ On Windows, the `--logfile` option is also supported by Freqtrade and you can us
 First of all, most indicator libraries don't have GPU support - as such, there would be little benefit for indicator calculations.
 The GPU improvements would only apply to pandas-native calculations - or ones written by yourself.
 
-For hyperopt, freqtrade is using scikit-optimize, which is built on top of scikit-learn.
-Their statement about GPU support is [pretty clear](https://scikit-learn.org/stable/faq.html#will-you-add-gpu-support).
-
-GPU's also are only good at crunching numbers (floating point operations).
+GPU's are only good at crunching numbers (floating point operations).
 For hyperopt, we need both number-crunching (find next parameters) and running python code (running backtesting).
 As such, GPU's are not too well suited for most parts of hyperopt.
 

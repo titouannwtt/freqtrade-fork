@@ -4,6 +4,7 @@
 This module contains the hyperopt logic
 """
 
+import gc
 import logging
 import random
 from datetime import datetime
@@ -13,14 +14,15 @@ from pathlib import Path
 from typing import Any
 
 import rapidjson
-from joblib import Parallel, cpu_count, delayed, wrap_non_picklable_objects
+from joblib import Parallel, cpu_count
+from optuna.trial import FrozenTrial, Trial, TrialState
 
 from freqtrade.constants import FTHYPT_FILEVERSION, LAST_BT_RESULT_FN, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import file_dump_json, plural
 from freqtrade.optimize.hyperopt.hyperopt_logger import logging_mp_handle, logging_mp_setup
-from freqtrade.optimize.hyperopt.hyperopt_optimizer import HyperOptimizer
+from freqtrade.optimize.hyperopt.hyperopt_optimizer import INITIAL_POINTS, HyperOptimizer
 from freqtrade.optimize.hyperopt.hyperopt_output import HyperoptOutput
 from freqtrade.optimize.hyperopt_tools import (
     HyperoptStateContainer,
@@ -32,12 +34,6 @@ from freqtrade.util import get_progress_tracker
 
 logger = logging.getLogger(__name__)
 
-
-INITIAL_POINTS = 30
-
-# Keep no more than SKOPT_MODEL_QUEUE_SIZE models
-# in the skopt model queue, to optimize memory consumption
-SKOPT_MODEL_QUEUE_SIZE = 10
 
 log_queue: Any
 
@@ -92,7 +88,8 @@ class Hyperopt:
         self.hyperopt_table_header = 0
         self.print_json = self.config.get("print_json", False)
 
-        self.hyperopter = HyperOptimizer(self.config)
+        self.hyperopter = HyperOptimizer(self.config, self.data_pickle_file)
+        self.count_skipped_epochs = 0
 
     @staticmethod
     def get_lock_filename(config: Config) -> str:
@@ -158,61 +155,62 @@ class Hyperopt:
                 log_queue, logging.INFO if self.config["verbosity"] < 1 else logging.DEBUG
             )
 
-            return self.hyperopter.generate_optimizer(*args, **kwargs)
+            return self.hyperopter.generate_optimizer_wrapped(*args, **kwargs)
 
-        return parallel(delayed(wrap_non_picklable_objects(optimizer_wrapper))(v) for v in asked)
+        return parallel(optimizer_wrapper(v) for v in asked)
 
     def _set_random_state(self, random_state: int | None) -> int:
         return random_state or random.randint(1, 2**16 - 1)  # noqa: S311
 
-    def get_asked_points(self, n_points: int) -> tuple[list[list[Any]], list[bool]]:
+    def get_optuna_asked_points(self, n_points: int, dimensions: dict) -> list[Any]:
+        asked: list[list[Any]] = []
+        for i in range(n_points):
+            asked.append(self.opt.ask(dimensions))
+        return asked
+
+    def duplicate_optuna_asked_points(self, trial: Trial, asked_trials: list[FrozenTrial]) -> bool:
+        asked_trials_no_dups: list[FrozenTrial] = []
+        trials_to_consider = trial.study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+        # Check whether we already evaluated the sampled `params`.
+        for t in reversed(trials_to_consider):
+            if trial.params == t.params:
+                return True
+        # Check whether same`params` in one batch (asked_trials). Autosampler is doing this.
+        for t in asked_trials:
+            if t.params not in asked_trials_no_dups:
+                asked_trials_no_dups.append(t)
+        if len(asked_trials_no_dups) != len(asked_trials):
+            return True
+        return False
+
+    def get_asked_points(self, n_points: int, dimensions: dict) -> tuple[list[Any], list[bool]]:
         """
         Enforce points returned from `self.opt.ask` have not been already evaluated
 
         Steps:
         1. Try to get points using `self.opt.ask` first
         2. Discard the points that have already been evaluated
-        3. Retry using `self.opt.ask` up to 3 times
-        4. If still some points are missing in respect to `n_points`, random sample some points
-        5. Repeat until at least `n_points` points in the `asked_non_tried` list
-        6. Return a list with length truncated at `n_points`
+        3. Retry using `self.opt.ask` up to `n_points` times
         """
-
-        def unique_list(a_list):
-            new_list = []
-            for item in a_list:
-                if item not in new_list:
-                    new_list.append(item)
-            return new_list
-
+        asked_non_tried: list[FrozenTrial] = []
+        optuna_asked_trials = self.get_optuna_asked_points(n_points=n_points, dimensions=dimensions)
+        asked_non_tried += [
+            x
+            for x in optuna_asked_trials
+            if not self.duplicate_optuna_asked_points(x, optuna_asked_trials)
+        ]
         i = 0
-        asked_non_tried: list[list[Any]] = []
-        is_random_non_tried: list[bool] = []
-        while i < 5 and len(asked_non_tried) < n_points:
-            if i < 3:
-                self.opt.cache_ = {}
-                asked = unique_list(self.opt.ask(n_points=n_points * 5 if i > 0 else n_points))
-                is_random = [False for _ in range(len(asked))]
-            else:
-                asked = unique_list(self.opt.space.rvs(n_samples=n_points * 5))
-                is_random = [True for _ in range(len(asked))]
-            is_random_non_tried += [
-                rand
-                for x, rand in zip(asked, is_random, strict=False)
-                if x not in self.opt.Xi and x not in asked_non_tried
-            ]
-            asked_non_tried += [
-                x for x in asked if x not in self.opt.Xi and x not in asked_non_tried
-            ]
+        while i < 2 * n_points and len(asked_non_tried) < n_points:
+            asked_new = self.get_optuna_asked_points(n_points=1, dimensions=dimensions)[0]
+            if not self.duplicate_optuna_asked_points(asked_new, asked_non_tried):
+                asked_non_tried.append(asked_new)
             i += 1
+        if len(asked_non_tried) < n_points:
+            if self.count_skipped_epochs == 0:
+                logger.warning("Duplicate params detected. Maybe your search space is too small?")
+            self.count_skipped_epochs += n_points - len(asked_non_tried)
 
-        if asked_non_tried:
-            return (
-                asked_non_tried[: min(len(asked_non_tried), n_points)],
-                is_random_non_tried[: min(len(asked_non_tried), n_points)],
-            )
-        else:
-            return self.opt.ask(n_points=n_points), [False for _ in range(n_points)]
+        return asked_non_tried, [False for _ in range(len(asked_non_tried))]
 
     def evaluate_result(self, val: dict[str, Any], current: int, is_random: bool):
         """
@@ -258,9 +256,7 @@ class Hyperopt:
         config_jobs = self.config.get("hyperopt_jobs", -1)
         logger.info(f"Number of parallel jobs set as: {config_jobs}")
 
-        self.opt = self.hyperopter.get_optimizer(
-            config_jobs, self.random_state, INITIAL_POINTS, SKOPT_MODEL_QUEUE_SIZE
-        )
+        self.opt = self.hyperopter.get_optimizer(self.random_state)
         self._setup_logging_mp_workaround()
         try:
             with Parallel(n_jobs=config_jobs) as parallel:
@@ -276,9 +272,11 @@ class Hyperopt:
                     if self.analyze_per_epoch:
                         # First analysis not in parallel mode when using --analyze-per-epoch.
                         # This allows dataprovider to load it's informative cache.
-                        asked, is_random = self.get_asked_points(n_points=1)
-                        f_val0 = self.hyperopter.generate_optimizer(asked[0])
-                        self.opt.tell(asked, [f_val0["loss"]])
+                        asked, is_random = self.get_asked_points(
+                            n_points=1, dimensions=self.hyperopter.o_dimensions
+                        )
+                        f_val0 = self.hyperopter.generate_optimizer(asked[0].params)
+                        self.opt.tell(asked[0], [f_val0["loss"]])
                         self.evaluate_result(f_val0, 1, is_random[0])
                         pbar.update(task, advance=1)
                         start += 1
@@ -290,9 +288,18 @@ class Hyperopt:
                         n_rest = (i + 1) * jobs - (self.total_epochs - start)
                         current_jobs = jobs - n_rest if n_rest > 0 else jobs
 
-                        asked, is_random = self.get_asked_points(n_points=current_jobs)
-                        f_val = self.run_optimizer_parallel(parallel, asked)
-                        self.opt.tell(asked, [v["loss"] for v in f_val])
+                        asked, is_random = self.get_asked_points(
+                            n_points=current_jobs, dimensions=self.hyperopter.o_dimensions
+                        )
+
+                        f_val = self.run_optimizer_parallel(
+                            parallel,
+                            [asked1.params for asked1 in asked],
+                        )
+
+                        f_val_loss = [v["loss"] for v in f_val]
+                        for o_ask, v in zip(asked, f_val_loss, strict=False):
+                            self.opt.tell(o_ask, v)
 
                         for j, val in enumerate(f_val):
                             # Use human-friendly indexes here (starting from 1)
@@ -301,9 +308,23 @@ class Hyperopt:
                             self.evaluate_result(val, current, is_random[j])
                             pbar.update(task, advance=1)
                         logging_mp_handle(log_queue)
+                        gc.collect()
+
+                        if (
+                            self.hyperopter.es_epochs > 0
+                            and self.hyperopter.es_terminator.should_terminate(self.opt)
+                        ):
+                            logger.info(f"Early stopping after {(i + 1) * jobs} epochs")
+                            break
 
         except KeyboardInterrupt:
             print("User interrupted..")
+
+        if self.count_skipped_epochs > 0:
+            logger.info(
+                f"{self.count_skipped_epochs} {plural(self.count_skipped_epochs, 'epoch')} "
+                f"skipped due to duplicate parameters."
+            )
 
         logger.info(
             f"{self.num_epochs_saved} {plural(self.num_epochs_saved, 'epoch')} "

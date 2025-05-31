@@ -408,14 +408,13 @@ EXCHANGES = {
         "candle_count": 200,
         "orderbook_max_entries": 50,
     },
-    # TODO: verify why htx is not working in CI.
-    # "htx": {
-    #     "pair": "ETH/BTC",
-    #     "stake_currency": "BTC",
-    #     "hasQuoteVolume": True,
-    #     "timeframe": "1h",
-    #     "candle_count": 1000,
-    # },
+    "htx": {
+        "pair": "ETH/BTC",
+        "stake_currency": "BTC",
+        "hasQuoteVolume": True,
+        "timeframe": "1h",
+        "candle_count": 1000,
+    },
     "bitvavo": {
         "pair": "BTC/EUR",
         "stake_currency": "EUR",
@@ -600,7 +599,7 @@ def exchange_ws(request, exchange_conf, exchange_mode, class_mocker):
     else:
         pytest.skip("Exchange does not support futures.")
 
-    if not exchange._has_watch_ohlcv:
+    if not exchange._exchange_ws:
         pytest.skip("Exchange does not support watch_ohlcv.")
     yield exchange, name, pair
     exchange.close()
