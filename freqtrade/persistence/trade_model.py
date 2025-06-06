@@ -1649,7 +1649,12 @@ class Trade(ModelBase, LocalTrade):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     orders: Mapped[list[Order]] = relationship(
-        "Order", order_by="Order.id", cascade="all, delete-orphan", lazy="selectin", innerjoin=True
+        "Order",
+        order_by="Order.id",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        innerjoin=True,
+        back_populates="_trade_live",
     )
     custom_data: Mapped[list[_CustomData]] = relationship(
         "_CustomData", cascade="all, delete-orphan", lazy="raise"
