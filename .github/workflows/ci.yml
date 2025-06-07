@@ -90,6 +90,7 @@ jobs:
         COVERALLS_REPO_TOKEN: 6D1m0xupS3FgutfuGao8keFf9Hc0FpIXu
       run: |
         # Allow failure for coveralls
+        uv pip install coveralls
         coveralls || true
 
     - name: Run json schema extract
