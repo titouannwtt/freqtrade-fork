@@ -1046,7 +1046,7 @@ class FreqtradeBot(LoggingMixin):
             trade.adjust_stop_loss(trade.open_rate, stoploss, initial=True)
 
         else:
-            # This is additional entry, we reset fee_open_currency so timeout checking can work
+            # This is additional entry, we reset fee_open_currency so fee checking can work
             trade.is_open = True
             trade.fee_open_currency = None
             trade.set_funding_fees(funding_fees)
