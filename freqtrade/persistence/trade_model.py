@@ -1627,6 +1627,7 @@ class LocalTrade:
                 remaining=order.get("remaining", 0.0),
                 funding_fee=order.get("funding_fee", None),
                 ft_order_tag=order.get("ft_order_tag", None),
+                ft_fee_base=order.get("ft_fee_base", None),
             )
             trade.orders.append(order_obj)
 
