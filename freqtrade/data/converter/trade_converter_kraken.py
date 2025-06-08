@@ -71,7 +71,7 @@ def import_kraken_trades_from_csv(config: Config, convert_to: str):
 
         # drop any row not having a number in the column timestamp
         timestamp_numeric = pd.to_numeric(trades["timestamp"], errors="coerce")
-        trades = trades[timestamp_numeric.notna() & (timestamp_numeric % 1 == 0)]
+        trades = trades[timestamp_numeric.notna()]
 
         trades.loc[:, "timestamp"] = trades["timestamp"] * 1e3
         trades.loc[:, "cost"] = trades["price"] * trades["amount"]
