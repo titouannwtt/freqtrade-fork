@@ -65,9 +65,12 @@ jobs:
         export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
         export TA_LIBRARY_PATH=${HOME}/dependencies/lib
         export TA_INCLUDE_PATH=${HOME}/dependencies/include
+        echo "numpy<2.3.0" > constraints.txt
+        export UV_BUILD_CONSTRAINT=constraints.txt
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
+        rm constraints.txt
 
     - name: Check for version alignment
       run: |
@@ -228,9 +231,12 @@ jobs:
         export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
         export TA_LIBRARY_PATH=${HOME}/dependencies/lib
         export TA_INCLUDE_PATH=${HOME}/dependencies/include
+        echo "numpy<2.3.0" > constraints.txt
+        export UV_BUILD_CONSTRAINT=constraints.txt
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
+        rm constraints.txt
 
     - name: Tests
       run: |
@@ -480,9 +486,13 @@ jobs:
         export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
         export TA_LIBRARY_PATH=${HOME}/dependencies/lib
         export TA_INCLUDE_PATH=${HOME}/dependencies/include
+        echo "numpy<2.3.0" > constraints.txt
+        export UV_BUILD_CONSTRAINT=constraints.txt
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
+        rm constraints.txt
+
 
     - name: Tests incl. ccxt compatibility tests
       env:
