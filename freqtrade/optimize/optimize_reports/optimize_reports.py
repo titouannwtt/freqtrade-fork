@@ -347,7 +347,7 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         else timedelta()
     )
     winner_holding_min = (
-        timedelta(minutes=round(winning_duration[winning_duration > 0].min()))
+        timedelta(minutes=round(winning_duration.min()))
         if not winning_duration.empty
         else timedelta()
     )
@@ -362,7 +362,7 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         else timedelta()
     )
     loser_holding_min = (
-        timedelta(minutes=round(losing_duration[losing_duration > 0].min()))
+        timedelta(minutes=round(losing_duration.min()))
         if not losing_duration.empty
         else timedelta()
     )
