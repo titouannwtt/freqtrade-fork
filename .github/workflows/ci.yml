@@ -629,6 +629,7 @@ jobs:
     uses: ./.github/workflows/docker-build.yml
     permissions:
       packages: write
+      contents: read
     secrets:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
