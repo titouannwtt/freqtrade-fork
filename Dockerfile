@@ -36,6 +36,8 @@ ENV LD_LIBRARY_PATH /usr/local/lib
 COPY --chown=ftuser:ftuser requirements.txt requirements-hyperopt.txt /freqtrade/
 USER ftuser
 RUN  pip install --user --no-cache-dir "numpy<2.3.0" \
+  && echo "numpy<2.3.0" > /tmp/constraints.txt \
+  && export PIP_CONSTRAINT=/tmp/constraints.txt \
   && pip install --user --no-cache-dir -r requirements-hyperopt.txt
 
 # Copy dependencies to runtime-image
