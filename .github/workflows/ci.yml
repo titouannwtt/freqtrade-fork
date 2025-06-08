@@ -66,7 +66,7 @@ jobs:
         export TA_LIBRARY_PATH=${HOME}/dependencies/lib
         export TA_INCLUDE_PATH=${HOME}/dependencies/include
         echo "numpy<2.3.0" > constraints.txt
-        export PIP_CONSTRAINTS=${HOME}/constraints.txt
+        export PIP_CONSTRAINT=${HOME}/constraints.txt
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -231,7 +231,7 @@ jobs:
         export TA_LIBRARY_PATH=${HOME}/dependencies/lib
         export TA_INCLUDE_PATH=${HOME}/dependencies/include
         echo "numpy<2.3.0" > constraints.txt
-        export PIP_CONSTRAINTS=${HOME}/constraints.txt
+        export PIP_CONSTRAINT=${HOME}/constraints.txt
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
