@@ -70,6 +70,7 @@ jobs:
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
+        rm constraints.txt
 
     - name: Check for version alignment
       run: |
@@ -235,6 +236,7 @@ jobs:
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
+        rm constraints.txt
 
     - name: Tests
       run: |
