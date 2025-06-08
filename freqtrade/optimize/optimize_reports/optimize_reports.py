@@ -669,6 +669,7 @@ def generate_backtest_stats(
     all_results: dict[str, BacktestContentType],
     min_date: datetime,
     max_date: datetime,
+    notes: str | None = None,
 ) -> BacktestResultType:
     """
     :param btdata: Backtest data
@@ -694,6 +695,8 @@ def generate_backtest_stats(
             "backtest_start_ts": int(min_date.timestamp()),
             "backtest_end_ts": int(max_date.timestamp()),
         }
+        if notes:
+            metadata[strategy]["notes"] = notes
         result["strategy"][strategy] = strat_stats
 
     strategy_results = generate_strategy_comparison(bt_stats=result["strategy"])
