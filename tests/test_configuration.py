@@ -1062,6 +1062,17 @@ def test__validate_orderflow(default_conf) -> None:
     validate_config_consistency(conf)
 
 
+def test_validate_edge_removal(default_conf):
+    default_conf["edge"] = {
+        "enabled": True,
+    }
+    with pytest.raises(
+        ConfigurationError,
+        match="Edge is no longer supported and has been removed from Freqtrade with 2025.6.",
+    ):
+        validate_config_consistency(default_conf)
+
+
 def test_load_config_test_comments() -> None:
     """
     Load config with comments
