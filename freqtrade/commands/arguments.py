@@ -82,7 +82,7 @@ ARGS_HYPEROPT = [
     "early_stop",
 ]
 
-ARGS_EDGE = [*ARGS_COMMON_OPTIMIZE, "stoploss_range"]
+ARGS_EDGE = [*ARGS_COMMON_OPTIMIZE]
 
 ARGS_LIST_STRATEGIES = [
     "strategy_path",
