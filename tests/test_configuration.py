@@ -1315,23 +1315,6 @@ def test_process_removed_settings(mocker, default_conf, setting):
         process_temporary_deprecated_settings(default_conf)
 
 
-def test_process_deprecated_setting_edge(mocker, edge_conf):
-    patched_configuration_load_config_file(mocker, edge_conf)
-    edge_conf.update(
-        {
-            "edge": {
-                "enabled": True,
-                "capital_available_percentage": 0.5,
-            }
-        }
-    )
-
-    with pytest.raises(
-        OperationalException, match=r"DEPRECATED.*Using 'edge.capital_available_percentage'*"
-    ):
-        process_temporary_deprecated_settings(edge_conf)
-
-
 def test_check_conflicting_settings(mocker, default_conf, caplog):
     patched_configuration_load_config_file(mocker, default_conf)
 

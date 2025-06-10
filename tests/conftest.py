@@ -2584,31 +2584,6 @@ def buy_order_fee():
     }
 
 
-@pytest.fixture(scope="function")
-def edge_conf(default_conf):
-    conf = deepcopy(default_conf)
-    conf["runmode"] = RunMode.DRY_RUN
-    conf["max_open_trades"] = -1
-    conf["tradable_balance_ratio"] = 0.5
-    conf["stake_amount"] = constants.UNLIMITED_STAKE_AMOUNT
-    conf["edge"] = {
-        "enabled": True,
-        "process_throttle_secs": 1800,
-        "calculate_since_number_of_days": 14,
-        "allowed_risk": 0.01,
-        "stoploss_range_min": -0.01,
-        "stoploss_range_max": -0.1,
-        "stoploss_range_step": -0.01,
-        "maximum_winrate": 0.80,
-        "minimum_expectancy": 0.20,
-        "min_trade_number": 15,
-        "max_trade_duration_minute": 1440,
-        "remove_pumps": False,
-    }
-
-    return conf
-
-
 @pytest.fixture
 def rpc_balance():
     return {
