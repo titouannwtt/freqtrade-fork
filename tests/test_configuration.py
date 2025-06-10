@@ -756,27 +756,6 @@ def test_validate_tsl(default_conf):
         validate_config_consistency(default_conf)
 
 
-def test_validate_edge2(edge_conf):
-    edge_conf.update(
-        {
-            "use_exit_signal": True,
-        }
-    )
-    # Passes test
-    validate_config_consistency(edge_conf)
-
-    edge_conf.update(
-        {
-            "use_exit_signal": False,
-        }
-    )
-    with pytest.raises(
-        OperationalException,
-        match="Edge requires `use_exit_signal` to be True, otherwise no sells will happen.",
-    ):
-        validate_config_consistency(edge_conf)
-
-
 def test_validate_whitelist(default_conf):
     default_conf["runmode"] = RunMode.DRY_RUN
     # Test regular case - has whitelist and uses StaticPairlist
