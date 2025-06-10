@@ -190,9 +190,6 @@ delete_trade
 
         :param trade_id: Deletes the trade with this ID from the database.
 
-edge
-	Return information about edge.
-
 forcebuy
 	Buy an asset.
 
