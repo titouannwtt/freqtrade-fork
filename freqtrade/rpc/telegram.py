@@ -1227,10 +1227,13 @@ class Telegram(RPCHandler):
         total_stake = fmt_coin(
             result["total" if full_result else "total_bot"], result["stake"], False
         )
+        fiat_estimated_value = (
+            f"\t`{result['symbol']}: {value}`{fiat_val}\n" if result["symbol"] else ""
+        )
         output += (
             f"\n*Estimated Value{' (Bot managed assets only)' if not full_result else ''}*:\n"
             f"\t`{result['stake']}: {total_stake}`{stake_improve}\n"
-            f"\t`{result['symbol']}: {value}`{fiat_val}\n"
+            f"{fiat_estimated_value}"
         )
         await self._send_msg(
             output, reload_able=True, callback_path="update_balance", query=update.callback_query
