@@ -297,24 +297,6 @@ def patch_whitelist(mocker, conf) -> None:
     )
 
 
-def patch_edge(mocker) -> None:
-    # "ETH/BTC",
-    # "LTC/BTC",
-    # "XRP/BTC",
-    # "NEO/BTC"
-
-    mocker.patch(
-        "freqtrade.edge.Edge._cached_pairs",
-        mocker.PropertyMock(
-            return_value={
-                "NEO/BTC": PairInfo(-0.20, 0.66, 3.71, 0.50, 1.71, 10, 25),
-                "LTC/BTC": PairInfo(-0.21, 0.66, 3.71, 0.50, 1.71, 11, 20),
-            }
-        ),
-    )
-    mocker.patch("freqtrade.edge.Edge.calculate", MagicMock(return_value=True))
-
-
 # Functions for recurrent object patching
 
 

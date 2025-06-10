@@ -43,7 +43,6 @@ from tests.conftest import (
     get_patched_worker,
     log_has,
     log_has_re,
-    patch_edge,
     patch_exchange,
     patch_get_signal,
     patch_wallet,
