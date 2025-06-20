@@ -3,6 +3,27 @@ from copy import deepcopy
 from freqtrade.constants import Config
 
 
+_SENSITIVE_KEYS = [
+    "exchange.key",
+    "exchange.api_key",
+    "exchange.apiKey",
+    "exchange.secret",
+    "exchange.password",
+    "exchange.uid",
+    "exchange.account_id",
+    "exchange.accountId",
+    "exchange.wallet_address",
+    "exchange.walletAddress",
+    "exchange.private_key",
+    "exchange.privateKey",
+    "telegram.token",
+    "telegram.chat_id",
+    "discord.webhook_url",
+    "api_server.password",
+    "webhook.url",
+]
+
+
 def sanitize_config(config: Config, *, show_sensitive: bool = False) -> Config:
     """
     Remove sensitive information from the config.
@@ -12,27 +33,8 @@ def sanitize_config(config: Config, *, show_sensitive: bool = False) -> Config:
     """
     if show_sensitive:
         return config
-    keys_to_remove = [
-        "exchange.key",
-        "exchange.api_key",
-        "exchange.apiKey",
-        "exchange.secret",
-        "exchange.password",
-        "exchange.uid",
-        "exchange.account_id",
-        "exchange.accountId",
-        "exchange.wallet_address",
-        "exchange.walletAddress",
-        "exchange.private_key",
-        "exchange.privateKey",
-        "telegram.token",
-        "telegram.chat_id",
-        "discord.webhook_url",
-        "api_server.password",
-        "webhook.url",
-    ]
     config = deepcopy(config)
-    for key in keys_to_remove:
+    for key in _SENSITIVE_KEYS:
         if "." in key:
             nested_keys = key.split(".")
             nested_config = config
