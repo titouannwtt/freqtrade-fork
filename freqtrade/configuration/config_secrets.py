@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from freqtrade.constants import Config
+from freqtrade.constants import Config, ExchangeConfig
 
 
 _SENSITIVE_KEYS = [
@@ -47,3 +47,17 @@ def sanitize_config(config: Config, *, show_sensitive: bool = False) -> Config:
                 config[key] = "REDACTED"
 
     return config
+
+
+def remove_exchange_credentials(exchange_config: ExchangeConfig, dry_run: bool) -> None:
+    """
+    Removes exchange keys from the configuration and specifies dry-run
+    Used for backtesting / hyperopt and utils.
+    Modifies the input dict!
+    """
+    if dry_run:
+        exchange_config["key"] = ""
+        exchange_config["apiKey"] = ""
+        exchange_config["secret"] = ""
+        exchange_config["password"] = ""
+        exchange_config["uid"] = ""
