@@ -54,10 +54,14 @@ def remove_exchange_credentials(exchange_config: ExchangeConfig, dry_run: bool) 
     Removes exchange keys from the configuration and specifies dry-run
     Used for backtesting / hyperopt and utils.
     Modifies the input dict!
+    :param exchange_config: Exchange configuration
+    :param dry_run: If True, remove sensitive keys from the exchange configuration
     """
-    if dry_run:
-        exchange_config["key"] = ""
-        exchange_config["apiKey"] = ""
-        exchange_config["secret"] = ""
-        exchange_config["password"] = ""
-        exchange_config["uid"] = ""
+    if not dry_run:
+        return
+
+    for key in [k for k in _SENSITIVE_KEYS if k.startswith("exchange.")]:
+        if "." in key:
+            key1 = key.removeprefix("exchange.")
+            if key1 in exchange_config:
+                exchange_config[key1] = ""
