@@ -231,6 +231,49 @@ def calculate_max_drawdown(
     )
 
 
+def calculate_current_drawdown(trades: pd.DataFrame, starting_balance: float):
+    """
+    Calculates the current drawdown (loss from historical maximum) based on closed trades.
+
+    :param trades: DataFrame containing trades (requires columns close_date_dt and profit_abs)
+    :param starting_balance: Initial account balance
+    :return: DrawDownResult object including:
+        - drawdown_abs: Drawdown in absolute terms
+        - relative_account_drawdown: Drawdown relative to max balance
+        - high_value: Maximum profit reached
+        - high_date: Date when the max profit was reached
+    """
+
+    if len(trades) == 0:
+        raise ValueError("Trade dataframe empty.")
+
+    # Sort trades by close date
+    sorted_df = trades.sort_values("close_date_dt").reset_index(drop=True)
+
+    # Calculate cumulative profit
+    cum_profit = sorted_df["profit_abs"].cumsum()
+
+    # Find historical maximum profit and its date
+    max_profit_idx = cum_profit.idxmax()
+    max_profit = cum_profit.iloc[max_profit_idx]
+    max_date = sorted_df.iloc[max_profit_idx]["close_date_dt"]
+
+    # Calculate current and max balance
+    current_balance = starting_balance + cum_profit.iloc[-1]
+    max_balance = starting_balance + max_profit
+
+    # Calculate drawdown
+    drawdown_abs = max_balance - current_balance
+    drawdown_relative = drawdown_abs / max_balance
+
+    return DrawDownResult(
+        drawdown_abs=drawdown_abs,
+        relative_account_drawdown=drawdown_relative,
+        high_value=max_profit,
+        high_date=max_date,
+    )
+
+
 def calculate_csum(trades: pd.DataFrame, starting_balance: float = 0) -> tuple[float, float]:
     """
     Calculate min/max cumsum of trades, to show if the wallet/stake amount ratio is sane
