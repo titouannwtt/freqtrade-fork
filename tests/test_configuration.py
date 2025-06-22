@@ -1603,5 +1603,5 @@ def test_remove_exchange_credentials(default_conf) -> None:
     remove_exchange_credentials(conf["exchange"], True)
     assert conf["exchange"]["key"] == ""
     assert conf["exchange"]["secret"] == ""
-    assert conf["exchange"]["password"] == ""
-    assert conf["exchange"]["uid"] == ""
+    assert conf["exchange"].get("password", "") == ""
+    assert conf["exchange"].get("uid", "") == ""
