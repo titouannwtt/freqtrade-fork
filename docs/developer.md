@@ -304,6 +304,10 @@ The `IProtection` parent class provides a helper method for this in `calculate_l
 
 Most exchanges supported by CCXT should work out of the box.
 
+If you need to implement a specific exchange class, these are found in the `freqtrade/exchange` source folder.
+We recommend looking at existing exchange implementations to get an idea of what might be required.
+Implementing an exchange can be a lot of trial and error, so please bear this in mind. 
+
 To quickly test the public endpoints of an exchange, add a configuration for your exchange to `tests/exchange_online/conftest.py` and run these tests with `pytest --longrun tests/exchange_online/test_ccxt_compat.py`.
 Completing these tests successfully a good basis point (it's a requirement, actually), however these won't guarantee correct exchange functioning, as this only tests public endpoints, but no private endpoint (like generate order or similar).
 
