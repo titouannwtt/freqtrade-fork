@@ -3429,7 +3429,8 @@ class Exchange:
                 raise InvalidOrderException(f"Amount {stake_amount} too high for {pair}")
 
             raise OperationalException(
-                "Looped through all tiers without finding a max leverage. Should never be reached"
+                f"Looped through all tiers without finding a max leverage for {pair}. "
+                "Should never be reached."
             )
 
         elif self.trading_mode == TradingMode.MARGIN:  # Search markets.limits for max lev
