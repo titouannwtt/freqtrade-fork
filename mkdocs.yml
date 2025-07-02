@@ -61,6 +61,8 @@ theme:
   name: material
   logo: "images/logo.png"
   favicon: "images/logo.png"
+  icon:
+    repo: fontawesome/brands/github
   custom_dir: "docs/overrides"
   features:
     - content.code.annotate
