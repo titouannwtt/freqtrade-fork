@@ -68,6 +68,7 @@ theme:
     - content.code.annotate
     - search.share
     - content.code.copy
+    - content.action.edit
     - navigation.top
     - navigation.footer
   palette:
