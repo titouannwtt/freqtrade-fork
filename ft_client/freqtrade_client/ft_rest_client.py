@@ -189,13 +189,6 @@ class FtRestClient:
         """
         return self._get("monthly", params={"timescale": months} if months else None)
 
-    def edge(self):
-        """Return information about edge.
-
-        :return: json object
-        """
-        return self._get("edge")
-
     def profit(self):
         """Return the profit summary.
 
@@ -268,8 +261,8 @@ class FtRestClient:
             params["limit"] = limit
         if offset:
             params["offset"] = offset
-        if order_by_id:
-            params["order_by_id"] = True
+        if not order_by_id:
+            params["order_by_id"] = False
         return self._get("trades", params)
 
     def list_open_trades_custom_data(self, key=None, limit=100, offset=0):

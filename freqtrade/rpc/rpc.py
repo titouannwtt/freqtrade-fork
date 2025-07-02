@@ -35,7 +35,7 @@ from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.ft_types import AnnotationType
 from freqtrade.loggers import bufferHandler
 from freqtrade.persistence import CustomDataWrapper, KeyValueStore, PairLocks, Trade
-from freqtrade.persistence.models import PairLock
+from freqtrade.persistence.models import PairLock, custom_data_rpc_wrapper
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
 from freqtrade.rpc.rpc_types import RPCSendMsg
@@ -1125,6 +1125,7 @@ class RPC:
                 "cancel_order_count": c_count,
             }
 
+    @custom_data_rpc_wrapper
     def _rpc_list_custom_data(
         self, trade_id: int | None = None, key: str | None = None, limit: int = 100, offset: int = 0
     ) -> list[dict[str, Any]]:
@@ -1137,6 +1138,7 @@ class RPC:
         - "custom_data": a list of custom data dicts, each with the fields:
                 "id", "key", "type", "value", "created_at", "updated_at"
         """
+
         trades: Sequence[Trade]
         if trade_id is None:
             # Get all open trades
@@ -1342,12 +1344,6 @@ class RPC:
         #       "freqtrade.worker", "INFO", "Starting worker develop"]
 
         return {"log_count": len(records), "logs": records}
-
-    def _rpc_edge(self) -> list[dict[str, Any]]:
-        """Returns information related to Edge"""
-        if not self._freqtrade.edge:
-            raise RPCException("Edge is not enabled.")
-        return self._freqtrade.edge.accepted_pairs()
 
     @staticmethod
     def _convert_dataframe_to_dict(
