@@ -199,6 +199,19 @@ class Exchange:
 
         self._config.update(config)
 
+        # Leverage properties
+        self.trading_mode: TradingMode = config.get("trading_mode", TradingMode.SPOT)
+        self.margin_mode: MarginMode = (
+            MarginMode(config.get("margin_mode")) if config.get("margin_mode") else MarginMode.NONE
+        )
+        self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
+
+        exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
+
+        # Deep merge ft_has with default ft_has options
+        # Must be called before ft_has is used.
+        self.build_ft_has(exchange_conf)
+
         # Holds last candle refreshed time of each pair
         self._pairs_last_refresh_time: dict[PairWithTimeframe, int] = {}
         # Timestamp of last markets refresh
@@ -227,21 +240,9 @@ class Exchange:
         if config["dry_run"]:
             logger.info("Instance is running with dry_run enabled")
         logger.info(f"Using CCXT {ccxt.__version__}")
-        exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
 
         remove_exchange_credentials(exchange_conf, config.get("dry_run", False))
         self.log_responses = exchange_conf.get("log_responses", False)
-
-        # Leverage properties
-        self.trading_mode: TradingMode = config.get("trading_mode", TradingMode.SPOT)
-        self.margin_mode: MarginMode = (
-            MarginMode(config.get("margin_mode")) if config.get("margin_mode") else MarginMode.NONE
-        )
-        self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
-
-        # Deep merge ft_has with default ft_has options
-        # Must be called before ft_has is used.
-        self.build_ft_has(exchange_conf)
 
         # Assign this directly for easy access
         self._ohlcv_partial_candle = self._ft_has["ohlcv_partial_candle"]
