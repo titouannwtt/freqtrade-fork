@@ -18,7 +18,6 @@ class Luno(Exchange):
     """
 
     _ft_has: FtHas = {
-        "ohlcv_candle_limit": 1000,
         "ohlcv_has_history": False,  # Only provides the last 1000 candles
         "always_require_api_keys": True,  # Requires API keys to fetch candles
         "trades_has_history": False,  # Only the last 24h are available
