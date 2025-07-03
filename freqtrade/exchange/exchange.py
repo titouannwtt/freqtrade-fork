@@ -137,6 +137,7 @@ class Exchange:
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
         "ohlcv_partial_candle": True,
         "ohlcv_require_since": False,
+        "always_require_api_keys": False,  # purge API keys for Dry-run. Must default to false.
         # Check https://github.com/ccxt/ccxt/issues/10767 for removal of ohlcv_volume_currency
         "ohlcv_volume_currency": "base",  # "base" or "quote"
         "tickers_have_quoteVolume": True,
@@ -241,7 +242,11 @@ class Exchange:
             logger.info("Instance is running with dry_run enabled")
         logger.info(f"Using CCXT {ccxt.__version__}")
 
-        remove_exchange_credentials(exchange_conf, config.get("dry_run", False))
+        # Don't remove exchange credentials for dry-run or if always_require_api_keys is set
+        remove_exchange_credentials(
+            exchange_conf,
+            not self._ft_has["always_require_api_keys"] and config.get("dry_run", False),
+        )
         self.log_responses = exchange_conf.get("log_responses", False)
 
         # Assign this directly for easy access
