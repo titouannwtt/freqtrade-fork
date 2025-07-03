@@ -58,7 +58,7 @@ def setup_logging_pre() -> None:
 FT_LOGGING_CONFIG = {
     "version": 1,
     # "incremental": True,
-    # "disable_existing_loggers": False,
+    "disable_existing_loggers": False,
     "formatters": {
         "basic": {"format": "%(message)s"},
         "standard": {
