@@ -227,7 +227,8 @@ class Exchange:
         if config["dry_run"]:
             logger.info("Instance is running with dry_run enabled")
         logger.info(f"Using CCXT {ccxt.__version__}")
-        exchange_conf: dict[str, Any] = exchange_config if exchange_config else config["exchange"]
+        exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
+
         remove_exchange_credentials(exchange_conf, config.get("dry_run", False))
         self.log_responses = exchange_conf.get("log_responses", False)
 
@@ -239,12 +240,8 @@ class Exchange:
         self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
 
         # Deep merge ft_has with default ft_has options
-        self._ft_has = deep_merge_dicts(self._ft_has, deepcopy(self._ft_has_default))
-        if self.trading_mode == TradingMode.FUTURES:
-            self._ft_has = deep_merge_dicts(self._ft_has_futures, self._ft_has)
-        if exchange_conf.get("_ft_has_params"):
-            self._ft_has = deep_merge_dicts(exchange_conf.get("_ft_has_params"), self._ft_has)
-            logger.info("Overriding exchange._ft_has with config params, result: %s", self._ft_has)
+        # Must be called before ft_has is used.
+        self.build_ft_has(exchange_conf)
 
         # Assign this directly for easy access
         self._ohlcv_partial_candle = self._ft_has["ohlcv_partial_candle"]
@@ -875,6 +872,20 @@ class Exchange:
             raise ConfigurationError(
                 f"Freqtrade does not support '{mm_value}' '{trading_mode}' on {self.name}."
             )
+
+    def build_ft_has(self, exchange_conf: ExchangeConfig) -> None:
+        """
+        Deep merge ft_has with default ft_has options
+        and with exchange_conf._ft_has_params if available.
+        This is called on initialization of the exchange object.
+        It must be called before ft_has is used.
+        """
+        self._ft_has = deep_merge_dicts(self._ft_has, deepcopy(self._ft_has_default))
+        if self.trading_mode == TradingMode.FUTURES:
+            self._ft_has = deep_merge_dicts(self._ft_has_futures, self._ft_has)
+        if exchange_conf.get("_ft_has_params"):
+            self._ft_has = deep_merge_dicts(exchange_conf.get("_ft_has_params"), self._ft_has)
+            logger.info("Overriding exchange._ft_has with config params, result: %s", self._ft_has)
 
     def get_option(self, param: str, default: Any | None = None) -> Any:
         """
