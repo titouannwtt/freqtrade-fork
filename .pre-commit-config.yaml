@@ -26,6 +26,7 @@ repos:
       - id: mypy
         exclude: build_helpers
         additional_dependencies:
+          - scipy-stubs==1.15.3.0
           - types-cachetools==6.0.0.20250525
           - types-filelock==3.2.7
           - types-requests==2.32.4.20250611

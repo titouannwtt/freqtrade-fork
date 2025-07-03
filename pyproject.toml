@@ -111,6 +111,7 @@ develop = [
   "pytest-xdist",
   "pytest",
   "ruff",
+  "scipy-stubs",
   "time-machine",
   "types-cachetools",
   "types-filelock",
