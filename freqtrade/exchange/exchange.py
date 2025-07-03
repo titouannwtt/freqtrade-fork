@@ -249,11 +249,6 @@ class Exchange:
         # Assign this directly for easy access
         self._ohlcv_partial_candle = self._ft_has["ohlcv_partial_candle"]
 
-        self._max_trades_limit = self._ft_has["trades_limit"]
-
-        self._trades_pagination = self._ft_has["trades_pagination"]
-        self._trades_pagination_arg = self._ft_has["trades_pagination_arg"]
-
         # Initialize ccxt objects
         ccxt_config = self._ccxt_config
         ccxt_config = deep_merge_dicts(exchange_conf.get("ccxt_config", {}), ccxt_config)
@@ -2995,7 +2990,7 @@ class Exchange:
         returns: List of dicts containing trades, the next iteration value (new "since" or trade_id)
         """
         try:
-            trades_limit = self._max_trades_limit
+            trades_limit = self._ft_has["trades_limit"]
             # fetch trades asynchronously
             if params:
                 logger.debug("Fetching trades for pair %s, params: %s ", pair, params)
@@ -3039,7 +3034,7 @@ class Exchange:
         """
         if not trades:
             return None
-        if self._trades_pagination == "id":
+        if self._ft_has["trades_pagination"] == "id":
             return trades[-1].get("id")
         else:
             return trades[-1].get("timestamp")
@@ -3057,7 +3052,7 @@ class Exchange:
     ) -> tuple[str, list[list]]:
         """
         Asynchronously gets trade history using fetch_trades
-        use this when exchange uses id-based iteration (check `self._trades_pagination`)
+        use this when exchange uses id-based iteration (check `self._ft_has["trades_pagination"]`)
         :param pair: Pair to fetch trade data for
         :param since: Since as integer timestamp in milliseconds
         :param until: Until as integer timestamp in milliseconds
@@ -3083,7 +3078,7 @@ class Exchange:
         while True:
             try:
                 t, from_id_next = await self._async_fetch_trades(
-                    pair, params={self._trades_pagination_arg: from_id}
+                    pair, params={self._ft_has["trades_pagination_arg"]: from_id}
                 )
                 if t:
                     trades.extend(t[x])
@@ -3111,7 +3106,7 @@ class Exchange:
     ) -> tuple[str, list[list]]:
         """
         Asynchronously gets trade history using fetch_trades,
-        when the exchange uses time-based iteration (check `self._trades_pagination`)
+        when the exchange uses time-based iteration (check `self._ft_has["trades_pagination"]`)
         :param pair: Pair to fetch trade data for
         :param since: Since as integer timestamp in milliseconds
         :param until: Until as integer timestamp in milliseconds
@@ -3165,9 +3160,9 @@ class Exchange:
             until = ccxt.Exchange.milliseconds()
             logger.debug(f"Exchange milliseconds: {until}")
 
-        if self._trades_pagination == "time":
+        if self._ft_has["trades_pagination"] == "time":
             return await self._async_get_trade_history_time(pair=pair, since=since, until=until)
-        elif self._trades_pagination == "id":
+        elif self._ft_has["trades_pagination"] == "id":
             return await self._async_get_trade_history_id(
                 pair=pair, since=since, until=until, from_id=from_id
             )

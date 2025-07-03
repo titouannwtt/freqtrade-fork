@@ -399,7 +399,7 @@ class Binance(Exchange):
                 trades = await self._api_async.fetch_trades(
                     pair,
                     params={
-                        self._trades_pagination_arg: "0",
+                        self._ft_has["trades_pagination_arg"]: "0",
                     },
                     limit=5,
                 )
