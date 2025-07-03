@@ -3269,7 +3269,7 @@ async def test__async_fetch_trades(
     assert isinstance(res, list)
     assert isinstance(res[0], list)
     assert isinstance(res[1], list)
-    if exchange._trades_pagination == "id":
+    if exchange._ft_has["trades_pagination"] == "id":
         if exchange_name == "kraken":
             assert pagid == 1565798399872512133
         else:
@@ -3290,7 +3290,7 @@ async def test__async_fetch_trades(
     assert exchange._api_async.fetch_trades.call_args[1]["limit"] == 1000
     assert exchange._api_async.fetch_trades.call_args[1]["params"] == {"from": "123"}
 
-    if exchange._trades_pagination == "id":
+    if exchange._ft_has["trades_pagination"] == "id":
         if exchange_name == "kraken":
             assert pagid == 1565798399872512133
         else:
@@ -3379,10 +3379,10 @@ async def test__async_get_trade_history_id(
 ):
     default_conf["exchange"]["only_from_ccxt"] = True
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
-    if exchange._trades_pagination != "id":
+    if exchange._ft_has["trades_pagination"] != "id":
         exchange.close()
         pytest.skip("Exchange does not support pagination by trade id")
-    pagination_arg = exchange._trades_pagination_arg
+    pagination_arg = exchange._ft_has["trades_pagination_arg"]
 
     async def mock_get_trade_hist(pair, *args, **kwargs):
         if "since" in kwargs:
@@ -3456,7 +3456,7 @@ async def test__async_get_trade_history_time(
 
     caplog.set_level(logging.DEBUG)
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
-    if exchange._trades_pagination != "time":
+    if exchange._ft_has["trades_pagination"] != "time":
         exchange.close()
         pytest.skip("Exchange does not support pagination by timestamp")
     # Monkey-patch async function
