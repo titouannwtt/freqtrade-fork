@@ -79,7 +79,7 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
         watch_call_count += 1
         # Signal that a watch call happened
         watch_call_event.set()
-        await asyncio.sleep(0.01)  # Minimal delay for realism
+        await asyncio.sleep(0.1)
         return MagicMock()
 
     async def wait_for_condition(condition_func, timeout=5.0, check_interval=0.01):
