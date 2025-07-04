@@ -4,7 +4,7 @@ import logging
 import platform
 import re
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, PropertyMock
 
@@ -126,7 +126,7 @@ def get_args(args):
 def generate_trades_history(n_rows, start_date: datetime | None = None, days=5):
     np.random.seed(42)
     if not start_date:
-        start_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        start_date = datetime(2020, 1, 1, tzinfo=UTC)
 
         # Generate random data
     end_date = start_date + timedelta(days=days)
