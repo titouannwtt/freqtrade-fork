@@ -50,18 +50,14 @@ def test_dt_ts_none():
 
 def test_dt_utc():
     assert dt_utc(2023, 5, 5) == datetime(2023, 5, 5, tzinfo=UTC)
-    assert dt_utc(2023, 5, 5, 0, 0, 0, 555500) == datetime(
-        2023, 5, 5, 0, 0, 0, 555500, tzinfo=UTC
-    )
+    assert dt_utc(2023, 5, 5, 0, 0, 0, 555500) == datetime(2023, 5, 5, 0, 0, 0, 555500, tzinfo=UTC)
 
 
 @pytest.mark.parametrize("as_ms", [True, False])
 def test_dt_from_ts(as_ms):
     multi = 1000 if as_ms else 1
     assert dt_from_ts(1683244800.0 * multi) == datetime(2023, 5, 5, tzinfo=UTC)
-    assert dt_from_ts(1683244800.5555 * multi) == datetime(
-        2023, 5, 5, 0, 0, 0, 555500, tzinfo=UTC
-    )
+    assert dt_from_ts(1683244800.5555 * multi) == datetime(2023, 5, 5, 0, 0, 0, 555500, tzinfo=UTC)
     # As int
     assert dt_from_ts(1683244800 * multi) == datetime(2023, 5, 5, tzinfo=UTC)
     # As milliseconds
