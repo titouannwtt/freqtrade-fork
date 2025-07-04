@@ -74,14 +74,16 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
         await asyncio.sleep(0.1)
         return MagicMock()
 
-    async def wait_for_condition(condition_func, timeout=5.0, check_interval=0.01):
+    async def wait_for_condition(condition_func, timeout_=5.0, check_interval=0.01):
         """Wait for a condition to be true with timeout."""
-        start_time = asyncio.get_event_loop().time()
-        while asyncio.get_event_loop().time() - start_time < timeout:
-            if condition_func():
-                return True
-            await asyncio.sleep(check_interval)
-        return False
+        try:
+            async with asyncio.timeout(timeout_):
+                while True:
+                    if condition_func():
+                        return True
+                    await asyncio.sleep(check_interval)
+        except TimeoutError:
+            return False
 
     ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock(side_effect=NotSupported)
     ccxt_object.watch_ohlcv = AsyncMock(side_effect=controlled_sleeper)
@@ -104,7 +106,7 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
             lambda: (
                 len(exchange_ws._klines_watching) == 2 and len(exchange_ws._klines_scheduled) == 2
             ),
-            timeout=2.0,
+            timeout_=2.0,
         )
 
         assert exchange_ws._klines_watching == {
@@ -117,7 +119,7 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
         }
 
         # Wait for the expected number of watch calls
-        await wait_for_condition(lambda: ccxt_object.watch_ohlcv.call_count >= 6, timeout=3.0)
+        await wait_for_condition(lambda: ccxt_object.watch_ohlcv.call_count >= 6, timeout_=3.0)
         assert ccxt_object.watch_ohlcv.call_count >= 6
         ccxt_object.watch_ohlcv.reset_mock()
 
@@ -126,7 +128,7 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
 
         # Wait for log message
         await wait_for_condition(
-            lambda: log_has_re("un_watch_ohlcv_for_symbols not supported: ", caplog), timeout=2.0
+            lambda: log_has_re("un_watch_ohlcv_for_symbols not supported: ", caplog), timeout_=2.0
         )
         assert log_has_re("un_watch_ohlcv_for_symbols not supported: ", caplog)
 
