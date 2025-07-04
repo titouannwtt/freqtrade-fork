@@ -69,16 +69,8 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
     ccxt_object = MagicMock()
     caplog.set_level(logging.DEBUG)
 
-    # Create synchronization events for deterministic testing
-    watch_call_event = asyncio.Event()
-    watch_call_count = 0
-
     async def controlled_sleeper(*args, **kwargs):
-        """Controlled async function that signals when called."""
-        nonlocal watch_call_count
-        watch_call_count += 1
-        # Signal that a watch call happened
-        watch_call_event.set()
+        # Sleep to pass control back to the event loop
         await asyncio.sleep(0.1)
         return MagicMock()
 
@@ -124,7 +116,7 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
             ("XRP/BTC", "1m", CandleType.SPOT),
         }
 
-        # Wait for the expected number of watch calls (should be 6 based on original test logic)
+        # Wait for the expected number of watch calls
         await wait_for_condition(lambda: ccxt_object.watch_ohlcv.call_count >= 6, timeout=3.0)
         assert ccxt_object.watch_ohlcv.call_count == 6
         ccxt_object.watch_ohlcv.reset_mock()
