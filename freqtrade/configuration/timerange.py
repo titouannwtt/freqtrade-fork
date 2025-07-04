@@ -150,9 +150,7 @@ class TimeRange:
                     starts = rvals[index]
                     if stype[0] == "date" and len(starts) == 8:
                         start = int(
-                            datetime.strptime(starts, "%Y%m%d")
-                            .replace(tzinfo=UTC)
-                            .timestamp()
+                            datetime.strptime(starts, "%Y%m%d").replace(tzinfo=UTC).timestamp()
                         )
                     elif len(starts) == 13:
                         start = int(starts) // 1000
@@ -163,9 +161,7 @@ class TimeRange:
                     stops = rvals[index]
                     if stype[1] == "date" and len(stops) == 8:
                         stop = int(
-                            datetime.strptime(stops, "%Y%m%d")
-                            .replace(tzinfo=UTC)
-                            .timestamp()
+                            datetime.strptime(stops, "%Y%m%d").replace(tzinfo=UTC).timestamp()
                         )
                     elif len(stops) == 13:
                         stop = int(stops) // 1000

@@ -1583,9 +1583,7 @@ class FreqtradeBot(LoggingMixin):
                 if not_closed:
                     if fully_cancelled or (
                         open_order
-                        and self.strategy.ft_check_timed_out(
-                            trade, open_order, datetime.now(UTC)
-                        )
+                        and self.strategy.ft_check_timed_out(trade, open_order, datetime.now(UTC))
                     ):
                         self.handle_cancel_order(
                             order, open_order, trade, constants.CANCEL_REASON["TIMEOUT"]

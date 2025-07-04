@@ -71,9 +71,7 @@ class PairLock(ModelBase):
             "lock_time": self.lock_time.strftime(DATETIME_PRINT_FORMAT),
             "lock_timestamp": int(self.lock_time.replace(tzinfo=UTC).timestamp() * 1000),
             "lock_end_time": self.lock_end_time.strftime(DATETIME_PRINT_FORMAT),
-            "lock_end_timestamp": int(
-                self.lock_end_time.replace(tzinfo=UTC).timestamp() * 1000
-            ),
+            "lock_end_timestamp": int(self.lock_end_time.replace(tzinfo=UTC).timestamp() * 1000),
             "reason": self.reason,
             "side": self.side,
             "active": self.active,
