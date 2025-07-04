@@ -5,7 +5,7 @@ Unit test file for rpc/api_server.py
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, PropertyMock
 
@@ -637,12 +637,12 @@ def test_api_locks(botclient):
         [
             {
                 "pair": "ETH/BTC",
-                "until": f"{format_date(datetime.now(timezone.utc) + timedelta(minutes=4))}Z",
+                "until": f"{format_date(datetime.now(UTC) + timedelta(minutes=4))}Z",
                 "reason": "randreason",
             },
             {
                 "pair": "XRP/BTC",
-                "until": f"{format_date(datetime.now(timezone.utc) + timedelta(minutes=20))}Z",
+                "until": f"{format_date(datetime.now(UTC) + timedelta(minutes=20))}Z",
                 "reason": "deadbeef",
             },
         ],
@@ -711,7 +711,7 @@ def test_api_daily(botclient, mocker, ticker, fee, markets):
     assert len(response["data"]) == 7
     assert response["stake_currency"] == "BTC"
     assert response["fiat_display_currency"] == "USD"
-    assert response["data"][0]["date"] == str(datetime.now(timezone.utc).date())
+    assert response["data"][0]["date"] == str(datetime.now(UTC).date())
 
 
 def test_api_weekly(botclient, mocker, ticker, fee, markets, time_machine):
@@ -1695,7 +1695,7 @@ def test_api_force_entry(botclient, mocker, fee, endpoint):
             exchange="binance",
             stake_amount=1,
             open_rate=0.245441,
-            open_date=datetime.now(timezone.utc),
+            open_date=datetime.now(UTC),
             is_open=False,
             is_short=False,
             fee_close=fee.return_value,
