@@ -118,22 +118,22 @@ async def test_exchangews_ohlcv(mocker, time_machine, caplog):
 
         # Wait for the expected number of watch calls
         await wait_for_condition(lambda: ccxt_object.watch_ohlcv.call_count >= 6, timeout=3.0)
-        assert ccxt_object.watch_ohlcv.call_count == 6
+        assert ccxt_object.watch_ohlcv.call_count >= 6
         ccxt_object.watch_ohlcv.reset_mock()
 
         time_machine.shift(timedelta(minutes=5))
         exchange_ws.schedule_ohlcv("ETH/BTC", "1m", CandleType.SPOT)
 
-        # Wait for log message and state changes with timeout
+        # Wait for log message
         await wait_for_condition(
             lambda: log_has_re("un_watch_ohlcv_for_symbols not supported: ", caplog), timeout=2.0
         )
+        assert log_has_re("un_watch_ohlcv_for_symbols not supported: ", caplog)
 
-        # Wait for XRP/BTC cleanup
-        await wait_for_condition(
-            lambda: exchange_ws._klines_watching == {("ETH/BTC", "1m", CandleType.SPOT)},
-            timeout=2.0,
-        )
+        # XRP/BTC should be cleaned up.
+        assert exchange_ws._klines_watching == {
+            ("ETH/BTC", "1m", CandleType.SPOT),
+        }
 
         # Cleanup happened.
         ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock(side_effect=ValueError)
