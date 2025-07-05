@@ -5935,6 +5935,10 @@ def test_get_max_leverage_futures(default_conf, mocker, leverage_tiers):
     ):
         exchange.get_max_leverage("BTC/USDT:USDT", 1000000000.01)
 
+    assert exchange.get_max_leverage("TIA/USDT:USDT", 130) == 50
+    assert exchange.get_max_leverage("TIA/USDT:USDT", 131) == 40
+    assert exchange.get_max_leverage("TIA/USDT:USDT", 130.008) == 40
+
 
 @pytest.mark.parametrize("exchange_name", ["binance", "kraken", "gate", "okx", "bybit"])
 def test__get_params(mocker, default_conf, exchange_name):
