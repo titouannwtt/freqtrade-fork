@@ -3405,4 +3405,35 @@ def leverage_tiers():
                 "maintAmt": 654500.0,
             },
         ],
+        "TIA/USDT:USDT": [
+            # Okx tier - these have a gap between maxNotional and the next minNotional
+            {
+                "minNotional": 0.0,
+                "maxNotional": 6500.0,
+                "maintenanceMarginRate": 0.0065,
+                "maxLeverage": 50.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 6501.0,
+                "maxNotional": 12000.0,
+                "maintenanceMarginRate": 0.01,
+                "maxLeverage": 40.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 12001.0,
+                "maxNotional": 25000.0,
+                "maintenanceMarginRate": 0.015,
+                "maxLeverage": 20.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 25001.0,
+                "maxNotional": 50000.0,
+                "maintenanceMarginRate": 0.02,
+                "maxLeverage": 18.18,
+                "maintAmt": None,
+            },
+        ],
     }
