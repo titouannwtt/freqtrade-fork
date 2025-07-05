@@ -3435,6 +3435,9 @@ class Exchange:
                 if min_stake <= stake_amount <= max_stake:
                     return tier["maxLeverage"]
                 if stake_amount < min_stake and stake_amount <= max_stake:
+                    # TODO: Remove this warning eventually
+                    # Code could be simplified by removing the check for min-stake in the above
+                    # condition, making this branch unnecessary.
                     logger.warning(
                         f"Fallback to next higher leverage tier for {pair}, stake: {stake_amount}, "
                         f"min_stake: {min_stake}."
