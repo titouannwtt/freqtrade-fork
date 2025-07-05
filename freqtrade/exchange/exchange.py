@@ -3434,6 +3434,12 @@ class Exchange:
                 prior_max_lev = tier["maxLeverage"]
                 if min_stake <= stake_amount <= max_stake:
                     return tier["maxLeverage"]
+                if stake_amount < min_stake and stake_amount <= max_stake:
+                    logger.warning(
+                        f"Fallback to next higher leverage tier for {pair}, stake: {stake_amount}, "
+                        f"min_stake: {min_stake}."
+                    )
+                    return tier["maxLeverage"]
 
             #     else:  # if on the last tier
             if stake_amount > max_stake:
