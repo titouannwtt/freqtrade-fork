@@ -199,7 +199,7 @@ def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_r
 ```
 
 !!! Note
-    `enter_tag` is limited to 100 characters, remaining data will be truncated.
+    `enter_tag` is limited to 255 characters, remaining data will be truncated.
 
 !!! Warning
     There is only one `enter_tag` column, which is used for both long and short trades.
