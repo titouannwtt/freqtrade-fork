@@ -5,7 +5,7 @@ Freqtrade is the main module of this bot. It contains the class Freqtrade()
 import logging
 import traceback
 from copy import deepcopy
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from math import isclose
 from threading import Lock
 from time import sleep
@@ -266,7 +266,7 @@ class FreqtradeBot(LoggingMixin):
         )
 
         strategy_safe_wrapper(self.strategy.bot_loop_start, supress_error=True)(
-            current_time=datetime.now(timezone.utc)
+            current_time=datetime.now(UTC)
         )
 
         with self._measure_execution:
@@ -296,7 +296,7 @@ class FreqtradeBot(LoggingMixin):
         self._schedule.run_pending()
         Trade.commit()
         self.rpc.process_msg_queue(self.dataprovider._msg_queue)
-        self.last_process = datetime.now(timezone.utc)
+        self.last_process = datetime.now(UTC)
 
     def process_stopped(self) -> None:
         """
@@ -421,7 +421,7 @@ class FreqtradeBot(LoggingMixin):
 
             except InvalidOrderException as e:
                 logger.warning(f"Error updating Order {order.order_id} due to {e}.")
-                if order.order_date_utc - timedelta(days=5) < datetime.now(timezone.utc):
+                if order.order_date_utc - timedelta(days=5) < datetime.now(UTC):
                     logger.warning(
                         "Order is older than 5 days. Assuming order was fully cancelled."
                     )
@@ -755,7 +755,7 @@ class FreqtradeBot(LoggingMixin):
         logger.debug(f"Calling adjust_trade_position for pair {trade.pair}")
         stake_amount, order_tag = self.strategy._adjust_trade_position_internal(
             trade=trade,
-            current_time=datetime.now(timezone.utc),
+            current_time=datetime.now(UTC),
             current_rate=current_entry_rate,
             current_profit=current_entry_profit,
             min_stake=min_entry_stake,
@@ -916,7 +916,7 @@ class FreqtradeBot(LoggingMixin):
             amount=amount,
             rate=enter_limit_requested,
             time_in_force=time_in_force,
-            current_time=datetime.now(timezone.utc),
+            current_time=datetime.now(UTC),
             entry_tag=enter_tag,
             side=trade_side,
         ):
@@ -987,7 +987,7 @@ class FreqtradeBot(LoggingMixin):
         # Fee is applied twice because we make a LIMIT_BUY and LIMIT_SELL
         fee = self.exchange.get_fee(symbol=pair, taker_or_maker="maker")
         base_currency = self.exchange.get_pair_base_currency(pair)
-        open_date = datetime.now(timezone.utc)
+        open_date = datetime.now(UTC)
 
         funding_fees = self.exchange.get_funding_fees(
             pair=pair,
@@ -1106,7 +1106,7 @@ class FreqtradeBot(LoggingMixin):
             )(
                 pair=pair,
                 trade=trade,
-                current_time=datetime.now(timezone.utc),
+                current_time=datetime.now(UTC),
                 proposed_rate=enter_limit_requested,
                 entry_tag=entry_tag,
                 side=trade_side,
@@ -1124,7 +1124,7 @@ class FreqtradeBot(LoggingMixin):
             else:
                 leverage = strategy_safe_wrapper(self.strategy.leverage, default_retval=1.0)(
                     pair=pair,
-                    current_time=datetime.now(timezone.utc),
+                    current_time=datetime.now(UTC),
                     current_rate=enter_limit_requested,
                     proposed_leverage=1.0,
                     max_leverage=max_leverage,
@@ -1157,7 +1157,7 @@ class FreqtradeBot(LoggingMixin):
                 self.strategy.custom_stake_amount, default_retval=stake_amount
             )(
                 pair=pair,
-                current_time=datetime.now(timezone.utc),
+                current_time=datetime.now(UTC),
                 current_rate=enter_limit_requested,
                 proposed_stake=stake_amount,
                 min_stake=min_stake_amount,
@@ -1222,7 +1222,7 @@ class FreqtradeBot(LoggingMixin):
             "quote_currency": self.exchange.get_pair_quote_currency(trade.pair),
             "fiat_currency": self.config.get("fiat_display_currency", None),
             "amount": order.safe_amount_after_fee if fill else (order.safe_amount or trade.amount),
-            "open_date": trade.open_date_utc or datetime.now(timezone.utc),
+            "open_date": trade.open_date_utc or datetime.now(UTC),
             "current_rate": current_rate,
             "sub_trade": sub_trade,
         }
@@ -1361,7 +1361,7 @@ class FreqtradeBot(LoggingMixin):
         exits: list[ExitCheckTuple] = self.strategy.should_exit(
             trade,
             exit_rate,
-            datetime.now(timezone.utc),
+            datetime.now(UTC),
             enter=enter,
             exit_=exit_,
             force_stoploss=0,
@@ -1496,7 +1496,7 @@ class FreqtradeBot(LoggingMixin):
         if self.exchange.stoploss_adjust(stoploss_norm, order, side=trade.exit_side):
             # we check if the update is necessary
             update_beat = self.strategy.order_types.get("stoploss_on_exchange_interval", 60)
-            upd_req = datetime.now(timezone.utc) - timedelta(seconds=update_beat)
+            upd_req = datetime.now(UTC) - timedelta(seconds=update_beat)
             if trade.stoploss_last_update_utc and upd_req >= trade.stoploss_last_update_utc:
                 # cancelling the current stoploss on exchange first
                 logger.info(
@@ -1583,9 +1583,7 @@ class FreqtradeBot(LoggingMixin):
                 if not_closed:
                     if fully_cancelled or (
                         open_order
-                        and self.strategy.ft_check_timed_out(
-                            trade, open_order, datetime.now(timezone.utc)
-                        )
+                        and self.strategy.ft_check_timed_out(trade, open_order, datetime.now(UTC))
                     ):
                         self.handle_cancel_order(
                             order, open_order, trade, constants.CANCEL_REASON["TIMEOUT"]
@@ -1683,7 +1681,7 @@ class FreqtradeBot(LoggingMixin):
                 trade=trade,
                 order=order_obj,
                 pair=trade.pair,
-                current_time=datetime.now(timezone.utc),
+                current_time=datetime.now(UTC),
                 proposed_rate=proposed_rate,
                 current_order_rate=order_obj.safe_placement_price,
                 entry_tag=trade.enter_tag,
@@ -2075,7 +2073,7 @@ class FreqtradeBot(LoggingMixin):
         )(
             pair=trade.pair,
             trade=trade,
-            current_time=datetime.now(timezone.utc),
+            current_time=datetime.now(UTC),
             proposed_rate=proposed_limit_rate,
             current_profit=current_profit,
             exit_tag=exit_reason,
@@ -2106,7 +2104,7 @@ class FreqtradeBot(LoggingMixin):
                 time_in_force=time_in_force,
                 exit_reason=exit_reason,
                 sell_reason=exit_reason,  # sellreason -> compatibility
-                current_time=datetime.now(timezone.utc),
+                current_time=datetime.now(UTC),
             )
         ):
             logger.info(f"User denied exit for {trade.pair}.")
@@ -2202,7 +2200,7 @@ class FreqtradeBot(LoggingMixin):
             "enter_tag": trade.enter_tag,
             "exit_reason": trade.exit_reason,
             "open_date": trade.open_date_utc,
-            "close_date": trade.close_date_utc or datetime.now(timezone.utc),
+            "close_date": trade.close_date_utc or datetime.now(UTC),
             "stake_amount": trade.stake_amount,
             "stake_currency": self.config["stake_currency"],
             "base_currency": self.exchange.get_pair_base_currency(trade.pair),
@@ -2257,7 +2255,7 @@ class FreqtradeBot(LoggingMixin):
             "enter_tag": trade.enter_tag,
             "exit_reason": trade.exit_reason,
             "open_date": trade.open_date,
-            "close_date": trade.close_date or datetime.now(timezone.utc),
+            "close_date": trade.close_date or datetime.now(UTC),
             "stake_currency": self.config["stake_currency"],
             "base_currency": self.exchange.get_pair_base_currency(trade.pair),
             "quote_currency": self.exchange.get_pair_quote_currency(trade.pair),
@@ -2338,7 +2336,7 @@ class FreqtradeBot(LoggingMixin):
     def _update_trade_after_fill(self, trade: Trade, order: Order, send_msg: bool) -> Trade:
         if order.status in constants.NON_OPEN_EXCHANGE_STATES:
             strategy_safe_wrapper(self.strategy.order_filled, default_retval=None)(
-                pair=trade.pair, trade=trade, order=order, current_time=datetime.now(timezone.utc)
+                pair=trade.pair, trade=trade, order=order, current_time=datetime.now(UTC)
             )
             # If a entry order was closed, force update on stoploss on exchange
             if order.ft_order_side == trade.entry_side:
@@ -2371,7 +2369,7 @@ class FreqtradeBot(LoggingMixin):
                     )
                     profit = trade.calc_profit_ratio(current_rate)
                     self.strategy.ft_stoploss_adjust(
-                        current_rate, trade, datetime.now(timezone.utc), profit, 0, after_fill=True
+                        current_rate, trade, datetime.now(UTC), profit, 0, after_fill=True
                     )
             # Updating wallets when order is closed
             self.wallets.update()
@@ -2397,7 +2395,7 @@ class FreqtradeBot(LoggingMixin):
 
     def handle_protections(self, pair: str, side: LongShort) -> None:
         # Lock pair for one candle to prevent immediate re-entries
-        self.strategy.lock_pair(pair, datetime.now(timezone.utc), reason="Auto lock", side=side)
+        self.strategy.lock_pair(pair, datetime.now(UTC), reason="Auto lock", side=side)
         prot_trig = self.protections.stop_per_pair(pair, side=side)
         if prot_trig:
             msg: RPCProtectionMsg = {

@@ -5,7 +5,7 @@ This module contains class to define a RPC communications
 import logging
 from abc import abstractmethod
 from collections.abc import Generator, Sequence
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import psutil
@@ -375,7 +375,7 @@ class RPC:
         """
         :param timeunit: Valid entries are 'days', 'weeks', 'months'
         """
-        start_date = datetime.now(timezone.utc).date()
+        start_date = datetime.now(UTC).date()
         if timeunit == "weeks":
             # weekly
             start_date = start_date - timedelta(days=start_date.weekday())  # Monday
@@ -1259,7 +1259,7 @@ class RPC:
 
         for lock in locks:
             lock.active = False
-            lock.lock_end_time = datetime.now(timezone.utc)
+            lock.lock_end_time = datetime.now(UTC)
 
         Trade.commit()
 

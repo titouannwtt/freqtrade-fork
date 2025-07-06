@@ -1,7 +1,7 @@
 """Binance exchange subclass"""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import ccxt
@@ -160,7 +160,7 @@ class Binance(Exchange):
                 since_ms = x[3][0][0]
                 logger.info(
                     f"Candle-data for {pair} available starting with "
-                    f"{datetime.fromtimestamp(since_ms // 1000, tz=timezone.utc).isoformat()}."
+                    f"{datetime.fromtimestamp(since_ms // 1000, tz=UTC).isoformat()}."
                 )
                 if until_ms and since_ms >= until_ms:
                     logger.warning(
