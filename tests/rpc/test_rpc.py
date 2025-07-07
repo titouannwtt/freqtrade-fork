@@ -393,7 +393,7 @@ def test_rpc_delete_trade(mocker, default_conf, fee, markets, caplog, is_short):
     freqtradebot.strategy.order_types["stoploss_on_exchange"] = True
     create_mock_trades(fee, is_short)
     rpc = RPC(freqtradebot)
-    with pytest.raises(RPCException, match="invalid argument"):
+    with pytest.raises(RPCException, match="Trade with id '200' not found."):
         rpc._rpc_delete("200")
 
     trades = Trade.session.scalars(select(Trade)).all()

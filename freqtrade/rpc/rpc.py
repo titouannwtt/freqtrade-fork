@@ -1094,7 +1094,7 @@ class RPC:
             trade = Trade.get_trades(trade_filter=[Trade.id == trade_id]).first()
             if not trade:
                 logger.warning("delete trade: Invalid argument received")
-                raise RPCException("invalid argument")
+                raise RPCException(f"Trade with id '{trade_id}' not found.")
 
             # Try cancelling regular order if that exists
             for open_order in trade.open_orders:
