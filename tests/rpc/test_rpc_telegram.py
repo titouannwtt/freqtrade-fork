@@ -2001,7 +2001,7 @@ async def test_telegram_delete_trade(mocker, update, default_conf, fee, is_short
     context.args = [1]
     await telegram._delete_trade(update=update, context=context)
     assert msg_mock.call_count == 1
-    assert "Deleted trade 1." in msg_mock.call_args_list[0][0][0]
+    assert "Deleted trade #1" in msg_mock.call_args_list[0][0][0]
     assert "Please make sure to take care of this asset" in msg_mock.call_args_list[0][0][0]
 
 

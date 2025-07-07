@@ -1115,13 +1115,16 @@ class RPC:
                         c_count += 1
                     except ExchangeError:
                         pass
-
+            trade_pair = trade.pair
             trade.delete()
             self._freqtrade.wallets.update()
             return {
                 "result": "success",
                 "trade_id": trade_id,
-                "result_msg": f"Deleted trade {trade_id}. Closed {c_count} open orders.",
+                "result_msg": (
+                    f"Deleted trade #{trade_id} for pair {trade_pair}. "
+                    f"Closed {c_count} open orders."
+                ),
                 "cancel_order_count": c_count,
             }
 

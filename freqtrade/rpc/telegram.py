@@ -1484,7 +1484,7 @@ class Telegram(RPCHandler):
         trade_id = int(context.args[0])
         msg = self._rpc._rpc_delete(trade_id)
         await self._send_msg(
-            f"`{msg['result_msg']}`\n"
+            f"{msg['result_msg']}\n"
             "Please make sure to take care of this asset on the exchange manually."
         )
 
