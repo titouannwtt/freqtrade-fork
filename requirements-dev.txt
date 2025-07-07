@@ -15,7 +15,7 @@ pytest-cov==6.2.1
 pytest-mock==3.14.1
 pytest-random-order==1.2.0
 pytest-timeout==2.4.0
-pytest-xdist==3.7.0
+pytest-xdist==3.8.0
 isort==6.0.1
 # For datetime mocking
 time-machine==2.16.0
