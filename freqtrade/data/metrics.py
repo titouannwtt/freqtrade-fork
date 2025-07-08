@@ -175,11 +175,11 @@ def calculate_underwater(
 @dataclass()
 class DrawDownResult:
     # Max drawdown fields
+    drawdown_abs: float = 0.0
     high_date: pd.Timestamp = None
     low_date: pd.Timestamp = None
     high_value: float = 0.0
     low_value: float = 0.0
-    drawdown_abs: float = 0.0
     relative_account_drawdown: float = 0.0
     # Current drawdown fields
     current_high_date: pd.Timestamp = None
@@ -208,14 +208,10 @@ def calculate_max_drawdown(
              relative account drawdown, and current drawdown information.
     :raise: ValueError if trade-dataframe was found empty.
     """
-
     if len(trades) == 0:
         raise ValueError("Trade dataframe empty.")
 
-    # Sort trades by close date
     profit_results = trades.sort_values(date_col).reset_index(drop=True)
-
-    # Get drawdown data
     max_drawdown_df = _calc_drawdown_series(
         profit_results, date_col=date_col, value_col=value_col, starting_balance=starting_balance
     )
@@ -231,7 +227,6 @@ def calculate_max_drawdown(
     low_date = profit_results.loc[idxmin, date_col]
     high_val = max_drawdown_df.loc[high_idx, "cumulative"]
     low_val = max_drawdown_df.loc[idxmin, "cumulative"]
-    max_drawdown_abs = abs(max_drawdown_df.loc[idxmin, "drawdown"])
     max_drawdown_rel = max_drawdown_df.loc[idxmin, "drawdown_relative"]
 
     # Calculate current drawdown
@@ -242,13 +237,13 @@ def calculate_max_drawdown(
     current_drawdown_abs = current_high_value - current_cumulative
     current_drawdown_relative = max_drawdown_df.iloc[-1]["drawdown_relative"]
 
-    result = DrawDownResult(
+    return DrawDownResult(
         # Max drawdown
+        drawdown_abs=abs(max_drawdown_df.loc[idxmin, "drawdown"]),
         high_date=high_date,
         low_date=low_date,
         high_value=high_val,
         low_value=low_val,
-        drawdown_abs=max_drawdown_abs,
         relative_account_drawdown=max_drawdown_rel,
         # Current drawdown
         current_high_date=current_high_date,
@@ -256,8 +251,6 @@ def calculate_max_drawdown(
         current_drawdown_abs=current_drawdown_abs,
         current_relative_account_drawdown=current_drawdown_relative,
     )
-
-    return result
 
 
 def calculate_csum(trades: pd.DataFrame, starting_balance: float = 0) -> tuple[float, float]:

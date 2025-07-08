@@ -611,17 +611,18 @@ class RPC:
         )
 
         expectancy, expectancy_ratio = calculate_expectancy(trades_df)
-        max_drawdown = DrawDownResult()
 
+        drawdown = DrawDownResult()
         if len(trades_df) > 0:
             try:
-                max_drawdown = calculate_max_drawdown(
+                drawdown = calculate_max_drawdown(
                     trades_df,
                     value_col="profit_abs",
                     date_col="close_date_dt",
                     starting_balance=starting_balance,
                 )
             except ValueError:
+                # ValueError if no losing trade.
                 pass
 
         profit_all_fiat = (
@@ -672,19 +673,19 @@ class RPC:
             "winrate": winrate,
             "expectancy": expectancy,
             "expectancy_ratio": expectancy_ratio,
-            "max_drawdown": max_drawdown.relative_account_drawdown,
-            "max_drawdown_abs": max_drawdown.drawdown_abs,
-            "max_drawdown_start": format_date(max_drawdown.high_date),
-            "max_drawdown_start_timestamp": dt_ts_def(max_drawdown.high_date),
-            "max_drawdown_end": format_date(max_drawdown.low_date),
-            "max_drawdown_end_timestamp": dt_ts_def(max_drawdown.low_date),
-            "drawdown_high": max_drawdown.high_value,
-            "drawdown_low": max_drawdown.low_value,
-            "current_drawdown": max_drawdown.current_relative_account_drawdown,
-            "current_drawdown_abs": max_drawdown.current_drawdown_abs,
-            "current_drawdown_high": max_drawdown.current_high_value,
-            "current_drawdown_start": format_date(max_drawdown.current_high_date),
-            "current_drawdown_start_timestamp": dt_ts_def(max_drawdown.current_high_date),
+            "max_drawdown": drawdown.relative_account_drawdown,
+            "max_drawdown_abs": drawdown.drawdown_abs,
+            "max_drawdown_start": format_date(drawdown.high_date),
+            "max_drawdown_start_timestamp": dt_ts_def(drawdown.high_date),
+            "max_drawdown_end": format_date(drawdown.low_date),
+            "max_drawdown_end_timestamp": dt_ts_def(drawdown.low_date),
+            "drawdown_high": drawdown.high_value,
+            "drawdown_low": drawdown.low_value,
+            "current_drawdown": drawdown.current_relative_account_drawdown,
+            "current_drawdown_abs": drawdown.current_drawdown_abs,
+            "current_drawdown_high": drawdown.current_high_value,
+            "current_drawdown_start": format_date(drawdown.current_high_date),
+            "current_drawdown_start_timestamp": dt_ts_def(drawdown.current_high_date),
             "trading_volume": trading_volume,
             "bot_start_timestamp": dt_ts_def(bot_start, 0),
             "bot_start_date": format_date(bot_start),
