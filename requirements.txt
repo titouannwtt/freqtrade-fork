@@ -1,4 +1,4 @@
-numpy==2.2.6
+numpy==2.3.1
 pandas==2.3.0
 bottleneck==1.5.0
 numexpr==2.11.0
@@ -7,15 +7,15 @@ ft-pandas-ta==0.3.15
 ta-lib==0.5.5
 technical==1.5.1
 
-ccxt==4.4.89
-cryptography==45.0.4
+ccxt==4.4.92
+cryptography==45.0.5
 aiohttp==3.12.13
 SQLAlchemy==2.0.41
-python-telegram-bot==22.1
+python-telegram-bot==22.2
 # can't be hard-pinned due to telegram-bot pinning httpx with ~
 httpx>=0.24.1
 humanize==4.12.3
-cachetools==6.0.0
+cachetools==6.1.0
 requests==2.32.4
 urllib3==2.5.0
 certifi==2025.6.15
@@ -36,9 +36,9 @@ orjson==3.10.18
 sdnotify==0.3.2
 
 # API Server
-fastapi==0.115.12
+fastapi==0.115.14
 pydantic==2.11.7
-uvicorn==0.34.3
+uvicorn==0.35.0
 pyjwt==2.10.1
 aiofiles==24.1.0
 psutil==7.0.0
@@ -57,5 +57,5 @@ schedule==1.2.2
 websockets==15.0.1
 janus==2.0.0
 
-ast-comments==1.2.2
+ast-comments==1.2.3
 packaging==25.0

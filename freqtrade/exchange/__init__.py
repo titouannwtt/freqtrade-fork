@@ -1,6 +1,6 @@
 # flake8: noqa: F401
 # isort: off
-from freqtrade.exchange.common import remove_exchange_credentials, MAP_EXCHANGE_CHILDCLASS
+from freqtrade.exchange.common import MAP_EXCHANGE_CHILDCLASS
 from freqtrade.exchange.exchange import Exchange
 
 # isort: on
@@ -43,4 +43,5 @@ from freqtrade.exchange.idex import Idex
 from freqtrade.exchange.kraken import Kraken
 from freqtrade.exchange.kucoin import Kucoin
 from freqtrade.exchange.lbank import Lbank
+from freqtrade.exchange.luno import Luno
 from freqtrade.exchange.okx import Okx
