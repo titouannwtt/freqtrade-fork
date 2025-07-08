@@ -5931,7 +5931,7 @@ def test_get_max_leverage_futures(default_conf, mocker, leverage_tiers):
     assert exchange.get_max_leverage("SPONGE/USDT:USDT", 200) == 1.0  # Pair not in leverage_tiers
     assert exchange.get_max_leverage("BTC/USDT:USDT", 0.0) == 125.0  # No stake amount
     with pytest.raises(
-        InvalidOrderException, match=r"Amount 1000000000.01 too high for BTC/USDT:USDT"
+        InvalidOrderException, match=r"Stake amount 1000000000.01 too high for BTC/USDT:USDT"
     ):
         exchange.get_max_leverage("BTC/USDT:USDT", 1000000000.01)
 
