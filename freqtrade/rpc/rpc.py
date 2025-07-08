@@ -19,12 +19,7 @@ from freqtrade import __version__
 from freqtrade.configuration.timerange import TimeRange
 from freqtrade.constants import CANCEL_REASON, DEFAULT_DATAFRAME_COLUMNS, Config
 from freqtrade.data.history import load_data
-from freqtrade.data.metrics import (
-    DrawDownResult,
-    calculate_current_drawdown,
-    calculate_expectancy,
-    calculate_max_drawdown,
-)
+from freqtrade.data.metrics import DrawDownResult, calculate_expectancy, calculate_max_drawdown
 from freqtrade.enums import (
     CandleType,
     ExitCheckTuple,
@@ -616,9 +611,7 @@ class RPC:
         )
 
         expectancy, expectancy_ratio = calculate_expectancy(trades_df)
-
         max_drawdown = DrawDownResult()
-        current_drawdown = DrawDownResult()
 
         if len(trades_df) > 0:
             try:
@@ -628,11 +621,6 @@ class RPC:
                     date_col="close_date_dt",
                     starting_balance=starting_balance,
                 )
-            except ValueError:
-                pass
-
-            try:
-                current_drawdown = calculate_current_drawdown(trades_df, starting_balance)
             except ValueError:
                 pass
 
@@ -692,11 +680,11 @@ class RPC:
             "max_drawdown_end_timestamp": dt_ts_def(max_drawdown.low_date),
             "drawdown_high": max_drawdown.high_value,
             "drawdown_low": max_drawdown.low_value,
-            "current_drawdown": current_drawdown.relative_account_drawdown,
-            "current_drawdown_abs": current_drawdown.drawdown_abs,
-            "current_drawdown_high": current_drawdown.high_value,
-            "current_drawdown_start": format_date(current_drawdown.high_date),
-            "current_drawdown_start_timestamp": dt_ts_def(current_drawdown.high_date),
+            "current_drawdown": max_drawdown.current_relative_account_drawdown,
+            "current_drawdown_abs": max_drawdown.current_drawdown_abs,
+            "current_drawdown_high": max_drawdown.current_high_value,
+            "current_drawdown_start": format_date(max_drawdown.current_high_date),
+            "current_drawdown_start_timestamp": dt_ts_def(max_drawdown.current_high_date),
             "trading_volume": trading_volume,
             "bot_start_timestamp": dt_ts_def(bot_start, 0),
             "bot_start_date": format_date(bot_start),
