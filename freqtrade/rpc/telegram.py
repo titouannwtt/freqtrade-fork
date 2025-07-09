@@ -1085,6 +1085,10 @@ class Telegram(RPCHandler):
                     f"({fmt_coin(stats['drawdown_high'], stake_cur)})`\n"
                     f"    to `{stats['max_drawdown_end']} "
                     f"({fmt_coin(stats['drawdown_low'], stake_cur)})`\n"
+                    f"*Current Drawdown:* `{stats['current_drawdown']:.2%} "
+                    f"({fmt_coin(stats['current_drawdown_abs'], stake_cur)})`\n"
+                    f"    from `{stats['current_drawdown_start']} "
+                    f"({fmt_coin(stats['current_drawdown_high'], stake_cur)})`\n"
                 )
         await self._send_msg(
             markdown_msg,
