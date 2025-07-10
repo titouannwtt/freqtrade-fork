@@ -1479,44 +1479,6 @@ class FreqtradeBot(LoggingMixin):
 
         return False
 
-    def handle_trailing_stoploss_on_exchange(self, trade: Trade, order: CcxtOrder) -> None:
-        """
-        Check to see if stoploss on exchange should be updated
-        in case of trailing stoploss on exchange
-        :param trade: Corresponding Trade
-        :param order: Current on exchange stoploss order
-        :return: None
-        """
-        stoploss_norm = self.exchange.price_to_precision(
-            trade.pair,
-            trade.stoploss_or_liquidation,
-            rounding_mode=ROUND_DOWN if trade.is_short else ROUND_UP,
-        )
-
-        if self.exchange.stoploss_adjust(stoploss_norm, order, side=trade.exit_side):
-            # we check if the update is necessary
-            update_beat = self.strategy.order_types.get("stoploss_on_exchange_interval", 60)
-            upd_req = datetime.now(UTC) - timedelta(seconds=update_beat)
-            if trade.stoploss_last_update_utc and upd_req >= trade.stoploss_last_update_utc:
-                # cancelling the current stoploss on exchange first
-                logger.info(
-                    f"Cancelling current stoploss on exchange for pair {trade.pair} "
-                    f"(orderid:{order['id']}) in order to add another one ..."
-                )
-
-                self.cancel_stoploss_on_exchange(trade)
-                if not trade.is_open:
-                    logger.warning(
-                        f"Trade {trade} is closed, not creating trailing stoploss order."
-                    )
-                    return
-
-                # Create new stoploss order
-                if not self.create_stoploss_order(trade=trade, stop_price=stoploss_norm):
-                    logger.warning(
-                        f"Could not create trailing stoploss order for pair {trade.pair}."
-                    )
-
     def manage_trade_stoploss_orders(self, trade: Trade, stoploss_orders: list[CcxtOrder]):
         """
         Perform required actions according to existing stoploss orders of trade
@@ -1557,6 +1519,44 @@ class FreqtradeBot(LoggingMixin):
                 self.handle_trailing_stoploss_on_exchange(trade, last_active_sl_order)
 
         return
+
+    def handle_trailing_stoploss_on_exchange(self, trade: Trade, order: CcxtOrder) -> None:
+        """
+        Check to see if stoploss on exchange should be updated
+        in case of trailing stoploss on exchange
+        :param trade: Corresponding Trade
+        :param order: Current on exchange stoploss order
+        :return: None
+        """
+        stoploss_norm = self.exchange.price_to_precision(
+            trade.pair,
+            trade.stoploss_or_liquidation,
+            rounding_mode=ROUND_DOWN if trade.is_short else ROUND_UP,
+        )
+
+        if self.exchange.stoploss_adjust(stoploss_norm, order, side=trade.exit_side):
+            # we check if the update is necessary
+            update_beat = self.strategy.order_types.get("stoploss_on_exchange_interval", 60)
+            upd_req = datetime.now(UTC) - timedelta(seconds=update_beat)
+            if trade.stoploss_last_update_utc and upd_req >= trade.stoploss_last_update_utc:
+                # cancelling the current stoploss on exchange first
+                logger.info(
+                    f"Cancelling current stoploss on exchange for pair {trade.pair} "
+                    f"(orderid:{order['id']}) in order to add another one ..."
+                )
+
+                self.cancel_stoploss_on_exchange(trade)
+                if not trade.is_open:
+                    logger.warning(
+                        f"Trade {trade} is closed, not creating trailing stoploss order."
+                    )
+                    return
+
+                # Create new stoploss order
+                if not self.create_stoploss_order(trade=trade, stop_price=stoploss_norm):
+                    logger.warning(
+                        f"Could not create trailing stoploss order for pair {trade.pair}."
+                    )
 
     def manage_open_orders(self) -> None:
         """
