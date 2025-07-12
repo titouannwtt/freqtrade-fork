@@ -1009,15 +1009,23 @@ class Telegram(RPCHandler):
 
         start_date = datetime.fromtimestamp(0)
         timescale = None
-        try:
-            if context.args:
-                timescale = int(context.args[0]) - 1
-                today_start = datetime.combine(date.today(), datetime.min.time())
-                start_date = today_start - timedelta(days=timescale)
-        except (TypeError, ValueError, IndexError):
-            pass
+        direction: str | None = None
+        args = list(context.args) if context.args else []
+        if args and isinstance(args[0], str) and args[0].lower() in ('long', 'short'):
+            direction = args[0].lower()
+            args.pop(0)
+        if args:
+            try:
+                if context.args:
+                    timescale = int(context.args[0]) - 1
+                    today_start = datetime.combine(date.today(), datetime.min.time())
+                    start_date = today_start - timedelta(days=timescale)
+            except (TypeError, ValueError, IndexError):
+                pass
 
-        stats = self._rpc._rpc_trade_statistics(stake_cur, fiat_disp_cur, start_date)
+        stats = self._rpc._rpc_trade_statistics(
+            stake_cur, fiat_disp_cur, start_date,direction=direction
+        )
         profit_closed_coin = stats["profit_closed_coin"]
         profit_closed_ratio_mean = stats["profit_closed_ratio_mean"]
         profit_closed_percent = stats["profit_closed_percent"]
@@ -1045,8 +1053,11 @@ class Telegram(RPCHandler):
                 fiat_closed_trades = (
                     f"∙ `{fmt_coin(profit_closed_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
                 )
+
+                direction_str = f"{direction.capitalize()} " if direction else ""
+
                 markdown_msg = (
-                    "*ROI:* Closed trades\n"
+                    f"*ROI ({direction_str}Trades):* Closed trades\n"
                     f"∙ `{fmt_coin(profit_closed_coin, stake_cur)} "
                     f"({profit_closed_ratio_mean:.2%}) "
                     f"({profit_closed_percent} \N{GREEK CAPITAL LETTER SIGMA}%)`\n"
@@ -1057,8 +1068,9 @@ class Telegram(RPCHandler):
             fiat_all_trades = (
                 f"∙ `{fmt_coin(profit_all_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
             )
+            direction_str_all = f"{direction.capitalize()} " if direction else ""
             markdown_msg += (
-                f"*ROI:* All trades\n"
+                f"*ROI ({direction_str_all}Trades):* All trades\n"
                 f"∙ `{fmt_coin(profit_all_coin, stake_cur)} "
                 f"({profit_all_ratio_mean:.2%}) "
                 f"({profit_all_percent} \N{GREEK CAPITAL LETTER SIGMA}%)`\n"
@@ -1867,8 +1879,8 @@ class Telegram(RPCHandler):
             "*/exits <pair|none>:* `Shows the exit reason performance`\n"
             "*/mix_tags <pair|none>:* `Shows combined entry tag + exit reason performance`\n"
             "*/trades [limit]:* `Lists last closed trades (limited to 10 by default)`\n"
-            "*/profit [<n>]:* `Lists cumulative profit from all finished trades, "
-            "over the last n days`\n"
+            "*/profit [long|short] [<n>]:* `Show profit from finished trades (last n days).`\n "
+            "`Optional filter: long or short.`\n"
             "*/performance:* `Show performance of each finished trade grouped by pair`\n"
             "*/daily <n>:* `Shows profit or loss per day, over the last n days`\n"
             "*/weekly <n>:* `Shows statistics per week, over the last n weeks`\n"

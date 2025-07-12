@@ -921,7 +921,7 @@ async def test_telegram_profit_handle(
     await telegram._profit(update=update, context=context)
     assert msg_mock.call_count == 1
     assert "No closed trade" in msg_mock.call_args_list[-1][0][0]
-    assert "*ROI:* All trades" in msg_mock.call_args_list[-1][0][0]
+    assert "*ROI (Trades):* All trades" in msg_mock.call_args_list[-1][0][0]
     mocker.patch("freqtrade.wallets.Wallets.get_starting_balance", return_value=1000)
     assert (
         "∙ `0.298 USDT (0.50%) (0.03 \N{GREEK CAPITAL LETTER SIGMA}%)`"
@@ -946,13 +946,13 @@ async def test_telegram_profit_handle(
     context.args = [3]
     await telegram._profit(update=update, context=context)
     assert msg_mock.call_count == 1
-    assert "*ROI:* Closed trades" in msg_mock.call_args_list[-1][0][0]
+    assert "*ROI (Trades):* Closed trades" in msg_mock.call_args_list[-1][0][0]
     assert (
         "∙ `5.685 USDT (9.45%) (0.57 \N{GREEK CAPITAL LETTER SIGMA}%)`"
         in msg_mock.call_args_list[-1][0][0]
     )
     assert "∙ `6.253 USD`" in msg_mock.call_args_list[-1][0][0]
-    assert "*ROI:* All trades" in msg_mock.call_args_list[-1][0][0]
+    assert "*ROI (Trades):* All trades" in msg_mock.call_args_list[-1][0][0]
     assert (
         "∙ `5.685 USDT (9.45%) (0.57 \N{GREEK CAPITAL LETTER SIGMA}%)`"
         in msg_mock.call_args_list[-1][0][0]
@@ -966,6 +966,19 @@ async def test_telegram_profit_handle(
     assert "*Expectancy (Ratio):*" in msg_mock.call_args_list[-1][0][0]
     assert "*Trading volume:* `126 USDT`" in msg_mock.call_args_list[-1][0][0]
 
+    msg_mock.reset_mock()
+    # Test /profit long
+    context.args = ["long"]
+    await telegram._profit(update=update, context=context)
+    assert msg_mock.call_count == 1
+    assert "*ROI (Long Trades):* All trades" in msg_mock.call_args_list[-1][0][0]
+
+    msg_mock.reset_mock()
+    # Test /profit short
+    context.args = ["short"]
+    await telegram._profit(update=update, context=context)
+    assert msg_mock.call_count == 1
+    assert "No trades yet." in msg_mock.call_args_list[-1][0][0]
 
 @pytest.mark.parametrize("is_short", [True, False])
 async def test_telegram_stats(default_conf, update, ticker, fee, mocker, is_short) -> None:
