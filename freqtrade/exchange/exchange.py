@@ -202,9 +202,13 @@ class Exchange:
         self._config.update(config)
 
         # Leverage properties
-        self.trading_mode: TradingMode = config.get("trading_mode", TradingMode.SPOT)
+        self.trading_mode: TradingMode = config.get(
+            "trading_mode", self._supported_trading_mode_margin_pairs[0][0]
+        )
         self.margin_mode: MarginMode = (
-            MarginMode(config.get("margin_mode")) if config.get("margin_mode") else MarginMode.NONE
+            MarginMode(config.get("margin_mode"))
+            if config.get("margin_mode")
+            else self._supported_trading_mode_margin_pairs[0][1]
         )
         self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
 
