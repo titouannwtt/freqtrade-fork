@@ -202,14 +202,17 @@ class Exchange:
         self._config.update(config)
 
         # Leverage properties
-        self.trading_mode: TradingMode = config.get(
-            "trading_mode", self._supported_trading_mode_margin_pairs[0][0]
+        self.trading_mode: TradingMode = TradingMode(
+            config.get("trading_mode", self._supported_trading_mode_margin_pairs[0][0])
         )
-        self.margin_mode: MarginMode = (
+        self.margin_mode: MarginMode = MarginMode(
             MarginMode(config.get("margin_mode"))
             if config.get("margin_mode")
             else self._supported_trading_mode_margin_pairs[0][1]
         )
+        config["trading_mode"] = self.trading_mode
+        config["margin_mode"] = self.margin_mode
+        config["candle_type_def"] = CandleType.get_default(self.trading_mode)
         self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
 
         exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
