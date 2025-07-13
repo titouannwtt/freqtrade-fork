@@ -2596,8 +2596,10 @@ class Exchange:
         if ticks and cache:
             idx = -2 if drop_incomplete and len(ticks) > 1 else -1
             self._pairs_last_refresh_time[(pair, timeframe, c_type)] = ticks[idx][0]
+        has_cache = cache and (pair, timeframe, c_type) in self._klines
+        # in case of existing cache, fill_missing happens after concatenation
         ohlcv_df = ohlcv_to_dataframe(
-            ticks, timeframe, pair=pair, fill_missing=True, drop_incomplete=drop_incomplete
+            ticks, timeframe, pair=pair, fill_missing=not has_cache, drop_incomplete=drop_incomplete
         )
         # keeping parsed dataframe in cache
         if cache:
