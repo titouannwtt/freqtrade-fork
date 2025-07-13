@@ -10,7 +10,6 @@ from freqtrade.configuration.timerange import TimeRange
 from freqtrade.data import history
 from freqtrade.data.dataprovider import DataProvider
 from freqtrade.enums import RunMode
-from freqtrade.enums.candletype import CandleType
 from freqtrade.exceptions import OperationalException
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.optimize.backtesting import Backtesting
