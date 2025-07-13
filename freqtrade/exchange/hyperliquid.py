@@ -28,8 +28,7 @@ class Hyperliquid(Exchange):
         "stoploss_on_exchange": False,
         "exchange_has_overrides": {"fetchTrades": False},
         "marketOrderRequiresPrice": True,
-        # ws causes tons of warnings on low timeframes due to low volume on many coins
-        "ws_enabled": False,
+        "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
         "stoploss_on_exchange": True,
