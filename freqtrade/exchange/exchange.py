@@ -199,8 +199,6 @@ class Exchange:
         self.loop = self._init_async_loop()
         self._config: Config = {}
 
-        self._config.update(config)
-
         # Leverage properties
         self.trading_mode: TradingMode = TradingMode(
             config.get("trading_mode", self._supported_trading_mode_margin_pairs[0][0])
@@ -213,6 +211,7 @@ class Exchange:
         config["trading_mode"] = self.trading_mode
         config["margin_mode"] = self.margin_mode
         config["candle_type_def"] = CandleType.get_default(self.trading_mode)
+        self._config.update(config)
         self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
 
         exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
