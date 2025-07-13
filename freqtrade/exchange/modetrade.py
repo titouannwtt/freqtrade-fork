@@ -1,7 +1,6 @@
 import logging
 
-from freqtrade.enums.marginmode import MarginMode
-from freqtrade.enums.tradingmode import TradingMode
+# from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
 
