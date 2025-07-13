@@ -41,7 +41,8 @@ class Hyperliquid(Exchange):
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
 
     @property

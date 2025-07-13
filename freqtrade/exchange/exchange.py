@@ -169,7 +169,8 @@ class Exchange:
     _ft_has_futures: FtHas = {}
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        # TradingMode.SPOT always supported and not required in this list
+        # Non-defined exchanges only support spot mode.
+        (TradingMode.SPOT, MarginMode.NONE),
     ]
 
     def __init__(
