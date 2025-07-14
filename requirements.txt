@@ -9,7 +9,7 @@ technical==1.5.1
 
 ccxt==4.4.94
 cryptography==45.0.5
-aiohttp==3.12.13
+aiohttp==3.12.14
 SQLAlchemy==2.0.41
 python-telegram-bot==22.2
 # can't be hard-pinned due to telegram-bot pinning httpx with ~
