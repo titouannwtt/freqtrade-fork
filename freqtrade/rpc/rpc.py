@@ -502,17 +502,13 @@ class RPC:
         durations = {"wins": wins_dur, "draws": draws_dur, "losses": losses_dur}
         return {"exit_reasons": exit_reasons, "durations": durations}
 
-    def _process_trade_stats(
+    def _collect_trade_statistics_data(
         self,
-        trades: Sequence[Trade],
+        trades: Sequence['Trade'],
         stake_currency: str,
         fiat_display_currency: str,
-        start_date: datetime,
     ) -> dict[str, Any]:
-        """
-        Processes a list of trades and returns the statistics.
-        Helper for _rpc_trade_statistics.
-        """
+        """Iterate trades, calculate various statistics, and return intermediate results."""
         profit_all_coin = []
         profit_all_ratio = []
         profit_closed_coin = []
@@ -541,7 +537,9 @@ class RPC:
                     losing_trades += 1
                     losing_profit += profit_abs
             else:
+                # Get current rate for open trades
                 if len(trade.select_filled_orders(trade.entry_side)) == 0:
+                    # Skip trades with no filled orders
                     continue
                 try:
                     current_rate = self._freqtrade.exchange.get_rate(
@@ -559,12 +557,66 @@ class RPC:
             profit_all_coin.append(profit_abs)
             profit_all_ratio.append(profit_ratio)
 
+        return {
+            "profit_all_coin": profit_all_coin,
+            "profit_all_ratio": profit_all_ratio,
+            "profit_closed_coin": profit_closed_coin,
+            "profit_closed_ratio": profit_closed_ratio,
+            "durations": durations,
+            "winning_trades": winning_trades,
+            "losing_trades": losing_trades,
+            "winning_profit": winning_profit,
+            "losing_profit": losing_profit,
+        }
+
+    def _rpc_trade_statistics(
+        self,
+        stake_currency: str,
+        fiat_display_currency: str,
+        start_date: datetime | None = None,
+        direction: str | None = None
+    ) -> dict[str, Any]:
+        """
+        Returns cumulative profit statistics, with optional direction filter (long/short)
+        """
+        start_date = datetime.fromtimestamp(0) if start_date is None else start_date
+
+        trade_filter = (
+            (Trade.is_open.is_(False) & (Trade.close_date >= start_date)) | Trade.is_open.is_(True)
+        )
+
+        if direction:
+            if direction == "long":
+                trade_filter = trade_filter & Trade.is_short.is_(False)
+            elif direction == "short":
+                trade_filter = trade_filter & Trade.is_short.is_(True)
+
+        trades: Sequence[Trade] = Trade.session.scalars(
+            Trade.get_trades_query(trade_filter, include_orders=False).order_by(Trade.id)
+        ).all()
+
+        stats = self._collect_trade_statistics_data(trades, stake_currency, fiat_display_currency)
+
+        profit_all_coin = stats["profit_all_coin"]
+        profit_all_ratio = stats["profit_all_ratio"]
+        profit_closed_coin = stats["profit_closed_coin"]
+        profit_closed_ratio = stats["profit_closed_ratio"]
+        durations = stats["durations"]
+        winning_trades = stats["winning_trades"]
+        losing_trades = stats["losing_trades"]
+        winning_profit = stats["winning_profit"]
+        losing_profit = stats["losing_profit"]
+
         closed_trade_count = len([t for t in trades if not t.is_open])
+
         best_pair = Trade.get_best_pair(start_date)
         trading_volume = Trade.get_trading_volume(start_date)
+
+        # Prepare data to display
         profit_closed_coin_sum = round(sum(profit_closed_coin), 8)
-        profit_closed_ratio_sum = sum(profit_closed_ratio) if profit_closed_ratio else 0.0
         profit_closed_ratio_mean = float(mean(profit_closed_ratio) if profit_closed_ratio else 0.0)
+        profit_closed_ratio_sum = sum(profit_closed_ratio) if profit_closed_ratio else 0.0
+
         profit_closed_fiat = (
             self._fiat_converter.convert_amount(
                 profit_closed_coin_sum, stake_currency, fiat_display_currency
@@ -572,17 +624,22 @@ class RPC:
             if self._fiat_converter
             else 0
         )
+
         profit_all_coin_sum = round(sum(profit_all_coin), 8)
-        profit_all_ratio_sum = sum(profit_all_ratio) if profit_all_ratio else 0.0
         profit_all_ratio_mean = float(mean(profit_all_ratio) if profit_all_ratio else 0.0)
+        # Doing the sum is not right - overall profit needs to be based on initial capital
+        profit_all_ratio_sum = sum(profit_all_ratio) if profit_all_ratio else 0.0
         starting_balance = self._freqtrade.wallets.get_starting_balance()
         profit_closed_ratio_fromstart = 0.0
         profit_all_ratio_fromstart = 0.0
         if starting_balance:
             profit_closed_ratio_fromstart = profit_closed_coin_sum / starting_balance
             profit_all_ratio_fromstart = profit_all_coin_sum / starting_balance
+
         profit_factor = winning_profit / abs(losing_profit) if losing_profit else float("inf")
+
         winrate = (winning_trades / closed_trade_count) if closed_trade_count > 0 else 0
+
         trades_df = DataFrame(
             [
                 {
@@ -594,7 +651,9 @@ class RPC:
                 if not trade.is_open and trade.close_date
             ]
         )
+
         expectancy, expectancy_ratio = calculate_expectancy(trades_df)
+
         drawdown = DrawDownResult()
         if len(trades_df) > 0:
             try:
@@ -605,7 +664,9 @@ class RPC:
                     starting_balance=starting_balance,
                 )
             except ValueError:
+                # ValueError if no losing trade.
                 pass
+
         profit_all_fiat = (
             self._fiat_converter.convert_amount(
                 profit_all_coin_sum, stake_currency, fiat_display_currency
@@ -613,6 +674,7 @@ class RPC:
             if self._fiat_converter
             else 0
         )
+
         first_date = trades[0].open_date_utc if trades else None
         last_date = trades[-1].open_date_utc if trades else None
         num = float(len(durations) or 1)
@@ -644,7 +706,7 @@ class RPC:
             "latest_trade_timestamp": dt_ts_def(last_date, 0),
             "avg_duration": str(timedelta(seconds=sum(durations) / num)).split(".")[0],
             "best_pair": best_pair[0] if best_pair else "",
-            "best_rate": round(best_pair[1] * 100, 2) if best_pair else 0,
+            "best_rate": round(best_pair[1] * 100, 2) if best_pair else 0,  # Deprecated
             "best_pair_profit_ratio": best_pair[1] if best_pair else 0,
             "best_pair_profit_abs": best_pair[2] if best_pair else 0,
             "winning_trades": winning_trades,
@@ -670,36 +732,6 @@ class RPC:
             "bot_start_timestamp": dt_ts_def(bot_start, 0),
             "bot_start_date": format_date(bot_start),
         }
-
-
-
-    def _rpc_trade_statistics(
-        self,
-        stake_currency: str,
-        fiat_display_currency: str,
-        start_date: datetime | None = None,
-        direction: str | None = None,
-    ) -> dict[str, Any]:
-        """Returns cumulative profit statistics"""
-        start_date_filter = datetime.fromtimestamp(0) if start_date is None else start_date
-
-        trade_filter = (
-            Trade.is_open.is_(False) & (Trade.close_date >= start_date_filter)
-        ) | Trade.is_open.is_(True)
-
-        if direction:
-            if direction == 'long':
-                trade_filter &= Trade.is_short.is_(False)
-            elif direction == 'short':
-                trade_filter &= Trade.is_short.is_(True)
-
-        trades: Sequence[Trade] = Trade.session.scalars(
-            Trade.get_trades_query(trade_filter, include_orders=False).order_by(Trade.id)
-        ).all()
-
-        return self._process_trade_stats(
-            trades, stake_currency, fiat_display_currency, start_date_filter
-        )
 
     def __balance_get_est_stake(
         self, coin: str, stake_currency: str, amount: float, balance: Wallet

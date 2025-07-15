@@ -305,6 +305,8 @@ class Telegram(RPCHandler):
             CommandHandler("order", self._order),
             CommandHandler("list_custom_data", self._list_custom_data),
             CommandHandler("tg_info", self._tg_info),
+            CommandHandler("profit_long", self._profit_long),
+            CommandHandler("profit_short", self._profit_short),
         ]
         callbacks = [
             CallbackQueryHandler(self._status_table, pattern="update_status_table"),
@@ -1009,23 +1011,15 @@ class Telegram(RPCHandler):
 
         start_date = datetime.fromtimestamp(0)
         timescale = None
-        direction: str | None = None
-        args = list(context.args) if context.args else []
-        if args and isinstance(args[0], str) and args[0].lower() in ('long', 'short'):
-            direction = args[0].lower()
-            args.pop(0)
-        if args:
-            try:
-                if context.args:
-                    timescale = int(context.args[0]) - 1
-                    today_start = datetime.combine(date.today(), datetime.min.time())
-                    start_date = today_start - timedelta(days=timescale)
-            except (TypeError, ValueError, IndexError):
-                pass
+        try:
+            if context.args:
+                timescale = int(context.args[0]) - 1
+                today_start = datetime.combine(date.today(), datetime.min.time())
+                start_date = today_start - timedelta(days=timescale)
+        except (TypeError, ValueError, IndexError):
+            pass
 
-        stats = self._rpc._rpc_trade_statistics(
-            stake_cur, fiat_disp_cur, start_date,direction=direction
-        )
+        stats = self._rpc._rpc_trade_statistics(stake_cur, fiat_disp_cur, start_date)
         profit_closed_coin = stats["profit_closed_coin"]
         profit_closed_ratio_mean = stats["profit_closed_ratio_mean"]
         profit_closed_percent = stats["profit_closed_percent"]
@@ -1053,11 +1047,8 @@ class Telegram(RPCHandler):
                 fiat_closed_trades = (
                     f"∙ `{fmt_coin(profit_closed_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
                 )
-
-                direction_str = f"{direction.capitalize()} " if direction else ""
-
                 markdown_msg = (
-                    f"*ROI ({direction_str}Trades):* Closed trades\n"
+                    "*ROI:* Closed trades\n"
                     f"∙ `{fmt_coin(profit_closed_coin, stake_cur)} "
                     f"({profit_closed_ratio_mean:.2%}) "
                     f"({profit_closed_percent} \N{GREEK CAPITAL LETTER SIGMA}%)`\n"
@@ -1068,9 +1059,8 @@ class Telegram(RPCHandler):
             fiat_all_trades = (
                 f"∙ `{fmt_coin(profit_all_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
             )
-            direction_str_all = f"{direction.capitalize()} " if direction else ""
             markdown_msg += (
-                f"*ROI ({direction_str_all}Trades):* All trades\n"
+                f"*ROI:* All trades\n"
                 f"∙ `{fmt_coin(profit_all_coin, stake_cur)} "
                 f"({profit_all_ratio_mean:.2%}) "
                 f"({profit_all_percent} \N{GREEK CAPITAL LETTER SIGMA}%)`\n"
@@ -1106,6 +1096,208 @@ class Telegram(RPCHandler):
             markdown_msg,
             reload_able=True,
             callback_path="update_profit",
+            query=update.callback_query,
+        )
+
+    @authorized_only
+    async def _profit_long(self, update: Update, context: CallbackContext) -> None:
+        """
+        Handler for /profit_long.
+        Returns cumulative profit statistics for long trades.
+        """
+        stake_cur = self._config["stake_currency"]
+        fiat_disp_cur = self._config.get("fiat_display_currency", "")
+        start_date = datetime.fromtimestamp(0)
+        timescale = None
+        try:
+            if context.args:
+                timescale = int(context.args[0]) - 1
+                today_start = datetime.combine(date.today(), datetime.min.time())
+                start_date = today_start - timedelta(days=timescale)
+        except (TypeError, ValueError, IndexError):
+            pass
+        stats = self._rpc._rpc_trade_statistics(
+            stake_cur,
+            fiat_disp_cur,
+            start_date,
+            direction="long"
+        )
+
+        profit_closed_coin = stats["profit_closed_coin"]
+        profit_closed_ratio_mean = stats["profit_closed_ratio_mean"]
+        profit_closed_percent = stats["profit_closed_percent"]
+        profit_closed_fiat = stats["profit_closed_fiat"]
+        profit_all_coin = stats["profit_all_coin"]
+        profit_all_ratio_mean = stats["profit_all_ratio_mean"]
+        profit_all_percent = stats["profit_all_percent"]
+        profit_all_fiat = stats["profit_all_fiat"]
+        trade_count = stats["trade_count"]
+        first_trade_date = f"{stats['first_trade_humanized']} ({stats['first_trade_date']})"
+        latest_trade_date = f"{stats['latest_trade_humanized']} ({stats['latest_trade_date']})"
+        avg_duration = stats["avg_duration"]
+        best_pair = stats["best_pair"]
+        best_pair_profit_ratio = stats["best_pair_profit_ratio"]
+        best_pair_profit_abs = fmt_coin(stats["best_pair_profit_abs"], stake_cur)
+        winrate = stats["winrate"]
+        expectancy = stats["expectancy"]
+        expectancy_ratio = stats["expectancy_ratio"]
+        if stats["trade_count"] == 0:
+            markdown_msg = f"No long trades yet.\n*Bot started:* `{stats['bot_start_date']}`"
+        else:
+            if stats["closed_trade_count"] > 0:
+                fiat_closed_trades = (
+                    f"∙ `{fmt_coin(profit_closed_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
+                )
+                markdown_msg = (
+                    "*ROI: Closed long trades*\n"
+                    f"∙ `{fmt_coin(profit_closed_coin, stake_cur)} "
+                    f"({profit_closed_ratio_mean:.2%}) "
+                    f"({profit_closed_percent} \u03A3%)`\n"
+                    f"{fiat_closed_trades}"
+                )
+            else:
+                markdown_msg = "`No closed long trade` \n"
+            fiat_all_trades = (
+                f"∙ `{fmt_coin(profit_all_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
+            )
+            markdown_msg += (
+                f"*ROI: All long trades\n"
+                f"∙ `{fmt_coin(profit_all_coin, stake_cur)} "
+                f"({profit_all_ratio_mean:.2%}) "
+                f"({profit_all_percent} \u03A3%)`\n"
+                f"{fiat_all_trades}"
+                f"*Total Trade Count:* `{trade_count}`\n"
+                f"*Bot started:* `{stats['bot_start_date']}`\n"
+                f"*{'First Trade opened' if not timescale else 'Showing Profit since'}:* "
+                f"`{first_trade_date}`\n"
+                f"*Latest Trade opened:* `{latest_trade_date}`\n"
+                f"*Win / Loss:* `{stats['winning_trades']} / {stats['losing_trades']}`\n"
+                f"*Winrate:* `{winrate:.2%}`\n"
+                f"*Expectancy (Ratio):* `{expectancy:.2f} ({expectancy_ratio:.2f})`"
+            )
+            if stats["closed_trade_count"] > 0:
+                markdown_msg += (
+                    f"\n*Avg. Duration:* `{avg_duration}`\n"
+                    f"*Best Performing:* `{best_pair}: {best_pair_profit_abs} "
+                    f"({best_pair_profit_ratio:.2%})`\n"
+                    f"*Trading volume:* `{fmt_coin(stats['trading_volume'], stake_cur)}`\n"
+                    f"*Profit factor:* `{stats['profit_factor']:.2f}`\n"
+                    f"*Max Drawdown:* `{stats['max_drawdown']:.2%} "
+                    f"({fmt_coin(stats['max_drawdown_abs'], stake_cur)})`\n"
+                    f"    from `{stats['max_drawdown_start']} "
+                    f"({fmt_coin(stats['drawdown_high'], stake_cur)})`\n"
+                    f"    to `{stats['max_drawdown_end']} "
+                    f"({fmt_coin(stats['drawdown_low'], stake_cur)})`\n"
+                    f"*Current Drawdown:* `{stats['current_drawdown']:.2%} "
+                    f"({fmt_coin(stats['current_drawdown_abs'], stake_cur)})`\n"
+                    f"    from `{stats['current_drawdown_start']} "
+                    f"({fmt_coin(stats['current_drawdown_high'], stake_cur)})`\n"
+                )
+        await self._send_msg(
+            markdown_msg,
+            reload_able=True,
+            callback_path="update_profit_long",
+            query=update.callback_query,
+        )
+
+    @authorized_only
+    async def _profit_short(self, update: Update, context: CallbackContext) -> None:
+        """
+        Handler for /profit_short.
+        Returns cumulative profit statistics for short trades.
+        """
+        stake_cur = self._config["stake_currency"]
+        fiat_disp_cur = self._config.get("fiat_display_currency", "")
+        start_date = datetime.fromtimestamp(0)
+        timescale = None
+        try:
+            if context.args:
+                timescale = int(context.args[0]) - 1
+                today_start = datetime.combine(date.today(), datetime.min.time())
+                start_date = today_start - timedelta(days=timescale)
+        except (TypeError, ValueError, IndexError):
+            pass
+        stats = self._rpc._rpc_trade_statistics(
+            stake_cur,
+            fiat_disp_cur,
+            start_date,
+            direction="short"
+        )
+
+        profit_closed_coin = stats["profit_closed_coin"]
+        profit_closed_ratio_mean = stats["profit_closed_ratio_mean"]
+        profit_closed_percent = stats["profit_closed_percent"]
+        profit_closed_fiat = stats["profit_closed_fiat"]
+        profit_all_coin = stats["profit_all_coin"]
+        profit_all_ratio_mean = stats["profit_all_ratio_mean"]
+        profit_all_percent = stats["profit_all_percent"]
+        profit_all_fiat = stats["profit_all_fiat"]
+        trade_count = stats["trade_count"]
+        first_trade_date = f"{stats['first_trade_humanized']} ({stats['first_trade_date']})"
+        latest_trade_date = f"{stats['latest_trade_humanized']} ({stats['latest_trade_date']})"
+        avg_duration = stats["avg_duration"]
+        best_pair = stats["best_pair"]
+        best_pair_profit_ratio = stats["best_pair_profit_ratio"]
+        best_pair_profit_abs = fmt_coin(stats["best_pair_profit_abs"], stake_cur)
+        winrate = stats["winrate"]
+        expectancy = stats["expectancy"]
+        expectancy_ratio = stats["expectancy_ratio"]
+        if stats["trade_count"] == 0:
+            markdown_msg = f"No short trades yet.\n*Bot started:* `{stats['bot_start_date']}`"
+        else:
+            if stats["closed_trade_count"] > 0:
+                fiat_closed_trades = (
+                    f"∙ `{fmt_coin(profit_closed_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
+                )
+                markdown_msg = (
+                    "*ROI: Closed short trades*\n"
+                    f"∙ `{fmt_coin(profit_closed_coin, stake_cur)} "
+                    f"({profit_closed_ratio_mean:.2%}) "
+                    f"({profit_closed_percent} \u03A3%)`\n"
+                    f"{fiat_closed_trades}"
+                )
+            else:
+                markdown_msg = "`No closed short trade` \n"
+            fiat_all_trades = (
+                f"∙ `{fmt_coin(profit_all_fiat, fiat_disp_cur)}`\n" if fiat_disp_cur else ""
+            )
+            markdown_msg += (
+                f"*ROI: All short trades\n"
+                f"∙ `{fmt_coin(profit_all_coin, stake_cur)} "
+                f"({profit_all_ratio_mean:.2%}) "
+                f"({profit_all_percent} \u03A3%)`\n"
+                f"{fiat_all_trades}"
+                f"*Total Trade Count:* `{trade_count}`\n"
+                f"*Bot started:* `{stats['bot_start_date']}`\n"
+                f"*{'First Trade opened' if not timescale else 'Showing Profit since'}:* "
+                f"`{first_trade_date}`\n"
+                f"*Latest Trade opened:* `{latest_trade_date}`\n"
+                f"*Win / Loss:* `{stats['winning_trades']} / {stats['losing_trades']}`\n"
+                f"*Winrate:* `{winrate:.2%}`\n"
+                f"*Expectancy (Ratio):* `{expectancy:.2f} ({expectancy_ratio:.2f})`"
+            )
+            if stats["closed_trade_count"] > 0:
+                markdown_msg += (
+                    f"\n*Avg. Duration:* `{avg_duration}`\n"
+                    f"*Best Performing:* `{best_pair}: {best_pair_profit_abs} "
+                    f"({best_pair_profit_ratio:.2%})`\n"
+                    f"*Trading volume:* `{fmt_coin(stats['trading_volume'], stake_cur)}`\n"
+                    f"*Profit factor:* `{stats['profit_factor']:.2f}`\n"
+                    f"*Max Drawdown:* `{stats['max_drawdown']:.2%} "
+                    f"({fmt_coin(stats['max_drawdown_abs'], stake_cur)})`\n"
+                    f"    from `{stats['max_drawdown_start']} "
+                    f"({fmt_coin(stats['drawdown_high'], stake_cur)})`\n"
+                    f"    to `{stats['max_drawdown_end']} "
+                    f"({fmt_coin(stats['drawdown_low'], stake_cur)})`\n"
+                    f"*Current Drawdown:* `{stats['current_drawdown']:.2%} "
+                    f"({fmt_coin(stats['current_drawdown_abs'], stake_cur)})`\n"
+                    f"    from `{stats['current_drawdown_start']} "
+                    f"({fmt_coin(stats['current_drawdown_high'], stake_cur)})`\n"
+                )
+        await self._send_msg(
+            markdown_msg,
+            reload_able=True,
+            callback_path="update_profit_short",
             query=update.callback_query,
         )
 
@@ -1879,8 +2071,12 @@ class Telegram(RPCHandler):
             "*/exits <pair|none>:* `Shows the exit reason performance`\n"
             "*/mix_tags <pair|none>:* `Shows combined entry tag + exit reason performance`\n"
             "*/trades [limit]:* `Lists last closed trades (limited to 10 by default)`\n"
-            "*/profit [long|short] [<n>]:* `Show profit from finished trades (last n days).`\n "
-            "`Optional filter: long or short.`\n"
+            "*/profit [<n>]:* `Lists cumulative profit from all finished trades, "
+            "over the last n days`\n"
+            "*/profit_long [<n>]:* `Lists cumulative profit from all finished long trades, "
+            "over the last n days`\n"
+            "*/profit_short [<n>]:* `Lists cumulative profit from all finished short trades, "
+            "over the last n days`\n"
             "*/performance:* `Show performance of each finished trade grouped by pair`\n"
             "*/daily <n>:* `Shows profit or loss per day, over the last n days`\n"
             "*/weekly <n>:* `Shows statistics per week, over the last n weeks`\n"
@@ -2187,3 +2383,4 @@ class Telegram(RPCHandler):
             )
         except TelegramError as telegram_err:
             logger.warning("TelegramError: %s! Giving up on that message.", telegram_err.message)
+
