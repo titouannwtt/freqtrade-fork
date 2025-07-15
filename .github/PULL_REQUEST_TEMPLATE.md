@@ -1,5 +1,10 @@
 <!-- Thank you for sending your pull request. But first, have you included
 unit tests, and is your code PEP8 conformant? [More details](https://github.com/freqtrade/freqtrade/blob/develop/CONTRIBUTING.md)
+
+Did you use AI to create your changes?
+If so, please state it clearly in the PR description (failing to do so may result in your PR being closed).
+
+Also, please do a line by line review of the changes you made before submitting the PR, reverting all unnecessary changes.
 -->
 ## Summary
 

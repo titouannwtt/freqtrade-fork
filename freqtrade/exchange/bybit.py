@@ -64,9 +64,9 @@ class Bybit(Exchange):
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        # TradingMode.SPOT always supported and not required in this list
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
         # (TradingMode.FUTURES, MarginMode.CROSS),
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
 
     @property
