@@ -504,7 +504,7 @@ class RPC:
 
     def _collect_trade_statistics_data(
         self,
-        trades: Sequence['Trade'],
+        trades: Sequence["Trade"],
         stake_currency: str,
         fiat_display_currency: str,
     ) -> dict[str, Any]:
@@ -574,7 +574,7 @@ class RPC:
         stake_currency: str,
         fiat_display_currency: str,
         start_date: datetime | None = None,
-        direction: str | None = None
+        direction: str | None = None,
     ) -> dict[str, Any]:
         """
         Returns cumulative profit statistics, with optional direction filter (long/short)
@@ -582,8 +582,8 @@ class RPC:
         start_date = datetime.fromtimestamp(0) if start_date is None else start_date
 
         trade_filter = (
-            (Trade.is_open.is_(False) & (Trade.close_date >= start_date)) | Trade.is_open.is_(True)
-        )
+            Trade.is_open.is_(False) & (Trade.close_date >= start_date)
+        ) | Trade.is_open.is_(True)
 
         if direction:
             if direction == "long":
