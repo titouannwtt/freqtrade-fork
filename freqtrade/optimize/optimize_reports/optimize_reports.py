@@ -515,14 +515,16 @@ def generate_strategy_stats(
 
     best_pair = (
         max(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
     )
     worst_pair = (
         min(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
