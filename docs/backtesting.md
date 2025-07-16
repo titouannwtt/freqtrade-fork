@@ -376,7 +376,7 @@ It contains some useful key metrics about performance of your strategy on backte
 - `Profit factor`: profit / loss.
 - `Avg. stake amount`: Average stake amount, either `stake_amount` or the average when using dynamic stake amount.
 - `Total trade volume`: Volume generated on the exchange to reach the above profit.
-- `Best Pair` / `Worst Pair`: Best and worst performing pair, and it's corresponding `Tot Profit %`.
+- `Best Pair` / `Worst Pair`: Best and worst performing pair (based on absolute profit), and it's corresponding `Tot Profit %`.
 - `Best Trade` / `Worst Trade`: Biggest single winning trade and biggest single losing trade.
 - `Best day` / `Worst day`: Best and worst day based on daily profit.
 - `Days win/draw/lose`: Winning / Losing days (draws are usually days without closed trade).
