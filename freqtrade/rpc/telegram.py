@@ -191,8 +191,8 @@ class Telegram(RPCHandler):
             r"/mix_tags",
             r"/daily$",
             r"/daily \d+$",
-            r"/profit$",
-            r"/profit \d+",
+            r"/profit([_ ]long|[_ ]short)?$",
+            r"/profit([_ ]long|[_ ]short)? \d+$",
             r"/stats$",
             r"/count$",
             r"/locks$",
@@ -1126,6 +1126,11 @@ class Telegram(RPCHandler):
         timescale = None
         try:
             if context.args:
+                if not direction:
+                    arg = context.args[0].lower()
+                    if arg in ("short", "long"):
+                        direction = arg
+                        context.args.pop(0)  # Remove direction from args
                 timescale = int(context.args[0]) - 1
                 today_start = datetime.combine(date.today(), datetime.min.time())
                 start_date = today_start - timedelta(days=timescale)

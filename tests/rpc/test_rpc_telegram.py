@@ -3006,7 +3006,24 @@ async def test_telegram_profit_long_short_handle(
     assert msg_mock.call_count == 1
     assert "No long trades yet." in msg_mock.call_args_list[0][0][0]
     msg_mock.reset_mock()
+
+    # Test support with "/profit long"
+    context = MagicMock()
+    context.args = ["long"]
+    await telegram._profit(update=update, context=context)
+    assert msg_mock.call_count == 1
+    assert "No long trades yet." in msg_mock.call_args_list[0][0][0]
+    msg_mock.reset_mock()
+
     await telegram._profit_short(update=update, context=MagicMock())
+    assert msg_mock.call_count == 1
+    assert "No short trades yet." in msg_mock.call_args_list[0][0][0]
+    msg_mock.reset_mock()
+
+    # Test support with "/profit short"
+    context = MagicMock()
+    context.args = ["short"]
+    await telegram._profit(update=update, context=context)
     assert msg_mock.call_count == 1
     assert "No short trades yet." in msg_mock.call_args_list[0][0][0]
     msg_mock.reset_mock()
