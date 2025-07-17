@@ -313,7 +313,9 @@ class Telegram(RPCHandler):
             CallbackQueryHandler(self._daily, pattern="update_daily"),
             CallbackQueryHandler(self._weekly, pattern="update_weekly"),
             CallbackQueryHandler(self._monthly, pattern="update_monthly"),
-            CallbackQueryHandler(self._profit, pattern="update_profit"),
+            CallbackQueryHandler(self._profit_long, pattern="update_profit_long"),
+            CallbackQueryHandler(self._profit_short, pattern="update_profit_short"),
+            CallbackQueryHandler(self._profit, pattern=r"update_profit$"),
             CallbackQueryHandler(self._balance, pattern="update_balance"),
             CallbackQueryHandler(self._performance, pattern="update_performance"),
             CallbackQueryHandler(
@@ -1041,10 +1043,8 @@ class Telegram(RPCHandler):
             f"No{direction_label} trades yet.\n*Bot started:* `{stats['bot_start_date']}`"
         )
         no_closed_msg = f"`No closed{direction_label} trade` \n"
-        closed_roi_label = (
-            f"*ROI: Closed{direction_label} trades*" if direction else "*ROI:* Closed trades"
-        )
-        all_roi_label = f"*ROI: All{direction_label} trades" if direction else "*ROI:* All trades"
+        closed_roi_label = f"*ROI:* Closed{direction_label} trades"
+        all_roi_label = f"*ROI:* All{direction_label} trades"
 
         if stats["trade_count"] == 0:
             return no_trades_msg
@@ -1162,7 +1162,7 @@ class Telegram(RPCHandler):
         :param update: message update
         :return: None
         """
-        await self._profit_handler(update, context)
+        await self._profit_handler(update, context, callback_path="update_profit")
 
     @authorized_only
     async def _profit_long(self, update: Update, context: CallbackContext) -> None:
