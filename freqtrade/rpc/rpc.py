@@ -612,7 +612,7 @@ class RPC:
 
         closed_trade_count = len([t for t in trades if not t.is_open])
 
-        best_pair = Trade.get_best_pair(start_date)
+        best_pair = Trade.get_best_pair([Trade.close_date > start_date, dir_filter])
         trading_volume = Trade.get_trading_volume(
             [Order.order_filled_date >= start_date, dir_filter]
         )

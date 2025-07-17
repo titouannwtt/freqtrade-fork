@@ -2090,17 +2090,17 @@ class Trade(ModelBase, LocalTrade):
         return resp
 
     @staticmethod
-    def get_best_pair(start_date: datetime | None = None):
+    def get_best_pair(trade_filter: list | None = None):
         """
         Get best pair with closed trade.
         NOTE: Not supported in Backtesting.
         :returns: Tuple containing (pair, profit_sum)
         """
-        filters: list = [Trade.is_open.is_(False)]
-        if start_date:
-            filters.append(Trade.close_date >= start_date)
+        if not trade_filter:
+            trade_filter = []
+        trade_filter.append(Trade.is_open.is_(False))
 
-        pair_rates_query = Trade._generic_performance_query([Trade.pair], filters)
+        pair_rates_query = Trade._generic_performance_query([Trade.pair], trade_filter)
         best_pair = Trade.session.execute(pair_rates_query).first()
         # returns pair, profit_ratio, abs_profit, count
         return best_pair
