@@ -943,7 +943,7 @@ async def test_telegram_profit_handle(
     trade.is_open = False
     Trade.commit()
 
-    context.args = [3]
+    context.args = ["3"]
     await telegram._profit(update=update, context=context)
     assert msg_mock.call_count == 1
     assert "*ROI:* Closed trades" in msg_mock.call_args_list[-1][0][0]
@@ -1016,8 +1016,8 @@ async def test_telegram_profit_long_short_handle(
     Trade.commit()
     await telegram._profit_long(update=update, context=MagicMock())
     msg = msg_mock.call_args_list[0][0][0]
-    assert "*ROI: Closed long trades*" in msg
-    assert "*ROI: All long trades" in msg
+    assert "*ROI:* Closed long trades" in msg
+    assert "*ROI:* All long trades" in msg
     assert "*Total Trade Count:*" in msg
     assert "*Winrate:*" in msg
     assert "*Expectancy (Ratio):*" in msg
@@ -1033,8 +1033,8 @@ async def test_telegram_profit_long_short_handle(
     Trade.commit()
     await telegram._profit_short(update=update, context=MagicMock())
     msg = msg_mock.call_args_list[0][0][0]
-    assert "*ROI: Closed short trades*" in msg
-    assert "*ROI: All short trades" in msg
+    assert "*ROI:* Closed short trades" in msg
+    assert "*ROI:* All short trades" in msg
     assert "*Total Trade Count:*" in msg
     assert "*Winrate:*" in msg
     assert "*Expectancy (Ratio):*" in msg
