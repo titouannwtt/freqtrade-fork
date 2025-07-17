@@ -2890,7 +2890,7 @@ async def test_telegram_list_custom_data(default_conf_usdt, update, ticker, fee,
     msg_mock.reset_mock()
 
 
-def test_noficiation_settings(default_conf_usdt, mocker):
+def test_notification_settings(default_conf_usdt, mocker):
     (telegram, _, _) = get_telegram_testobject(mocker, default_conf_usdt)
     telegram._config["telegram"].update(
         {
