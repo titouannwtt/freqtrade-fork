@@ -1109,7 +1109,6 @@ class Telegram(RPCHandler):
         update: Update,
         context: CallbackContext,
         direction: str | None = None,
-        callback_path: str = "update_profit",
     ) -> None:
         """
         Common handler for profit commands.
@@ -1154,7 +1153,7 @@ class Telegram(RPCHandler):
         await self._send_msg(
             markdown_msg,
             reload_able=True,
-            callback_path=callback_path,
+            callback_path="update_profit" if not direction else f"update_profit_{direction}",
             query=update.callback_query,
         )
 
@@ -1167,7 +1166,7 @@ class Telegram(RPCHandler):
         :param update: message update
         :return: None
         """
-        await self._profit_handler(update, context, callback_path="update_profit")
+        await self._profit_handler(update, context)
 
     @authorized_only
     async def _profit_long(self, update: Update, context: CallbackContext) -> None:
@@ -1175,9 +1174,7 @@ class Telegram(RPCHandler):
         Handler for /profit_long.
         Returns cumulative profit statistics for long trades.
         """
-        await self._profit_handler(
-            update, context, direction="long", callback_path="update_profit_long"
-        )
+        await self._profit_handler(update, context, direction="long")
 
     @authorized_only
     async def _profit_short(self, update: Update, context: CallbackContext) -> None:
@@ -1185,9 +1182,7 @@ class Telegram(RPCHandler):
         Handler for /profit_short.
         Returns cumulative profit statistics for short trades.
         """
-        await self._profit_handler(
-            update, context, direction="short", callback_path="update_profit_short"
-        )
+        await self._profit_handler(update, context, direction="short")
 
     @authorized_only
     async def _stats(self, update: Update, context: CallbackContext) -> None:
