@@ -2363,14 +2363,14 @@ class FreqtradeBot(LoggingMixin):
                     stake_currency=self.config["stake_currency"],
                     dry_run=self.config["dry_run"],
                 )
-                if self.strategy.use_custom_stoploss:
-                    current_rate = self.exchange.get_rate(
-                        trade.pair, side="exit", is_short=trade.is_short, refresh=True
-                    )
-                    profit = trade.calc_profit_ratio(current_rate)
-                    self.strategy.ft_stoploss_adjust(
-                        current_rate, trade, datetime.now(UTC), profit, 0, after_fill=True
-                    )
+            if self.strategy.use_custom_stoploss and trade.is_open:
+                current_rate = self.exchange.get_rate(
+                    trade.pair, side="exit", is_short=trade.is_short, refresh=True
+                )
+                profit = trade.calc_profit_ratio(current_rate)
+                self.strategy.ft_stoploss_adjust(
+                    current_rate, trade, datetime.now(UTC), profit, 0, after_fill=True
+                )
             # Updating wallets when order is closed
             self.wallets.update()
         return trade
