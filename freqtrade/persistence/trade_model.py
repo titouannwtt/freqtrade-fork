@@ -2106,16 +2106,18 @@ class Trade(ModelBase, LocalTrade):
         return best_pair
 
     @staticmethod
-    def get_trading_volume(start_date: datetime | None = None) -> float:
+    def get_trading_volume(trade_filter: list | None = None) -> float:
         """
         Get Trade volume based on Orders
         NOTE: Not supported in Backtesting.
         :returns: Tuple containing (pair, profit_sum)
         """
-        filters = [Order.status == "closed"]
-        if start_date:
-            filters.append(Order.order_filled_date >= start_date)
+        if not trade_filter:
+            trade_filter = []
+        trade_filter.append(Order.status == "closed")
         trading_volume = Trade.session.execute(
-            select(func.sum(Order.cost).label("volume")).filter(*filters)
+            select(func.sum(Order.cost).label("volume"))
+            .join(Order._trade_live)
+            .filter(*trade_filter)
         ).scalar_one()
         return trading_volume or 0.0

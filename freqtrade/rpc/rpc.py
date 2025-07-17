@@ -34,7 +34,7 @@ from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_msec
 from freqtrade.exchange.exchange_utils import price_to_precision
 from freqtrade.ft_types import AnnotationType
 from freqtrade.loggers import bufferHandler
-from freqtrade.persistence import CustomDataWrapper, KeyValueStore, PairLocks, Trade
+from freqtrade.persistence import CustomDataWrapper, KeyValueStore, Order, PairLocks, Trade
 from freqtrade.persistence.models import PairLock, custom_data_rpc_wrapper
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
@@ -585,11 +585,14 @@ class RPC:
             Trade.is_open.is_(False) & (Trade.close_date >= start_date)
         ) | Trade.is_open.is_(True)
 
-        if direction:
-            if direction == "long":
-                trade_filter = trade_filter & Trade.is_short.is_(False)
-            elif direction == "short":
-                trade_filter = trade_filter & Trade.is_short.is_(True)
+        if direction == "long":
+            dir_filter = Trade.is_short.is_(False)
+            trade_filter = trade_filter & dir_filter
+        elif direction == "short":
+            dir_filter = Trade.is_short.is_(True)
+            trade_filter = trade_filter & dir_filter
+        else:
+            dir_filter = True
 
         trades: Sequence[Trade] = Trade.session.scalars(
             Trade.get_trades_query(trade_filter, include_orders=False).order_by(Trade.id)
@@ -610,7 +613,9 @@ class RPC:
         closed_trade_count = len([t for t in trades if not t.is_open])
 
         best_pair = Trade.get_best_pair(start_date)
-        trading_volume = Trade.get_trading_volume(start_date)
+        trading_volume = Trade.get_trading_volume(
+            [Order.order_filled_date >= start_date, dir_filter]
+        )
 
         # Prepare data to display
         profit_closed_coin_sum = round(sum(profit_closed_coin), 8)
