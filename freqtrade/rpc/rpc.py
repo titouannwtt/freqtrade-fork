@@ -591,8 +591,6 @@ class RPC:
         elif direction == "short":
             dir_filter = Trade.is_short.is_(True)
             trade_filter = trade_filter & dir_filter
-        else:
-            dir_filter = True
 
         trades: Sequence[Trade] = Trade.session.scalars(
             Trade.get_trades_query(trade_filter, include_orders=False).order_by(Trade.id)
@@ -612,10 +610,15 @@ class RPC:
 
         closed_trade_count = len([t for t in trades if not t.is_open])
 
-        best_pair = Trade.get_best_pair([Trade.close_date > start_date, dir_filter])
-        trading_volume = Trade.get_trading_volume(
-            [Order.order_filled_date >= start_date, dir_filter]
-        )
+        best_pair_filters = [Trade.close_date > start_date]
+        trading_volume_filters = [Order.order_filled_date >= start_date]
+
+        if direction:
+            best_pair_filters.append(dir_filter)
+            trading_volume_filters.append(dir_filter)
+
+        best_pair = Trade.get_best_pair(best_pair_filters)
+        trading_volume = Trade.get_trading_volume(trading_volume_filters)
 
         # Prepare data to display
         profit_closed_coin_sum = round(sum(profit_closed_coin), 8)
