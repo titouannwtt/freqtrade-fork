@@ -43,6 +43,7 @@ from freqtrade.rpc.api_server.api_schemas import (
     Ping,
     PlotConfig,
     Profit,
+    ProfitAll,
     ResultMsg,
     ShowConfig,
     Stats,
@@ -89,7 +90,8 @@ logger = logging.getLogger(__name__)
 # 2.40: Add hyperopt-loss endpoint
 # 2.41: Add download-data endpoint
 # 2.42: Add /pair_history endpoint with live data
-API_VERSION = 2.42
+# 2.43: Add /profit_all endpoint
+API_VERSION = 2.43
 
 # Public API, requires no auth.
 router_public = APIRouter()
@@ -146,6 +148,24 @@ def performance(rpc: RPC = Depends(get_rpc)):
 @router.get("/profit", response_model=Profit, tags=["info"])
 def profit(rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
     return rpc._rpc_trade_statistics(config["stake_currency"], config.get("fiat_display_currency"))
+
+
+@router.get("/profit_all", response_model=ProfitAll, tags=["info"])
+def profit_all(rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
+    response = {
+        "all": rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency")
+        ),
+    }
+    if config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT:
+        response["long"] = rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency"), direction="long"
+        )
+        response["short"] = rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency"), direction="short"
+        )
+
+    return response
 
 
 @router.get("/stats", response_model=Stats, tags=["info"])
