@@ -487,7 +487,7 @@ EXCHANGES = {
         ],
     },
     "hyperliquid": {
-        "pair": "PURR/USDC",
+        "pair": "UBTC/USDC",
         "stake_currency": "USDC",
         "hasQuoteVolume": False,
         "timeframe": "1h",
