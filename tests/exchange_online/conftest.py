@@ -490,7 +490,7 @@ EXCHANGES = {
         "pair": "UBTC/USDC",
         "stake_currency": "USDC",
         "hasQuoteVolume": False,
-        "timeframe": "1h",
+        "timeframe": "30m",
         "futures": True,
         "candle_count": 5000,
         "orderbook_max_entries": 20,
