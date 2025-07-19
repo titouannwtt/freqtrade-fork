@@ -182,18 +182,36 @@ class Bybit(Exchange):
         PERPETUAL:
          bybit:
           https://www.bybithelp.com/HelpCenterKnowledge/bybitHC_Article?language=en_US&id=000001067
-          https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#b
+          USDT:
+            https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#b
+          USDC:
+            https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#c
 
-        Long:
+        Long USDT:
+            Liquidation Price = (
+                Entry Price - [(Initial Margin - Maintenance Margin)/Contract Quantity]
+                - (Extra Margin Added/Contract Quantity))
+        Short USDT:
+            Liquidation Price = (
+                Entry Price + [(Initial Margin - Maintenance Margin)/Contract Quantity]
+                + (Extra Margin Added/Contract Quantity))
+
+        Long USDC:
         Liquidation Price = (
-            Entry Price - [(Initial Margin - Maintenance Margin)/Contract Quantity]
-            - (Extra Margin Added/Contract Quantity))
-        Short:
+            Position Entry Price - [
+                (Initial Margin + Extra Margin Added - Maintenance Margin) / Position Size
+            ]
+        )
+
+        Short USDC:
         Liquidation Price = (
-            Entry Price + [(Initial Margin - Maintenance Margin)/Contract Quantity]
-            + (Extra Margin Added/Contract Quantity))
+            Position Entry Price + [
+                (Initial Margin + Extra Margin Added - Maintenance Margin) / Position Size
+            ]
+        )
 
         Implementation Note: Extra margin is currently not used.
+        Due to this - the liquidation formula between USDT and USDC is the same.
 
         :param pair: Pair to calculate liquidation price for
         :param open_rate: Entry price of position
