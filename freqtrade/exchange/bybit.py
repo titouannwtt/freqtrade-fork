@@ -1,8 +1,5 @@
-"""Bybit exchange subclass"""
-
 import logging
 from datetime import datetime, timedelta
-from typing import Any
 
 import ccxt
 
@@ -78,11 +75,6 @@ class Bybit(Exchange):
             config.update({"options": {"defaultType": "spot"}})
         config.update(super()._ccxt_config)
         return config
-
-    def market_is_future(self, market: dict[str, Any]) -> bool:
-        main = super().market_is_future(market)
-        # For ByBit, we'll only support USDT markets for now.
-        return main and market["settle"] == "USDT"
 
     @retrier
     def additional_exchange_init(self) -> None:
