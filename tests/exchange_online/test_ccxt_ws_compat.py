@@ -41,9 +41,8 @@ class TestCCXTExchangeWs:
 
         # Currently open candle
         next_candle = timeframe_to_prev_date(timeframe, dt_now())
-        now = next_candle - timedelta(seconds=1)
         # Currently closed candle
-        curr_candle = timeframe_to_prev_date(timeframe, now)
+        curr_candle = timeframe_to_prev_date(timeframe, next_candle - timedelta(seconds=1))
 
         assert pair_tf in exch._exchange_ws._klines_watching
         assert pair_tf in exch._exchange_ws._klines_scheduled
