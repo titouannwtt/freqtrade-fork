@@ -9,6 +9,7 @@ from freqtrade.exceptions import DDosProtection, ExchangeError, OperationalExcep
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
+from freqtrade.misc import deep_merge_dicts
 
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,9 @@ class Bybit(Exchange):
         config = {}
         if self.trading_mode == TradingMode.SPOT:
             config.update({"options": {"defaultType": "spot"}})
-        config.update(super()._ccxt_config)
+        elif self.trading_mode == TradingMode.FUTURES:
+            config.update({"options": {"defaultSettle": self._config["stake_currency"]}})
+        config = deep_merge_dicts(config, super()._ccxt_config)
         return config
 
     @retrier
