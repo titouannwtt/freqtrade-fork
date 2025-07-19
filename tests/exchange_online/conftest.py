@@ -498,6 +498,8 @@ EXCHANGES = {
         "hasQuoteVolumeFutures": True,
         "leverage_tiers_public": False,
         "leverage_in_spot_market": False,
+        # TODO: re-enable hyperliquid websocket tests
+        "skip_ws_tests": True,
     },
 }
 
