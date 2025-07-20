@@ -321,6 +321,7 @@ It contains some useful key metrics about performance of your strategy on backte
 | SQN                         | 2.45                |
 | Profit factor               | 1.11                |
 | Expectancy (Ratio)          | -0.15 (-0.05)       |
+| Avg. daily profit           | 0.0001     BTC      |
 | Avg. stake amount           | 0.001      BTC      |
 | Total trade volume          | 0.429      BTC      |
 |                             |                     |
@@ -374,6 +375,8 @@ It contains some useful key metrics about performance of your strategy on backte
 - `Calmar`: Annualized Calmar ratio.
 - `SQN`: System Quality Number (SQN) - by Van Tharp.
 - `Profit factor`: profit / loss.
+- `Expectancy (Ratio)`: Expectancy ratio, which is the average profit or loss per trade. A negative expectancy ratio means that your strategy is not profitable.
+- `Avg. daily profit`: Average profit per day, calculated as `(Total Profit / Backtest Days)`.
 - `Avg. stake amount`: Average stake amount, either `stake_amount` or the average when using dynamic stake amount.
 - `Total trade volume`: Volume generated on the exchange to reach the above profit.
 - `Best Pair` / `Worst Pair`: Best and worst performing pair (based on absolute profit), and it's corresponding `Tot Profit %`.
