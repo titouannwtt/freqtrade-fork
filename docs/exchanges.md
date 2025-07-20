@@ -363,6 +363,27 @@ Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 
     * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet to trade on Hyperliquid.
     * If you have funds you don't want to use for trading (after making a profit for example), transfer them back to your hardware wallet.
 
+### Hyperliquid Vault / Subaccount
+
+Hyperliquid allows you to create either a vault or a subaccount.  
+To use these with Freqtrade, you will need to use the following configuration pattern:
+
+``` json
+"exchange": {
+    "name": "hyperliquid",
+    "walletAddress": "your_vault_address",  // Vault or subaccount address
+    "privateKey": "your_api_private_key",
+    "ccxt_config": {
+        "options": {
+            "vaultAddress": "your_vault_address" // Optional, only if you want to use a vault or subaccount
+        }
+    },
+    // ...
+}
+```
+
+Your balance and trades will now be used from your vault / subaccount - and no longer from your main account.
+
 ### Historic Hyperliquid data
 
 The Hyperliquid API does not provide historic data beyond the single call to fetch current data, so downloading data is not possible, as the downloaded data would not constitute proper historic data.
