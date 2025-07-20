@@ -332,8 +332,11 @@ def text_table_add_metrics(strat_results: dict) -> None:
                 ),
             ),
             (
-                "Avg. daily profit %",
-                f"{(strat_results['profit_total'] / strat_results['backtest_days']):.2%}",
+                "Avg. daily profit",
+                fmt_coin(
+                    (strat_results["profit_total_abs"] / strat_results["backtest_days"]),
+                    strat_results["stake_currency"],
+                ),
             ),
             (
                 "Avg. stake amount",
