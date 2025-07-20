@@ -339,7 +339,7 @@ This needs to be configured like this:
 ```json
 "exchange": {
     "name": "hyperliquid",
-    "walletAddress": "your_eth_wallet_address",
+    "walletAddress": "your_eth_wallet_address",  // This should NOT be your API Wallet Address!
     "privateKey": "your_api_private_key",
     // ...
 }
