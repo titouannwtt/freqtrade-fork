@@ -259,6 +259,7 @@ ARGS_RECURSIVE_ANALYSIS = ["timeframe", "timerange", "dataformat_ohlcv", "pairs"
 # Command level configs - keep at the bottom of the above definitions
 NO_CONF_REQURIED = [
     "backtest-filter",
+    "backtesting-show",
     "convert-data",
     "convert-trade-data",
     "download-data",
@@ -274,6 +275,7 @@ NO_CONF_REQURIED = [
     "plot-dataframe",
     "plot-profit",
     "show-trades",
+    "install-ui",
     "strategy-updater",
     "trades-to-ohlcv",
 ]
@@ -325,7 +327,7 @@ class Arguments:
                 cfgfile = Path.cwd() / DEFAULT_CONFIG
                 conf_optional = "command" in parsed_arg and parsed_arg.command in NO_CONF_REQURIED
                 if cfgfile.is_file() or not conf_optional:
-                    # Only inject config if the file exists, or if the config is optional
+                    # Only inject config if the file exists, or if the config is required
                     parsed_arg.config = [DEFAULT_CONFIG]
 
         return parsed_arg
