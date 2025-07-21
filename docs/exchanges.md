@@ -345,7 +345,7 @@ This needs to be configured like this:
 }
 ```
 
-* walletAddress in hex format: `0x<40 hex characters>` - Can be easily copied from your wallet - and should be your wallet address, not your API Wallet Address.
+* walletAddress in hex format: `0x<40 hex characters>` - Can be easily copied from your wallet - and should be your main wallet address, not your API Wallet Address.
 * privateKey in hex format: `0x<64 hex characters>` - Use the key the API Wallet shows on creation.
 
 Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 2 scaling solution built on top of Ethereum. Hyperliquid uses USDC as quote / collateral. The process of depositing USDC on Hyperliquid requires a couple of steps, see [how to start trading](https://hyperliquid.gitbook.io/hyperliquid-docs/onboarding/how-to-start-trading) for details on what steps are needed.
