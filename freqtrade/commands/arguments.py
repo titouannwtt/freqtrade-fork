@@ -258,24 +258,24 @@ ARGS_RECURSIVE_ANALYSIS = ["timeframe", "timerange", "dataformat_ohlcv", "pairs"
 
 # Command level configs - keep at the bottom of the above definitions
 NO_CONF_REQURIED = [
+    "backtest-filter",
     "convert-data",
     "convert-trade-data",
     "download-data",
-    "list-timeframes",
+    "hyperopt-list",
+    "hyperopt-show",
+    "list-data",
+    "list-freqaimodels",
+    "list-hyperoptloss",
     "list-markets",
     "list-pairs",
     "list-strategies",
-    "list-freqaimodels",
-    "list-hyperoptloss",
-    "list-data",
-    "hyperopt-list",
-    "hyperopt-show",
-    "backtest-filter",
+    "list-timeframes",
     "plot-dataframe",
     "plot-profit",
     "show-trades",
-    "trades-to-ohlcv",
     "strategy-updater",
+    "trades-to-ohlcv",
 ]
 
 NO_CONF_ALLOWED = ["create-userdir", "list-exchanges", "new-strategy"]
