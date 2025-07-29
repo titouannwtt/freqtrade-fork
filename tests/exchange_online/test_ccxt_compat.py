@@ -393,7 +393,7 @@ class TestCCXTExchange:
         )
 
         assert isinstance(funding_fee, float)
-        # assert funding_fee > 0
+        assert funding_fee != 0
 
     def test_ccxt__async_get_trade_history(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange
