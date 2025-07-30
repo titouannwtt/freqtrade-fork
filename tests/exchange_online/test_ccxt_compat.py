@@ -521,3 +521,35 @@ class TestCCXTExchange:
         exch, exchangename = exchange
         for method in EXCHANGES[exchangename].get("private_methods", []):
             assert hasattr(exch._api, method)
+
+    def test_ccxt_bitget_ohlcv_candle_limit(self, exchange: EXCHANGE_FIXTURE_TYPE):
+        exch, exchangename = exchange
+        if exchangename != "bitget":
+            pytest.skip("This test is only for the Bitget exchange")
+
+        timeframes = ("1m", "5m", "1h")
+
+        for timeframe in timeframes:
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT) == 1000
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES) == 1000
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK) == 200
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE) == 200
+
+            start_time = dt_ts(dt_now() - timedelta(days=17))
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == 1000
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == 1000
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
+            start_time = dt_ts(dt_now() - timedelta(days=48))
+            length = 200 if timeframe in ("1m", "5m") else 1000
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
+
+            start_time = dt_ts(dt_now() - timedelta(days=61))
+            length = 200
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+            assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
