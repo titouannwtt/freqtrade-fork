@@ -414,12 +414,6 @@ EXCHANGES = {
         "hasQuoteVolume": True,
         "timeframe": "1h",
         "candle_count": 1000,
-        # "futures": False,
-        # "futures_pair": "BTC/USDT:USDT",
-        # "hasQuoteVolumeFutures": False,
-        # "leverage_tiers_public": True,
-        # "leverage_in_spot_market": True,
-        # "private_methods": ["fetch_accounts"],
     },
     "htx": {
         "pair": "ETH/BTC",
