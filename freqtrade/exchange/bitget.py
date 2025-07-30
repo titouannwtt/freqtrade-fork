@@ -23,6 +23,9 @@ class Bitget(Exchange):
     _ft_has: FtHas = {
         "ohlcv_candle_limit": 200,  # 200 for historical candles, 1000 for recent ones.
     }
+    _ft_has_futures: FtHas = {
+        "mark_ohlcv_timeframe": "4h",
+    }
 
     def ohlcv_candle_limit(
         self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
