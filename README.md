@@ -64,7 +64,7 @@ Please find the complete documentation on the [freqtrade website](https://www.fr
 
 ## Features
 
-- [x] **Based on Python 3.10+**: For botting on any operating system - Windows, macOS and Linux.
+- [x] **Based on Python 3.11+**: For botting on any operating system - Windows, macOS and Linux.
 - [x] **Persistence**: Persistence is achieved through sqlite.
 - [x] **Dry-run**: Run the bot without paying money.
 - [x] **Backtesting**: Run a simulation of your buy/sell strategy.
@@ -146,6 +146,8 @@ Telegram is not mandatory. However, this is a great way to control your bot. Mor
 - `/stopentry`: Stop entering new trades.
 - `/status <trade_id>|[table]`: Lists all or specific open trades.
 - `/profit [<n>]`: Lists cumulative profit from all finished trades, over the last n days.
+- `/profit_long [<n>]`: Lists cumulative profit from all finished long trades, over the last n days.
+- `/profit_short [<n>]`: Lists cumulative profit from all finished short trades, over the last n days.
 - `/forceexit <trade_id>|all`: Instantly exits the given trade (Ignoring `minimum_roi`).
 - `/fx <trade_id>|all`: Alias to `/forceexit`
 - `/performance`: Show performance of each finished trade grouped by pair
@@ -153,6 +155,7 @@ Telegram is not mandatory. However, this is a great way to control your bot. Mor
 - `/daily <n>`: Shows profit or loss per day, over the last n days.
 - `/help`: Show help message.
 - `/version`: Show version.
+
 
 ## Development branches
 
@@ -219,7 +222,7 @@ To run this bot we recommend you a cloud instance with a minimum of:
 
 ### Software requirements
 
-- [Python >= 3.10](http://docs.python-guide.org/en/latest/starting/installation/)
+- [Python >= 3.11](http://docs.python-guide.org/en/latest/starting/installation/)
 - [pip](https://pip.pypa.io/en/stable/installing/)
 - [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [TA-Lib](https://ta-lib.github.io/ta-lib-python/)

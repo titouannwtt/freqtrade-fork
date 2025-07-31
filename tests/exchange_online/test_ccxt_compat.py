@@ -5,7 +5,7 @@ However, these tests should give a good idea to determine if a new exchange is
 suitable to run with freqtrade.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -248,7 +248,7 @@ class TestCCXTExchange:
             len(exch.klines(pair_tf)) > exch.ohlcv_candle_limit(timeframe, CandleType.SPOT) * 0.90
         )
         # Check if last-timeframe is within the last 2 intervals
-        now = datetime.now(timezone.utc) - timedelta(minutes=(timeframe_to_minutes(timeframe) * 2))
+        now = datetime.now(UTC) - timedelta(minutes=(timeframe_to_minutes(timeframe) * 2))
         assert exch.klines(pair_tf).iloc[-1]["date"] >= timeframe_to_prev_date(timeframe, now)
 
     def test_ccxt_fetch_ohlcv_startdate(self, exchange: EXCHANGE_FIXTURE_TYPE):
@@ -266,15 +266,13 @@ class TestCCXTExchange:
         assert isinstance(ohlcv, dict)
         assert len(ohlcv[pair_tf]) == len(exch.klines(pair_tf))
         # Check if last-timeframe is within the last 2 intervals
-        now = datetime.now(timezone.utc) - timedelta(minutes=(timeframe_to_minutes(timeframe) * 2))
+        now = datetime.now(UTC) - timedelta(minutes=(timeframe_to_minutes(timeframe) * 2))
         assert exch.klines(pair_tf).iloc[-1]["date"] >= timeframe_to_prev_date(timeframe, now)
         assert exch.klines(pair_tf)["date"].astype(int).iloc[0] // 1e6 == since_ms
 
-    def ccxt__async_get_candle_history(
-        self, exchange, exchangename, pair, timeframe, candle_type, factor=0.9
-    ):
+    def _ccxt__async_get_candle_history(self, exchange, pair, timeframe, candle_type, factor=0.9):
         timeframe_ms = timeframe_to_msecs(timeframe)
-        now = timeframe_to_prev_date(timeframe, datetime.now(timezone.utc))
+        now = timeframe_to_prev_date(timeframe, datetime.now(UTC))
         for offset in (360, 120, 30, 10, 5, 2):
             since = now - timedelta(days=offset)
             since_ms = int(since.timestamp() * 1000)
@@ -304,7 +302,7 @@ class TestCCXTExchange:
             pytest.skip("Exchange does not support candle history")
         pair = EXCHANGES[exchangename]["pair"]
         timeframe = EXCHANGES[exchangename]["timeframe"]
-        self.ccxt__async_get_candle_history(exc, exchangename, pair, timeframe, CandleType.SPOT)
+        self._ccxt__async_get_candle_history(exc, pair, timeframe, CandleType.SPOT)
 
     @pytest.mark.parametrize(
         "candle_type",
@@ -315,7 +313,7 @@ class TestCCXTExchange:
         ],
     )
     def test_ccxt__async_get_candle_history_futures(
-        self, exchange_futures: EXCHANGE_FIXTURE_TYPE, candle_type
+        self, exchange_futures: EXCHANGE_FIXTURE_TYPE, candle_type: CandleType
     ):
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
@@ -324,9 +322,8 @@ class TestCCXTExchange:
             timeframe = exchange._ft_has.get(
                 "funding_fee_timeframe", exchange._ft_has["mark_ohlcv_timeframe"]
             )
-        self.ccxt__async_get_candle_history(
+        self._ccxt__async_get_candle_history(
             exchange,
-            exchangename,
             pair=pair,
             timeframe=timeframe,
             candle_type=candle_type,
@@ -336,7 +333,7 @@ class TestCCXTExchange:
         exchange, exchangename = exchange_futures
 
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
-        since = int((datetime.now(timezone.utc) - timedelta(days=5)).timestamp() * 1000)
+        since = int((datetime.now(UTC) - timedelta(days=5)).timestamp() * 1000)
         timeframe_ff = exchange._ft_has.get(
             "funding_fee_timeframe", exchange._ft_has["mark_ohlcv_timeframe"]
         )
@@ -371,7 +368,7 @@ class TestCCXTExchange:
     def test_ccxt_fetch_mark_price_history(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
-        since = int((datetime.now(timezone.utc) - timedelta(days=5)).timestamp() * 1000)
+        since = int((datetime.now(UTC) - timedelta(days=5)).timestamp() * 1000)
         pair_tf = (pair, "1h", CandleType.MARK)
 
         mark_ohlcv = exchange.refresh_latest_ohlcv([pair_tf], since_ms=since, drop_incomplete=False)
@@ -383,27 +380,31 @@ class TestCCXTExchange:
         this_hour = timeframe_to_prev_date(expected_tf)
         prev_hour = timeframe_to_prev_date(expected_tf, this_hour - timedelta(minutes=1))
 
+        # Mark price must be available for the currently open candle (as well as older candles,
+        # even though the test only asserts the last two).
+        # This is a requirement to have funding fee calculations available correctly and timely
+        # right as the funding fee applies (e.g. at 08:00).
         assert mark_candles[mark_candles["date"] == prev_hour].iloc[0]["open"] != 0.0
         assert mark_candles[mark_candles["date"] == this_hour].iloc[0]["open"] != 0.0
 
     def test_ccxt__calculate_funding_fees(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
-        since = datetime.now(timezone.utc) - timedelta(days=5)
+        since = datetime.now(UTC) - timedelta(days=5)
 
         funding_fee = exchange._fetch_and_calculate_funding_fees(
             pair, 20, is_short=False, open_date=since
         )
 
         assert isinstance(funding_fee, float)
-        # assert funding_fee > 0
+        assert funding_fee != 0
 
     def test_ccxt__async_get_trade_history(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange
         if not (lookback := EXCHANGES[exchangename].get("trades_lookback_hours")):
             pytest.skip("test_fetch_trades not enabled for this exchange")
         pair = EXCHANGES[exchangename]["pair"]
-        since = int((datetime.now(timezone.utc) - timedelta(hours=lookback)).timestamp() * 1000)
+        since = int((datetime.now(UTC) - timedelta(hours=lookback)).timestamp() * 1000)
         res = exch.loop.run_until_complete(exch._async_get_trade_history(pair, since, None, None))
         assert len(res) == 2
         res_pair, res_trades = res

@@ -1,6 +1,6 @@
 import logging
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import numpy as np
@@ -83,7 +83,6 @@ def _generate_result_line(
     """
     Generate one result dict, with "first_column" as key.
     """
-    profit_sum = result["profit_ratio"].sum()
     # (end-capital - starting capital) / starting capital
     profit_total = result["profit_abs"].sum() / starting_balance
     backtest_days = (max_date - min_date).days or 1
@@ -108,8 +107,6 @@ def _generate_result_line(
         "profit_mean_pct": (
             round(result["profit_ratio"].mean() * 100.0, 2) if len(result) > 0 else 0.0
         ),
-        "profit_sum": profit_sum,
-        "profit_sum_pct": round(profit_sum * 100.0, 2),
         "profit_total_abs": result["profit_abs"].sum(),
         "profit_total": profit_total,
         "profit_total_pct": round(profit_total * 100.0, 2),
@@ -518,14 +515,16 @@ def generate_strategy_stats(
 
     best_pair = (
         max(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
     )
     worst_pair = (
         min(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
@@ -652,9 +651,9 @@ def generate_strategy_stats(
                 "max_drawdown_abs": 0.0,
                 "max_drawdown_low": 0.0,
                 "max_drawdown_high": 0.0,
-                "drawdown_start": datetime(1970, 1, 1, tzinfo=timezone.utc),
+                "drawdown_start": datetime(1970, 1, 1, tzinfo=UTC),
                 "drawdown_start_ts": 0,
-                "drawdown_end": datetime(1970, 1, 1, tzinfo=timezone.utc),
+                "drawdown_end": datetime(1970, 1, 1, tzinfo=UTC),
                 "drawdown_end_ts": 0,
                 "csum_min": 0,
                 "csum_max": 0,
