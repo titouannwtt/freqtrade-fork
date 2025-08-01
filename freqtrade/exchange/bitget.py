@@ -22,6 +22,7 @@ class Bitget(Exchange):
 
     _ft_has: FtHas = {
         "ohlcv_candle_limit": 200,  # 200 for historical candles, 1000 for recent ones.
+        "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
     }
     _ft_has_futures: FtHas = {
         "mark_ohlcv_timeframe": "4h",
