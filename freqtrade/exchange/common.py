@@ -49,7 +49,6 @@ MAP_EXCHANGE_CHILDCLASS = {
     "binanceje": "binance",
     "binanceusdm": "binance",
     "okex": "okx",
-    "myokx": "okx",
     "okxus": "okx",
     "gateio": "gate",
     "huboi": "htx",
@@ -65,6 +64,7 @@ SUPPORTED_EXCHANGES = [
     "hyperliquid",
     "kraken",
     "okx",
+    "myokx",
 ]
 
 # either the main, or replacement methods (array) is required
