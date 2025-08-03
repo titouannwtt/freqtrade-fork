@@ -160,6 +160,19 @@ def test_list_exchanges(capsys):
     assert re.search(r"^bingx$", captured.out, re.MULTILINE)
     assert re.search(r"^bitmex$", captured.out, re.MULTILINE)
 
+    # Only dex
+    args = [
+        "list-exchanges",
+        "--dex",
+    ]
+
+    start_list_exchanges(get_args(args))
+    captured = capsys.readouterr()
+    assert re.search(r"Exchanges available for Freqtrade.*", captured.out)
+    assert not re.search(r".*binance.*", captured.out)
+    assert not re.search(r".*bingx.*", captured.out)
+    assert re.search(r".*hyperliquid.*", captured.out)
+
 
 def test_list_timeframes(mocker, capsys):
     api_mock = MagicMock()
