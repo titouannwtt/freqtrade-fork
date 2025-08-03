@@ -330,7 +330,7 @@ It's therefore required to pass the UID as well.
 
 ## Bitget
 
-Kucoin requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
+Bitget requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
 
 ```json
 "exchange": {
