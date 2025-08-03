@@ -399,12 +399,13 @@ class TestCCXTExchange:
         assert isinstance(funding_fee, float)
         assert funding_fee != 0
 
-    def test_ccxt__async_get_trade_history(self, exchange: EXCHANGE_FIXTURE_TYPE):
+    def test_ccxt__async_get_trade_history(self, exchange: EXCHANGE_FIXTURE_TYPE, mocker):
         exch, exchangename = exchange
         if not (lookback := EXCHANGES[exchangename].get("trades_lookback_hours")):
             pytest.skip("test_fetch_trades not enabled for this exchange")
         pair = EXCHANGES[exchangename]["pair"]
         since = int((datetime.now(UTC) - timedelta(hours=lookback)).timestamp() * 1000)
+        nvspy = mocker.spy(exch, "_get_trade_pagination_next_value")
         res = exch.loop.run_until_complete(exch._async_get_trade_history(pair, since, None, None))
         assert len(res) == 2
         res_pair, res_trades = res
@@ -412,6 +413,14 @@ class TestCCXTExchange:
         assert isinstance(res_trades, list)
         assert res_trades[0][0] >= since
         assert len(res_trades) > 1200
+        assert nvspy.call_count > 5
+        if exchangename == "kraken":
+            # for Kraken, the pagination value is added to the last trade result by ccxt.
+            # We therefore expect that the last row has one additional field
+
+            # Pick a random spy call
+            trades_orig = nvspy.call_args_list[2][0][0]
+            assert len(trades_orig[-1].get("info")) > len(trades_orig[-2].get("info"))
 
     def test_ccxt_get_fee(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange
