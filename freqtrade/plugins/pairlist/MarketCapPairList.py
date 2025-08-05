@@ -156,6 +156,29 @@ class MarketCapPairList(IPairList):
 
         return pairlist
 
+    def resolve_marketcap_pair(
+        self,
+        test_pair: str,
+        prefixes: list[str],
+        pairlist: list[str],
+        markets: list[str],
+        filtered_pairlist: list[str],
+    ) -> str | None:
+        if any(p.startswith(test_pair) for p in filtered_pairlist):
+            return None
+
+        if any(p.startswith(test_pair) for p in pairlist):
+            return test_pair
+
+        if not any(p.startswith(test_pair) for p in markets):
+            for prefix in prefixes:
+                test_prefix = f"{prefix}{test_pair}"
+
+                if any(p.startswith(test_prefix) for p in pairlist):
+                    return test_prefix
+
+        return None
+
     def filter_pairlist(self, pairlist: list[str], tickers: dict) -> list[str]:
         """
         Filters and sorts pairlist and returns the whitelist again.
@@ -198,7 +221,7 @@ class MarketCapPairList(IPairList):
                 self._marketcap_cache["marketcap"] = marketcap_list
 
         if marketcap_list:
-            filtered_pairlist = []
+            filtered_pairlist: list[str] = []
 
             market = self._config["trading_mode"]
             pair_format = f"{self._stake_currency.upper()}"
@@ -210,17 +233,13 @@ class MarketCapPairList(IPairList):
 
             for mc_pair in top_marketcap:
                 test_pair = f"{mc_pair.upper()}/{pair_format}"
-                test_prefix_1000 = f"1000{test_pair}"  # Binance
-                test_prefix_k = f"k{test_pair}"  # Hyperliquid
+                prefixes = ["1000", "k"]
+                resolved = self.resolve_marketcap_pair(
+                    test_pair, prefixes, pairlist, markets, filtered_pairlist
+                )
 
-                if not any(p.startswith(test_pair) for p in filtered_pairlist):
-                    if any(p.startswith(test_pair) for p in pairlist):
-                        filtered_pairlist.append(test_pair)
-                    elif not any(p.startswith(test_pair) for p in markets):
-                        if any(p.startswith(test_prefix_1000) for p in pairlist):
-                            filtered_pairlist.append(test_prefix_1000)
-                        elif any(p.startswith(test_prefix_k) for p in pairlist):
-                            filtered_pairlist.append(test_prefix_k)
+                if resolved:
+                    filtered_pairlist.append(resolved)
 
                 if len(filtered_pairlist) == self._number_assets:
                     break
