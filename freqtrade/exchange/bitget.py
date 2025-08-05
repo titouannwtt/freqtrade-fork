@@ -87,13 +87,14 @@ class Bitget(Exchange):
         }
         for method in (
             self._api.fetch_open_orders,
-            self._api.fetch_closed_orders,
+            self._api.fetch_canceled_and_closed_orders,
         ):
             try:
                 orders = method(pair, params=params2)
                 orders_f = [order for order in orders if order["id"] == order_id]
                 if orders_f:
                     order = orders_f[0]
+                    self._log_exchange_response("get_stop_order_fallback", order)
                     return self._convert_stop_order(pair, order_id, order)
             except (ccxt.OrderNotFound, ccxt.InvalidOrder):
                 pass
