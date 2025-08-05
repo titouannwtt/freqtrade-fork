@@ -1,14 +1,10 @@
-from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
-import ccxt
 import pytest
 
-from freqtrade.enums import CandleType, MarginMode, TradingMode
-from freqtrade.exceptions import RetryableOrderError, TemporaryError
+from freqtrade.exceptions import RetryableOrderError
 from freqtrade.exchange.common import API_RETRY_COUNT
-from freqtrade.exchange.exchange import timeframe_to_minutes
-from tests.conftest import EXMS, get_patched_exchange, log_has
+from tests.conftest import EXMS, get_patched_exchange
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
 
