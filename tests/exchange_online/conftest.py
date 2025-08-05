@@ -415,7 +415,7 @@ EXCHANGES = {
         "timeframe": "1h",
         "candle_count": 1000,
     },
-    # TODO: reenable htx once certificates work again
+    # TODO: re-enable htx once certificates work again
     # "htx": {
     #     "pair": "ETH/BTC",
     #     "stake_currency": "BTC",
