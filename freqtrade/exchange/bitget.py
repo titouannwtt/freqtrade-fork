@@ -57,7 +57,7 @@ class Bitget(Exchange):
         timeframe_map = self._api.options["fetchOHLCV"]["maxRecentDaysPerTimeframe"]
         days = timeframe_map.get(timeframe, 30)
 
-        if candle_type in (CandleType.FUTURES, CandleType.SPOT) and (
+        if candle_type in (CandleType.FUTURES, CandleType.SPOT, CandleType.MARK) and (
             not since_ms or dt_ts(dt_now() - timedelta(days=days)) < since_ms
         ):
             return 1000

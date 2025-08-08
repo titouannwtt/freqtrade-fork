@@ -76,6 +76,7 @@ def test_fetch_stoploss_order_bitget_exceptions(default_conf_usdt, mocker):
 
 
 def test_bitget_ohlcv_candle_limit(mocker, default_conf_usdt):
+    # This test is also a live test - so we're sure our limits are correct.
     api_mock = MagicMock()
     api_mock.options = {
         "fetchOHLCV": {
@@ -97,24 +98,24 @@ def test_bitget_ohlcv_candle_limit(mocker, default_conf_usdt):
     for timeframe in timeframes:
         assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT) == 1000
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES) == 1000
-        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK) == 1000
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE) == 200
 
         start_time = dt_ts(dt_now() - timedelta(days=17))
         assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == 1000
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == 1000
-        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 1000
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
         start_time = dt_ts(dt_now() - timedelta(days=48))
         length = 200 if timeframe in ("1m", "5m") else 1000
         assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
-        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
 
         start_time = dt_ts(dt_now() - timedelta(days=61))
         length = 200
         assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
-        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
