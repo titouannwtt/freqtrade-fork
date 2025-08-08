@@ -1,9 +1,12 @@
+from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
 
+from freqtrade.enums import CandleType
 from freqtrade.exceptions import RetryableOrderError
 from freqtrade.exchange.common import API_RETRY_COUNT
+from freqtrade.util import dt_now, dt_ts
 from tests.conftest import EXMS, get_patched_exchange
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
@@ -70,3 +73,48 @@ def test_fetch_stoploss_order_bitget_exceptions(default_conf_usdt, mocker):
         order_id="12345",
         pair="ETH/USDT",
     )
+
+
+def test_bitget_ohlcv_candle_limit(mocker, default_conf_usdt):
+    api_mock = MagicMock()
+    api_mock.options = {
+        "fetchOHLCV": {
+            "maxRecentDaysPerTimeframe": {
+                "1m": 30,
+                "5m": 30,
+                "15m": 30,
+                "30m": 30,
+                "1h": 60,
+                "4h": 60,
+                "1d": 60,
+            }
+        }
+    }
+
+    exch = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange="bitget")
+    timeframes = ("1m", "5m", "1h")
+
+    for timeframe in timeframes:
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT) == 1000
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES) == 1000
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE) == 200
+
+        start_time = dt_ts(dt_now() - timedelta(days=17))
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == 1000
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == 1000
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
+        start_time = dt_ts(dt_now() - timedelta(days=48))
+        length = 200 if timeframe in ("1m", "5m") else 1000
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
+
+        start_time = dt_ts(dt_now() - timedelta(days=61))
+        length = 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.SPOT, start_time) == length
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == 200
+        assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
