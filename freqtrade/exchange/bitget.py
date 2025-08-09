@@ -65,18 +65,25 @@ class Bitget(Exchange):
         return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
 
     def _convert_stop_order(self, pair: str, order_id: str, order: CcxtOrder) -> CcxtOrder:
-        if (
-            order.get("status", "open") == "closed"
-            and (real_order_id := order.get("info", {}).get("ordId")) is not None
-        ):
-            # Once a order triggered, we fetch the regular followup order.
-            order_reg = self.fetch_order(real_order_id, pair)
-            self._log_exchange_response("fetch_stoploss_order1", order_reg)
-            order_reg["id_stop"] = order_reg["id"]
-            order_reg["id"] = order_id
-            order_reg["type"] = "stoploss"
-            order_reg["status_stop"] = "triggered"
-            return order_reg
+        if order.get("status", "open") == "closed":
+            # Use orderID as cliendOrderId filter to fetch the regular followup order.
+            # Could be done with "fetch_order" - but clientOid as filter doesn't seem to work
+            # https://www.bitget.com/api-doc/spot/trade/Get-Order-Info
+
+            for method in (
+                self._api.fetch_canceled_and_closed_orders,
+                self._api.fetch_open_orders,
+            ):
+                orders = method(pair)
+                orders_f = [order for order in orders if order["clientOrderId"] == order_id]
+                if orders_f:
+                    order_reg = orders_f[0]
+                    self._log_exchange_response("fetch_stoploss_order1", order_reg)
+                    order_reg["id_stop"] = order_reg["id"]
+                    order_reg["id"] = order_id
+                    order_reg["type"] = "stoploss"
+                    order_reg["status_stop"] = "triggered"
+                    return order_reg
         order = self._order_contracts_to_amount(order)
         order["type"] = "stoploss"
         return order
