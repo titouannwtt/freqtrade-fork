@@ -31,15 +31,16 @@ def test_fetch_stoploss_order_bitget(default_conf, mocker):
     api_mock.fetch_canceled_and_closed_orders.reset_mock()
 
     api_mock.fetch_canceled_and_closed_orders = MagicMock(
-        return_value=[{"id": "1234", "status": "closed", "info": {"ordId": "123455"}}]
+        return_value=[{"id": "1234", "status": "closed", "clientOrderId": "123455"}]
     )
-    mocker.patch(f"{EXMS}.fetch_order", MagicMock(return_value={"id": "123455"}))
+    api_mock.fetch_open_orders = MagicMock(return_value=[{"id": "50110", "clientOrderId": "1234"}])
+
     resp = exchange.fetch_stoploss_order("1234", "ETH/BTC")
-    assert api_mock.fetch_open_orders.call_count == 1
-    assert api_mock.fetch_canceled_and_closed_orders.call_count == 1
+    assert api_mock.fetch_open_orders.call_count == 2
+    assert api_mock.fetch_canceled_and_closed_orders.call_count == 2
 
     assert resp["id"] == "1234"
-    assert resp["id_stop"] == "123455"
+    assert resp["id_stop"] == "50110"
     assert resp["type"] == "stoploss"
 
     default_conf["dry_run"] = True
