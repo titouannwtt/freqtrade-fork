@@ -2404,7 +2404,7 @@ def test_MarketCapPairList_timing(mocker, default_conf_usdt, markets, time_machi
     pm = PairListManager(exchange, default_conf_usdt)
     markets_mock.reset_mock()
     pm.refresh_pairlist()
-    assert markets_mock.call_count == 3
+    assert markets_mock.call_count == 4
     markets_mock.reset_mock()
 
     time_machine.move_to(start_dt + timedelta(hours=20))
@@ -2416,7 +2416,7 @@ def test_MarketCapPairList_timing(mocker, default_conf_usdt, markets, time_machi
     time_machine.move_to(start_dt + timedelta(days=2))
     pm.refresh_pairlist()
     # No longer cached pairlist ...
-    assert markets_mock.call_count == 3
+    assert markets_mock.call_count == 4
 
 
 def test_MarketCapPairList_filter_special_no_pair_from_coingecko(
