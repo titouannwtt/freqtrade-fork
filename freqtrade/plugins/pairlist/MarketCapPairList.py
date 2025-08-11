@@ -164,17 +164,17 @@ class MarketCapPairList(IPairList):
         markets: list[str],
         filtered_pairlist: list[str],
     ) -> str | None:
-        if any(p.startswith(test_pair) for p in filtered_pairlist):
+        if test_pair in filtered_pairlist:
             return None
 
-        if any(p.startswith(test_pair) for p in pairlist):
+        if test_pair in pairlist:
             return test_pair
 
-        if not any(p.startswith(test_pair) for p in markets):
+        if not test_pair in markets:
             for prefix in prefixes:
                 test_prefix = f"{prefix}{test_pair}"
 
-                if any(p.startswith(test_prefix) for p in pairlist):
+                if test_prefix in pairlist:
                     return test_prefix
 
         return None
