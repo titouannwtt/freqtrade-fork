@@ -170,7 +170,7 @@ class MarketCapPairList(IPairList):
         if test_pair in pairlist:
             return test_pair
 
-        if not test_pair in markets:
+        if test_pair not in markets:
             for prefix in prefixes:
                 test_prefix = f"{prefix}{test_pair}"
 
