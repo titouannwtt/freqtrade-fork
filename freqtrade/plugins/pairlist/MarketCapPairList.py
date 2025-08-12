@@ -156,23 +156,25 @@ class MarketCapPairList(IPairList):
 
         return pairlist
 
+    # Prefixes to test to discover coins like 1000PEPE/USDDT:USDT or KPEPE/USDC (hyperliquid)
+    prefixes = ("1000", "K")
+
     def resolve_marketcap_pair(
         self,
-        test_pair: str,
-        prefixes: list[str],
+        pair: str,
         pairlist: list[str],
         markets: list[str],
         filtered_pairlist: list[str],
     ) -> str | None:
-        if test_pair in filtered_pairlist:
+        if pair in filtered_pairlist:
             return None
 
-        if test_pair in pairlist:
-            return test_pair
+        if pair in pairlist:
+            return pair
 
-        if test_pair not in markets:
-            for prefix in prefixes:
-                test_prefix = f"{prefix}{test_pair}"
+        if pair not in markets:
+            for prefix in self.prefixes:
+                test_prefix = f"{prefix}{pair}"
 
                 if test_prefix in pairlist:
                     return test_prefix
@@ -232,11 +234,8 @@ class MarketCapPairList(IPairList):
             markets = self.get_markets_cache()
 
             for mc_pair in top_marketcap:
-                test_pair = f"{mc_pair.upper()}/{pair_format}"
-                prefixes = ["1000", "k"]
-                resolved = self.resolve_marketcap_pair(
-                    test_pair, prefixes, pairlist, markets, filtered_pairlist
-                )
+                pair = f"{mc_pair.upper()}/{pair_format}"
+                resolved = self.resolve_marketcap_pair(pair, pairlist, markets, filtered_pairlist)
 
                 if resolved:
                     filtered_pairlist.append(resolved)
