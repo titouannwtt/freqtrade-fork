@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from jsonschema import ValidationError
 
 from freqtrade.commands import Arguments
 from freqtrade.configuration import (
