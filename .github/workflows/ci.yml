@@ -315,7 +315,9 @@ jobs:
         function uvpipFunction { uv pip $args }
         Set-Alias -name pip -value uvpipFunction
 
-        ./build_helpers/install_windows.ps1
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install -e .
 
     - name: Tests
       run: |
