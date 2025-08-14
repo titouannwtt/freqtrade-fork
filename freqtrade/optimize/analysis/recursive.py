@@ -15,7 +15,6 @@ from freqtrade.loggers.set_log_levels import (
 )
 from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.optimize.base_analysis import BaseAnalysis, VarHolder
-from freqtrade.resolvers import StrategyResolver
 
 
 logger = logging.getLogger(__name__)
