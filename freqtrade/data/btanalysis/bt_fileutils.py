@@ -171,7 +171,10 @@ def load_backtest_stats(
     if file_or_directory.is_dir():
         if not filename:
             filename = get_latest_backtest_filename(file_or_directory)
-        fn = file_or_directory / filename
+        if filename.is_file():
+            fn = filename
+        else:
+            fn = file_or_directory / filename
     else:
         fn = file_or_directory
 
