@@ -167,8 +167,8 @@ def _normalize_filename(file_or_directory: Path | str, filename: Path | str | No
     if file_or_directory.is_dir():
         if not filename:
             filename = get_latest_backtest_filename(file_or_directory)
-        if filename.is_file():
-            fn = filename
+        if Path(filename).is_file():
+            fn = Path(filename)
         else:
             fn = file_or_directory / filename
     else:
