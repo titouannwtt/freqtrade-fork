@@ -155,16 +155,12 @@ def load_backtest_metadata(filename: Path | str) -> dict[str, Any]:
         raise OperationalException("Unexpected error while loading backtest metadata.") from e
 
 
-def load_backtest_stats(
-    file_or_directory: Path | str, filename: Path | str | None = None
-) -> BacktestResultType:
+def _normalize_filename(file_or_directory: Path | str, filename: Path | str | None = None) -> Path:
     """
-    Load backtest statistics file.
-    :param file_or_directory: pathlib.Path object, or string pointing to the directory,
-        or absolute/relative path to the backtest results file.
-    :param filename: Optional filename to load from (if different from the main filename).
-        Only valid when loading from a directory.
-    :return: a dictionary containing the resulting file.
+    Normalize the filename by ensuring it is a Path object.
+    :param file_or_directory: The directory or file to normalize.
+    :param filename: The filename to normalize.
+    :return: A Path object representing the normalized filename.
     """
     if isinstance(file_or_directory, str):
         file_or_directory = Path(file_or_directory)
@@ -177,9 +173,24 @@ def load_backtest_stats(
             fn = file_or_directory / filename
     else:
         fn = file_or_directory
+    return fn
+
+
+def load_backtest_stats(
+    file_or_directory: Path | str, filename: Path | str | None = None
+) -> BacktestResultType:
+    """
+    Load backtest statistics file.
+    :param file_or_directory: pathlib.Path object, or string pointing to the directory,
+        or absolute/relative path to the backtest results file.
+    :param filename: Optional filename to load from (if different from the main filename).
+        Only valid when loading from a directory.
+    :return: a dictionary containing the resulting file.
+    """
+    fn = _normalize_filename(file_or_directory, filename)
 
     if not fn.is_file():
-        raise ValueError(f"File {fn} does not exist.")
+        raise ValueError(f"File or directory {fn} does not exist.")
     logger.info(f"Loading backtest result from {fn}")
 
     if fn.suffix == ".zip":
