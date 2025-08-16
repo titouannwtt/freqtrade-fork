@@ -473,27 +473,6 @@ def load_backtest_analysis_data(backtest_dir: Path, name: Literal["signals", "re
             return None
 
 
-def load_rejected_signals(backtest_dir: Path):
-    """
-    Load rejected signals from backtest directory
-    """
-    return load_backtest_analysis_data(backtest_dir, "rejected")
-
-
-def load_signal_candles(backtest_dir: Path):
-    """
-    Load signal candles from backtest directory
-    """
-    return load_backtest_analysis_data(backtest_dir, "signals")
-
-
-def load_exit_signal_candles(backtest_dir: Path) -> dict[str, dict[str, pd.DataFrame]]:
-    """
-    Load exit signal candles from backtest directory
-    """
-    return load_backtest_analysis_data(backtest_dir, "exited")
-
-
 def trade_list_to_dataframe(trades: list[Trade] | list[LocalTrade]) -> pd.DataFrame:
     """
     Convert list of Trade objects to pandas Dataframe
