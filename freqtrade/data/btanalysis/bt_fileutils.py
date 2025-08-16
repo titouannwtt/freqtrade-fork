@@ -155,33 +155,41 @@ def load_backtest_metadata(filename: Path | str) -> dict[str, Any]:
         raise OperationalException("Unexpected error while loading backtest metadata.") from e
 
 
-def load_backtest_stats(filename: Path | str) -> BacktestResultType:
+def load_backtest_stats(
+    file_or_directory: Path | str, filename: Path | str | None = None
+) -> BacktestResultType:
     """
     Load backtest statistics file.
-    :param filename: pathlib.Path object, or string pointing to the file.
+    :param file_or_directory: pathlib.Path object, or string pointing to the directory,
+        or absolute/relative path to the backtest results file.
+    :param filename: Optional filename to load from (if different from the main filename).
+        Only valid when loading from a directory.
     :return: a dictionary containing the resulting file.
     """
-    if isinstance(filename, str):
-        filename = Path(filename)
-    if filename.is_dir():
-        filename = filename / get_latest_backtest_filename(filename)
-    if not filename.is_file():
-        raise ValueError(f"File {filename} does not exist.")
-    logger.info(f"Loading backtest result from {filename}")
+    if isinstance(file_or_directory, str):
+        file_or_directory = Path(file_or_directory)
+    if file_or_directory.is_dir():
+        if not filename:
+            filename = get_latest_backtest_filename(file_or_directory)
+        fn = file_or_directory / filename
+    else:
+        fn = file_or_directory
 
-    if filename.suffix == ".zip":
+    if not fn.is_file():
+        raise ValueError(f"File {fn} does not exist.")
+    logger.info(f"Loading backtest result from {fn}")
+
+    if fn.suffix == ".zip":
         data = json_load(
-            StringIO(
-                load_file_from_zip(filename, filename.with_suffix(".json").name).decode("utf-8")
-            )
+            StringIO(load_file_from_zip(fn, fn.with_suffix(".json").name).decode("utf-8"))
         )
     else:
-        with filename.open() as file:
+        with fn.open() as file:
             data = json_load(file)
 
     # Legacy list format does not contain metadata.
     if isinstance(data, dict):
-        data["metadata"] = load_backtest_metadata(filename)
+        data["metadata"] = load_backtest_metadata(fn)
     return data
 
 
