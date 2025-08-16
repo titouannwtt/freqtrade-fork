@@ -430,7 +430,7 @@ def load_file_from_zip(zip_path: Path, filename: str) -> bytes:
         raise ValueError(f"Bad zip file: {zip_path}.") from None
 
 
-def load_backtest_analysis_data(backtest_dir: Path, name: str):
+def load_backtest_analysis_data(backtest_dir: Path, name: Literal["signals", "rejected", "exited"]):
     """
     Load backtest analysis data either from a pickle file or from within a zip file
     :param backtest_dir: Directory containing backtest results
