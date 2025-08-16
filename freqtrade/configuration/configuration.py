@@ -212,14 +212,13 @@ class Configuration:
         self._args_to_config(
             config, argname="exportdirectory", logstring="Using {} as backtest directory ..."
         )
-        config["exportdirectory"] = Path(config["exportdirectory"])
 
         if self.args.get("exportfilename"):
             self._args_to_config(
                 config, argname="exportfilename", logstring="Storing backtest results to {} ..."
             )
             config["exportfilename"] = Path(config["exportfilename"])
-            if config["exportdirectory"].is_dir():
+            if config.get("exportdirectory") and Path(config["exportdirectory"]).is_dir():
                 logger.warning(
                     "DEPRECATED: Using `--export-filename` with directories is deprecated, "
                     "use `--export-directory` instead."
@@ -227,9 +226,9 @@ class Configuration:
                 if config.get("exportdirectory") is None:
                     # Fallback - assign export-directory directly.
                     config["exportdirectory"] = config["exportfilename"]
-
         if not config.get("exportdirectory"):
             config["exportdirectory"] = config["user_data_dir"] / "backtest_results"
+        config["exportdirectory"] = Path(config["exportdirectory"])
 
         if self.args.get("show_sensitive"):
             logger.warning(
