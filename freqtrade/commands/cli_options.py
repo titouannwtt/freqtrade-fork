@@ -209,6 +209,12 @@ AVAILABLE_CLI_OPTIONS = {
         help="Add notes to the backtest results.",
         metavar="TEXT",
     ),
+    "exportdirectory": Arg(
+        "--export-directory",
+        help="Directory to use for backtest results."
+        "Example: `--export-directory=user_data/backtest_results/`",
+        metavar="PATH",
+    ),
     "exportfilename": Arg(
         "--backtest-filename",
         "--export-filename",
