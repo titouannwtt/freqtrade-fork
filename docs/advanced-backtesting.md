@@ -46,29 +46,29 @@ ranging from the simplest (0) to the most detailed per pair, per buy and per sel
 
 More options are available by running with the `-h` option.
 
-### Using export-filename
+### Using backtest-filename
 
 Normally, `backtesting-analysis` uses the latest backtest results, but if you wanted to go
-back to a previous backtest output, you need to supply the `--export-filename` option.
+back to a previous backtest output, you need to supply the `--backtest-filename` option.
 You can supply the same parameter to `backtest-analysis` with the name of the final backtest
 output file. This allows you to keep historical versions of backtest results and re-analyse
 them at a later date:
 
 ``` bash
-freqtrade backtesting-analysis -c <config.json> --timeframe <tf> --strategy <strategy_name> --timerange=<timerange> --export=signals --export-filename=user_data/backtest-results/backtest-result-2025-03-05_20-38-34.zip
+freqtrade backtesting-analysis -c <config.json> --timeframe <tf> --strategy <strategy_name> --timerange=<timerange> --export=signals --backtest-filename=backtest-result-2025-03-05_20-38-34.zip
 ```
 
 You should see some output similar to below in the logs with the name of the timestamped
 filename that was exported:
 
 ```
-2022-06-14 16:28:32,698 - freqtrade.misc - INFO - dumping json to "/tmp/mystrat_backtest-2022-06-14_16-28-32.json"
+2022-06-14 16:28:32,698 - freqtrade.misc - INFO - dumping json to "mystrat_backtest-2022-06-14_16-28-32.json"
 ```
 
 You can then use that filename in `backtesting-analysis`:
 
 ```
-freqtrade backtesting-analysis -c <config.json> --export-filename=/tmp/mystrat_backtest-2022-06-14_16-28-32.json
+freqtrade backtesting-analysis -c <config.json> --backtest-filename=mystrat_backtest-2022-06-14_16-28-32.json
 ```
 
 ### Tuning the buy tags and sell tags to display
