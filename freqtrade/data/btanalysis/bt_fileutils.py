@@ -386,7 +386,7 @@ def _load_backtest_data_df_compatibility(df: pd.DataFrame) -> pd.DataFrame:
 
 def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.DataFrame:
     """
-    Load backtest data file.
+    Load backtest data file, returns a dataframe with the individual trades.
     :param filename: pathlib.Path object, or string pointing to a file or directory
     :param strategy: Strategy to load - mainly relevant for multi-strategy backtests
                      Can also serve as protection to load the correct result.
