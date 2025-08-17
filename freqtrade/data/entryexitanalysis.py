@@ -344,21 +344,29 @@ def process_entry_exit_reasons(config: Config):
             None if config.get("timerange") is None else str(config.get("timerange"))
         )
         try:
-            backtest_stats = load_backtest_stats(config["exportdirectory"])
+            backtest_stats = load_backtest_stats(
+                config["exportdirectory"], config["exportfilename"]
+            )
         except ValueError as e:
             raise ConfigurationError(e) from e
 
         for strategy_name, results in backtest_stats["strategy"].items():
-            trades = load_backtest_data(config["exportdirectory"], strategy_name)
+            trades = load_backtest_data(
+                config["exportdirectory"], strategy_name, config["exportfilename"]
+            )
 
             if trades is not None and not trades.empty:
-                signal_candles = load_backtest_analysis_data(config["exportdirectory"], "signals")
-                exit_signals = load_backtest_analysis_data(config["exportdirectory"], "exited")
+                signal_candles = load_backtest_analysis_data(
+                    config["exportdirectory"], "signals", config["exportfilename"]
+                )
+                exit_signals = load_backtest_analysis_data(
+                    config["exportdirectory"], "exited", config["exportfilename"]
+                )
 
                 rej_df = None
                 if do_rejected:
                     rejected_signals_dict = load_backtest_analysis_data(
-                        config["exportdirectory"], "rejected"
+                        config["exportdirectory"], "rejected", config["exportfilename"]
                     )
                     rej_df = prepare_results(
                         rejected_signals_dict,

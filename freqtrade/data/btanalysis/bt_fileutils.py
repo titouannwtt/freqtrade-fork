@@ -155,7 +155,7 @@ def load_backtest_metadata(filename: Path | str) -> dict[str, Any]:
         raise OperationalException("Unexpected error while loading backtest metadata.") from e
 
 
-def _normalize_filename(file_or_directory: Path | str, filename: Path | str | None = None) -> Path:
+def _normalize_filename(file_or_directory: Path | str, filename: Path | str | None) -> Path:
     """
     Normalize the filename by ensuring it is a Path object.
     :param file_or_directory: The directory or file to normalize.
@@ -384,16 +384,21 @@ def _load_backtest_data_df_compatibility(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_backtest_data(filename: Path | str, strategy: str | None = None) -> pd.DataFrame:
+def load_backtest_data(
+    file_or_directory: Path | str, strategy: str | None = None, filename: Path | str | None = None
+) -> pd.DataFrame:
     """
     Load backtest data file, returns a dataframe with the individual trades.
-    :param filename: pathlib.Path object, or string pointing to a file or directory
+    :param file_or_directory: pathlib.Path object, or string pointing to the directory,
+        or absolute/relative path to the backtest results file.
     :param strategy: Strategy to load - mainly relevant for multi-strategy backtests
                      Can also serve as protection to load the correct result.
+    :param filename: Optional filename to load from (if different from the main filename).
+        Only valid when loading from a directory.
     :return: a dataframe with the analysis results
     :raise: ValueError if loading goes wrong.
     """
-    data = load_backtest_stats(filename)
+    data = load_backtest_stats(file_or_directory, filename)
     if not isinstance(data, list):
         # new, nested format
         if "strategy" not in data:
@@ -452,20 +457,29 @@ def load_file_from_zip(zip_path: Path, filename: str) -> bytes:
         raise ValueError(f"Bad zip file: {zip_path}.") from None
 
 
-def load_backtest_analysis_data(backtest_dir: Path, name: Literal["signals", "rejected", "exited"]):
+def load_backtest_analysis_data(
+    file_or_directory: Path,
+    name: Literal["signals", "rejected", "exited"],
+    filename: Path | str | None = None,
+):
     """
     Load backtest analysis data either from a pickle file or from within a zip file
-    :param backtest_dir: Directory containing backtest results
+    :param file_or_directory: pathlib.Path object, or string pointing to the directory,
+        or absolute/relative path to the backtest results file.
     :param name: Name of the analysis data to load (signals, rejected, exited)
+    :param filename: Optional filename to load from (if different from the main filename).
+        Only valid when loading from a directory.
     :return: Analysis data
     """
     import joblib
 
-    if backtest_dir.is_dir():
-        lbf = Path(get_latest_backtest_filename(backtest_dir))
-        zip_path = backtest_dir / lbf
+    zip_path = _normalize_filename(file_or_directory, None)
+
+    if file_or_directory.is_dir():
+        lbf = Path(get_latest_backtest_filename(file_or_directory))
+        zip_path = file_or_directory / lbf
     else:
-        zip_path = backtest_dir
+        zip_path = file_or_directory
 
     if zip_path.suffix == ".zip":
         # Load from zip file
@@ -480,10 +494,10 @@ def load_backtest_analysis_data(backtest_dir: Path, name: Literal["signals", "re
 
     else:
         # Load from separate pickle file
-        if backtest_dir.is_dir():
-            scpf = Path(backtest_dir, f"{zip_path.stem}_{name}.pkl")
+        if file_or_directory.is_dir():
+            scpf = Path(file_or_directory, f"{zip_path.stem}_{name}.pkl")
         else:
-            scpf = Path(backtest_dir.parent / f"{backtest_dir.stem}_{name}.pkl")
+            scpf = Path(file_or_directory.parent / f"{file_or_directory.stem}_{name}.pkl")
 
         try:
             with scpf.open("rb") as scp:
