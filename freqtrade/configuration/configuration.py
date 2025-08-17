@@ -228,6 +228,8 @@ class Configuration:
                     config["exportdirectory"] = config["exportfilename"]
         if not config.get("exportdirectory"):
             config["exportdirectory"] = config["user_data_dir"] / "backtest_results"
+        if not config.get("exportfilename"):
+            config["exportfilename"] = None
         config["exportdirectory"] = Path(config["exportdirectory"])
 
         if self.args.get("show_sensitive"):
