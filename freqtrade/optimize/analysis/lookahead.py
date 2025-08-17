@@ -25,7 +25,7 @@ class Analysis:
         self.total_signals = 0
         self.false_entry_signals = 0
         self.false_exit_signals = 0
-        self.false_indicators: set[str] = set()
+        self.false_indicators: list[str] = []
         self.has_bias = False
 
 
@@ -87,7 +87,7 @@ class LookaheadAnalysis(BaseAnalysis):
                 # output differences
                 if self_value != other_value:
                     if not self.current_analysis.false_indicators.__contains__(col_name[0]):
-                        self.current_analysis.false_indicators.add(col_name[0])
+                        self.current_analysis.false_indicators.append(col_name[0])
                         logger.info(
                             f"=> found look ahead bias in column "
                             f"{col_name[0]}. "
