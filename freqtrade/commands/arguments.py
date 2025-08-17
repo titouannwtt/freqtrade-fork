@@ -239,6 +239,7 @@ ARGS_HYPEROPT_SHOW = [
 
 ARGS_ANALYZE_ENTRIES_EXITS = [
     "exportfilename",
+    "exportdirectory",
     "analysis_groups",
     "enter_reason_list",
     "exit_reason_list",

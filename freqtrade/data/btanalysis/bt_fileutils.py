@@ -473,13 +473,7 @@ def load_backtest_analysis_data(
     """
     import joblib
 
-    zip_path = _normalize_filename(file_or_directory, None)
-
-    if file_or_directory.is_dir():
-        lbf = Path(get_latest_backtest_filename(file_or_directory))
-        zip_path = file_or_directory / lbf
-    else:
-        zip_path = file_or_directory
+    zip_path = _normalize_filename(file_or_directory, filename)
 
     if zip_path.suffix == ".zip":
         # Load from zip file
