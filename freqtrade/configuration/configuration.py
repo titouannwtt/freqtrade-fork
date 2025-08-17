@@ -221,7 +221,7 @@ class Configuration:
             if config.get("exportdirectory") and Path(config["exportdirectory"]).is_dir():
                 logger.warning(
                     "DEPRECATED: Using `--export-filename` with directories is deprecated, "
-                    "use `--export-directory` instead."
+                    "use `--backtest-directory` instead."
                 )
                 if config.get("exportdirectory") is None:
                     # Fallback - assign export-directory directly.
