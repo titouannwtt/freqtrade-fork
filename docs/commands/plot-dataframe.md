@@ -42,7 +42,7 @@ options:
                         Use this filename for backtest results.Example:
                         `--backtest-
                         filename=backtest_results_2020-09-27_16-20-48.json`.
-                        Assumes either user_data/backtest_results/ or
+                        Assumes either `user_data/backtest_results/` or
                         `--export-directory` as base directory.
   --timerange TIMERANGE
                         Specify what timerange of data to use.

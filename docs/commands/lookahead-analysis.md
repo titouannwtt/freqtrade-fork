@@ -16,7 +16,7 @@ usage: freqtrade lookahead-analysis [-h] [-v] [--no-color] [--logfile FILE]
                                     [--strategy-list STRATEGY_LIST [STRATEGY_LIST ...]]
                                     [--export {none,trades,signals}]
                                     [--backtest-filename PATH]
-                                    [--export-directory PATH]
+                                    [--backtest-directory PATH]
                                     [--freqai-backtest-live-models]
                                     [--minimum-trade-amount INT]
                                     [--targeted-trade-amount INT]
@@ -65,9 +65,9 @@ options:
                         Use this filename for backtest results.Example:
                         `--backtest-
                         filename=backtest_results_2020-09-27_16-20-48.json`.
-                        Assumes either user_data/backtest_results/ or
+                        Assumes either `user_data/backtest_results/` or
                         `--export-directory` as base directory.
-  --export-directory PATH, --backtest-directory PATH
+  --backtest-directory PATH, --export-directory PATH
                         Directory to use for backtest results. Example:
                         `--export-directory=user_data/backtest_results/`.
   --freqai-backtest-live-models

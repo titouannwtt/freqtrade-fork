@@ -210,8 +210,8 @@ AVAILABLE_CLI_OPTIONS = {
         choices=constants.EXPORT_OPTIONS,
     ),
     "exportdirectory": Arg(
-        "--export-directory",
         "--backtest-directory",
+        "--export-directory",
         help="Directory to use for backtest results. "
         "Example: `--export-directory=user_data/backtest_results/`. ",
         metavar="PATH",
@@ -221,7 +221,7 @@ AVAILABLE_CLI_OPTIONS = {
         "--export-filename",
         help="Use this filename for backtest results."
         "Example: `--backtest-filename=backtest_results_2020-09-27_16-20-48.json`. "
-        "Assumes either user_data/backtest_results/ or `--export-directory` as base directory.",
+        "Assumes either `user_data/backtest_results/` or `--export-directory` as base directory.",
         metavar="PATH",
     ),
     "disableparamexport": Arg(

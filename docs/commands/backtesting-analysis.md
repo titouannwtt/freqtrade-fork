@@ -3,7 +3,7 @@ usage: freqtrade backtesting-analysis [-h] [-v] [--no-color] [--logfile FILE]
                                       [-V] [-c PATH] [-d PATH]
                                       [--userdir PATH]
                                       [--backtest-filename PATH]
-                                      [--export-directory PATH]
+                                      [--backtest-directory PATH]
                                       [--analysis-groups {0,1,2,3,4,5} [{0,1,2,3,4,5} ...]]
                                       [--enter-reason-list ENTER_REASON_LIST [ENTER_REASON_LIST ...]]
                                       [--exit-reason-list EXIT_REASON_LIST [EXIT_REASON_LIST ...]]
@@ -19,9 +19,9 @@ options:
                         Use this filename for backtest results.Example:
                         `--backtest-
                         filename=backtest_results_2020-09-27_16-20-48.json`.
-                        Assumes either user_data/backtest_results/ or
+                        Assumes either `user_data/backtest_results/` or
                         `--export-directory` as base directory.
-  --export-directory PATH, --backtest-directory PATH
+  --backtest-directory PATH, --export-directory PATH
                         Directory to use for backtest results. Example:
                         `--export-directory=user_data/backtest_results/`.
   --analysis-groups {0,1,2,3,4,5} [{0,1,2,3,4,5} ...]

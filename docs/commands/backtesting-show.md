@@ -2,7 +2,8 @@
 usage: freqtrade backtesting-show [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                   [-c PATH] [-d PATH] [--userdir PATH]
                                   [--backtest-filename PATH]
-                                  [--export-directory PATH] [--show-pair-list]
+                                  [--backtest-directory PATH]
+                                  [--show-pair-list]
                                   [--breakdown {day,week,month,year} [{day,week,month,year} ...]]
 
 options:
@@ -11,9 +12,9 @@ options:
                         Use this filename for backtest results.Example:
                         `--backtest-
                         filename=backtest_results_2020-09-27_16-20-48.json`.
-                        Assumes either user_data/backtest_results/ or
+                        Assumes either `user_data/backtest_results/` or
                         `--export-directory` as base directory.
-  --export-directory PATH, --backtest-directory PATH
+  --backtest-directory PATH, --export-directory PATH
                         Directory to use for backtest results. Example:
                         `--export-directory=user_data/backtest_results/`.
   --show-pair-list      Show backtesting pairlist sorted by profit.
