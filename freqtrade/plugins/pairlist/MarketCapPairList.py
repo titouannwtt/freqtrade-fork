@@ -190,7 +190,7 @@ class MarketCapPairList(IPairList):
         if marketcap_list:
             filtered_pairlist = []
 
-            market = self._config["trading_mode"]
+            market = self._exchange._config["trading_mode"]
             pair_format = f"{self._stake_currency.upper()}"
             if market == "futures":
                 pair_format += f":{self._stake_currency.upper()}"
