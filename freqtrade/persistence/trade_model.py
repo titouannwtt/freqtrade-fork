@@ -1181,7 +1181,7 @@ class LocalTrade:
         """
         Calculates the profit as ratio (including fee).
         :param rate: rate to compare with.
-        :param amount: Amount to use for the calculation. Falls back to self.amount if not set.
+        :param amount: Amount to use for the calculation. Falls back to trade.amount if not set.
         :param open_rate: open_rate to use. Defaults to self.open_rate if not provided.
         :return: profit ratio as float
         """
