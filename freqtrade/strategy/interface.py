@@ -11,6 +11,7 @@ from math import isinf, isnan
 from pandas import DataFrame
 from pydantic import ValidationError
 
+from freqtrade.configuration import TimeRange
 from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH, Config, IntOrInf, ListPairsWithTimeframes
 from freqtrade.data.converter import populate_dataframe_with_trades
 from freqtrade.data.converter.converter import reduce_dataframe_footprint
@@ -1767,9 +1768,31 @@ class IStrategy(ABC, HyperStrategyMixin):
         use_public_trades = self.config.get("exchange", {}).get("use_public_trades", False)
         if use_public_trades:
             pair = metadata["pair"]
-            trades = self.dp.trades(pair=pair, copy=False)
+            # Build timerange from dataframe date column
+            if not dataframe.empty:
+                start_ts = int(dataframe["date"].iloc[0].timestamp() * 1000)
+                end_ts = int(dataframe["date"].iloc[-1].timestamp() * 1000)
+                timerange = TimeRange("date", "date", startts=start_ts, stopts=end_ts)
+            else:
+                timerange = None
 
-            # TODO: slice trades to size of dataframe for faster backtesting
+            trades = self.dp.trades(pair=pair, copy=False, timerange=timerange)
+
+            # Apply additional filtering with buffer for faster backtesting
+            if not trades.empty and not dataframe.empty and "timestamp" in trades.columns:
+                # Add timeframe buffer to ensure complete candle coverage
+                timeframe_buffer = timeframe_to_seconds(self.config["timeframe"]) * 1000
+
+                # Create time bounds with buffer
+                time_start = start_ts - timeframe_buffer
+                time_end = end_ts + timeframe_buffer
+
+                # Filter trades within buffered timerange
+                trades_mask = (trades["timestamp"] >= time_start) & (
+                    trades["timestamp"] <= time_end
+                )
+                trades = trades.loc[trades_mask].reset_index(drop=True)
+
             cached_grouped_trades: DataFrame | None = self._cached_grouped_trades_per_pair.get(pair)
             dataframe, cached_grouped_trades = populate_dataframe_with_trades(
                 cached_grouped_trades, self.config, dataframe, trades
