@@ -1,6 +1,7 @@
 import logging
 
 from pandas import DataFrame, read_feather, to_datetime
+from pyarrow import dataset
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS, DEFAULT_TRADES_COLUMNS
@@ -116,17 +117,34 @@ class FeatherDataHandler(IDataHandler):
     ) -> DataFrame:
         """
         Load a pair from file, either .json.gz or .json
-        # TODO: respect timerange ...
         :param pair: Load trades for this pair
         :param trading_mode: Trading mode to use (used to determine the filename)
-        :param timerange: Timerange to load trades for - currently not implemented
+        :param timerange: Timerange to load trades for - filters data to this range if provided
         :return: Dataframe containing trades
         """
         filename = self._pair_trades_filename(self._datadir, pair, trading_mode)
         if not filename.exists():
             return DataFrame(columns=DEFAULT_TRADES_COLUMNS)
 
-        tradesdata = read_feather(filename)
+        # Load trades data with optional timerange filtering
+        if timerange is None:
+            # No timerange filter - load entire file
+            logger.debug(f"Loading entire trades file for {pair}")
+            tradesdata = read_feather(filename)
+        else:
+            # Use Arrow dataset with predicate pushdown for efficient filtering
+            try:
+                dataset_reader = dataset.dataset(filename, format="feather")
+                time_filter = (dataset.field("timestamp") >= timerange.startts) & (
+                    dataset.field("timestamp") <= timerange.stopts
+                )
+                tradesdata = dataset_reader.to_table(filter=time_filter).to_pandas()
+                logger.debug(f"Loaded {len(tradesdata)} trades for {pair}")
+
+            except (ImportError, AttributeError, ValueError) as e:
+                # Fallback: load entire file
+                logger.debug(f"Unable to use Arrow filtering, loading entire trades file: {e}")
+                tradesdata = read_feather(filename)
 
         return tradesdata
 
