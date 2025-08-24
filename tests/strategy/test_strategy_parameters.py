@@ -84,6 +84,15 @@ def test_hyperopt_decimal_parameter():
     assert len(list(decimalpar.range)) == 6
     assert list(decimalpar.range) == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 
+    decimalpar2 = DecimalParameter(low=0.01, high=0.03, decimals=3, default=0.02, space="buy")
+    decimalpar2.in_space = True
+    assert len(list(decimalpar2.range)) == 21
+    expected_range = [round(0.01 + i * 0.001, 3) for i in range(21)]
+    assert list(decimalpar2.range) == expected_range
+    assert decimalpar2.value == 0.02
+    decimalpar2.value = 0.022222
+    assert decimalpar2.value == 0.022
+
     HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
     assert len(list(decimalpar.range)) == 1
 
