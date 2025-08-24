@@ -143,7 +143,7 @@ class FeatherDataHandler(IDataHandler):
 
             except (ImportError, AttributeError, ValueError) as e:
                 # Fallback: load entire file
-                logger.debug(f"Unable to use Arrow filtering, loading entire trades file: {e}")
+                logger.warning(f"Unable to use Arrow filtering, loading entire trades file: {e}")
                 tradesdata = read_feather(filename)
 
         return tradesdata

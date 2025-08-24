@@ -506,3 +506,70 @@ def test_get_datahandler(testdatadir):
     assert isinstance(dh, JsonGzDataHandler)
     dh1 = get_datahandler(testdatadir, "jsongz", dh)
     assert id(dh1) == id(dh)
+
+
+@pytest.fixture
+def feather_dh(testdatadir):
+    return FeatherDataHandler(testdatadir)
+
+
+@pytest.fixture
+def trades_full(feather_dh):
+    df = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT)
+    assert not df.empty
+    return df
+
+
+@pytest.fixture
+def timerange_full(trades_full):
+    # Pick a full-span window using actual timestamps
+    startts = int(trades_full["timestamp"].min())
+    stopts = int(trades_full["timestamp"].max())
+    return TimeRange("date", "date", startts=startts, stopts=stopts)
+
+
+@pytest.fixture
+def timerange_mid(trades_full):
+    # Pick a mid-range window using actual timestamps
+    mid_start = int(trades_full["timestamp"].iloc[len(trades_full) // 3])
+    mid_end = int(trades_full["timestamp"].iloc[(2 * len(trades_full)) // 3])
+    return TimeRange("date", "date", startts=mid_start, stopts=mid_end)
+
+
+def test_feather_trades_timerange_filter_fullspan(feather_dh, trades_full, timerange_full):
+    # Full-span filter should equal unfiltered
+    filtered = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=timerange_full)
+    assert_frame_equal(
+        trades_full.reset_index(drop=True), filtered.reset_index(drop=True), check_exact=True
+    )
+
+
+def test_feather_trades_timerange_filter_subset(feather_dh, trades_full, timerange_mid):
+    # Subset filter should be a subset of the full-span filter
+    subset = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=timerange_mid)
+    assert not subset.empty
+    assert subset["timestamp"].min() >= timerange_mid.startts
+    assert subset["timestamp"].max() <= timerange_mid.stopts
+    assert len(subset) < len(trades_full)
+
+
+def test_feather_trades_timerange_pushdown_fallback(
+    feather_dh, trades_full, timerange_mid, monkeypatch, caplog
+):
+    # Pushdown filter should fail, so fallback should load the entire file
+    import freqtrade.data.history.datahandlers.featherdatahandler as fdh
+
+    def raise_err(*args, **kwargs):
+        raise ValueError("fail")
+
+    # Mock the dataset loading to raise an error
+    monkeypatch.setattr(fdh.dataset, "dataset", raise_err)
+
+    with caplog.at_level("WARNING"):
+        out = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=timerange_mid)
+
+    assert len(out) == len(trades_full)
+    assert any(
+        "Unable to use Arrow filtering, loading entire trades file" in r.message
+        for r in caplog.records
+    )

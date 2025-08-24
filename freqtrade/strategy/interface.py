@@ -41,7 +41,7 @@ from freqtrade.strategy.informative_decorator import (
 )
 from freqtrade.strategy.strategy_validation import StrategyResultValidator
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
-from freqtrade.util import dt_now
+from freqtrade.util import dt_now, dt_ts
 from freqtrade.wallets import Wallets
 
 
@@ -1770,28 +1770,13 @@ class IStrategy(ABC, HyperStrategyMixin):
             pair = metadata["pair"]
             # Build timerange from dataframe date column
             if not dataframe.empty:
-                start_ts = int(dataframe["date"].iloc[0].timestamp() * 1000)
-                end_ts = int(dataframe["date"].iloc[-1].timestamp() * 1000)
+                start_ts = dt_ts(dataframe["date"].iloc[0])
+                end_ts = dt_ts(dataframe["date"].iloc[-1])
                 timerange = TimeRange("date", "date", startts=start_ts, stopts=end_ts)
             else:
                 timerange = None
 
             trades = self.dp.trades(pair=pair, copy=False, timerange=timerange)
-
-            # Apply additional filtering with buffer for faster backtesting
-            if not trades.empty and not dataframe.empty and "timestamp" in trades.columns:
-                # Add timeframe buffer to ensure complete candle coverage
-                timeframe_buffer = timeframe_to_seconds(self.config["timeframe"]) * 1000
-
-                # Create time bounds with buffer
-                time_start = start_ts - timeframe_buffer
-                time_end = end_ts + timeframe_buffer
-
-                # Filter trades within buffered timerange
-                trades_mask = (trades["timestamp"] >= time_start) & (
-                    trades["timestamp"] <= time_end
-                )
-                trades = trades.loc[trades_mask].reset_index(drop=True)
 
             cached_grouped_trades: DataFrame | None = self._cached_grouped_trades_per_pair.get(pair)
             dataframe, cached_grouped_trades = populate_dataframe_with_trades(
