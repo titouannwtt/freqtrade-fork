@@ -73,19 +73,19 @@ def test_hyperopt_decimal_parameter():
     with pytest.raises(OperationalException, match=r"DecimalParameter space invalid\."):
         DecimalParameter([0, 10], high=7, default=5, space="buy")
 
-    fltpar = DecimalParameter(low=0.0, high=0.5, default=0.14, decimals=1, space="buy")
-    assert fltpar.value == 0.1
-    assert isinstance(fltpar.get_space(""), SKDecimal)
-    assert isinstance(fltpar.range, list)
-    assert len(list(fltpar.range)) == 1
+    decimalpar = DecimalParameter(low=0.0, high=0.5, default=0.14, decimals=1, space="buy")
+    assert decimalpar.value == 0.1
+    assert isinstance(decimalpar.get_space(""), SKDecimal)
+    assert isinstance(decimalpar.range, list)
+    assert len(list(decimalpar.range)) == 1
     # Range contains ONLY the default / value.
-    assert list(fltpar.range) == [fltpar.value]
-    fltpar.in_space = True
-    assert len(list(fltpar.range)) == 6
-    assert list(fltpar.range) == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    assert list(decimalpar.range) == [decimalpar.value]
+    decimalpar.in_space = True
+    assert len(list(decimalpar.range)) == 6
+    assert list(decimalpar.range) == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 
     HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
-    assert len(list(fltpar.range)) == 1
+    assert len(list(decimalpar.range)) == 1
 
 
 def test_hyperopt_categorical_parameter():
