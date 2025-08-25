@@ -22,11 +22,12 @@ permissions:
 
 jobs:
   deploy-docker:
+    name: "Deploy Docker x64 and armv7l"
     runs-on: ubuntu-22.04
     if: github.repository == 'freqtrade/freqtrade'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -74,7 +75,7 @@ jobs:
         build_helpers/publish_docker_multi.sh
 
   deploy-arm:
-    name: "Deploy Docker"
+    name: "Deploy Docker ARM64"
     permissions:
       packages: write
     needs: [ deploy-docker ]
@@ -83,7 +84,7 @@ jobs:
     if: github.repository == 'freqtrade/freqtrade'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 

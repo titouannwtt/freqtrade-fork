@@ -10,7 +10,7 @@ usage: freqtrade plot-dataframe [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                 [--plot-limit INT] [--db-url PATH]
                                 [--trade-source {DB,file}]
                                 [--export {none,trades,signals}]
-                                [--export-filename PATH]
+                                [--backtest-filename PATH]
                                 [--timerange TIMERANGE] [-i TIMEFRAME]
                                 [--no-trades]
 
@@ -38,10 +38,12 @@ options:
                         (backtest file)) Default: file
   --export {none,trades,signals}
                         Export backtest results (default: trades).
-  --export-filename PATH, --backtest-filename PATH
-                        Use this filename for backtest results.Requires
-                        `--export` to be set as well. Example: `--export-filen
-                        ame=user_data/backtest_results/backtest_today.json`
+  --backtest-filename PATH, --export-filename PATH
+                        Use this filename for backtest results.Example:
+                        `--backtest-
+                        filename=backtest_results_2020-09-27_16-20-48.json`.
+                        Assumes either `user_data/backtest_results/` or
+                        `--export-directory` as base directory.
   --timerange TIMERANGE
                         Specify what timerange of data to use.
   -i TIMEFRAME, --timeframe TIMEFRAME

@@ -28,7 +28,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -38,7 +38,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
         activate-environment: true
         enable-cache: true
@@ -47,24 +47,9 @@ jobs:
         cache-suffix: "${{ matrix.python-version }}"
         prune-cache: false
 
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ runner.os }}-dependencies
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
-
     - name: Installation - *nix
       run: |
         uv pip install --upgrade wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -163,7 +148,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -174,7 +159,7 @@ jobs:
         check-latest: true
 
     - name: Install uv
-      uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
         activate-environment: true
         enable-cache: true
@@ -182,18 +167,6 @@ jobs:
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "${{ matrix.python-version }}"
         prune-cache: false
-
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ matrix.os }}-dependencies
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
 
     - name: Installation - macOS (Brew)
       run: |
@@ -222,9 +195,6 @@ jobs:
     - name: Installation (python)
       run: |
         uv pip install wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -287,11 +257,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest ]
-        python-version: ["3.11", "3.12", "3.13"]
+        os: [ "windows-2022", "windows-2025" ]
+        python-version: ["3.11", "3.12", "3.13.6"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -301,7 +271,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
         activate-environment: true
         enable-cache: true
@@ -315,7 +285,9 @@ jobs:
         function uvpipFunction { uv pip $args }
         Set-Alias -name pip -value uvpipFunction
 
-        ./build_helpers/install_windows.ps1
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install -e .
 
     - name: Tests
       run: |
@@ -379,7 +351,7 @@ jobs:
   mypy-version-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -396,7 +368,7 @@ jobs:
   pre-commit:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -408,7 +380,7 @@ jobs:
   docs-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -439,7 +411,7 @@ jobs:
     # Run pytest with "live" checks
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -449,7 +421,7 @@ jobs:
         python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
         activate-environment: true
         enable-cache: true
@@ -458,25 +430,9 @@ jobs:
         cache-suffix: "3.12"
         prune-cache: false
 
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ runner.os }}-dependencies
-
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
-
     - name: Installation - *nix
       run: |
         uv pip install --upgrade wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -508,9 +464,9 @@ jobs:
 
     - name: Check user permission
       id: check
-      uses: scherermichael-oss/action-has-permission@136e061bfe093832d87f090dd768e14e27a740d3 # 1.0.6
+      uses: prince-chrismc/check-actor-permissions-action@d504e74ba31658f4cdf4fcfeb509d4c09736d88e # v3.0.2
       with:
-        required-permission: write
+        permission: "write"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -528,7 +484,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -575,7 +531,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -604,7 +560,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
