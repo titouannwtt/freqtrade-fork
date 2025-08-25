@@ -117,18 +117,15 @@ class MarketCapPairList(IPairList):
             },
         }
 
-    def get_markets_cache(self):
-        markets = self._marketcap_cache.get("markets")
-        if not markets:
-            markets = [
-                k
-                for k in self._exchange.get_markets(
-                    quote_currencies=[self._stake_currency], tradable_only=True, active_only=True
-                ).keys()
-            ]
-            self._marketcap_cache["markets"] = markets.copy()
+    def get_markets_exchange(self):
+        markets = [
+            k
+            for k in self._exchange.get_markets(
+                quote_currencies=[self._stake_currency], tradable_only=True, active_only=True
+            ).keys()
+        ]
 
-        return markets.copy()
+        return markets
 
     def gen_pairlist(self, tickers: Tickers) -> list[str]:
         """
@@ -145,7 +142,7 @@ class MarketCapPairList(IPairList):
         else:
             # Use fresh pairlist
             # Check if pair quote currency equals to the stake currency.
-            _pairlist = self.get_markets_cache()
+            _pairlist = self.get_markets_exchange()
 
             # No point in testing for blacklisted pairs...
             _pairlist = self.verify_blacklist(_pairlist, logger.info)
@@ -230,7 +227,7 @@ class MarketCapPairList(IPairList):
                 pair_format += f":{self._stake_currency.upper()}"
 
             top_marketcap = marketcap_list[: self._max_rank :]
-            markets = self.get_markets_cache()
+            markets = self.get_markets_exchange()
 
             for mc_pair in top_marketcap:
                 pair = f"{mc_pair.upper()}/{pair_format}"
