@@ -286,9 +286,15 @@ Without these permissions, the bot will not start correctly and show errors like
 
 ## Bybit
 
-Futures trading on bybit is currently supported for USDT markets, and will use isolated futures mode.
+!!! Tip "Stoploss on Exchange"
+    Bybit (futures only) supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
+    On futures, Bybit supports both `stop-limit` as well as `stop-market` orders. You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type to use.
 
-On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that changes to this setting may result in exceptions and errors.
+Bybit supports [time_in_force](configuration.md#understand-order_time_in_force) settings.
+
+Futures trading on bybit is currently supported for isolated futures mode.
+
+On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
 
 As bybit doesn't provide funding rate history, the dry-run calculation is used for live trades as well.
 
@@ -304,11 +310,6 @@ We do strongly recommend to limit all API keys to the IP you're going to use it 
     Freqtrade assumes accounts to be dedicated to the bot.
     We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
     Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
-
-
-!!! Tip "Stoploss on Exchange"
-    Bybit (futures only) supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it by enabling stoploss on exchange.
-    On futures, Bybit supports both `stop-limit` as well as `stop-market` orders. You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type to use.
 
 ## Bitmart
 
