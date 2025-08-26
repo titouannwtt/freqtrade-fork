@@ -464,6 +464,7 @@ jobs:
 
     - name: Check user permission
       id: check
+      continue-on-error: true
       uses: prince-chrismc/check-actor-permissions-action@d504e74ba31658f4cdf4fcfeb509d4c09736d88e # v3.0.2
       with:
         permission: "write"
@@ -472,7 +473,7 @@ jobs:
 
     - name: Discord notification
       uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
-      if: always() && steps.check.outputs.has-permission && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+      if: steps.check.outputs.permitted == 'true' && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: info
           details: Test Completed!
