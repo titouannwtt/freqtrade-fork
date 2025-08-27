@@ -156,7 +156,7 @@ ARGS_DOWNLOAD_DATA = [
     "days",
     "new_pairs_days",
     "include_inactive",
-    "use_parallel_download",
+    "no_parallel_download",
     "timerange",
     "download_trades",
     "convert_trades",

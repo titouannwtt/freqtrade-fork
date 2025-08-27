@@ -436,10 +436,10 @@ AVAILABLE_CLI_OPTIONS = {
         help="Also download data from inactive pairs.",
         action="store_true",
     ),
-    "use_parallel_download": Arg(
-        "--use-parallel-download",
-        help="Use the Parallel Downloader.",
-        action="store_true",
+    "no_parallel_download": Arg(
+        "--no-parallel-download",
+        help="Disable the Parallel Downloader.",
+        action="store_false",
     ),
     "new_pairs_days": Arg(
         "--new-pairs-days",
