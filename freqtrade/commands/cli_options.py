@@ -457,7 +457,7 @@ AVAILABLE_CLI_OPTIONS = {
     "no_parallel_download": Arg(
         "--no-parallel-download",
         help="Disable the Parallel Downloader.",
-        action="store_false",
+        action="store_true",
     ),
     "new_pairs_days": Arg(
         "--new-pairs-days",

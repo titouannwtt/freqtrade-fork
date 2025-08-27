@@ -389,7 +389,7 @@ def refresh_backtest_ohlcv_data(
             for timeframe in timeframes:
                 # Get fast candles via parallel method on first loop through per timeframe
                 # and candle type. Downloads all the pairs in the list and stores them.
-                if no_parallel_download and (
+                if not no_parallel_download and (
                     ((pair, timeframe, candle_type) not in fast_candles)
                     and (erase is False)
                     and (prepend is False)
