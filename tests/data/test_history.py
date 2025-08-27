@@ -544,6 +544,9 @@ def test_refresh_backtest_ohlcv_data(
 ):
     caplog.set_level(logging.DEBUG)
     dl_mock = mocker.patch("freqtrade.data.history.history_utils._download_pair_history")
+    parallel_mock = mocker.patch(
+        "freqtrade.data.history.history_utils._download_all_pairs_history_parallel", return_value={}
+    )
     mocker.patch(f"{EXMS}.markets", PropertyMock(return_value=markets))
 
     mocker.patch.object(Path, "exists", MagicMock(return_value=True))
@@ -558,10 +561,12 @@ def test_refresh_backtest_ohlcv_data(
         timeframes=["1m", "5m"],
         datadir=testdatadir,
         timerange=timerange,
-        erase=True,
+        erase=False,
         trading_mode=trademode,
     )
 
+    # Called once per timeframe and pair
+    assert parallel_mock.call_count == 4
     assert dl_mock.call_count == callcount
     assert dl_mock.call_args[1]["timerange"].starttype == "date"
 
