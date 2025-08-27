@@ -3,7 +3,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from collections import deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -76,7 +76,7 @@ class IFreqaiModel(ABC):
 
         self.dd = FreqaiDataDrawer(Path(self.full_path), self.config)
         # set current candle to arbitrary historical date
-        self.current_candle: datetime = datetime.fromtimestamp(637887600, tz=timezone.utc)
+        self.current_candle: datetime = datetime.fromtimestamp(637887600, tz=UTC)
         self.dd.current_candle = self.current_candle
         self.scanning = False
         self.ft_params = self.freqai_info["feature_parameters"]
@@ -514,12 +514,7 @@ class IFreqaiModel(ABC):
                    current coin/bot loop
         """
 
-        if "training_features_list_raw" in dk.data:
-            feature_list = dk.data["training_features_list_raw"]
-        else:
-            feature_list = dk.data["training_features_list"]
-
-        if dk.training_features_list != feature_list:
+        if dk.training_features_list != dk.data["training_features_list"]:
             raise OperationalException(
                 "Trying to access pretrained model with `identifier` "
                 "but found different features furnished by current strategy. "
@@ -763,6 +758,8 @@ class IFreqaiModel(ABC):
             init_model = None
         else:
             init_model = self.dd.model_dictionary[pair]
+            # Set "fresh" tb_logger - the one in model_dictionary has the writer closed.
+            init_model.tb_logger = self.tb_logger
 
         return init_model
 

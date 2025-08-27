@@ -15,6 +15,7 @@ class FtHas(TypedDict, total=False):
     stop_price_type_field: str
     stop_price_type_value_mapping: dict
     stoploss_order_types: dict[str, str]
+    stoploss_blocks_assets: bool
     # ohlcv
     ohlcv_params: dict
     ohlcv_candle_limit: int
@@ -23,6 +24,7 @@ class FtHas(TypedDict, total=False):
     ohlcv_require_since: bool
     ohlcv_volume_currency: str
     ohlcv_candle_limit_per_timeframe: dict[str, int]
+    always_require_api_keys: bool
     # Tickers
     tickers_have_quoteVolume: bool
     tickers_have_percentage: bool
@@ -38,6 +40,8 @@ class FtHas(TypedDict, total=False):
     l2_limit_range: list[int] | None
     l2_limit_range_required: bool
     l2_limit_upper: int | None
+    # fetch_orders
+    fetch_orders_limit_minutes: int | None
     # Futures
     ccxt_futures_name: str  # usually swap
     mark_ohlcv_price: str

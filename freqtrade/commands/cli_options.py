@@ -83,7 +83,8 @@ AVAILABLE_CLI_OPTIONS = {
         "-d",
         "--datadir",
         "--data-dir",
-        help="Path to directory with historical backtesting data.",
+        help="Path to the base directory of the exchange with historical backtesting data. "
+        "To see futures data, use trading-mode additionally.",
         metavar="PATH",
     ),
     "user_data_dir": Arg(
@@ -198,17 +199,29 @@ AVAILABLE_CLI_OPTIONS = {
         "(so `backtest-data.json` becomes `backtest-data-SampleStrategy.json`",
         nargs="+",
     ),
+    "backtest_notes": Arg(
+        "--notes",
+        help="Add notes to the backtest results.",
+        metavar="TEXT",
+    ),
     "export": Arg(
         "--export",
         help="Export backtest results (default: trades).",
         choices=constants.EXPORT_OPTIONS,
     ),
+    "exportdirectory": Arg(
+        "--backtest-directory",
+        "--export-directory",
+        help="Directory to use for backtest results. "
+        "Example: `--export-directory=user_data/backtest_results/`. ",
+        metavar="PATH",
+    ),
     "exportfilename": Arg(
-        "--export-filename",
         "--backtest-filename",
+        "--export-filename",
         help="Use this filename for backtest results."
-        "Requires `--export` to be set as well. "
-        "Example: `--export-filename=user_data/backtest_results/backtest_today.json`",
+        "Example: `--backtest-filename=backtest_results_2020-09-27_16-20-48.json`. "
+        "Assumes either `user_data/backtest_results/` or `--export-directory` as base directory.",
         metavar="PATH",
     ),
     "disableparamexport": Arg(
@@ -234,13 +247,6 @@ AVAILABLE_CLI_OPTIONS = {
         default=constants.BACKTEST_CACHE_DEFAULT,
         choices=constants.BACKTEST_CACHE_AGE,
     ),
-    # Edge
-    "stoploss_range": Arg(
-        "--stoplosses",
-        help="Defines a range of stoploss values against which edge will assess the strategy. "
-        'The format is "min,max,step" (without any space). '
-        "Example: `--stoplosses=-0.01,-0.1,-0.001`",
-    ),
     # Hyperopt
     "hyperopt": Arg(
         "--hyperopt",
@@ -260,6 +266,13 @@ AVAILABLE_CLI_OPTIONS = {
         type=check_int_positive,
         metavar="INT",
         default=constants.HYPEROPT_EPOCH,
+    ),
+    "early_stop": Arg(
+        "--early-stop",
+        help="Early stop hyperopt if no improvement after (default: %(default)d) epochs.",
+        type=check_int_positive,
+        metavar="INT",
+        default=0,  # 0 to disable by default
     ),
     "spaces": Arg(
         "--spaces",
@@ -361,6 +374,11 @@ AVAILABLE_CLI_OPTIONS = {
         "-a",
         "--all",
         help="Print all exchanges known to the ccxt library.",
+        action="store_true",
+    ),
+    "dex_exchanges": Arg(
+        "--dex-exchanges",
+        help="Print only DEX exchanges.",
         action="store_true",
     ),
     # List pairs / markets

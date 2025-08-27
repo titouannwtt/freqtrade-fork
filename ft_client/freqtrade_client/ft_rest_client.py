@@ -189,13 +189,6 @@ class FtRestClient:
         """
         return self._get("monthly", params={"timescale": months} if months else None)
 
-    def edge(self):
-        """Return information about edge.
-
-        :return: json object
-        """
-        return self._get("edge")
-
     def profit(self):
         """Return the profit summary.
 
@@ -255,11 +248,12 @@ class FtRestClient:
         """
         return self._get("logs", params={"limit": limit} if limit else {})
 
-    def trades(self, limit=None, offset=None):
-        """Return trades history, sorted by id
+    def trades(self, limit=None, offset=None, order_by_id=True):
+        """Return trades history, sorted by id (or by latest timestamp if order_by_id=False)
 
         :param limit: Limits trades to the X last trades. Max 500 trades.
         :param offset: Offset by this amount of trades.
+        :param order_by_id: Sort trades by id (default: True). If False, sorts by latest timestamp.
         :return: json object
         """
         params = {}
@@ -267,6 +261,8 @@ class FtRestClient:
             params["limit"] = limit
         if offset:
             params["offset"] = offset
+        if not order_by_id:
+            params["order_by_id"] = False
         return self._get("trades", params)
 
     def list_open_trades_custom_data(self, key=None, limit=100, offset=0):

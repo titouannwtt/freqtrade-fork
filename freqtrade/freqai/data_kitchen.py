@@ -3,7 +3,7 @@ import inspect
 import logging
 import random
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,7 @@ from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
 from freqtrade.configuration import TimeRange
-from freqtrade.constants import DOCS_LINK, Config
+from freqtrade.constants import DOCS_LINK, ORDERFLOW_ADDED_COLUMNS, Config
 from freqtrade.data.converter import reduce_dataframe_footprint
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import timeframe_to_seconds
@@ -341,7 +341,7 @@ class FreqaiDataKitchen:
         full_timerange = TimeRange.parse_timerange(tr)
         config_timerange = TimeRange.parse_timerange(self.config["timerange"])
         if config_timerange.stopts == 0:
-            config_timerange.stopts = int(datetime.now(tz=timezone.utc).timestamp())
+            config_timerange.stopts = int(datetime.now(tz=UTC).timestamp())
         timerange_train = copy.deepcopy(full_timerange)
         timerange_backtest = copy.deepcopy(full_timerange)
 
@@ -525,7 +525,7 @@ class FreqaiDataKitchen:
         :return:
             bool = If the model is expired or not.
         """
-        time = datetime.now(tz=timezone.utc).timestamp()
+        time = datetime.now(tz=UTC).timestamp()
         elapsed_time = (time - trained_timestamp) / 3600  # hours
         max_time = self.freqai_config.get("expiration_hours", 0)
         if max_time > 0:
@@ -536,7 +536,7 @@ class FreqaiDataKitchen:
     def check_if_new_training_required(
         self, trained_timestamp: int
     ) -> tuple[bool, TimeRange, TimeRange]:
-        time = datetime.now(tz=timezone.utc).timestamp()
+        time = datetime.now(tz=UTC).timestamp()
         trained_timerange = TimeRange()
         data_load_timerange = TimeRange()
 
@@ -709,6 +709,11 @@ class FreqaiDataKitchen:
         skip_columns = [
             (f"{s}_{suffix}") for s in ["date", "open", "high", "low", "close", "volume"]
         ]
+
+        for s in ORDERFLOW_ADDED_COLUMNS:
+            if s in dataframe.columns and f"{s}_{suffix}" in dataframe.columns:
+                skip_columns.append(f"{s}_{suffix}")
+
         dataframe = dataframe.drop(columns=skip_columns)
         return dataframe
 

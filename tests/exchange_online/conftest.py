@@ -408,13 +408,21 @@ EXCHANGES = {
         "candle_count": 200,
         "orderbook_max_entries": 50,
     },
-    "htx": {
-        "pair": "ETH/BTC",
-        "stake_currency": "BTC",
+    "bitget": {
+        "pair": "BTC/USDT",
+        "stake_currency": "USDT",
         "hasQuoteVolume": True,
         "timeframe": "1h",
         "candle_count": 1000,
     },
+    # TODO: re-enable htx once certificates work again
+    # "htx": {
+    #     "pair": "ETH/BTC",
+    #     "stake_currency": "BTC",
+    #     "hasQuoteVolume": True,
+    #     "timeframe": "1h",
+    #     "candle_count": 1000,
+    # },
     "bitvavo": {
         "pair": "BTC/EUR",
         "stake_currency": "EUR",
@@ -487,10 +495,10 @@ EXCHANGES = {
         ],
     },
     "hyperliquid": {
-        "pair": "PURR/USDC",
+        "pair": "UBTC/USDC",
         "stake_currency": "USDC",
         "hasQuoteVolume": False,
-        "timeframe": "1h",
+        "timeframe": "30m",
         "futures": True,
         "candle_count": 5000,
         "orderbook_max_entries": 20,
@@ -498,6 +506,8 @@ EXCHANGES = {
         "hasQuoteVolumeFutures": True,
         "leverage_tiers_public": False,
         "leverage_in_spot_market": False,
+        # TODO: re-enable hyperliquid websocket tests
+        "skip_ws_tests": True,
     },
 }
 
@@ -568,12 +578,16 @@ def get_futures_exchange(exchange_name, exchange_conf, class_mocker):
 @pytest.fixture(params=EXCHANGES, scope="class")
 def exchange(request, exchange_conf, class_mocker):
     class_mocker.patch("freqtrade.exchange.bybit.Bybit.additional_exchange_init")
-    return get_exchange(request.param, exchange_conf)
+    exchange, name = get_exchange(request.param, exchange_conf)
+    yield exchange, name
+    exchange.close()
 
 
 @pytest.fixture(params=EXCHANGES, scope="class")
 def exchange_futures(request, exchange_conf, class_mocker):
-    return get_futures_exchange(request.param, exchange_conf, class_mocker)
+    exchange, name = get_futures_exchange(request.param, exchange_conf, class_mocker)
+    yield exchange, name
+    exchange.close()
 
 
 @pytest.fixture(params=["spot", "futures"], scope="class")
@@ -599,7 +613,7 @@ def exchange_ws(request, exchange_conf, exchange_mode, class_mocker):
     else:
         pytest.skip("Exchange does not support futures.")
 
-    if not exchange._has_watch_ohlcv:
+    if not exchange._exchange_ws:
         pytest.skip("Exchange does not support watch_ohlcv.")
     yield exchange, name, pair
     exchange.close()

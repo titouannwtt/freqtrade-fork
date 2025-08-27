@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,9 +18,11 @@ class ValueTypesEnum(str, Enum):
     INT = "int"
 
 
-class KeyStoreKeys(str, Enum):
-    BOT_START_TIME = "bot_start_time"
-    STARTUP_TIME = "startup_time"
+KeyStoreKeys = Literal[
+    "bot_start_time",
+    "startup_time",
+    "binance_migration",
+]
 
 
 class _KeyValueStoreModel(ModelBase):
@@ -112,7 +114,7 @@ class KeyValueStore:
         if kv.value_type == ValueTypesEnum.STRING:
             return kv.string_value
         if kv.value_type == ValueTypesEnum.DATETIME and kv.datetime_value is not None:
-            return kv.datetime_value.replace(tzinfo=timezone.utc)
+            return kv.datetime_value.replace(tzinfo=UTC)
         if kv.value_type == ValueTypesEnum.FLOAT:
             return kv.float_value
         if kv.value_type == ValueTypesEnum.INT:
@@ -154,7 +156,7 @@ class KeyValueStore:
         )
         if kv is None or kv.datetime_value is None:
             return None
-        return kv.datetime_value.replace(tzinfo=timezone.utc)
+        return kv.datetime_value.replace(tzinfo=UTC)
 
     @staticmethod
     def get_float_value(key: KeyStoreKeys) -> float | None:
@@ -192,7 +194,7 @@ class KeyValueStore:
         return kv.int_value
 
 
-def set_startup_time():
+def set_startup_time() -> None:
     """
     sets bot_start_time to the first trade open date - or "now" on new databases.
     sets startup_time to "now"
@@ -205,5 +207,5 @@ def set_startup_time():
         if t is not None:
             KeyValueStore.store_value("bot_start_time", t.open_date_utc)
         else:
-            KeyValueStore.store_value("bot_start_time", datetime.now(timezone.utc))
-    KeyValueStore.store_value("startup_time", datetime.now(timezone.utc))
+            KeyValueStore.store_value("bot_start_time", datetime.now(UTC))
+    KeyValueStore.store_value("startup_time", datetime.now(UTC))

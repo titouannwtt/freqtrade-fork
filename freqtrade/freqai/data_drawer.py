@@ -5,7 +5,7 @@ import re
 import shutil
 import threading
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -116,7 +116,7 @@ class FreqaiDataDrawer:
             if metric not in self.metric_tracker[pair]:
                 self.metric_tracker[pair][metric] = {"timestamp": [], "value": []}
 
-            timestamp = int(datetime.now(timezone.utc).timestamp())
+            timestamp = int(datetime.now(UTC).timestamp())
             self.metric_tracker[pair][metric]["value"].append(value)
             self.metric_tracker[pair][metric]["timestamp"].append(timestamp)
 
@@ -493,7 +493,7 @@ class FreqaiDataDrawer:
 
         dk.data["data_path"] = str(dk.data_path)
         dk.data["model_filename"] = str(dk.model_filename)
-        dk.data["training_features_list"] = list(dk.data_dictionary["train_features"].columns)
+        dk.data["training_features_list"] = dk.training_features_list
         dk.data["label_list"] = dk.label_list
 
         with (save_path / f"{dk.model_filename}_{METADATA}.json").open("w") as fp:

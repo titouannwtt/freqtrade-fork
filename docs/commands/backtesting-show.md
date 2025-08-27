@@ -1,15 +1,22 @@
 ```
 usage: freqtrade backtesting-show [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                   [-c PATH] [-d PATH] [--userdir PATH]
-                                  [--export-filename PATH] [--show-pair-list]
+                                  [--backtest-filename PATH]
+                                  [--backtest-directory PATH]
+                                  [--show-pair-list]
                                   [--breakdown {day,week,month,year} [{day,week,month,year} ...]]
 
 options:
   -h, --help            show this help message and exit
-  --export-filename PATH, --backtest-filename PATH
-                        Use this filename for backtest results.Requires
-                        `--export` to be set as well. Example: `--export-filen
-                        ame=user_data/backtest_results/backtest_today.json`
+  --backtest-filename PATH, --export-filename PATH
+                        Use this filename for backtest results.Example:
+                        `--backtest-
+                        filename=backtest_results_2020-09-27_16-20-48.json`.
+                        Assumes either `user_data/backtest_results/` or
+                        `--export-directory` as base directory.
+  --backtest-directory PATH, --export-directory PATH
+                        Directory to use for backtest results. Example:
+                        `--export-directory=user_data/backtest_results/`.
   --show-pair-list      Show backtesting pairlist sorted by profit.
   --breakdown {day,week,month,year} [{day,week,month,year} ...]
                         Show backtesting breakdown per [day, week, month,
@@ -30,7 +37,9 @@ Common arguments:
                         exists). Multiple --config options may be used. Can be
                         set to `-` to read config from stdin.
   -d PATH, --datadir PATH, --data-dir PATH
-                        Path to directory with historical backtesting data.
+                        Path to the base directory of the exchange with
+                        historical backtesting data. To see futures data, use
+                        trading-mode additionally.
   --userdir PATH, --user-data-dir PATH
                         Path to userdata directory.
 

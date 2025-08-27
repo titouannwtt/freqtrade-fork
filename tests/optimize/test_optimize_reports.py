@@ -18,12 +18,10 @@ from freqtrade.data.btanalysis import (
     load_backtest_data,
     load_backtest_stats,
 )
-from freqtrade.edge import PairInfo
 from freqtrade.enums import ExitType
 from freqtrade.optimize.optimize_reports import (
     generate_backtest_stats,
     generate_daily_stats,
-    generate_edge_table,
     generate_pair_metrics,
     generate_periodic_breakdown_stats,
     generate_strategy_comparison,
@@ -40,7 +38,7 @@ from freqtrade.optimize.optimize_reports.optimize_reports import (
     generate_tag_metrics,
 )
 from freqtrade.resolvers.strategy_resolver import StrategyResolver
-from freqtrade.util import dt_ts
+from freqtrade.util import dt_ts, format_duration
 from freqtrade.util.datetime_helpers import dt_from_ts, dt_utc
 from tests.conftest import CURRENT_TEST_STRATEGY, log_has_re
 from tests.data.test_history import _clean_test_file
@@ -238,7 +236,7 @@ def test_generate_backtest_stats(default_conf, testdatadir, tmp_path):
     filename_last = tmp_path / LAST_BT_RESULT_FN
     _backup_file(filename_last, copy_file=True)
     assert not filename.is_file()
-    default_conf["exportfilename"] = filename
+    default_conf["exportdirectory"] = filename
 
     store_backtest_results(default_conf, stats, "2022_01_01_15_05_13")
 
@@ -265,7 +263,7 @@ def test_store_backtest_results(testdatadir, mocker):
     zip_mock = mocker.patch("freqtrade.optimize.optimize_reports.bt_storage.ZipFile")
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
     store_backtest_results(
-        {"exportfilename": testdatadir, "original_config": {}}, data, "2022_01_01_15_05_13"
+        {"exportdirectory": testdatadir, "original_config": {}}, data, "2022_01_01_15_05_13"
     )
 
     assert dump_mock.call_count == 2
@@ -277,7 +275,7 @@ def test_store_backtest_results(testdatadir, mocker):
     zip_mock.reset_mock()
     filename = testdatadir / "testresult.json"
     store_backtest_results(
-        {"exportfilename": filename, "original_config": {}}, data, "2022_01_01_15_05_13"
+        {"exportdirectory": filename, "original_config": {}}, data, "2022_01_01_15_05_13"
     )
     assert dump_mock.call_count == 2
     assert zip_mock.call_count == 1
@@ -289,7 +287,7 @@ def test_store_backtest_results(testdatadir, mocker):
 def test_store_backtest_results_real(tmp_path, caplog):
     data = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
     config = {
-        "exportfilename": tmp_path,
+        "exportdirectory": tmp_path,
         "original_config": {},
     }
     store_backtest_results(
@@ -358,7 +356,7 @@ def test_write_read_backtest_candles(tmp_path):
     bt_results = {"metadata": {}, "strategy": {}, "strategy_comparison": []}
 
     mock_conf = {
-        "exportfilename": tmp_path,
+        "exportdirectory": tmp_path,
         "export": "signals",
         "runmode": "backtest",
         "original_config": {},
@@ -395,33 +393,6 @@ def test_write_read_backtest_candles(tmp_path):
 
     _clean_test_file(stored_file)
 
-    # test file exporting
-    filename = tmp_path / "testresult"
-    mock_conf["exportfilename"] = filename
-    store_backtest_results(mock_conf, bt_results, sample_date, analysis_results=data)
-    stored_file = tmp_path / f"testresult-{sample_date}.zip"
-    signals_pkl = f"testresult-{sample_date}_signals.pkl"
-    rejected_pkl = f"testresult-{sample_date}_rejected.pkl"
-    exited_pkl = f"testresult-{sample_date}_exited.pkl"
-    assert not (tmp_path / signals_pkl).is_file()
-    assert stored_file.is_file()
-
-    with ZipFile(stored_file, "r") as zipf:
-        assert signals_pkl in zipf.namelist()
-        assert rejected_pkl in zipf.namelist()
-        assert exited_pkl in zipf.namelist()
-
-        with zipf.open(signals_pkl) as scp:
-            pickled_signal_candles2 = joblib.load(scp)
-
-    assert pickled_signal_candles2.keys() == candle_dict.keys()
-    assert pickled_signal_candles2["DefStrat"].keys() == pickled_signal_candles2["DefStrat"].keys()
-    assert pickled_signal_candles2["DefStrat"]["UNITTEST/BTC"].equals(
-        pickled_signal_candles2["DefStrat"]["UNITTEST/BTC"]
-    )
-
-    _clean_test_file(stored_file)
-
 
 def test_generate_pair_metrics():
     results = pd.DataFrame(
@@ -454,7 +425,6 @@ def test_generate_pair_metrics():
     assert (
         pytest.approx(pair_results[-1]["profit_mean_pct"]) == pair_results[-1]["profit_mean"] * 100
     )
-    assert pytest.approx(pair_results[-1]["profit_sum_pct"]) == pair_results[-1]["profit_sum"] * 100
 
 
 def test_generate_daily_stats(testdatadir):
@@ -482,8 +452,8 @@ def test_generate_trading_stats(testdatadir):
     bt_data = load_backtest_data(filename)
     res = generate_trading_stats(bt_data)
     assert isinstance(res, dict)
-    assert res["winner_holding_avg"] == timedelta(seconds=1440)
-    assert res["loser_holding_avg"] == timedelta(days=1, seconds=21420)
+    assert res["winner_holding_avg"] == format_duration(timedelta(seconds=1440))
+    assert res["loser_holding_avg"] == format_duration(timedelta(days=1, seconds=21420))
     assert "wins" in res
     assert "losses" in res
     assert "draws" in res
@@ -644,15 +614,6 @@ def test_text_table_strategy(testdatadir, capsys):
         r"260.85 .* 3:40:00 .* 170     0     9  95.0 .* 0.00308222 BTC  8.67%.*",
         text,
     )
-
-
-def test_generate_edge_table(capsys):
-    results = {}
-    results["ETH/BTC"] = PairInfo(-0.01, 0.60, 2, 1, 3, 10, 60)
-    generate_edge_table(results)
-    text = capsys.readouterr().out
-    assert re.search(r".* ETH/BTC .*", text)
-    assert re.search(r".* Risk Reward Ratio .* Required Risk Reward .* Expectancy .*", text)
 
 
 def test_generate_periodic_breakdown_stats(testdatadir):

@@ -5,7 +5,7 @@ Unit test file for rpc/api_server.py
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, PropertyMock
 
@@ -637,12 +637,12 @@ def test_api_locks(botclient):
         [
             {
                 "pair": "ETH/BTC",
-                "until": f"{format_date(datetime.now(timezone.utc) + timedelta(minutes=4))}Z",
+                "until": f"{format_date(datetime.now(UTC) + timedelta(minutes=4))}Z",
                 "reason": "randreason",
             },
             {
                 "pair": "XRP/BTC",
-                "until": f"{format_date(datetime.now(timezone.utc) + timedelta(minutes=20))}Z",
+                "until": f"{format_date(datetime.now(UTC) + timedelta(minutes=20))}Z",
                 "reason": "deadbeef",
             },
         ],
@@ -711,7 +711,7 @@ def test_api_daily(botclient, mocker, ticker, fee, markets):
     assert len(response["data"]) == 7
     assert response["stake_currency"] == "BTC"
     assert response["fiat_display_currency"] == "USD"
-    assert response["data"][0]["date"] == str(datetime.now(timezone.utc).date())
+    assert response["data"][0]["date"] == str(datetime.now(UTC).date())
 
 
 def test_api_weekly(botclient, mocker, ticker, fee, markets, time_machine):
@@ -776,11 +776,27 @@ def test_api_trades(botclient, mocker, fee, markets, is_short):
     assert rc.json()["trades_count"] == 2
     assert rc.json()["total_trades"] == 2
     assert rc.json()["trades"][0]["is_short"] == is_short
+    # Ensure the trades are sorted by trade_id (the default, see below)
+    assert rc.json()["trades"][0]["trade_id"] == 2
+    assert rc.json()["trades"][1]["trade_id"] == 3
+
     rc = client_get(client, f"{BASE_URI}/trades?limit=1")
     assert_response(rc)
     assert len(rc.json()["trades"]) == 1
     assert rc.json()["trades_count"] == 1
     assert rc.json()["total_trades"] == 2
+
+    # Test ascending order (default)
+    rc = client_get(client, f"{BASE_URI}/trades?order_by_id=true")
+    assert_response(rc)
+    assert rc.json()["trades"][0]["trade_id"] == 2
+    assert rc.json()["trades"][1]["trade_id"] == 3
+
+    # Test descending order
+    rc = client_get(client, f"{BASE_URI}/trades?order_by_id=false")
+    assert_response(rc)
+    assert rc.json()["trades"][0]["trade_id"] == 3
+    assert rc.json()["trades"][1]["trade_id"] == 2
 
 
 @pytest.mark.parametrize("is_short", [True, False])
@@ -1032,7 +1048,7 @@ def test_api_delete_trade(botclient, mocker, fee, markets, is_short):
 
     rc = client_delete(client, f"{BASE_URI}/trades/1")
     assert_response(rc)
-    assert rc.json()["result_msg"] == "Deleted trade 1. Closed 1 open orders."
+    assert rc.json()["result_msg"] == "Deleted trade #1 for pair ETH/BTC. Closed 1 open orders."
     assert len(trades) - 1 == len(Trade.session.scalars(select(Trade)).all())
     assert cancel_mock.call_count == 1
 
@@ -1045,7 +1061,7 @@ def test_api_delete_trade(botclient, mocker, fee, markets, is_short):
     assert len(trades) - 1 == len(Trade.session.scalars(select(Trade)).all())
     rc = client_delete(client, f"{BASE_URI}/trades/5")
     assert_response(rc)
-    assert rc.json()["result_msg"] == "Deleted trade 5. Closed 1 open orders."
+    assert rc.json()["result_msg"] == "Deleted trade #5 for pair XRP/BTC. Closed 1 open orders."
     assert len(trades) - 2 == len(Trade.session.scalars(select(Trade)).all())
     assert stoploss_mock.call_count == 1
 
@@ -1149,21 +1165,6 @@ def test_api_logs(botclient):
         print(f"rc1={rc1.json()}")
     assert rc1.json()["log_count"] > 2
     assert len(rc1.json()["logs"]) == rc1.json()["log_count"]
-
-
-def test_api_edge_disabled(botclient, mocker, ticker, fee, markets):
-    ftbot, client = botclient
-    patch_get_signal(ftbot)
-    mocker.patch.multiple(
-        EXMS,
-        get_balances=MagicMock(return_value=ticker),
-        fetch_ticker=ticker,
-        get_fee=fee,
-        markets=PropertyMock(return_value=markets),
-    )
-    rc = client_get(client, f"{BASE_URI}/edge")
-    assert_response(rc, 502)
-    assert rc.json() == {"error": "Error querying /api/v1/edge: Edge is not enabled."}
 
 
 @pytest.mark.parametrize(
@@ -1331,10 +1332,53 @@ def test_api_profit(botclient, mocker, ticker, fee, markets, is_short, expected)
         "max_drawdown_start_timestamp": ANY,
         "max_drawdown_end": ANY,
         "max_drawdown_end_timestamp": ANY,
+        "current_drawdown": ANY,
+        "current_drawdown_abs": ANY,
+        "current_drawdown_high": ANY,
+        "current_drawdown_start": ANY,
+        "current_drawdown_start_timestamp": ANY,
         "trading_volume": expected["trading_volume"],
         "bot_start_timestamp": 0,
         "bot_start_date": "",
     }
+
+
+def test_api_profit_all(botclient, mocker, ticker, fee, markets):
+    ftbot, client = botclient
+    ftbot.config["tradable_balance_ratio"] = 1
+    ftbot.config["trading_mode"] = TradingMode.FUTURES
+    patch_get_signal(ftbot)
+    mocker.patch.multiple(
+        EXMS,
+        get_balances=MagicMock(return_value=ticker),
+        fetch_ticker=ticker,
+        get_fee=fee,
+        markets=PropertyMock(return_value=markets),
+    )
+
+    rc = client_get(client, f"{BASE_URI}/profit_all")
+    assert_response(rc, 200)
+    response = rc.json()
+    assert "all" in response
+    assert "long" in response
+    assert "short" in response
+
+    assert response["all"]["trade_count"] == 0
+    create_mock_trades_usdt(fee, is_short=None)
+
+    rc = client_get(client, f"{BASE_URI}/profit_all")
+    assert_response(rc, 200)
+    response = rc.json()
+    assert response["all"]["trade_count"] == 7
+    assert response["long"]["trade_count"] == 2
+    assert response["short"]["trade_count"] == 5
+    assert pytest.approx(response["all"]["profit_all_coin"]) == 22.58997755
+    assert pytest.approx(response["long"]["profit_all_coin"]) == -20.0498903
+    assert pytest.approx(response["short"]["profit_all_coin"]) == 42.639867
+
+    assert response["all"]["best_pair"] == "NEO/USDT"
+    assert response["long"]["best_pair"] == ""
+    assert response["short"]["best_pair"] == "NEO/USDT"
 
 
 @pytest.mark.parametrize("is_short", [True, False])
@@ -1694,7 +1738,7 @@ def test_api_force_entry(botclient, mocker, fee, endpoint):
             exchange="binance",
             stake_amount=1,
             open_rate=0.245441,
-            open_date=datetime.now(timezone.utc),
+            open_date=datetime.now(UTC),
             is_open=False,
             is_short=False,
             fee_close=fee.return_value,
@@ -1848,7 +1892,21 @@ def test_api_pair_candles(botclient, ohlcv_history):
     ohlcv_history["exit_short"] = 0
 
     ftbot.dataprovider._set_cached_df("XRP/BTC", timeframe, ohlcv_history, CandleType.SPOT)
+    fake_plot_annotations = [
+        {
+            "type": "area",
+            "start": "2024-01-01 15:00:00",
+            "end": "2024-01-01 16:00:00",
+            "y_start": 94000.2,
+            "y_end": 98000,
+            "color": "",
+            "label": "some label",
+        }
+    ]
+    plot_annotations_mock = MagicMock(return_value=fake_plot_annotations)
+    ftbot.strategy.plot_annotations = plot_annotations_mock
     for call in ("get", "post"):
+        plot_annotations_mock.reset_mock()
         if call == "get":
             rc = client_get(
                 client,
@@ -1878,6 +1936,8 @@ def test_api_pair_candles(botclient, ohlcv_history):
         assert resp["data_start_ts"] == 1511686200000
         assert resp["data_stop"] == "2017-11-26 09:00:00+00:00"
         assert resp["data_stop_ts"] == 1511686800000
+        assert resp["annotations"] == fake_plot_annotations
+        assert plot_annotations_mock.call_count == 1
         assert isinstance(resp["columns"], list)
         base_cols = {
             "date",
@@ -2219,6 +2279,7 @@ def test_api_pair_history(botclient, tmp_path, mocker):
         assert result["data_start_ts"] == 1515628800000
         assert result["data_stop"] == "2018-01-12 00:00:00+00:00"
         assert result["data_stop_ts"] == 1515715200000
+        assert result["annotations"] == []
         lfm.reset_mock()
 
         # No data found
@@ -2741,8 +2802,8 @@ def test_api_backtesting(botclient, mocker, fee, caplog, tmp_path):
         ftbot.config["export"] = "trades"
         ftbot.config["backtest_cache"] = "day"
         ftbot.config["user_data_dir"] = tmp_path
-        ftbot.config["exportfilename"] = tmp_path / "backtest_results"
-        ftbot.config["exportfilename"].mkdir()
+        ftbot.config["exportdirectory"] = tmp_path / "backtest_results"
+        ftbot.config["exportdirectory"].mkdir()
 
         # start backtesting
         data = {
@@ -2853,7 +2914,7 @@ def test_api_backtesting(botclient, mocker, fee, caplog, tmp_path):
 def test_api_backtest_history(botclient, mocker, testdatadir):
     ftbot, client = botclient
     mocker.patch(
-        "freqtrade.data.btanalysis._get_backtest_files",
+        "freqtrade.data.btanalysis.bt_fileutils._get_backtest_files",
         return_value=[
             testdatadir / "backtest_results/backtest-result_multistrat.json",
             testdatadir / "backtest_results/backtest-result.json",

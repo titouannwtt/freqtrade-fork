@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterator
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -71,7 +71,7 @@ class HyperoptTools:
             "strategy_name": strategy_name,
             "params": final_params,
             "ft_stratparam_v": 1,
-            "export_time": datetime.now(timezone.utc),
+            "export_time": datetime.now(UTC),
         }
         logger.info(f"Dumping parameters to {filename}")
         with filename.open("w") as f:
@@ -107,7 +107,7 @@ class HyperoptTools:
         """
         Tell if the space value is contained in the configuration
         """
-        # 'trailing' and 'protection spaces are not included in the 'default' set of spaces
+        # The following spaces are not included in the 'default' set of spaces
         if space in ("trailing", "protection", "trades"):
             return any(s in config["spaces"] for s in [space, "all"])
         else:

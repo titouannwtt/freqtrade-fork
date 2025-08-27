@@ -26,6 +26,8 @@ __MESSAGE_TYPE_DICT: dict[str, dict[str, str]] = {x: {"type": "object"} for x in
 
 __IN_STRATEGY = "\nUsually specified in the strategy and missing in the configuration."
 
+__VIA_ENV = "Recommended to be set via environment variable"
+
 CONF_SCHEMA = {
     "type": "object",
     "properties": {
@@ -154,6 +156,16 @@ CONF_SCHEMA = {
         "exit_profit_offset": {
             "description": f"Offset for profit exit. {__IN_STRATEGY}",
             "type": "number",
+        },
+        "recursive_strategy_search": {
+            "description": "Enable recursive strategy search.",
+            "type": "boolean",
+        },
+        "user_data_dir": {
+            "description": "Path to the user data directory.",
+        },
+        "datadir": {
+            "description": "Path to the data directory.",
         },
         "fee": {
             "description": "Trading fee percentage. Can help to simulate slippage in backtesting",
@@ -421,10 +433,6 @@ CONF_SCHEMA = {
             "description": "Exchange configuration.",
             "$ref": "#/definitions/exchange",
         },
-        "edge": {
-            "description": "Edge configuration.",
-            "$ref": "#/definitions/edge",
-        },
         "log_config": {
             "description": "Logging configuration.",
             "$ref": "#/definitions/logging",
@@ -445,6 +453,7 @@ CONF_SCHEMA = {
         "pairlists": {
             "description": "Configuration for pairlists.",
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
@@ -468,11 +477,16 @@ CONF_SCHEMA = {
                 },
                 "token": {"description": "Telegram bot token.", "type": "string"},
                 "chat_id": {
-                    "description": "Telegram chat or group ID",
+                    "description": (
+                        f"Telegram chat or group ID. {__VIA_ENV} FREQTRADE__TELEGRAM__CHAT_ID"
+                    ),
                     "type": "string",
                 },
                 "topic_id": {
-                    "description": "Telegram topic ID - only applicable for group chats",
+                    "description": (
+                        "Telegram topic ID - only applicable for group chats. "
+                        f"{__VIA_ENV} FREQTRADE__TELEGRAM__TOPIC_ID"
+                    ),
                     "type": "string",
                 },
                 "authorized_users": {
@@ -574,8 +588,11 @@ CONF_SCHEMA = {
             "description": "Webhook settings.",
             "type": "object",
             "properties": {
-                "enabled": {"type": "boolean"},
-                "url": {"type": "string"},
+                "enabled": {"description": "Enable webhook notifications.", "type": "boolean"},
+                "url": {
+                    "description": f"Webhook URL. {__VIA_ENV} FREQTRADE__WEBHOOK__URL",
+                    "type": "string",
+                },
                 "format": {"type": "string", "enum": WEBHOOK_FORMAT_OPTIONS, "default": "form"},
                 "retries": {"type": "integer", "minimum": 0},
                 "retry_delay": {"type": "number", "minimum": 0},
@@ -587,7 +604,12 @@ CONF_SCHEMA = {
             "type": "object",
             "properties": {
                 "enabled": {"type": "boolean"},
-                "webhook_url": {"type": "string"},
+                "webhook_url": {
+                    "description": (
+                        f"Discord webhook URL. {__VIA_ENV} FREQTRADE__DISCORD__WEBHOOK_URL"
+                    ),
+                    "type": "string",
+                },
                 "exit_fill": {
                     "type": "array",
                     "items": {"type": "object"},
@@ -806,27 +828,57 @@ CONF_SCHEMA = {
             "type": "object",
             "properties": {
                 "name": {"description": "Name of the exchange.", "type": "string"},
-                "enable_ws": {
-                    "description": "Enable WebSocket connections to the exchange.",
-                    "type": "boolean",
-                    "default": True,
-                },
                 "key": {
-                    "description": "API key for the exchange.",
+                    "description": (
+                        f"API key for the exchange. {__VIA_ENV} FREQTRADE__EXCHANGE__KEY"
+                    ),
                     "type": "string",
                     "default": "",
                 },
                 "secret": {
-                    "description": "API secret for the exchange.",
+                    "description": (
+                        f"API secret for the exchange. {__VIA_ENV} FREQTRADE__EXCHANGE__SECRET"
+                    ),
                     "type": "string",
                     "default": "",
                 },
                 "password": {
-                    "description": "Password for the exchange, if required.",
+                    "description": (
+                        "Password for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__PASSWORD"
+                    ),
                     "type": "string",
                     "default": "",
                 },
-                "uid": {"description": "User ID for the exchange, if required.", "type": "string"},
+                "uid": {
+                    "description": (
+                        "User ID for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__UID"
+                    ),
+                    "type": "string",
+                },
+                "account_id": {
+                    "description": (
+                        "Account ID for the exchange, if required. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__ACCOUNT_ID"
+                    ),
+                    "type": "string",
+                },
+                "wallet_address": {
+                    "description": (
+                        "Wallet address for the exchange, if required. "
+                        "Usually used by DEX exchanges. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__WALLET_ADDRESS"
+                    ),
+                    "type": "string",
+                },
+                "private_key": {
+                    "description": (
+                        "Private key for the exchange, if required. Usually used by DEX exchanges. "
+                        f"{__VIA_ENV} FREQTRADE__EXCHANGE__PRIVATE_KEY"
+                    ),
+                    "type": "string",
+                },
                 "pair_whitelist": {
                     "description": "List of whitelisted trading pairs.",
                     "type": "array",
@@ -847,6 +899,11 @@ CONF_SCHEMA = {
                     "type": "boolean",
                     "default": False,
                 },
+                "enable_ws": {
+                    "description": "Enable WebSocket connections to the exchange.",
+                    "type": "boolean",
+                    "default": True,
+                },
                 "unknown_fee_rate": {
                     "description": "Fee rate for unknown markets.",
                     "type": "number",
@@ -863,29 +920,21 @@ CONF_SCHEMA = {
                 },
                 "ccxt_config": {"description": "CCXT configuration settings.", "type": "object"},
                 "ccxt_async_config": {
-                    "description": "CCXT asynchronous configuration settings.",
+                    "description": (
+                        "CCXT asynchronous configuration settings."
+                        "Usually ccxt_config should be used instead."
+                    ),
+                    "type": "object",
+                },
+                "ccxt_sync_config": {
+                    "description": (
+                        "CCXT synchronous configuration settings. "
+                        "Usually ccxt_config should be used instead."
+                    ),
                     "type": "object",
                 },
             },
             "required": ["name"],
-        },
-        "edge": {
-            "type": "object",
-            "properties": {
-                "enabled": {"type": "boolean"},
-                "process_throttle_secs": {"type": "integer", "minimum": 600},
-                "calculate_since_number_of_days": {"type": "integer"},
-                "allowed_risk": {"type": "number"},
-                "stoploss_range_min": {"type": "number"},
-                "stoploss_range_max": {"type": "number"},
-                "stoploss_range_step": {"type": "number"},
-                "minimum_winrate": {"type": "number"},
-                "minimum_expectancy": {"type": "number"},
-                "min_trade_number": {"type": "number"},
-                "max_trade_duration_minute": {"type": "integer"},
-                "remove_pumps": {"type": "boolean"},
-            },
-            "required": ["process_throttle_secs", "allowed_risk"],
         },
         "logging": {
             "type": "object",
@@ -1333,6 +1382,7 @@ SCHEMA_TRADE_REQUIRED = [
     "entry_pricing",
     "stoploss",
     "minimal_roi",
+    "pairlists",
     "internals",
     "dataformat_ohlcv",
     "dataformat_trades",
@@ -1342,6 +1392,7 @@ SCHEMA_BACKTEST_REQUIRED = [
     "exchange",
     "stake_currency",
     "stake_amount",
+    "pairlists",
     "dry_run_wallet",
     "dataformat_ohlcv",
     "dataformat_trades",

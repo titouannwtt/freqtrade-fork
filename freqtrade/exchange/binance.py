@@ -1,7 +1,7 @@
 """Binance exchange subclass"""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import ccxt
@@ -32,19 +32,23 @@ class Binance(Exchange):
         "stop_price_param": "stopPrice",
         "stop_price_prop": "stopPrice",
         "stoploss_order_types": {"limit": "stop_loss_limit"},
+        "stoploss_blocks_assets": True,  # By default stoploss orders block assets
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
         "trades_pagination": "id",
         "trades_pagination_arg": "fromId",
         "trades_has_history": True,
+        "fetch_orders_limit_minutes": None,
         "l2_limit_range": [5, 10, 20, 50, 100, 500, 1000],
         "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
         "funding_fee_candle_limit": 1000,
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
+        "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
         "order_time_in_force": ["GTC", "FOK", "IOC"],
         "tickers_have_price": False,
         "floor_leverage": True,
+        "fetch_orders_limit_minutes": 7 * 1440,  # "fetch_orders" is limited to 7 days
         "stop_price_type_field": "workingType",
         "order_props_in_contracts": ["amount", "cost", "filled", "remaining"],
         "stop_price_type_value_mapping": {
@@ -59,7 +63,7 @@ class Binance(Exchange):
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        # TradingMode.SPOT always supported and not required in this list
+        (TradingMode.SPOT, MarginMode.NONE),
         # (TradingMode.MARGIN, MarginMode.CROSS),
         (TradingMode.FUTURES, MarginMode.CROSS),
         (TradingMode.FUTURES, MarginMode.ISOLATED),
@@ -72,7 +76,10 @@ class Binance(Exchange):
         :return: Proxy coin or stake currency
         """
         if self.margin_mode == MarginMode.CROSS:
-            return self._config.get("proxy_coin", self._config["stake_currency"])
+            return self._config.get(
+                "proxy_coin",
+                self._config["stake_currency"],
+            )  # type: ignore[return-value]
         return self._config["stake_currency"]
 
     def get_tickers(
@@ -143,7 +150,7 @@ class Binance(Exchange):
         Does not work for other exchanges, which don't return the earliest data when called with "0"
         :param candle_type: Any of the enum CandleType (must match trading mode!)
         """
-        if is_new_pair:
+        if is_new_pair and candle_type in (CandleType.SPOT, CandleType.FUTURES, CandleType.MARK):
             with self._loop_lock:
                 x = self.loop.run_until_complete(
                     self._async_get_candle_history(pair, timeframe, candle_type, 0)
@@ -153,7 +160,7 @@ class Binance(Exchange):
                 since_ms = x[3][0][0]
                 logger.info(
                     f"Candle-data for {pair} available starting with "
-                    f"{datetime.fromtimestamp(since_ms // 1000, tz=timezone.utc).isoformat()}."
+                    f"{datetime.fromtimestamp(since_ms // 1000, tz=UTC).isoformat()}."
                 )
                 if until_ms and since_ms >= until_ms:
                     logger.warning(
@@ -392,7 +399,7 @@ class Binance(Exchange):
                 trades = await self._api_async.fetch_trades(
                     pair,
                     params={
-                        self._trades_pagination_arg: "0",
+                        self._ft_has["trades_pagination_arg"]: "0",
                     },
                     limit=5,
                 )
@@ -400,7 +407,7 @@ class Binance(Exchange):
                 since = max(since, listing_date)
 
             _, res = await download_archive_trades(
-                CandleType.SPOT,
+                CandleType.FUTURES if self.trading_mode == "futures" else CandleType.SPOT,
                 pair,
                 since_ms=since,
                 until_ms=until,

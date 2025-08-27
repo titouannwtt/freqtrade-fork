@@ -4,7 +4,7 @@ import logging
 import platform
 import re
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, PropertyMock
 
@@ -16,8 +16,7 @@ from xdist.scheduler.loadscope import LoadScopeScheduling
 from freqtrade import constants
 from freqtrade.commands import Arguments
 from freqtrade.data.converter import ohlcv_to_dataframe, trades_list_to_df
-from freqtrade.edge import PairInfo
-from freqtrade.enums import CandleType, MarginMode, RunMode, SignalDirection, TradingMode
+from freqtrade.enums import CandleType, MarginMode, SignalDirection, TradingMode
 from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_seconds
 from freqtrade.freqtradebot import FreqtradeBot
 from freqtrade.persistence import LocalTrade, Order, Trade, init_db
@@ -127,7 +126,7 @@ def get_args(args):
 def generate_trades_history(n_rows, start_date: datetime | None = None, days=5):
     np.random.seed(42)
     if not start_date:
-        start_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        start_date = datetime(2020, 1, 1, tzinfo=UTC)
 
         # Generate random data
     end_date = start_date + timedelta(days=days)
@@ -259,6 +258,7 @@ def patch_exchange(
             "._supported_trading_mode_margin_pairs",
             PropertyMock(
                 return_value=[
+                    (TradingMode.SPOT, MarginMode.NONE),
                     (TradingMode.MARGIN, MarginMode.CROSS),
                     (TradingMode.MARGIN, MarginMode.ISOLATED),
                     (TradingMode.FUTURES, MarginMode.CROSS),
@@ -296,24 +296,6 @@ def patch_whitelist(mocker, conf) -> None:
         "freqtrade.freqtradebot.FreqtradeBot._refresh_active_whitelist",
         MagicMock(return_value=conf["exchange"]["pair_whitelist"]),
     )
-
-
-def patch_edge(mocker) -> None:
-    # "ETH/BTC",
-    # "LTC/BTC",
-    # "XRP/BTC",
-    # "NEO/BTC"
-
-    mocker.patch(
-        "freqtrade.edge.Edge._cached_pairs",
-        mocker.PropertyMock(
-            return_value={
-                "NEO/BTC": PairInfo(-0.20, 0.66, 3.71, 0.50, 1.71, 10, 25),
-                "LTC/BTC": PairInfo(-0.21, 0.66, 3.71, 0.50, 1.71, 11, 20),
-            }
-        ),
-    )
-    mocker.patch("freqtrade.edge.Edge.calculate", MagicMock(return_value=True))
 
 
 # Functions for recurrent object patching
@@ -539,7 +521,11 @@ def patch_torch_initlogs(mocker) -> None:
         mocked_module = types.ModuleType(module_name)
         sys.modules[module_name] = mocked_module
     else:
-        mocker.patch("torch._logging._init_logs")
+        try:
+            mocker.patch("torch._logging._init_logs")
+        except ModuleNotFoundError:
+            # Allow running limited tests to run without freqAI dependencies
+            pass
 
 
 @pytest.fixture(autouse=True)
@@ -2603,31 +2589,6 @@ def buy_order_fee():
     }
 
 
-@pytest.fixture(scope="function")
-def edge_conf(default_conf):
-    conf = deepcopy(default_conf)
-    conf["runmode"] = RunMode.DRY_RUN
-    conf["max_open_trades"] = -1
-    conf["tradable_balance_ratio"] = 0.5
-    conf["stake_amount"] = constants.UNLIMITED_STAKE_AMOUNT
-    conf["edge"] = {
-        "enabled": True,
-        "process_throttle_secs": 1800,
-        "calculate_since_number_of_days": 14,
-        "allowed_risk": 0.01,
-        "stoploss_range_min": -0.01,
-        "stoploss_range_max": -0.1,
-        "stoploss_range_step": -0.01,
-        "maximum_winrate": 0.80,
-        "minimum_expectancy": 0.20,
-        "min_trade_number": 15,
-        "max_trade_duration_minute": 1440,
-        "remove_pumps": False,
-    }
-
-    return conf
-
-
 @pytest.fixture
 def rpc_balance():
     return {
@@ -3447,6 +3408,37 @@ def leverage_tiers():
                 "maintenanceMarginRate": 0.5,
                 "maxLeverage": 1,
                 "maintAmt": 654500.0,
+            },
+        ],
+        "TIA/USDT:USDT": [
+            # Okx tier - these have a gap between maxNotional and the next minNotional
+            {
+                "minNotional": 0.0,
+                "maxNotional": 6500.0,
+                "maintenanceMarginRate": 0.0065,
+                "maxLeverage": 50.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 6501.0,
+                "maxNotional": 12000.0,
+                "maintenanceMarginRate": 0.01,
+                "maxLeverage": 40.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 12001.0,
+                "maxNotional": 25000.0,
+                "maintenanceMarginRate": 0.015,
+                "maxLeverage": 20.0,
+                "maintAmt": None,
+            },
+            {
+                "minNotional": 25001.0,
+                "maxNotional": 50000.0,
+                "maintenanceMarginRate": 0.02,
+                "maxLeverage": 18.18,
+                "maintAmt": None,
             },
         ],
     }

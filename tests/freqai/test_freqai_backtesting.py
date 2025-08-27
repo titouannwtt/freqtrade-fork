@@ -1,5 +1,5 @@
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import PropertyMock
 
@@ -10,7 +10,6 @@ from freqtrade.configuration.timerange import TimeRange
 from freqtrade.data import history
 from freqtrade.data.dataprovider import DataProvider
 from freqtrade.enums import RunMode
-from freqtrade.enums.candletype import CandleType
 from freqtrade.exceptions import OperationalException
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.optimize.backtesting import Backtesting
@@ -28,7 +27,7 @@ from tests.freqai.conftest import get_patched_freqai_strategy
 def test_freqai_backtest_start_backtest_list(freqai_conf, mocker, testdatadir, caplog):
     patch_exchange(mocker)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     mocker.patch(
         "freqtrade.plugins.pairlistmanager.PairListManager.whitelist",
         PropertyMock(return_value=["HULUMULU/USDT", "XRP/USDT"]),
@@ -73,7 +72,7 @@ def test_freqai_backtest_load_data(
 ):
     patch_exchange(mocker)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     mocker.patch(
         "freqtrade.plugins.pairlistmanager.PairListManager.whitelist",
         PropertyMock(return_value=["HULUMULU/USDT", "XRP/USDT"]),
@@ -98,7 +97,7 @@ def test_freqai_backtest_load_data(
 def test_freqai_backtest_live_models_model_not_found(freqai_conf, mocker, testdatadir, caplog):
     patch_exchange(mocker)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     mocker.patch(
         "freqtrade.plugins.pairlistmanager.PairListManager.whitelist",
         PropertyMock(return_value=["HULUMULU/USDT", "XRP/USDT"]),
@@ -142,7 +141,7 @@ def test_freqai_backtest_consistent_timerange(mocker, freqai_conf):
 
     gbs = mocker.patch("freqtrade.optimize.backtesting.generate_backtest_stats")
 
-    freqai_conf["candle_type_def"] = CandleType.FUTURES
+    freqai_conf["trading_mode"] = "futures"
     freqai_conf.get("exchange", {}).update({"pair_whitelist": ["XRP/USDT:USDT"]})
     freqai_conf.get("freqai", {}).get("feature_parameters", {}).update(
         {"include_timeframes": ["5m", "1h"], "include_corr_pairlist": []}
@@ -163,6 +162,6 @@ def test_freqai_backtest_consistent_timerange(mocker, freqai_conf):
     backtesting = Backtesting(deepcopy(freqai_conf))
     backtesting.start()
 
-    assert gbs.call_args[1]["min_date"] == datetime(2021, 11, 20, 0, 0, tzinfo=timezone.utc)
-    assert gbs.call_args[1]["max_date"] == datetime(2021, 11, 21, 0, 0, tzinfo=timezone.utc)
+    assert gbs.call_args[1]["min_date"] == datetime(2021, 11, 20, 0, 0, tzinfo=UTC)
+    assert gbs.call_args[1]["max_date"] == datetime(2021, 11, 21, 0, 0, tzinfo=UTC)
     Backtesting.cleanup()

@@ -72,7 +72,7 @@ def start_backtesting_show(args: dict[str, Any]) -> None:
     from freqtrade.data.btanalysis import load_backtest_stats
     from freqtrade.optimize.optimize_reports import show_backtest_results, show_sorted_pairlist
 
-    results = load_backtest_stats(config["exportfilename"])
+    results = load_backtest_stats(config["exportdirectory"], config["exportfilename"])
 
     show_backtest_results(config, results)
     show_sorted_pairlist(config, results)
@@ -129,15 +129,10 @@ def start_edge(args: dict[str, Any]) -> None:
     :param args: Cli args from Arguments()
     :return: None
     """
-    from freqtrade.optimize.edge_cli import EdgeCli
-
-    # Initialize configuration
-    config = setup_optimize_configuration(args, RunMode.EDGE)
-    logger.info("Starting freqtrade in Edge mode")
-
-    # Initialize Edge object
-    edge_cli = EdgeCli(config)
-    edge_cli.start()
+    raise ConfigurationError(
+        "The Edge module has been deprecated in 2023.9 and removed in 2025.6. "
+        "All functionalities of edge have been removed."
+    )
 
 
 def start_lookahead_analysis(args: dict[str, Any]) -> None:

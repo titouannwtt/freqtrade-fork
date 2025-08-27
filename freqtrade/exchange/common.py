@@ -5,7 +5,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar, cast, overload
 
-from freqtrade.constants import ExchangeConfig
 from freqtrade.exceptions import DDosProtection, RetryableOrderError, TemporaryError
 from freqtrade.mixins import LoggingMixin
 
@@ -47,10 +46,9 @@ BAD_EXCHANGES = {
 
 MAP_EXCHANGE_CHILDCLASS = {
     "binanceus": "binance",
-    "binanceje": "binance",
     "binanceusdm": "binance",
     "okex": "okx",
-    "myokx": "okx",
+    "okxus": "okx",
     "gateio": "gate",
     "huboi": "htx",
 }
@@ -65,6 +63,7 @@ SUPPORTED_EXCHANGES = [
     "hyperliquid",
     "kraken",
     "okx",
+    "myokx",
 ]
 
 # either the main, or replacement methods (array) is required
@@ -102,20 +101,6 @@ EXCHANGE_HAS_OPTIONAL = [
     # ccxt.pro
     "watchOHLCV",
 ]
-
-
-def remove_exchange_credentials(exchange_config: ExchangeConfig, dry_run: bool) -> None:
-    """
-    Removes exchange keys from the configuration and specifies dry-run
-    Used for backtesting / hyperopt / edge and utils.
-    Modifies the input dict!
-    """
-    if dry_run:
-        exchange_config["key"] = ""
-        exchange_config["apiKey"] = ""
-        exchange_config["secret"] = ""
-        exchange_config["password"] = ""
-        exchange_config["uid"] = ""
 
 
 def calculate_backoff(retrycount, max_retries):

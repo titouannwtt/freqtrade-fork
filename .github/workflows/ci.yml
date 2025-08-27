@@ -25,10 +25,10 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-22.04", "ubuntu-24.04" ]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -38,32 +38,18 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "${{ matrix.python-version }}"
         prune-cache: false
 
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ runner.os }}-dependencies
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
-
     - name: Installation - *nix
       run: |
         uv pip install --upgrade wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -89,6 +75,7 @@ jobs:
         COVERALLS_REPO_TOKEN: 6D1m0xupS3FgutfuGao8keFf9Hc0FpIXu
       run: |
         # Allow failure for coveralls
+        uv pip install coveralls
         coveralls || true
 
     - name: Run json schema extract
@@ -102,6 +89,8 @@ jobs:
         python build_helpers/create_command_partials.py
 
     - name: Check for repository changes
+      # TODO: python 3.13 slightly changed the output of argparse.
+      if: (matrix.python-version != '3.13')
       run: |
         if [ -n "$(git status --porcelain)" ]; then
           echo "Repository is dirty, changes detected:"
@@ -144,7 +133,7 @@ jobs:
         mypy freqtrade scripts tests
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -155,11 +144,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "macos-13", "macos-14", "macos-15" ]
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ "macos-14", "macos-15" ]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -170,25 +159,14 @@ jobs:
         check-latest: true
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "${{ matrix.python-version }}"
         prune-cache: false
-
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ matrix.os }}-dependencies
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
 
     - name: Installation - macOS (Brew)
       run: |
@@ -217,9 +195,6 @@ jobs:
     - name: Installation (python)
       run: |
         uv pip install wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -270,7 +245,7 @@ jobs:
         mypy freqtrade scripts
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: info
@@ -282,11 +257,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest ]
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ "windows-2022", "windows-2025" ]
+        python-version: ["3.11", "3.12", "3.13.6"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -296,8 +271,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: ${{ matrix.python-version }}
         cache-dependency-glob: "requirements**.txt"
@@ -309,7 +285,9 @@ jobs:
         function uvpipFunction { uv pip $args }
         Set-Alias -name pip -value uvpipFunction
 
-        ./build_helpers/install_windows.ps1
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install -e .
 
     - name: Tests
       run: |
@@ -363,7 +341,7 @@ jobs:
       shell: powershell
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -373,7 +351,7 @@ jobs:
   mypy-version-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -390,19 +368,19 @@ jobs:
   pre-commit:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
     - uses: actions/setup-python@v5
       with:
         python-version: "3.12"
-    - uses: pre-commit/action@v3.0.1
+    - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   docs-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -421,7 +399,7 @@ jobs:
         mkdocs build
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
+      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: error
@@ -431,9 +409,9 @@ jobs:
 
   build-linux-online:
     # Run pytest with "live" checks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -443,33 +421,18 @@ jobs:
         python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
       with:
+        activate-environment: true
         enable-cache: true
         python-version: "3.12"
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "3.12"
         prune-cache: false
 
-    - name: Cache_dependencies
-      uses: actions/cache@v4
-      id: cache
-      with:
-        path: ~/dependencies/
-        key: ${{ runner.os }}-dependencies
-
-
-    - name: TA binary *nix
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        cd build_helpers && ./install_ta-lib.sh ${HOME}/dependencies/; cd ..
-
     - name: Installation - *nix
       run: |
         uv pip install --upgrade wheel
-        export LD_LIBRARY_PATH=${HOME}/dependencies/lib:$LD_LIBRARY_PATH
-        export TA_LIBRARY_PATH=${HOME}/dependencies/lib
-        export TA_INCLUDE_PATH=${HOME}/dependencies/include
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -501,15 +464,16 @@ jobs:
 
     - name: Check user permission
       id: check
-      uses: scherermichael-oss/action-has-permission@1.0.6
+      continue-on-error: true
+      uses: prince-chrismc/check-actor-permissions-action@d504e74ba31658f4cdf4fcfeb509d4c09736d88e # v3.0.2
       with:
-        required-permission: write
+        permission: "write"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
-      if: always() && steps.check.outputs.has-permission && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
+      if: steps.check.outputs.permitted == 'true' && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
           severity: info
           details: Test Completed!
@@ -521,7 +485,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
@@ -568,19 +532,19 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: freqtrade*-build
         path: dist
         merge-multiple: true
 
     - name: Publish to PyPI (Test)
-      uses: pypa/gh-action-pypi-publish@v1.12.4
+      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
       with:
         repository-url: https://test.pypi.org/legacy/
 
@@ -597,115 +561,30 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: freqtrade*-build
         path: dist
         merge-multiple: true
 
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.12.4
+      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
 
 
-  deploy-docker:
+  docker-build:
+    name: "Docker Build and Deploy"
     needs: [ build-linux, build-macos, build-windows, docs-check, mypy-version-check, pre-commit ]
-    runs-on: ubuntu-22.04
-
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release') && github.repository == 'freqtrade/freqtrade'
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-
-    - name: Extract branch name
-      id: extract-branch
-      run: |
-        echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "branch=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
-
-    - name: Dockerhub login
-      env:
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      run: |
-        echo "${DOCKER_PASSWORD}" | docker login --username ${DOCKER_USERNAME} --password-stdin
-
-    # We need docker experimental to pull the ARM image.
-    - name: Switch docker to experimental
-      run: |
-          docker version -f '{{.Server.Experimental}}'
-          echo $'{\n    "experimental": true\n}' | sudo tee /etc/docker/daemon.json
-          sudo systemctl restart docker
-          docker version -f '{{.Server.Experimental}}'
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Available platforms
-      run: echo ${PLATFORMS}
-      env:
-        PLATFORMS: ${{ steps.buildx.outputs.platforms }}
-
-    - name: Build and test and push docker images
-      env:
-        BRANCH_NAME: ${{ steps.extract-branch.outputs.branch }}
-      run: |
-        build_helpers/publish_docker_multi.sh
-
-  deploy-arm:
-    name: "Deploy Docker"
+    uses: ./.github/workflows/docker-build.yml
     permissions:
       packages: write
-    needs: [ deploy-docker ]
-    # Only run on 64bit machines
-    runs-on: [self-hosted, linux, ARM64]
-    if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release') && github.repository == 'freqtrade/freqtrade'
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-
-    - name: Extract branch name
-      id: extract-branch
-      run: |
-        echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "branch=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
-
-    - name: Dockerhub login
-      env:
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      run: |
-        echo "${DOCKER_PASSWORD}" | docker login --username ${DOCKER_USERNAME} --password-stdin
-
-    - name: Build and test and push docker images
-      env:
-        BRANCH_NAME: ${{ steps.extract-branch.outputs.branch }}
-        GHCR_USERNAME: ${{ github.actor }}
-        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        build_helpers/publish_docker_arm64.sh
-
-    - name: Discord notification
-      uses: rjstone/discord-webhook-notify@v1
-      if: always() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) && (github.event_name != 'schedule')
-      with:
-          severity: info
-          details: Deploy Succeeded!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      contents: read
+    secrets:
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}

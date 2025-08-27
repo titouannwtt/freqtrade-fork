@@ -1,8 +1,5 @@
-"""Bybit exchange subclass"""
-
 import logging
 from datetime import datetime, timedelta
-from typing import Any
 
 import ccxt
 
@@ -12,7 +9,7 @@ from freqtrade.exceptions import DDosProtection, ExchangeError, OperationalExcep
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
-from freqtrade.util.datetime_helpers import dt_now, dt_ts
+from freqtrade.misc import deep_merge_dicts
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +32,7 @@ class Bybit(Exchange):
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
         "ws_enabled": True,
         "trades_has_history": False,  # Endpoint doesn't support pagination
+        "fetch_orders_limit_minutes": 7 * 1440,  # 7 days
         "exchange_has_overrides": {
             # Bybit spot does not support fetch_order
             # Unless the account is unified.
@@ -49,6 +47,7 @@ class Bybit(Exchange):
         "funding_fee_candle_limit": 200,
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit", "market": "market"},
+        "stoploss_blocks_assets": False,
         # bybit response parsing fails to populate stopLossPrice
         "stop_price_prop": "stopPrice",
         "stop_price_type_field": "triggerBy",
@@ -63,9 +62,9 @@ class Bybit(Exchange):
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        # TradingMode.SPOT always supported and not required in this list
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
         # (TradingMode.FUTURES, MarginMode.CROSS),
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
     ]
 
     @property
@@ -75,13 +74,10 @@ class Bybit(Exchange):
         config = {}
         if self.trading_mode == TradingMode.SPOT:
             config.update({"options": {"defaultType": "spot"}})
-        config.update(super()._ccxt_config)
+        elif self.trading_mode == TradingMode.FUTURES:
+            config.update({"options": {"defaultSettle": self._config["stake_currency"]}})
+        config = deep_merge_dicts(config, super()._ccxt_config)
         return config
-
-    def market_is_future(self, market: dict[str, Any]) -> bool:
-        main = super().market_is_future(market)
-        # For ByBit, we'll only support USDT markets for now.
-        return main and market["settle"] == "USDT"
 
     @retrier
     def additional_exchange_init(self) -> None:
@@ -139,6 +135,21 @@ class Bybit(Exchange):
             params["position_idx"] = 0
         return params
 
+    def _get_stop_params(self, side: BuySell, ordertype: str, stop_price: float) -> dict:
+        params = super()._get_stop_params(
+            side=side,
+            ordertype=ordertype,
+            stop_price=stop_price,
+        )
+        # work around ccxt bug introduced in https://github.com/ccxt/ccxt/pull/25887
+        # Where create_order ain't returning an ID any longer.
+        params.update(
+            {
+                "method": "privatePostV5OrderCreate",
+            }
+        )
+        return params
+
     def _order_needs_price(self, side: BuySell, ordertype: str) -> bool:
         # Bybit requires price for market orders - but only for classic accounts,
         # and only in spot mode
@@ -166,18 +177,36 @@ class Bybit(Exchange):
         PERPETUAL:
          bybit:
           https://www.bybithelp.com/HelpCenterKnowledge/bybitHC_Article?language=en_US&id=000001067
-          https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#b
+          USDT:
+            https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#b
+          USDC:
+            https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account#c
 
-        Long:
+        Long USDT:
+            Liquidation Price = (
+                Entry Price - [(Initial Margin - Maintenance Margin)/Contract Quantity]
+                - (Extra Margin Added/Contract Quantity))
+        Short USDT:
+            Liquidation Price = (
+                Entry Price + [(Initial Margin - Maintenance Margin)/Contract Quantity]
+                + (Extra Margin Added/Contract Quantity))
+
+        Long USDC:
         Liquidation Price = (
-            Entry Price - [(Initial Margin - Maintenance Margin)/Contract Quantity]
-            - (Extra Margin Added/Contract Quantity))
-        Short:
+            Position Entry Price - [
+                (Initial Margin + Extra Margin Added - Maintenance Margin) / Position Size
+            ]
+        )
+
+        Short USDC:
         Liquidation Price = (
-            Entry Price + [(Initial Margin - Maintenance Margin)/Contract Quantity]
-            + (Extra Margin Added/Contract Quantity))
+            Position Entry Price + [
+                (Initial Margin + Extra Margin Added - Maintenance Margin) / Position Size
+            ]
+        )
 
         Implementation Note: Extra margin is currently not used.
+        Due to this - the liquidation formula between USDT and USDC is the same.
 
         :param pair: Pair to calculate liquidation price for
         :param open_rate: Entry price of position
@@ -233,25 +262,6 @@ class Bybit(Exchange):
             except ExchangeError:
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
-
-    def fetch_orders(
-        self, pair: str, since: datetime, params: dict | None = None
-    ) -> list[CcxtOrder]:
-        """
-        Fetch all orders for a pair "since"
-        :param pair: Pair for the query
-        :param since: Starting time for the query
-        """
-        # On bybit, the distance between since and "until" can't exceed 7 days.
-        # we therefore need to split the query into multiple queries.
-        orders = []
-
-        while since < dt_now():
-            until = since + timedelta(days=7, minutes=-1)
-            orders += super().fetch_orders(pair, since, params={"until": dt_ts(until)})
-            since = until
-
-        return orders
 
     def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
         if self.exchange_has("fetchOrder"):

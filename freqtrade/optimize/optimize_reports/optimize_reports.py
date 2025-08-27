@@ -1,6 +1,6 @@
 import logging
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import numpy as np
@@ -23,7 +23,7 @@ from freqtrade.ft_types import (
     BacktestResultType,
     get_BacktestResultType_default,
 )
-from freqtrade.util import decimals_per_coin, fmt_coin, get_dry_run_wallet
+from freqtrade.util import decimals_per_coin, fmt_coin, format_duration, get_dry_run_wallet
 
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,6 @@ def _generate_result_line(
     """
     Generate one result dict, with "first_column" as key.
     """
-    profit_sum = result["profit_ratio"].sum()
     # (end-capital - starting capital) / starting capital
     profit_total = result["profit_abs"].sum() / starting_balance
     backtest_days = (max_date - min_date).days or 1
@@ -108,8 +107,6 @@ def _generate_result_line(
         "profit_mean_pct": (
             round(result["profit_ratio"].mean() * 100.0, 2) if len(result) > 0 else 0.0
         ),
-        "profit_sum": profit_sum,
-        "profit_sum_pct": round(profit_sum * 100.0, 2),
         "profit_total_abs": result["profit_abs"].sum(),
         "profit_total": profit_total,
         "profit_total_pct": round(profit_total * 100.0, 2),
@@ -336,22 +333,44 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         }
 
     winning_trades = results.loc[results["profit_ratio"] > 0]
+    winning_duration = winning_trades["trade_duration"]
     draw_trades = results.loc[results["profit_ratio"] == 0]
     losing_trades = results.loc[results["profit_ratio"] < 0]
+    losing_duration = losing_trades["trade_duration"]
 
     holding_avg = (
         timedelta(minutes=round(results["trade_duration"].mean()))
         if not results.empty
         else timedelta()
     )
+    winner_holding_min = (
+        timedelta(minutes=round(winning_duration.min()))
+        if not winning_duration.empty
+        else timedelta()
+    )
+    winner_holding_max = (
+        timedelta(minutes=round(winning_duration.max()))
+        if not winning_duration.empty
+        else timedelta()
+    )
     winner_holding_avg = (
-        timedelta(minutes=round(winning_trades["trade_duration"].mean()))
-        if not winning_trades.empty
+        timedelta(minutes=round(winning_duration.mean()))
+        if not winning_duration.empty
+        else timedelta()
+    )
+    loser_holding_min = (
+        timedelta(minutes=round(losing_duration.min()))
+        if not losing_duration.empty
+        else timedelta()
+    )
+    loser_holding_max = (
+        timedelta(minutes=round(losing_duration.max()))
+        if not losing_duration.empty
         else timedelta()
     )
     loser_holding_avg = (
-        timedelta(minutes=round(losing_trades["trade_duration"].mean()))
-        if not losing_trades.empty
+        timedelta(minutes=round(losing_duration.mean()))
+        if not losing_duration.empty
         else timedelta()
     )
     winstreak, loss_streak = calc_streak(results)
@@ -363,9 +382,17 @@ def generate_trading_stats(results: DataFrame) -> dict[str, Any]:
         "winrate": len(winning_trades) / len(results) if len(results) else 0.0,
         "holding_avg": holding_avg,
         "holding_avg_s": holding_avg.total_seconds(),
-        "winner_holding_avg": winner_holding_avg,
+        "winner_holding_min": format_duration(winner_holding_min),
+        "winner_holding_min_s": winner_holding_min.total_seconds(),
+        "winner_holding_max": format_duration(winner_holding_max),
+        "winner_holding_max_s": winner_holding_max.total_seconds(),
+        "winner_holding_avg": format_duration(winner_holding_avg),
         "winner_holding_avg_s": winner_holding_avg.total_seconds(),
-        "loser_holding_avg": loser_holding_avg,
+        "loser_holding_min": format_duration(loser_holding_min),
+        "loser_holding_min_s": loser_holding_min.total_seconds(),
+        "loser_holding_max": format_duration(loser_holding_max),
+        "loser_holding_max_s": loser_holding_max.total_seconds(),
+        "loser_holding_avg": format_duration(loser_holding_avg),
         "loser_holding_avg_s": loser_holding_avg.total_seconds(),
         "max_consecutive_wins": winstreak,
         "max_consecutive_losses": loss_streak,
@@ -488,14 +515,16 @@ def generate_strategy_stats(
 
     best_pair = (
         max(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
     )
     worst_pair = (
         min(
-            [pair for pair in pair_results if pair["key"] != "TOTAL"], key=lambda x: x["profit_sum"]
+            [pair for pair in pair_results if pair["key"] != "TOTAL"],
+            key=lambda x: x["profit_total_abs"],
         )
         if len(pair_results) > 1
         else None
@@ -569,6 +598,8 @@ def generate_strategy_stats(
         "timerange": config.get("timerange", ""),
         "enable_protections": config.get("enable_protections", False),
         "strategy_name": strategy,
+        "freqaimodel": config.get("freqaimodel", None),
+        "freqai_identifier": config.get("freqai", {}).get("identifier", None),
         # Parameters relevant for backtesting
         "stoploss": config["stoploss"],
         "trailing_stop": config.get("trailing_stop", False),
@@ -622,9 +653,9 @@ def generate_strategy_stats(
                 "max_drawdown_abs": 0.0,
                 "max_drawdown_low": 0.0,
                 "max_drawdown_high": 0.0,
-                "drawdown_start": datetime(1970, 1, 1, tzinfo=timezone.utc),
+                "drawdown_start": datetime(1970, 1, 1, tzinfo=UTC),
                 "drawdown_start_ts": 0,
-                "drawdown_end": datetime(1970, 1, 1, tzinfo=timezone.utc),
+                "drawdown_end": datetime(1970, 1, 1, tzinfo=UTC),
                 "drawdown_end_ts": 0,
                 "csum_min": 0,
                 "csum_max": 0,
@@ -639,6 +670,7 @@ def generate_backtest_stats(
     all_results: dict[str, BacktestContentType],
     min_date: datetime,
     max_date: datetime,
+    notes: str | None = None,
 ) -> BacktestResultType:
     """
     :param btdata: Backtest data
@@ -649,7 +681,7 @@ def generate_backtest_stats(
     :return: Dictionary containing results per strategy and a strategy summary.
     """
     result: BacktestResultType = get_BacktestResultType_default()
-    market_change = calculate_market_change(btdata, "close")
+    market_change = calculate_market_change(btdata, "close", min_date=min_date)
     metadata = {}
     pairlist = list(btdata.keys())
     for strategy, content in all_results.items():
@@ -664,6 +696,8 @@ def generate_backtest_stats(
             "backtest_start_ts": int(min_date.timestamp()),
             "backtest_end_ts": int(max_date.timestamp()),
         }
+        if notes:
+            metadata[strategy]["notes"] = notes
         result["strategy"][strategy] = strat_stats
 
     strategy_results = generate_strategy_comparison(bt_stats=result["strategy"])

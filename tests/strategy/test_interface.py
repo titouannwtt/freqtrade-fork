@@ -1,32 +1,26 @@
 # pragma pylint: disable=missing-docstring, C0103
 import logging
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH
 from freqtrade.data.dataprovider import DataProvider
 from freqtrade.data.history import load_data
-from freqtrade.enums import ExitCheckTuple, ExitType, HyperoptState, SignalDirection
+from freqtrade.enums import ExitCheckTuple, ExitType, SignalDirection
 from freqtrade.exceptions import OperationalException, StrategyError
-from freqtrade.optimize.hyperopt_tools import HyperoptStateContainer
-from freqtrade.optimize.space import SKDecimal
 from freqtrade.persistence import PairLocks, Trade
 from freqtrade.resolvers import StrategyResolver
 from freqtrade.strategy.hyper import detect_parameters
 from freqtrade.strategy.parameters import (
-    BaseParameter,
-    BooleanParameter,
-    CategoricalParameter,
-    DecimalParameter,
     IntParameter,
-    RealParameter,
 )
+from freqtrade.strategy.strategy_validation import StrategyResultValidator
 from freqtrade.util import dt_now
 from tests.conftest import CURRENT_TEST_STRATEGY, TRADE_SIDES, log_has, log_has_re
 
@@ -124,7 +118,7 @@ def test_returns_latest_signal(ohlcv_history):
 def test_analyze_pair_empty(mocker, caplog, ohlcv_history):
     mocker.patch.object(_STRATEGY.dp, "ohlcv", return_value=ohlcv_history)
     mocker.patch.object(_STRATEGY, "_analyze_ticker_internal", return_value=DataFrame([]))
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch("freqtrade.strategy.interface.StrategyResultValidator.assert_df")
 
     _STRATEGY.analyze_pair("ETH/BTC")
 
@@ -174,7 +168,7 @@ def test_get_signal_old_dataframe(default_conf, mocker, caplog, ohlcv_history):
     mocked_history.loc[1, "enter_long"] = 1
 
     caplog.set_level(logging.INFO)
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch("freqtrade.strategy.interface.StrategyResultValidator.assert_df")
 
     assert (None, None) == _STRATEGY.get_latest_candle(
         "xyz", default_conf["timeframe"], mocked_history
@@ -194,7 +188,9 @@ def test_get_signal_no_sell_column(default_conf, mocker, caplog, ohlcv_history):
     mocked_history.loc[1, "enter_long"] = 1
 
     caplog.set_level(logging.INFO)
-    mocker.patch.object(_STRATEGY, "assert_df")
+    mocker.patch(
+        "freqtrade.strategy.interface.StrategyResultValidator.assert_df",
+    )
 
     assert (SignalDirection.LONG, None) == _STRATEGY.get_entry_signal(
         "xyz", default_conf["timeframe"], mocked_history
@@ -205,7 +201,7 @@ def test_ignore_expired_candle(default_conf):
     strategy = StrategyResolver.load_strategy(default_conf)
     strategy.ignore_buying_expired_candle_after = 60
 
-    latest_date = datetime(2020, 12, 30, 7, 0, 0, tzinfo=timezone.utc)
+    latest_date = datetime(2020, 12, 30, 7, 0, 0, tzinfo=UTC)
     # Add 1 candle length as the "latest date" defines candle open.
     current_time = latest_date + timedelta(seconds=80 + 300)
 
@@ -237,7 +233,10 @@ def test_assert_df_raise(mocker, caplog, ohlcv_history):
     caplog.set_level(logging.INFO)
     mocker.patch.object(_STRATEGY.dp, "ohlcv", return_value=ohlcv_history)
     mocker.patch.object(_STRATEGY.dp, "get_analyzed_dataframe", return_value=(mocked_history, 0))
-    mocker.patch.object(_STRATEGY, "assert_df", side_effect=StrategyError("Dataframe returned..."))
+    mocker.patch(
+        "freqtrade.strategy.interface.StrategyResultValidator.assert_df",
+        side_effect=StrategyError("Dataframe returned..."),
+    )
     _STRATEGY.analyze_pair("xyz")
     assert log_has(
         "Unable to analyze candle (OHLCV) data for pair xyz: Dataframe returned...", caplog
@@ -248,59 +247,39 @@ def test_assert_df(ohlcv_history, caplog):
     df_len = len(ohlcv_history) - 1
     ohlcv_history.loc[:, "enter_long"] = 0
     ohlcv_history.loc[:, "exit_long"] = 0
+    validator = StrategyResultValidator(ohlcv_history, warn_only=False)
     # Ensure it's running when passed correctly
-    _STRATEGY.assert_df(
-        ohlcv_history,
-        len(ohlcv_history),
-        ohlcv_history.loc[df_len, "close"],
-        ohlcv_history.loc[df_len, "date"],
-    )
+    validator.assert_df(ohlcv_history)
 
     with pytest.raises(StrategyError, match=r"Dataframe returned from strategy.*length\."):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history) + 1,
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[df_len, "date"],
-        )
+        validator.assert_df(concat([ohlcv_history, ohlcv_history]))
 
     with pytest.raises(
         StrategyError, match=r"Dataframe returned from strategy.*last close price\."
     ):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"] + 0.01,
-            ohlcv_history.loc[df_len, "date"],
-        )
+        df = ohlcv_history.copy()
+        df.loc[df_len, "close"] += 0.01
+        validator.assert_df(df)
+
     with pytest.raises(StrategyError, match=r"Dataframe returned from strategy.*last date\."):
-        _STRATEGY.assert_df(
-            ohlcv_history,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[0, "date"],
-        )
+        df = ohlcv_history.copy()
+        df.loc[df_len, "date"] = ohlcv_history.loc[0, "date"] - timedelta(days=1)
+        validator.assert_df(df)
+
     with pytest.raises(
         StrategyError, match=r"No dataframe returned \(return statement missing\?\)."
     ):
-        _STRATEGY.assert_df(
-            None,
-            len(ohlcv_history),
-            ohlcv_history.loc[df_len, "close"],
-            ohlcv_history.loc[0, "date"],
-        )
+        validator.assert_df(None)
 
-    _STRATEGY.disable_dataframe_checks = True
+    validator = StrategyResultValidator(ohlcv_history, warn_only=True)
+
     caplog.clear()
-    _STRATEGY.assert_df(
-        ohlcv_history,
-        len(ohlcv_history),
-        ohlcv_history.loc[2, "close"],
-        ohlcv_history.loc[0, "date"],
-    )
+    df = ohlcv_history.copy()
+    df.loc[df_len, "date"] = ohlcv_history.loc[0, "date"] - timedelta(days=1)
+
+    validator.assert_df(df)
     assert log_has_re(r"Dataframe returned from strategy.*last date\.", caplog)
     # reset to avoid problems in other tests due to test leakage
-    _STRATEGY.disable_dataframe_checks = False
 
 
 def test_advise_all_indicators(default_conf, testdatadir) -> None:
@@ -423,6 +402,57 @@ def test_min_roi_reached3(default_conf, fee) -> None:
     # Should not trigger with 20% profit since after 55 minutes only 30% is active.
     assert not strategy.min_roi_reached(trade, 0.20, dt_now() - timedelta(minutes=2))
     assert strategy.min_roi_reached(trade, 0.31, dt_now() - timedelta(minutes=2))
+
+
+def test_min_roi_reached_custom_roi(default_conf, fee) -> None:
+    strategy = StrategyResolver.load_strategy(default_conf)
+    # Move traditional ROI out of the way
+    strategy.minimal_roi = {0: 2000}
+    strategy.use_custom_roi = True
+
+    def custom_roi(*args, trade: Trade, current_time: datetime, **kwargs):
+        trade_dur = int((current_time.timestamp() - trade.open_date_utc.timestamp()) // 60)
+        # Profit is reduced after 30 minutes.
+        if trade.pair == "XRP/BTC":
+            return 0.2
+        if trade_dur > 30:
+            return 0.05
+        return 0.1
+
+    strategy.custom_roi = MagicMock(side_effect=custom_roi)
+
+    trade = Trade(
+        pair="ETH/BTC",
+        stake_amount=0.001,
+        amount=5,
+        open_date=dt_now() - timedelta(hours=1),
+        fee_open=fee.return_value,
+        fee_close=fee.return_value,
+        exchange="binance",
+        open_rate=1,
+    )
+
+    assert not strategy.min_roi_reached(trade, 0.02, dt_now() - timedelta(minutes=56))
+    assert strategy.custom_roi.call_count == 1
+    assert strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=56))
+
+    # after 30 minutes, the profit is reduced to 5%
+    assert strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=29))
+    assert strategy.min_roi_reached(trade, 0.06, dt_now() - timedelta(minutes=29))
+    assert strategy.min_roi_reached(trade, 0.051, dt_now() - timedelta(minutes=29))
+    # Comparison to exactly 5% should not trigger
+    assert not strategy.min_roi_reached(trade, 0.05, dt_now() - timedelta(minutes=29))
+
+    # XRP/BTC has a custom roi of 20%.
+
+    trade.pair = "XRP/BTC"
+    assert not strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=56))
+    assert not strategy.min_roi_reached(trade, 0.12, dt_now() - timedelta(minutes=1))
+    # XRP/BTC is not time related
+    assert strategy.min_roi_reached(trade, 0.201, dt_now() - timedelta(minutes=1))
+    assert strategy.min_roi_reached(trade, 0.201, dt_now() - timedelta(minutes=56))
+
+    assert strategy.custom_roi.call_count == 10
 
 
 @pytest.mark.parametrize(
@@ -728,7 +758,7 @@ def test_leverage_callback(default_conf, side) -> None:
     assert (
         strategy.leverage(
             pair="XRP/USDT",
-            current_time=datetime.now(timezone.utc),
+            current_time=datetime.now(UTC),
             current_rate=2.2,
             proposed_leverage=1.0,
             max_leverage=5.0,
@@ -743,7 +773,7 @@ def test_leverage_callback(default_conf, side) -> None:
     assert (
         strategy.leverage(
             pair="XRP/USDT",
-            current_time=datetime.now(timezone.utc),
+            current_time=datetime.now(UTC),
             current_rate=2.2,
             proposed_leverage=1.0,
             max_leverage=5.0,
@@ -860,7 +890,7 @@ def test_is_pair_locked(default_conf):
 
     pair = "BTC/USDT"
     # Lock until 14:30
-    lock_time = datetime(2020, 5, 1, 14, 30, 0, tzinfo=timezone.utc)
+    lock_time = datetime(2020, 5, 1, 14, 30, 0, tzinfo=UTC)
     # Subtract 2 seconds, as locking rounds up to the next candle.
     strategy.lock_pair(pair, lock_time - timedelta(seconds=2))
 
@@ -891,95 +921,6 @@ def test_is_informative_pairs_callback(default_conf):
     # Should return empty
     # Uses fallback to base implementation
     assert [] == strategy.gather_informative_pairs()
-
-
-def test_hyperopt_parameters():
-    HyperoptStateContainer.set_state(HyperoptState.INDICATORS)
-    from skopt.space import Categorical, Integer, Real
-
-    with pytest.raises(OperationalException, match=r"Name is determined.*"):
-        IntParameter(low=0, high=5, default=1, name="hello")
-
-    with pytest.raises(OperationalException, match=r"IntParameter space must be.*"):
-        IntParameter(low=0, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"RealParameter space must be.*"):
-        RealParameter(low=0, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"DecimalParameter space must be.*"):
-        DecimalParameter(low=0, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"IntParameter space invalid\."):
-        IntParameter([0, 10], high=7, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"RealParameter space invalid\."):
-        RealParameter([0, 10], high=7, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"DecimalParameter space invalid\."):
-        DecimalParameter([0, 10], high=7, default=5, space="buy")
-
-    with pytest.raises(OperationalException, match=r"CategoricalParameter space must.*"):
-        CategoricalParameter(["aa"], default="aa", space="buy")
-
-    with pytest.raises(TypeError):
-        BaseParameter(opt_range=[0, 1], default=1, space="buy")
-
-    intpar = IntParameter(low=0, high=5, default=1, space="buy")
-    assert intpar.value == 1
-    assert isinstance(intpar.get_space(""), Integer)
-    assert isinstance(intpar.range, range)
-    assert len(list(intpar.range)) == 1
-    # Range contains ONLY the default / value.
-    assert list(intpar.range) == [intpar.value]
-    intpar.in_space = True
-
-    assert len(list(intpar.range)) == 6
-    assert list(intpar.range) == [0, 1, 2, 3, 4, 5]
-
-    fltpar = RealParameter(low=0.0, high=5.5, default=1.0, space="buy")
-    assert fltpar.value == 1
-    assert isinstance(fltpar.get_space(""), Real)
-
-    fltpar = DecimalParameter(low=0.0, high=0.5, default=0.14, decimals=1, space="buy")
-    assert fltpar.value == 0.1
-    assert isinstance(fltpar.get_space(""), SKDecimal)
-    assert isinstance(fltpar.range, list)
-    assert len(list(fltpar.range)) == 1
-    # Range contains ONLY the default / value.
-    assert list(fltpar.range) == [fltpar.value]
-    fltpar.in_space = True
-    assert len(list(fltpar.range)) == 6
-    assert list(fltpar.range) == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-
-    catpar = CategoricalParameter(
-        ["buy_rsi", "buy_macd", "buy_none"], default="buy_macd", space="buy"
-    )
-    assert catpar.value == "buy_macd"
-    assert isinstance(catpar.get_space(""), Categorical)
-    assert isinstance(catpar.range, list)
-    assert len(list(catpar.range)) == 1
-    # Range contains ONLY the default / value.
-    assert list(catpar.range) == [catpar.value]
-    catpar.in_space = True
-    assert len(list(catpar.range)) == 3
-    assert list(catpar.range) == ["buy_rsi", "buy_macd", "buy_none"]
-
-    boolpar = BooleanParameter(default=True, space="buy")
-    assert boolpar.value is True
-    assert isinstance(boolpar.get_space(""), Categorical)
-    assert isinstance(boolpar.range, list)
-    assert len(list(boolpar.range)) == 1
-
-    boolpar.in_space = True
-    assert len(list(boolpar.range)) == 2
-
-    assert list(boolpar.range) == [True, False]
-
-    HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
-    assert len(list(intpar.range)) == 1
-    assert len(list(fltpar.range)) == 1
-    assert len(list(catpar.range)) == 1
-    assert len(list(boolpar.range)) == 1
 
 
 def test_auto_hyperopt_interface(default_conf):

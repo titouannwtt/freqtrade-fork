@@ -28,10 +28,12 @@ class Hyperliquid(Exchange):
         "stoploss_on_exchange": False,
         "exchange_has_overrides": {"fetchTrades": False},
         "marketOrderRequiresPrice": True,
+        "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit"},
+        "stoploss_blocks_assets": False,
         "stop_price_prop": "stopPrice",
         "funding_fee_timeframe": "1h",
         "funding_fee_candle_limit": 500,
@@ -39,7 +41,8 @@ class Hyperliquid(Exchange):
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
 
     @property

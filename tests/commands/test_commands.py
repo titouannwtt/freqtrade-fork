@@ -16,6 +16,7 @@ from freqtrade.commands import (
     start_convert_trades,
     start_create_userdir,
     start_download_data,
+    start_edge,
     start_hyperopt_list,
     start_hyperopt_show,
     start_install_ui,
@@ -132,6 +133,8 @@ def test_list_exchanges(capsys):
     captured = capsys.readouterr()
     assert re.search(r"^binance$", captured.out, re.MULTILINE)
     assert re.search(r"^bybit$", captured.out, re.MULTILINE)
+    # An exchange not supporting futures
+    assert re.search(r"^kraken$", captured.out, re.MULTILINE)
 
     # Test with --all
     args = [
@@ -158,6 +161,32 @@ def test_list_exchanges(capsys):
     assert re.search(r"^binance$", captured.out, re.MULTILINE)
     assert re.search(r"^bingx$", captured.out, re.MULTILINE)
     assert re.search(r"^bitmex$", captured.out, re.MULTILINE)
+
+    # Only dex
+    args = [
+        "list-exchanges",
+        "--dex",
+    ]
+
+    start_list_exchanges(get_args(args))
+    captured = capsys.readouterr()
+    assert re.search(r"Exchanges available for Freqtrade.*", captured.out)
+    assert not re.search(r".*binance.*", captured.out)
+    assert not re.search(r".*bingx.*", captured.out)
+    assert re.search(r".*hyperliquid.*", captured.out)
+
+    # Only futures
+    args = [
+        "list-exchanges",
+        "--trading-mode",
+        "futures",
+    ]
+
+    start_list_exchanges(get_args(args))
+    captured = capsys.readouterr()
+    assert re.search(r"Exchanges available for Freqtrade.*", captured.out)
+    assert re.search(r".*binance.*", captured.out)
+    assert not re.search(r".*kraken.*", captured.out)
 
 
 def test_list_timeframes(mocker, capsys):
@@ -1833,8 +1862,10 @@ def test_backtesting_show(mocker, testdatadir, capsys):
     sbr = mocker.patch("freqtrade.optimize.optimize_reports.show_backtest_results")
     args = [
         "backtesting-show",
+        "--export-directory",
+        f"{testdatadir / 'backtest_results'}",
         "--export-filename",
-        f"{testdatadir / 'backtest_results/backtest-result.json'}",
+        "backtest-result.json",
         "--show-pair-list",
     ]
     pargs = get_args(args)
@@ -1937,3 +1968,15 @@ def test_start_show_config(capsys, caplog):
     assert '"max_open_trades":' in captured.out
     assert '"secret": "REDACTED"' not in captured.out
     assert log_has_re(r"Sensitive information will be shown in the upcoming output.*", caplog)
+
+
+def test_start_edge():
+    args = [
+        "edge",
+        "--config",
+        "tests/testdata/testconfigs/main_test_config.json",
+    ]
+
+    pargs = get_args(args)
+    with pytest.raises(OperationalException, match="The Edge module has been deprecated in 2023.9"):
+        start_edge(pargs)

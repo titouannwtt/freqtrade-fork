@@ -43,6 +43,7 @@ from freqtrade.rpc.api_server.api_schemas import (
     Ping,
     PlotConfig,
     Profit,
+    ProfitAll,
     ResultMsg,
     ShowConfig,
     Stats,
@@ -89,7 +90,8 @@ logger = logging.getLogger(__name__)
 # 2.40: Add hyperopt-loss endpoint
 # 2.41: Add download-data endpoint
 # 2.42: Add /pair_history endpoint with live data
-API_VERSION = 2.42
+# 2.43: Add /profit_all endpoint
+API_VERSION = 2.43
 
 # Public API, requires no auth.
 router_public = APIRouter()
@@ -148,6 +150,24 @@ def profit(rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
     return rpc._rpc_trade_statistics(config["stake_currency"], config.get("fiat_display_currency"))
 
 
+@router.get("/profit_all", response_model=ProfitAll, tags=["info"])
+def profit_all(rpc: RPC = Depends(get_rpc), config=Depends(get_config)):
+    response = {
+        "all": rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency")
+        ),
+    }
+    if config.get("trading_mode", TradingMode.SPOT) != TradingMode.SPOT:
+        response["long"] = rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency"), direction="long"
+        )
+        response["short"] = rpc._rpc_trade_statistics(
+            config["stake_currency"], config.get("fiat_display_currency"), direction="short"
+        )
+
+    return response
+
+
 @router.get("/stats", response_model=Stats, tags=["info"])
 def stats(rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_stats()
@@ -200,9 +220,12 @@ def status(rpc: RPC = Depends(get_rpc)):
 def trades(
     limit: int = Query(500, ge=1, description="Maximum number of different trades to return data"),
     offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
+    order_by_id: bool = Query(
+        True, description="Sort trades by id (default: True). If False, sorts by latest timestamp"
+    ),
     rpc: RPC = Depends(get_rpc),
 ):
-    return rpc._rpc_trade_history(limit, offset=offset, order_by_id=True)
+    return rpc._rpc_trade_history(limit, offset=offset, order_by_id=order_by_id)
 
 
 @router.get("/trade/{tradeid}", response_model=OpenTradeSchema, tags=["info", "trading"])
@@ -258,12 +281,6 @@ def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = De
         return rpc._rpc_list_custom_data(trade_id, key=key)
     except RPCException as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-
-# TODO: Missing response model
-@router.get("/edge", tags=["info"])
-def edge(rpc: RPC = Depends(get_rpc)):
-    return rpc._rpc_edge()
 
 
 @router.get("/show_config", response_model=ShowConfig, tags=["info"])

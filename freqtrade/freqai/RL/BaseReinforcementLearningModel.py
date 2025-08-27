@@ -3,7 +3,7 @@ import importlib
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -239,7 +239,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
                         pair, refresh=False, side="exit", is_short=trade.is_short
                     )
 
-                now = datetime.now(timezone.utc).timestamp()
+                now = datetime.now(UTC).timestamp()
                 trade_duration = int((now - trade.open_date_utc.timestamp()) / self.base_tf_seconds)
                 current_profit = trade.calc_profit_ratio(current_rate)
                 if trade.is_short:
@@ -318,13 +318,13 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         rename_dict = {
             "%-raw_open": "open",
             "%-raw_low": "low",
-            "%-raw_high": " high",
+            "%-raw_high": "high",
             "%-raw_close": "close",
         }
         rename_dict_old = {
             f"%-{pair}raw_open_{tf}": "open",
             f"%-{pair}raw_low_{tf}": "low",
-            f"%-{pair}raw_high_{tf}": " high",
+            f"%-{pair}raw_high_{tf}": "high",
             f"%-{pair}raw_close_{tf}": "close",
         }
 

@@ -24,7 +24,7 @@ The easiest way to install and run Freqtrade is to clone the bot Github reposito
     The `stable` branch contains the code of the last release (done usually once per month on an approximately one week old snapshot of the `develop` branch to prevent packaging bugs, so potentially it's more stable).
 
 !!! Note
-    Python3.10 or higher and the corresponding `pip` are assumed to be available. The install-script will warn you and stop if that's not the case. `git` is also needed to clone the Freqtrade repository.  
+    Python3.11 or higher and the corresponding `pip` are assumed to be available. The install-script will warn you and stop if that's not the case. `git` is also needed to clone the Freqtrade repository.  
     Also, python headers (`python<yourversion>-dev` / `python<yourversion>-devel`) must be available for the installation to complete successfully.
 
 !!! Warning "Up-to-date clock"
@@ -42,11 +42,10 @@ These requirements apply to both [Script Installation](#script-installation) and
 
 ### Install guide
 
-* [Python >= 3.10](http://docs.python-guide.org/en/latest/starting/installation/)
+* [Python >= 3.11](http://docs.python-guide.org/en/latest/starting/installation/)
 * [pip](https://pip.pypa.io/en/stable/installing/)
 * [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 * [virtualenv](https://virtualenv.pypa.io/en/stable/installation.html) (Recommended)
-* [TA-Lib](https://ta-lib.github.io/ta-lib-python/) (install instructions [below](#install-ta-lib))
 
 ### Install code
 
@@ -54,7 +53,7 @@ We've included/collected install instructions for Ubuntu, MacOS, and Windows. Th
 OS Specific steps are listed first, the common section below is necessary for all systems.
 
 !!! Note
-    Python3.10 or higher and the corresponding pip are assumed to be available.
+    Python3.11 or higher and the corresponding pip are assumed to be available.
 
 === "Debian/Ubuntu"
     #### Install necessary dependencies
@@ -87,7 +86,7 @@ OS Specific steps are listed first, the common section below is necessary for al
 
 
     ```bash
-    sudo apt-get install python3-venv libatlas-base-dev cmake curl
+    sudo apt-get install python3-venv libatlas-base-dev cmake curl libffi-dev
     # Use piwheels.org to speed up installation
     sudo echo "[global]\nextra-index-url=https://www.piwheels.org/simple" > tee /etc/pip.conf
 
@@ -179,7 +178,7 @@ You can as well update, configure and reset the codebase of your bot with `./scr
 ** --install **
 
 With this option, the script will install the bot and most dependencies:
-You will need to have git and python3.10+ installed beforehand for this to work.
+You will need to have git and python3.11+ installed beforehand for this to work.
 
 * Mandatory software as: `ta-lib`
 * Setup your virtualenv under `.venv/`
@@ -200,35 +199,6 @@ This option will hard reset your branch (only if you are on either `stable` or `
 ## Manual Installation
 
 Make sure you fulfill the [Requirements](#requirements) and have downloaded the [Freqtrade repository](#freqtrade-repository).
-
-### Install TA-Lib
-
-#### TA-Lib script installation
-
-```bash
-sudo ./build_helpers/install_ta-lib.sh
-```
-
-!!! Note
-    This will use the ta-lib tar.gz included in this repository.
-
-##### TA-Lib manual installation
-
-[Official installation guide](https://ta-lib.github.io/ta-lib-python/install.html)
-
-```bash
-wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
-tar xvzf ta-lib-0.4.0-src.tar.gz
-cd ta-lib
-sed -i.bak "s|0.00000001|0.000000000000000001 |g" src/ta_func/ta_utility.h
-./configure --prefix=/usr/local
-make
-sudo make install
-# On debian based systems (debian, ubuntu, ...) - updating ldconfig might be necessary.
-sudo ldconfig  
-cd ..
-rm -rf ./ta-lib*
-```
 
 ### Setup Python virtual environment (virtualenv)
 
@@ -330,16 +300,6 @@ Install last python dependencies with pip
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 python3 -m pip install -e .
-```
-
-Patch conda libta-lib (Linux only)
-
-```bash
-# Ensure that the environment is active!
-conda activate freqtrade
-
-cd build_helpers
-bash install_ta-lib.sh ${CONDA_PREFIX} nosudo
 ```
 
 [You are now ready](#you-are-ready) to run the bot.

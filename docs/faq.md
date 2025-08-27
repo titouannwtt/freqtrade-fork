@@ -102,6 +102,14 @@ You can use "current" market data by using the [dataprovider](strategy-customiza
 
 You can use the `/stopentry` command in Telegram to prevent future trade entry, followed by `/forceexit all` (sell all open trades).
 
+### I sold the bot's capital and now there's errors in the log
+
+Freqtrade assumes that the trades it opens are managed only though the bot.  
+If you happen to (accidentally) sell the bot's capital, freqtrade will try to recover by trying to re-find on-exchange orders.
+
+This is a best-effort approach, and will not work in all cases, especially when using order types that are not supported by freqtrade (OCO, iceberg, etc.), or when working with older trades (where the exchange no longer provides full order information).
+The exact limits will vary between exchanges - with the details usually being documented in the exchange's API documentation.
+
 ### I want to run multiple bots on the same machine
 
 Please look at the [advanced setup documentation Page](advanced-setup.md#running-multiple-instances-of-freqtrade).
@@ -150,6 +158,14 @@ This warning can point to one of the below problems:
 * Wrong system time -> Ensure your system-time is correct.
 * Barely traded pair -> Check the pair on the exchange webpage, look at the timeframe your strategy uses. If the pair does not have any volume in some candles (usually visualized with a "volume 0" bar, and a "_" as candle), this pair did not have any trades in this timeframe. These pairs should ideally be avoided, as they can cause problems with order-filling.
 * API problem -> API returns wrong data (this only here for completeness, and should not happen with supported exchanges).
+
+### I get the message "Couldn't reuse watch for xxx" in the log
+
+This is an informational message that the bot tried to use candles from the websocket, but the exchange didn't provide the right information.
+This can happen if there was an interruption to the websocket connection - or if the pair didn't have any trades happen in the timeframe you are using.
+
+Freqtrade will handle this gracefully by falling back to the REST api.
+While this makes the iteration slightly slower (due to the REST Api call) - it will not cause any problems to the bot's operation.
 
 ### I'm getting the "Exchange XXX does not support market orders." message and cannot run my strategy
 
@@ -219,10 +235,7 @@ On Windows, the `--logfile` option is also supported by Freqtrade and you can us
 First of all, most indicator libraries don't have GPU support - as such, there would be little benefit for indicator calculations.
 The GPU improvements would only apply to pandas-native calculations - or ones written by yourself.
 
-For hyperopt, freqtrade is using scikit-optimize, which is built on top of scikit-learn.
-Their statement about GPU support is [pretty clear](https://scikit-learn.org/stable/faq.html#will-you-add-gpu-support).
-
-GPU's also are only good at crunching numbers (floating point operations).
+GPU's are only good at crunching numbers (floating point operations).
 For hyperopt, we need both number-crunching (find next parameters) and running python code (running backtesting).
 As such, GPU's are not too well suited for most parts of hyperopt.
 
@@ -270,20 +283,6 @@ Example: 4% profit 650 times vs 0,3% profit a trade 10000 times in a year. If we
 
 Example:
 `freqtrade --config config.json --strategy SampleStrategy --hyperopt SampleHyperopt -e 1000 --timerange 20190601-20200601`
-
-## Edge module
-
-### Edge implements interesting approach for controlling position size, is there any theory behind it?
-
-The Edge module is mostly a result of brainstorming of [@mishaker](https://github.com/mishaker) and [@creslinux](https://github.com/creslinux) freqtrade team members.
-
-You can find further info on expectancy, win rate, risk management and position size in the following sources:
-
-- https://www.tradeciety.com/ultimate-math-guide-for-traders/
-- https://samuraitradingacademy.com/trading-expectancy/
-- https://www.learningmarkets.com/determining-expectancy-in-your-trading/
-- https://www.lonestocktrader.com/make-money-trading-positive-expectancy/
-- https://www.babypips.com/trading/trade-expectancy-matter
 
 ## Official channels
 

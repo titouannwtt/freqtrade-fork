@@ -6,9 +6,9 @@ import logging
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import isclose
-from typing import Any, ClassVar, Optional, cast
+from typing import Any, ClassVar, Optional, Self, cast
 
 from sqlalchemy import (
     Enum,
@@ -25,7 +25,6 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.orm import Mapped, lazyload, mapped_column, relationship, validates
-from typing_extensions import Self
 
 from freqtrade.constants import (
     CANCELED_EXCHANGE_STATES,
@@ -114,20 +113,19 @@ class Order(ModelBase):
     order_update_date: Mapped[datetime | None] = mapped_column(nullable=True)
     funding_fee: Mapped[float | None] = mapped_column(Float(), nullable=True)
 
+    # Fee if paid in base currency
     ft_fee_base: Mapped[float | None] = mapped_column(Float(), nullable=True)
     ft_order_tag: Mapped[str | None] = mapped_column(String(CUSTOM_TAG_MAX_LENGTH), nullable=True)
 
     @property
     def order_date_utc(self) -> datetime:
         """Order-date with UTC timezoneinfo"""
-        return self.order_date.replace(tzinfo=timezone.utc)
+        return self.order_date.replace(tzinfo=UTC)
 
     @property
     def order_filled_utc(self) -> datetime | None:
         """last order-date with UTC timezoneinfo"""
-        return (
-            self.order_filled_date.replace(tzinfo=timezone.utc) if self.order_filled_date else None
-        )
+        return self.order_filled_date.replace(tzinfo=UTC) if self.order_filled_date else None
 
     @property
     def safe_amount(self) -> float:
@@ -228,7 +226,7 @@ class Order(ModelBase):
                 self.order_filled_date = dt_from_ts(
                     safe_value_fallback(order, "lastTradeTimestamp", default_value=dt_ts())
                 )
-        self.order_update_date = datetime.now(timezone.utc)
+        self.order_update_date = datetime.now(UTC)
 
     def to_ccxt_object(self, stopPriceName: str = "stopPrice") -> dict[str, Any]:
         order: dict[str, Any] = {
@@ -285,7 +283,7 @@ class Order(ModelBase):
                         self.order_date.strftime(DATETIME_PRINT_FORMAT) if self.order_date else None
                     ),
                     "order_timestamp": (
-                        int(self.order_date.replace(tzinfo=timezone.utc).timestamp() * 1000)
+                        int(self.order_date.replace(tzinfo=UTC).timestamp() * 1000)
                         if self.order_date
                         else None
                     ),
@@ -532,7 +530,7 @@ class LocalTrade:
 
     @property
     def open_date_utc(self):
-        return self.open_date.replace(tzinfo=timezone.utc)
+        return self.open_date.replace(tzinfo=UTC)
 
     @property
     def stoploss_last_update_utc(self):
@@ -542,7 +540,7 @@ class LocalTrade:
 
     @property
     def close_date_utc(self):
-        return self.close_date.replace(tzinfo=timezone.utc) if self.close_date else None
+        return self.close_date.replace(tzinfo=UTC) if self.close_date else None
 
     @property
     def entry_side(self) -> str:
@@ -957,6 +955,10 @@ class LocalTrade:
     ) -> None:
         """
         Update Fee parameters. Only acts once per side
+        :param fee_cost: Cost of the fee in stake currency
+        :param fee_currency: Currency the fee was paid in
+        :param fee_rate: Rate of the fee (e.g. 0.001 for 0.1%)
+        :param side: Side of the fee (buy / sell)
         """
         if self.entry_side == side and self.fee_open_currency is None:
             self.fee_open_cost = fee_cost
@@ -1027,12 +1029,12 @@ class LocalTrade:
         Calculate the open_rate including open_fee.
         :return: Price in of the open trade incl. Fees
         """
-        open_trade = FtPrecise(amount) * FtPrecise(open_rate)
-        fees = open_trade * FtPrecise(self.fee_open)
+        open_value = FtPrecise(amount) * FtPrecise(open_rate)
+        fees = open_value * FtPrecise(self.fee_open)
         if self.is_short:
-            return float(open_trade - fees)
+            return float(open_value - fees)
         else:
-            return float(open_trade + fees)
+            return float(open_value + fees)
 
     def recalc_open_trade_value(self) -> None:
         """
@@ -1051,7 +1053,7 @@ class LocalTrade:
             return zero
 
         open_date = self.open_date.replace(tzinfo=None)
-        now = (self.close_date or datetime.now(timezone.utc)).replace(tzinfo=None)
+        now = (self.close_date or datetime.now(UTC)).replace(tzinfo=None)
         sec_per_hour = FtPrecise(3600)
         total_seconds = FtPrecise((now - open_date).total_seconds())
         hours = total_seconds / sec_per_hour or zero
@@ -1062,13 +1064,13 @@ class LocalTrade:
         return interest(exchange_name=self.exchange, borrowed=borrowed, rate=rate, hours=hours)
 
     def _calc_base_close(self, amount: FtPrecise, rate: float, fee: float | None) -> FtPrecise:
-        close_trade = amount * FtPrecise(rate)
-        fees = close_trade * FtPrecise(fee or 0.0)
+        close_value = amount * FtPrecise(rate)
+        fees = close_value * FtPrecise(fee or 0.0)
 
         if self.is_short:
-            return close_trade + fees
+            return close_value + fees
         else:
-            return close_trade - fees
+            return close_value - fees
 
     def calc_close_trade_value(self, rate: float, amount: float | None = None) -> float:
         """
@@ -1185,10 +1187,13 @@ class LocalTrade:
         """
         close_trade_value = self.calc_close_trade_value(rate, amount)
 
-        if amount is None or open_rate is None:
+        if (amount is None) and (open_rate is None):
             open_trade_value = self.open_trade_value
         else:
-            open_trade_value = self._calc_open_trade_value(amount, open_rate)
+            # Fall back to trade.amount and self.open_rate if necessary
+            open_trade_value = self._calc_open_trade_value(
+                amount or self.amount, open_rate or self.open_rate
+            )
 
         if open_trade_value == 0.0:
             return 0.0
@@ -1567,12 +1572,12 @@ class LocalTrade:
             fee_close=data["fee_close"],
             fee_close_cost=data.get("fee_close_cost"),
             fee_close_currency=data.get("fee_close_currency"),
-            open_date=datetime.fromtimestamp(data["open_timestamp"] // 1000, tz=timezone.utc),
+            open_date=datetime.fromtimestamp(data["open_timestamp"] // 1000, tz=UTC),
             open_rate=data["open_rate"],
             open_rate_requested=data.get("open_rate_requested", data["open_rate"]),
             open_trade_value=data.get("open_trade_value"),
             close_date=(
-                datetime.fromtimestamp(data["close_timestamp"] // 1000, tz=timezone.utc)
+                datetime.fromtimestamp(data["close_timestamp"] // 1000, tz=UTC)
                 if data["close_timestamp"]
                 else None
             ),
@@ -1617,7 +1622,7 @@ class LocalTrade:
                 if order.get("order_date")
                 else None,
                 order_filled_date=(
-                    datetime.fromtimestamp(order["order_filled_timestamp"] // 1000, tz=timezone.utc)
+                    datetime.fromtimestamp(order["order_filled_timestamp"] // 1000, tz=UTC)
                     if order["order_filled_timestamp"]
                     else None
                 ),
@@ -1627,6 +1632,7 @@ class LocalTrade:
                 remaining=order.get("remaining", 0.0),
                 funding_fee=order.get("funding_fee", None),
                 ft_order_tag=order.get("ft_order_tag", None),
+                ft_fee_base=order.get("ft_fee_base", None),
             )
             trade.orders.append(order_obj)
 
@@ -1646,120 +1652,88 @@ class Trade(ModelBase, LocalTrade):
 
     use_db: bool = True
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # type: ignore
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     orders: Mapped[list[Order]] = relationship(
-        "Order", order_by="Order.id", cascade="all, delete-orphan", lazy="selectin", innerjoin=True
-    )  # type: ignore
+        "Order",
+        order_by="Order.id",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        innerjoin=True,
+        back_populates="_trade_live",
+    )
     custom_data: Mapped[list[_CustomData]] = relationship(
         "_CustomData", cascade="all, delete-orphan", lazy="raise"
     )
 
-    exchange: Mapped[str] = mapped_column(String(25), nullable=False)  # type: ignore
-    pair: Mapped[str] = mapped_column(String(25), nullable=False, index=True)  # type: ignore
-    base_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)  # type: ignore
-    stake_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)  # type: ignore
-    is_open: Mapped[bool] = mapped_column(nullable=False, default=True, index=True)  # type: ignore
-    fee_open: Mapped[float] = mapped_column(Float(), nullable=False, default=0.0)  # type: ignore
-    fee_open_cost: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
-    fee_open_currency: Mapped[str | None] = mapped_column(  # type: ignore
-        String(25), nullable=True
-    )
-    fee_close: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=False, default=0.0
-    )
-    fee_close_cost: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
-    fee_close_currency: Mapped[str | None] = mapped_column(  # type: ignore
-        String(25), nullable=True
-    )
-    open_rate: Mapped[float] = mapped_column(Float())  # type: ignore
-    open_rate_requested: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True
-    )
+    exchange: Mapped[str] = mapped_column(String(25), nullable=False)
+    pair: Mapped[str] = mapped_column(String(25), nullable=False, index=True)
+    base_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)
+    stake_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)
+    is_open: Mapped[bool] = mapped_column(nullable=False, default=True, index=True)
+    fee_open: Mapped[float] = mapped_column(Float(), nullable=False, default=0.0)
+    # Fee cost in quote currency for entry the trade
+    fee_open_cost: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    # Currency the fee was paid in. Has no relation to fee_open_cost.
+    fee_open_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)
+    fee_close: Mapped[float | None] = mapped_column(Float(), nullable=False, default=0.0)
+    # Fee cost in quote currency for exit orders
+    fee_close_cost: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    fee_close_currency: Mapped[str | None] = mapped_column(String(25), nullable=True)
+    open_rate: Mapped[float] = mapped_column(Float())
+    open_rate_requested: Mapped[float | None] = mapped_column(Float(), nullable=True)
     # open_trade_value - calculated via _calc_open_trade_value
-    open_trade_value: Mapped[float] = mapped_column(Float(), nullable=True)  # type: ignore
-    close_rate: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    close_rate_requested: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    realized_profit: Mapped[float] = mapped_column(  # type: ignore
-        Float(), default=0.0, nullable=True
-    )
-    close_profit: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    close_profit_abs: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    stake_amount: Mapped[float] = mapped_column(Float(), nullable=False)  # type: ignore
-    max_stake_amount: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    amount: Mapped[float] = mapped_column(Float())  # type: ignore
-    amount_requested: Mapped[float | None] = mapped_column(Float())  # type: ignore
-    open_date: Mapped[datetime] = mapped_column(  # type: ignore
-        nullable=False, default=datetime.now
-    )
-    close_date: Mapped[datetime | None] = mapped_column()  # type: ignore
+    open_trade_value: Mapped[float] = mapped_column(Float(), nullable=True)
+    close_rate: Mapped[float | None] = mapped_column(Float())
+    close_rate_requested: Mapped[float | None] = mapped_column(Float())
+    realized_profit: Mapped[float] = mapped_column(Float(), default=0.0, nullable=True)
+    close_profit: Mapped[float | None] = mapped_column(Float())
+    close_profit_abs: Mapped[float | None] = mapped_column(Float())
+    stake_amount: Mapped[float] = mapped_column(Float(), nullable=False)
+    max_stake_amount: Mapped[float | None] = mapped_column(Float())
+    amount: Mapped[float] = mapped_column(Float())
+    amount_requested: Mapped[float | None] = mapped_column(Float())
+    open_date: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now)
+    close_date: Mapped[datetime | None] = mapped_column()
     # absolute value of the stop loss
-    stop_loss: Mapped[float] = mapped_column(Float(), nullable=True, default=0.0)  # type: ignore
+    stop_loss: Mapped[float] = mapped_column(Float(), nullable=True, default=0.0)
     # percentage value of the stop loss
-    stop_loss_pct: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
+    stop_loss_pct: Mapped[float | None] = mapped_column(Float(), nullable=True)
     # absolute value of the initial stop loss
-    initial_stop_loss: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True, default=0.0
-    )
+    initial_stop_loss: Mapped[float | None] = mapped_column(Float(), nullable=True, default=0.0)
     # percentage value of the initial stop loss
-    initial_stop_loss_pct: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True
-    )
-    is_stop_loss_trailing: Mapped[bool] = mapped_column(  # type: ignore
-        nullable=False, default=False
-    )
+    initial_stop_loss_pct: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    is_stop_loss_trailing: Mapped[bool] = mapped_column(nullable=False, default=False)
     # absolute value of the highest reached price
-    max_rate: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True, default=0.0
-    )
+    max_rate: Mapped[float | None] = mapped_column(Float(), nullable=True, default=0.0)
     # Lowest price reached
-    min_rate: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
-    exit_reason: Mapped[str | None] = mapped_column(  # type: ignore
-        String(CUSTOM_TAG_MAX_LENGTH), nullable=True
-    )
-    exit_order_status: Mapped[str | None] = mapped_column(  # type: ignore
-        String(100), nullable=True
-    )
-    strategy: Mapped[str | None] = mapped_column(String(100), nullable=True)  # type: ignore
-    enter_tag: Mapped[str | None] = mapped_column(  # type: ignore
-        String(CUSTOM_TAG_MAX_LENGTH), nullable=True
-    )
-    timeframe: Mapped[int | None] = mapped_column(Integer, nullable=True)  # type: ignore
+    min_rate: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    exit_reason: Mapped[str | None] = mapped_column(String(CUSTOM_TAG_MAX_LENGTH), nullable=True)
+    exit_order_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    strategy: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    enter_tag: Mapped[str | None] = mapped_column(String(CUSTOM_TAG_MAX_LENGTH), nullable=True)
+    timeframe: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    trading_mode: Mapped[TradingMode] = mapped_column(  # type: ignore
-        Enum(TradingMode), nullable=True
-    )
-    amount_precision: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True
-    )
-    price_precision: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
-    precision_mode: Mapped[int | None] = mapped_column(Integer, nullable=True)  # type: ignore
-    precision_mode_price: Mapped[int | None] = mapped_column(  # type: ignore
-        Integer, nullable=True
-    )
-    contract_size: Mapped[float | None] = mapped_column(Float(), nullable=True)  # type: ignore
+    trading_mode: Mapped[TradingMode] = mapped_column(Enum(TradingMode), nullable=True)
+    amount_precision: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    price_precision: Mapped[float | None] = mapped_column(Float(), nullable=True)
+    precision_mode: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    precision_mode_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contract_size: Mapped[float | None] = mapped_column(Float(), nullable=True)
 
     # Leverage trading properties
-    leverage: Mapped[float] = mapped_column(Float(), nullable=True, default=1.0)  # type: ignore
-    is_short: Mapped[bool] = mapped_column(nullable=False, default=False)  # type: ignore
-    liquidation_price: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True
-    )
+    leverage: Mapped[float] = mapped_column(Float(), nullable=True, default=1.0)
+    is_short: Mapped[bool] = mapped_column(nullable=False, default=False)
+    liquidation_price: Mapped[float | None] = mapped_column(Float(), nullable=True)
 
     # Margin Trading Properties
-    interest_rate: Mapped[float] = mapped_column(  # type: ignore
-        Float(), nullable=False, default=0.0
-    )
+    interest_rate: Mapped[float] = mapped_column(Float(), nullable=False, default=0.0)
 
     # Futures properties
-    funding_fees: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True, default=None
-    )
-    funding_fee_running: Mapped[float | None] = mapped_column(  # type: ignore
-        Float(), nullable=True, default=None
-    )
+    funding_fees: Mapped[float | None] = mapped_column(Float(), nullable=True, default=None)
+    funding_fee_running: Mapped[float | None] = mapped_column(Float(), nullable=True, default=None)
 
-    record_version: Mapped[int] = mapped_column(Integer, nullable=False, default=2)  # type: ignore
+    record_version: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
 
     def __init__(self, **kwargs):
         from_json = kwargs.pop("__FROM_JSON", None)
@@ -1802,11 +1776,15 @@ class Trade(ModelBase, LocalTrade):
         close_date: datetime | None = None,
     ) -> list["LocalTrade"]:
         """
-        Helper function to query Trades.j
+        Helper function to query Trades.
         Returns a List of trades, filtered on the parameters given.
         In live mode, converts the filter to a database query and returns all rows
         In Backtest mode, uses filters on Trade.bt_trades to get the result.
-
+        :param pair: Filter by pair
+        :param is_open: Filter by open/closed status
+        :param open_date: Filter by open_date (filters via trade.open_date > input)
+        :param close_date: Filter by close_date (filters via trade.close_date > input)
+                           and will implicitly only return closed trades.
         :return: unsorted List[Trade]
         """
         if Trade.use_db:
@@ -2115,32 +2093,34 @@ class Trade(ModelBase, LocalTrade):
         return resp
 
     @staticmethod
-    def get_best_pair(start_date: datetime | None = None):
+    def get_best_pair(trade_filter: list | None = None):
         """
         Get best pair with closed trade.
         NOTE: Not supported in Backtesting.
         :returns: Tuple containing (pair, profit_sum)
         """
-        filters: list = [Trade.is_open.is_(False)]
-        if start_date:
-            filters.append(Trade.close_date >= start_date)
+        if not trade_filter:
+            trade_filter = []
+        trade_filter.append(Trade.is_open.is_(False))
 
-        pair_rates_query = Trade._generic_performance_query([Trade.pair], filters)
+        pair_rates_query = Trade._generic_performance_query([Trade.pair], trade_filter)
         best_pair = Trade.session.execute(pair_rates_query).first()
         # returns pair, profit_ratio, abs_profit, count
         return best_pair
 
     @staticmethod
-    def get_trading_volume(start_date: datetime | None = None) -> float:
+    def get_trading_volume(trade_filter: list | None = None) -> float:
         """
         Get Trade volume based on Orders
         NOTE: Not supported in Backtesting.
         :returns: Tuple containing (pair, profit_sum)
         """
-        filters = [Order.status == "closed"]
-        if start_date:
-            filters.append(Order.order_filled_date >= start_date)
+        if not trade_filter:
+            trade_filter = []
+        trade_filter.append(Order.status == "closed")
         trading_volume = Trade.session.execute(
-            select(func.sum(Order.cost).label("volume")).filter(*filters)
+            select(func.sum(Order.cost).label("volume"))
+            .join(Order._trade_live)
+            .filter(*trade_filter)
         ).scalar_one()
         return trading_volume or 0.0
