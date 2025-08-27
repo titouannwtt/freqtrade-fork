@@ -521,14 +521,6 @@ def trades_full(feather_dh):
 
 
 @pytest.fixture
-def timerange_full(trades_full):
-    # Pick a full-span window using actual timestamps
-    startts = int(trades_full["timestamp"].min())
-    stopts = int(trades_full["timestamp"].max())
-    return TimeRange("date", "date", startts=startts, stopts=stopts)
-
-
-@pytest.fixture
 def timerange_mid(trades_full):
     # Pick a mid-range window using actual timestamps
     mid_start = int(trades_full["timestamp"].iloc[len(trades_full) // 3])
@@ -536,7 +528,13 @@ def timerange_mid(trades_full):
     return TimeRange("date", "date", startts=mid_start, stopts=mid_end)
 
 
-def test_feather_trades_timerange_filter_fullspan(feather_dh, trades_full, timerange_full):
+def test_feather_trades_timerange_filter_fullspan(feather_dh, trades_full):
+    timerange_full = TimeRange(
+        "date",
+        "date",
+        startts=int(trades_full["timestamp"].min()),
+        stopts=int(trades_full["timestamp"].max()),
+    )
     # Full-span filter should equal unfiltered
     filtered = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=timerange_full)
     assert_frame_equal(
