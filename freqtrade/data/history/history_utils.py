@@ -247,6 +247,7 @@ def _download_pair_history(
     :param timerange: range of time to download
     :param candle_type: Any of the enum CandleType (must match trading mode!)
     :param erase: Erase existing data
+    :param pair_candles: Optional with "1 call" pair candles.
     :return: bool with success state
     """
     data_handler = get_datahandler(datadir, data_handler=data_handler)
