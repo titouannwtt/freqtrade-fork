@@ -479,7 +479,10 @@ def _download_all_pairs_history_parallel(
     one_call_min_time_dt = dt_ts(date_minus_candles(timeframe, candle_limit))
     # check if we can get them all in one go, if so then we can download them in parallel
     if since > one_call_min_time_dt:
-        logger.info(f"Downloading Parallel Candles for {timeframe} since {format_ms_time(since)}")
+        logger.info(
+            f"Downloading parallel candles for {timeframe} for all pairs "
+            f"since {format_ms_time(since)}"
+        )
         needed_pairs: ListPairsWithTimeframes = [
             (p, timeframe, CandleType.get_default(trading_mode)) for p in [p for p in pairs]
         ]
