@@ -243,7 +243,7 @@ class Backtesting:
             fees = [
                 self.exchange.get_fee(
                     symbol=self.pairlists.whitelist[0],
-                    taker_or_maker=mt,  # type: ignore
+                    taker_or_maker=mt,
                 )
                 for mt in ("taker", "maker")
             ]
