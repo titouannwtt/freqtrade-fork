@@ -544,8 +544,13 @@ def test_refresh_backtest_ohlcv_data(
 ):
     caplog.set_level(logging.DEBUG)
     dl_mock = mocker.patch("freqtrade.data.history.history_utils._download_pair_history")
+
+    def parallel_mock(pairs, timeframe, candle_type, **kwargs):
+        return {(pair, timeframe, candle_type): DataFrame() for pair in pairs}
+
     parallel_mock = mocker.patch(
-        "freqtrade.data.history.history_utils._download_all_pairs_history_parallel", return_value={}
+        "freqtrade.data.history.history_utils._download_all_pairs_history_parallel",
+        side_effect=parallel_mock,
     )
     mocker.patch(f"{EXMS}.markets", PropertyMock(return_value=markets))
 
@@ -565,8 +570,8 @@ def test_refresh_backtest_ohlcv_data(
         trading_mode=trademode,
     )
 
-    # Called once per timeframe and pair
-    assert parallel_mock.call_count == 4
+    # Called once per timeframe (as we return an empty dataframe)
+    assert parallel_mock.call_count == 2
     assert dl_mock.call_count == callcount
     assert dl_mock.call_args[1]["timerange"].starttype == "date"
 
