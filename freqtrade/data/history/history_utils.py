@@ -465,7 +465,7 @@ def _download_all_pairs_history_parallel(
     timerange: TimeRange | None = None,
 ) -> dict[PairWithTimeframe, DataFrame]:
     """
-    Allows us to use the faster parallel async download method for many coins
+    Allows to use the faster parallel async download method for many coins
     but only if the data is short enough to be retrieved in one call.
     Used by freqtrade download-data subcommand.
     :return: Candle pairs with timeframes
@@ -478,7 +478,7 @@ def _download_all_pairs_history_parallel(
 
     candle_limit = exchange.ohlcv_candle_limit(timeframe, CandleType.get_default(trading_mode))
     one_call_min_time_dt = dt_ts(date_minus_candles(timeframe, candle_limit))
-    # check if we can get them all in one go, if so then we can download them in parallel
+    # check if we can get all candles in one go, if so then we can download them in parallel
     if since > one_call_min_time_dt:
         logger.info(
             f"Downloading parallel candles for {timeframe} for all pairs "
