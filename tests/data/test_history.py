@@ -18,6 +18,7 @@ from freqtrade.data.converter import ohlcv_to_dataframe
 from freqtrade.data.history import get_datahandler
 from freqtrade.data.history.datahandlers.jsondatahandler import JsonDataHandler, JsonGzDataHandler
 from freqtrade.data.history.history_utils import (
+    _download_all_pairs_history_parallel,
     _download_pair_history,
     _download_trades_history,
     _load_cached_data_for_updating,
@@ -708,3 +709,82 @@ def test_download_trades_history(
     assert ght_mock.call_count == 0
 
     _clean_test_file(file2)
+
+
+def test_download_all_pairs_history_parallel(mocker, default_conf_usdt):
+    pairs = ["PAIR1/BTC", "PAIR2/USDT"]
+    timeframe = "5m"
+    candle_type = CandleType.SPOT
+
+    df1 = DataFrame(
+        {
+            "date": [1, 2],
+            "open": [1, 2],
+            "close": [1, 2],
+            "high": [1, 2],
+            "low": [1, 2],
+            "volume": [1, 2],
+        }
+    )
+    df2 = DataFrame(
+        {
+            "date": [3, 4],
+            "open": [3, 4],
+            "close": [3, 4],
+            "high": [3, 4],
+            "low": [3, 4],
+            "volume": [3, 4],
+        }
+    )
+    expected = {
+        ("PAIR1/BTC", timeframe, candle_type): df1,
+        ("PAIR2/USDT", timeframe, candle_type): df2,
+    }
+    # Mock exchange
+    mocker.patch.multiple(
+        EXMS,
+        exchange_has=MagicMock(return_value=True),
+        ohlcv_candle_limit=MagicMock(return_value=1000),
+        refresh_latest_ohlcv=MagicMock(return_value=expected),
+    )
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+    # timerange with starttype 'date' and startts far in the future to trigger parallel download
+
+    timerange = TimeRange("date", None, 9999999999, 0)
+    result = _download_all_pairs_history_parallel(
+        exchange=exchange,
+        pairs=pairs,
+        timeframe=timeframe,
+        candle_type=candle_type,
+        timerange=timerange,
+    )
+    assert result == expected
+
+    assert exchange.ohlcv_candle_limit.call_args[0] == (timeframe, candle_type)
+    assert exchange.refresh_latest_ohlcv.call_count == 1
+
+    # If since is not after one_call_min_time_dt, should not call refresh_latest_ohlcv
+    exchange.refresh_latest_ohlcv.reset_mock()
+    timerange2 = TimeRange("date", None, 0, 0)
+    result2 = _download_all_pairs_history_parallel(
+        exchange=exchange,
+        pairs=pairs,
+        timeframe=timeframe,
+        candle_type=candle_type,
+        timerange=timerange2,
+    )
+    assert result2 == {}
+    assert exchange.refresh_latest_ohlcv.call_count == 0
+
+    exchange.refresh_latest_ohlcv.reset_mock()
+
+    # Test without timerange
+    result3 = _download_all_pairs_history_parallel(
+        exchange=exchange,
+        pairs=pairs,
+        timeframe=timeframe,
+        candle_type=candle_type,
+        timerange=None,
+    )
+    assert result3 == {}
+    assert exchange.refresh_latest_ohlcv.call_count == 0
