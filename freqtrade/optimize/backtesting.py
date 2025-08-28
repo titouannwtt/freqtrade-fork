@@ -124,7 +124,7 @@ class Backtesting:
         self.trade_id_counter: int = 0
         self.order_id_counter: int = 0
 
-        config["dry_run"] = True
+        self.config["dry_run"] = True
         self.price_pair_prec: dict[str, Series] = {}
         self.run_ids: dict[str, str] = {}
         self.strategylist: list[IStrategy] = []
@@ -180,8 +180,8 @@ class Backtesting:
         if len(self.pairlists.whitelist) == 0:
             raise OperationalException("No pair in whitelist.")
 
-        if config.get("fee", None) is not None:
-            self.fee = config["fee"]
+        if self.config.get("fee", None) is not None:
+            self.fee = self.config["fee"]
             logger.info(f"Using fee {self.fee:.4%} from config.")
         else:
             fees = [
@@ -217,8 +217,8 @@ class Backtesting:
             # This value should NOT be written to startup_candle_count
             self.required_startup = self.dataprovider.get_required_startup(self.timeframe)
 
-        self.trading_mode: TradingMode = config.get("trading_mode", TradingMode.SPOT)
-        self.margin_mode: MarginMode = config.get("margin_mode", MarginMode.ISOLATED)
+        self.trading_mode: TradingMode = self.config.get("trading_mode", TradingMode.SPOT)
+        self.margin_mode: MarginMode = self.config.get("margin_mode", MarginMode.ISOLATED)
         # strategies which define "can_short=True" will fail to load in Spot mode.
         self._can_short = self.trading_mode != TradingMode.SPOT
         self._position_stacking: bool = self.config.get("position_stacking", False)
