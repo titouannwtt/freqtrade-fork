@@ -137,6 +137,7 @@ class Backtesting:
         self.rejected_dict: dict[str, list] = {}
 
         self._exchange_name = self.config["exchange"]["name"]
+        self.__initial_backtest = exchange is None
         if not exchange:
             exchange = ExchangeResolver.load_exchange(self.config, load_leverage_tiers=True)
         self.exchange = exchange
@@ -179,20 +180,7 @@ class Backtesting:
 
         if len(self.pairlists.whitelist) == 0:
             raise OperationalException("No pair in whitelist.")
-
-        if self.config.get("fee", None) is not None:
-            self.fee = self.config["fee"]
-            logger.info(f"Using fee {self.fee:.4%} from config.")
-        else:
-            fees = [
-                self.exchange.get_fee(
-                    symbol=self.pairlists.whitelist[0],
-                    taker_or_maker=mt,  # type: ignore
-                )
-                for mt in ("taker", "maker")
-            ]
-            self.fee = max(fee for fee in fees if fee is not None)
-            logger.info(f"Using fee {self.fee:.4%} - worst case fee from exchange (lowest tier).")
+        self.set_fee()
         self.precision_mode = self.exchange.precisionMode
         self.precision_mode_price = self.exchange.precision_mode_price
 
@@ -237,6 +225,30 @@ class Backtesting:
             raise OperationalException(
                 "PrecisionFilter not allowed for backtesting multiple strategies."
             )
+
+    def log_once(self, msg: str) -> None:
+        """
+        Partial reimplementation of log_once from the Login mixin.
+        only used by recursive, as __initial_backtest is false in all other cases.
+
+        """
+        if self.__initial_backtest:
+            logger.info(msg)
+
+    def set_fee(self):
+        if self.config.get("fee", None) is not None:
+            self.fee = self.config["fee"]
+            self.log_once(f"Using fee {self.fee:.4%} from config.")
+        else:
+            fees = [
+                self.exchange.get_fee(
+                    symbol=self.pairlists.whitelist[0],
+                    taker_or_maker=mt,  # type: ignore
+                )
+                for mt in ("taker", "maker")
+            ]
+            self.fee = max(fee for fee in fees if fee is not None)
+            self.log_once(f"Using fee {self.fee:.4%} - worst case fee from exchange (lowest tier).")
 
     @staticmethod
     def cleanup():
