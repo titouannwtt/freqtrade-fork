@@ -399,7 +399,7 @@ def refresh_backtest_ohlcv_data(
                             exchange=exchange,
                             pairs=pairs,
                             timeframe=timeframe,
-                            trading_mode=trading_mode,
+                            candle_type=candle_type,
                             timerange=timerange,
                         )
                     )
@@ -461,7 +461,7 @@ def _download_all_pairs_history_parallel(
     exchange: Exchange,
     pairs: list[str],
     timeframe: str,
-    trading_mode: str,
+    candle_type: CandleType,
     timerange: TimeRange | None = None,
 ) -> dict[PairWithTimeframe, DataFrame]:
     """
@@ -476,7 +476,7 @@ def _download_all_pairs_history_parallel(
         if timerange.starttype == "date":
             since = timerange.startts * 1000
 
-    candle_limit = exchange.ohlcv_candle_limit(timeframe, CandleType.get_default(trading_mode))
+    candle_limit = exchange.ohlcv_candle_limit(timeframe, candle_type)
     one_call_min_time_dt = dt_ts(date_minus_candles(timeframe, candle_limit))
     # check if we can get all candles in one go, if so then we can download them in parallel
     if since > one_call_min_time_dt:
@@ -485,7 +485,7 @@ def _download_all_pairs_history_parallel(
             f"since {format_ms_time(since)}"
         )
         needed_pairs: ListPairsWithTimeframes = [
-            (p, timeframe, CandleType.get_default(trading_mode)) for p in [p for p in pairs]
+            (p, timeframe, candle_type) for p in [p for p in pairs]
         ]
         candles = exchange.refresh_latest_ohlcv(needed_pairs, since_ms=since, cache=False)
 
