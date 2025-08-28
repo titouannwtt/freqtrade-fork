@@ -134,7 +134,7 @@ def start_list_data(args: dict[str, Any]) -> None:
         config["datadir"], config.get("trading_mode", TradingMode.SPOT)
     )
     if args["pairs"]:
-        pl = expand_pairlist(args["pairs"], (p[0] for p in paircombs), keep_invalid=True)
+        pl = expand_pairlist(args["pairs"], [p[0] for p in paircombs], keep_invalid=True)
         paircombs = [comb for comb in paircombs if comb[0] in pl]
     title = f"Found {len(paircombs)} pair / timeframe combinations."
     if not config.get("show_timerange"):
@@ -198,7 +198,7 @@ def start_list_trades_data(args: dict[str, Any]) -> None:
     )
 
     if args["pairs"]:
-        pl = expand_pairlist(args["pairs"], (p[0] for p in paircombs), keep_invalid=True)
+        pl = expand_pairlist(args["pairs"], [p[0] for p in paircombs], keep_invalid=True)
         paircombs = [comb for comb in paircombs if comb[0] in pl]
 
     title = f"Found trades data for {len(paircombs)} {plural(len(paircombs), 'pair')}."
