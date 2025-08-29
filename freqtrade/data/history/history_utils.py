@@ -281,8 +281,8 @@ def _download_pair_history(
             "Current End: %s",
             f"{data.iloc[-1]['date']:{DATETIME_PRINT_FORMAT}}" if not data.empty else "None",
         )
-        # used to check if the passed in pair_candles are not as old as since_ms
-        # if not then we need more data and so we will have to collect more using the typical method
+        # used to check if the passed in pair_candles (parallel downloaded) covers since_ms.
+        # If we need more data, we have to fall back to the standard method.
         pair_candles_since_ms = (
             dt_ts(pair_candles.iloc[0]["date"])
             if pair_candles is not None and len(pair_candles.index) > 0
@@ -296,7 +296,6 @@ def _download_pair_history(
             or erase is True
             or pair_candles_since_ms > (since_ms if since_ms else 0)
         ):
-            # Default since_ms to 30 days if nothing is given
             new_dataframe = exchange.get_historic_ohlcv(
                 pair=pair,
                 timeframe=timeframe,
@@ -311,7 +310,7 @@ def _download_pair_history(
             )
             logger.info(f"Downloaded data for {pair} with length {len(new_dataframe)}.")
         else:
-            new_dataframe = pair_candles  # following clean_ohlcv_dataframe can do the clean up
+            new_dataframe = pair_candles
             logger.info(
                 f"Downloaded data for {pair} with length {len(new_dataframe)}. Parallel Method."
             )
