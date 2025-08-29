@@ -800,9 +800,9 @@ def test_download_pair_history_with_pair_candles(mocker, default_conf, tmp_path,
     existing_data = DataFrame(
         {
             "date": [dt_utc(2018, 1, 10, 10, 0), dt_utc(2018, 1, 10, 10, 5)],
-            "open": [1.0, 1.1],
+            "open": [1.0, 1.15],
             "high": [1.1, 1.2],
-            "low": [0.9, 1.0],
+            "low": [0.9, 1.1],
             "close": [1.05, 1.15],
             "volume": [100, 150],
         }
@@ -856,9 +856,6 @@ def test_download_pair_history_with_pair_candles(mocker, default_conf, tmp_path,
             "volume": [100, 200, 250, 300],
         }
     )
-    mocker.patch(
-        "freqtrade.data.history.history_utils.clean_ohlcv_dataframe", return_value=expected_result
-    )
 
     get_historic_ohlcv_mock = MagicMock()
     mocker.patch.object(exchange, "get_historic_ohlcv", get_historic_ohlcv_mock)
@@ -887,3 +884,81 @@ def test_download_pair_history_with_pair_candles(mocker, default_conf, tmp_path,
     stored_data = data_handler_mock.ohlcv_store.call_args_list[0][1]["data"]
     assert stored_data.equals(expected_result)
     assert len(stored_data) == 4
+
+
+def test_download_pair_history_with_pair_candles_no_overlap(
+    mocker, default_conf, tmp_path, caplog
+) -> None:
+    exchange = get_patched_exchange(mocker, default_conf)
+
+    # Create test data for existing cached data
+    existing_data = DataFrame(
+        {
+            "date": [dt_utc(2018, 1, 10, 10, 0), dt_utc(2018, 1, 10, 10, 5)],
+            "open": [1.0, 1.1],
+            "high": [1.1, 1.2],
+            "low": [0.9, 1.0],
+            "close": [1.05, 1.15],
+            "volume": [100, 150],
+        }
+    )
+
+    # Create pair_candles data that will be used instead of exchange download
+    # This data should start before or at the same time as since_ms to trigger the else branch
+    pair_candles_data = DataFrame(
+        {
+            "date": [
+                dt_utc(2018, 1, 10, 10, 10),
+                dt_utc(2018, 1, 10, 10, 15),
+                dt_utc(2018, 1, 10, 10, 20),
+            ],
+            "open": [1.15, 1.2, 1.25],
+            "high": [1.25, 1.3, 1.35],
+            "low": [1.1, 1.15, 1.2],
+            "close": [1.2, 1.25, 1.3],
+            "volume": [200, 250, 300],
+        }
+    )
+
+    # Mock the data handler to return existing cached data
+    data_handler_mock = MagicMock()
+    data_handler_mock.ohlcv_load.return_value = existing_data
+    data_handler_mock.ohlcv_store = MagicMock()
+    mocker.patch(
+        "freqtrade.data.history.history_utils.get_datahandler", return_value=data_handler_mock
+    )
+
+    # Mock _load_cached_data_for_updating to return existing data and since_ms
+    since_ms = dt_ts(dt_utc(2018, 1, 10, 10, 5))  # Time of last existing candle
+    mocker.patch(
+        "freqtrade.data.history.history_utils._load_cached_data_for_updating",
+        return_value=(existing_data, since_ms, None),
+    )
+
+    get_historic_ohlcv_mock = MagicMock(return_value=DataFrame())
+    mocker.patch.object(exchange, "get_historic_ohlcv", get_historic_ohlcv_mock)
+
+    # Call _download_pair_history with pre-loaded pair_candles
+    result = _download_pair_history(
+        datadir=tmp_path,
+        exchange=exchange,
+        pair="TEST/BTC",
+        timeframe="5m",
+        candle_type=CandleType.SPOT,
+        pair_candles=pair_candles_data,
+    )
+
+    # Verify the function succeeded
+    assert result is True
+
+    # Verify that exchange.get_historic_ohlcv was NOT called (parallel method was used)
+    assert get_historic_ohlcv_mock.call_count == 1
+
+    # Verify the log message indicating parallel method was used (line 315-316)
+    assert not log_has_re(r"Downloaded .* Parallel Method.", caplog)
+
+    # Verify data was stored
+    assert data_handler_mock.ohlcv_store.call_count == 1
+    stored_data = data_handler_mock.ohlcv_store.call_args_list[0][1]["data"]
+    assert stored_data.equals(existing_data)
+    assert len(stored_data) == 2
