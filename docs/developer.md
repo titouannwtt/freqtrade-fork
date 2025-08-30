@@ -408,6 +408,18 @@ jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace freqtrade/tem
 jupyter nbconvert --ClearOutputPreprocessor.enabled=True --to markdown freqtrade/templates/strategy_analysis_example.ipynb --stdout > docs/strategy_analysis_example.md
 ```
 
+## Backtest documentation results
+
+To generate backtest outputs, please use the following commands:
+
+``` bash
+freqtrade create-userdir --userdir user_data_bttest/
+freqtrade download-data --timerange 20250625-20250801 --config tests/testdata/config.tests.usdt.json --userdir user_data_bttest/ -t 5m
+
+freqtrade backtesting --config tests/testdata/config.tests.usdt.json -s SampleStrategy --userdir user_data_bttest/ --cache none --timerange 20250701-20250801
+```
+
+
 ## Continuous integration
 
 This documents some decisions taken for the CI Pipeline.
