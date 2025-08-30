@@ -198,8 +198,8 @@ def start_list_trades_data(args: dict[str, Any]) -> None:
     )
 
     if args["pairs"]:
-        pl = expand_pairlist(args["pairs"], [p[0] for p in paircombs], keep_invalid=True)
-        paircombs = [comb for comb in paircombs if comb[0] in pl]
+        pl = expand_pairlist(args["pairs"], [p for p in paircombs], keep_invalid=True)
+        paircombs = [comb for comb in paircombs if comb in pl]
 
     title = f"Found trades data for {len(paircombs)} {plural(len(paircombs), 'pair')}."
     if not config.get("show_timerange"):
