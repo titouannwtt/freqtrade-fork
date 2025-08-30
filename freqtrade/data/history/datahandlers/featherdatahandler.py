@@ -112,6 +112,36 @@ class FeatherDataHandler(IDataHandler):
         """
         raise NotImplementedError()
 
+    def _build_arrow_time_filter(self, timerange: TimeRange | None):
+        """
+        Build Arrow predicate filter for timerange filtering.
+        Treats 0 as unbounded (no filter on that side).
+        :param timerange: TimeRange object with start/stop timestamps
+        :return: Arrow filter expression or None if fully unbounded
+        """
+        if not timerange:
+            return None
+
+        # Treat 0 as unbounded
+        start_set = bool(timerange.startts and timerange.startts > 0)
+        stop_set = bool(timerange.stopts and timerange.stopts > 0)
+
+        if not (start_set or stop_set):
+            return None
+
+        ts_field = dataset.field("timestamp")
+        exprs = []
+
+        if start_set:
+            exprs.append(ts_field >= timerange.startts)
+        if stop_set:
+            exprs.append(ts_field <= timerange.stopts)
+
+        if len(exprs) == 1:
+            return exprs[0]
+        else:
+            return exprs[0] & exprs[1]
+
     def _trades_load(
         self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> DataFrame:
@@ -126,25 +156,27 @@ class FeatherDataHandler(IDataHandler):
         if not filename.exists():
             return DataFrame(columns=DEFAULT_TRADES_COLUMNS)
 
-        # Load trades data with optional timerange filtering
-        if timerange is None:
-            # No timerange filter - load entire file
-            logger.debug(f"Loading entire trades file for {pair}")
-            tradesdata = read_feather(filename)
-        else:
-            # Use Arrow dataset with predicate pushdown for efficient filtering
-            try:
-                dataset_reader = dataset.dataset(filename, format="feather")
-                time_filter = (dataset.field("timestamp") >= timerange.startts) & (
-                    dataset.field("timestamp") <= timerange.stopts
-                )
-                tradesdata = dataset_reader.to_table(filter=time_filter).to_pandas()
-                logger.debug(f"Loaded {len(tradesdata)} trades for {pair}")
+        # Use Arrow dataset with optional timerange filtering, fallback to read_feather
+        try:
+            dataset_reader = dataset.dataset(filename, format="feather")
+            time_filter = self._build_arrow_time_filter(timerange)
 
-            except (ImportError, AttributeError, ValueError) as e:
-                # Fallback: load entire file
-                logger.warning(f"Unable to use Arrow filtering, loading entire trades file: {e}")
-                tradesdata = read_feather(filename)
+            if time_filter is not None and timerange is not None:
+                tradesdata = dataset_reader.to_table(filter=time_filter).to_pandas()
+                start_desc = timerange.startts if timerange.startts > 0 else "unbounded"
+                stop_desc = timerange.stopts if timerange.stopts > 0 else "unbounded"
+                logger.debug(
+                    f"Loaded {len(tradesdata)} trades for {pair} "
+                    f"(filtered start={start_desc}, stop={stop_desc})"
+                )
+            else:
+                tradesdata = dataset_reader.to_table().to_pandas()
+                logger.debug(f"Loaded {len(tradesdata)} trades for {pair} (unfiltered)")
+
+        except (ImportError, AttributeError, ValueError) as e:
+            # Fallback: load entire file
+            logger.warning(f"Unable to use Arrow filtering, loading entire trades file: {e}")
+            tradesdata = read_feather(filename)
 
         return tradesdata
 

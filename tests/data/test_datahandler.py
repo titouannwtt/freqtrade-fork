@@ -571,3 +571,72 @@ def test_feather_trades_timerange_pushdown_fallback(
         "Unable to use Arrow filtering, loading entire trades file" in r.message
         for r in caplog.records
     )
+
+
+def test_feather_trades_timerange_open_start(feather_dh, trades_full):
+    # Open start: stop timestamp but no start (startts=0)
+    stop_ts = int(trades_full["timestamp"].iloc[(2 * len(trades_full)) // 3])
+    tr = TimeRange(None, "date", startts=0, stopts=stop_ts)
+
+    filtered = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=tr)
+    assert 0 < len(filtered) < len(trades_full)
+    assert filtered["timestamp"].max() <= stop_ts
+    # First row should match full's first row
+    assert filtered.iloc[0]["timestamp"] == trades_full.iloc[0]["timestamp"]
+
+
+def test_feather_trades_timerange_open_end(feather_dh, trades_full):
+    # Open end: start timestamp but no stop (stopts=0)
+    start_ts = int(trades_full["timestamp"].iloc[len(trades_full) // 3])
+    tr = TimeRange("date", None, startts=start_ts, stopts=0)
+
+    filtered = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=tr)
+    assert 0 < len(filtered) < len(trades_full)
+    assert filtered["timestamp"].min() >= start_ts
+    # Last row should match full's last row
+    assert filtered.iloc[-1]["timestamp"] == trades_full.iloc[-1]["timestamp"]
+
+
+def test_feather_trades_timerange_fully_open(feather_dh, trades_full):
+    # Fully open: no start or stop bounds (both 0)
+    tr = TimeRange(None, None, startts=0, stopts=0)
+
+    filtered = feather_dh.trades_load("XRP/ETH", TradingMode.SPOT, timerange=tr)
+    # Should equal unfiltered load
+    assert_frame_equal(
+        trades_full.reset_index(drop=True), filtered.reset_index(drop=True), check_exact=True
+    )
+
+
+def test_feather_build_arrow_time_filter(feather_dh):
+    # None timerange should return None
+    assert feather_dh._build_arrow_time_filter(None) is None
+
+    # Fully open (both bounds 0) should return None
+    tr_fully_open = TimeRange(None, None, startts=0, stopts=0)
+    assert feather_dh._build_arrow_time_filter(tr_fully_open) is None
+
+    # Open start (startts=0) should return stop filter only
+    tr_open_start = TimeRange(None, "date", startts=0, stopts=1000)
+    filter_open_start = feather_dh._build_arrow_time_filter(tr_open_start)
+    assert filter_open_start is not None
+    # Should be a single expression (timestamp <= stopts)
+    assert str(filter_open_start).count("<=") == 1
+    assert str(filter_open_start).count(">=") == 0
+
+    # Open end (stopts=0) should return start filter only
+    tr_open_end = TimeRange("date", None, startts=500, stopts=0)
+    filter_open_end = feather_dh._build_arrow_time_filter(tr_open_end)
+    assert filter_open_end is not None
+    # Should be a single expression (timestamp >= startts)
+    assert str(filter_open_end).count(">=") == 1
+    assert str(filter_open_end).count("<=") == 0
+
+    # Closed range should return combined filter
+    tr_closed = TimeRange("date", "date", startts=500, stopts=1000)
+    filter_closed = feather_dh._build_arrow_time_filter(tr_closed)
+    assert filter_closed is not None
+    # Should contain both >= and <= (combined with &)
+    filter_str = str(filter_closed)
+    assert ">=" in filter_str
+    assert "<=" in filter_str
