@@ -434,7 +434,6 @@ This documents some decisions taken for the CI Pipeline.
 * Docker images contain a file, `/freqtrade/freqtrade_commit` containing the commit this image is based of.
 * Full docker image rebuilds are run once a week via schedule.
 * Deployments run on ubuntu.
-* ta-lib binaries are contained in the build_helpers directory to avoid fails related to external unavailability.
 * All tests must pass for a PR to be merged to `stable` or `develop`.
 
 ## Creating a release
