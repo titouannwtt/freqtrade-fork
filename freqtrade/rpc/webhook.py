@@ -49,7 +49,7 @@ class Webhook(RPCHandler):
         if msg["type"].value in whconfig:
             # Explicit types should have priority
             valuedict = whconfig.get(msg["type"].value)
-        # Deprecated 2022.10 - only keep generic method.
+        # The below is deprecated 2022.10 - only keep generic method.
         elif msg["type"] in [RPCMessageType.ENTRY]:
             valuedict = whconfig.get("webhookentry")
         elif msg["type"] in [RPCMessageType.ENTRY_CANCEL]:
