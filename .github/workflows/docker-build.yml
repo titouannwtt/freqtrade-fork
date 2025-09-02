@@ -122,7 +122,7 @@ jobs:
     - name: Build image without cache
       if: github.event_name != 'schedule'
       run: |
-        docker pull ${IMAGE_NAME}:${TAG}
+        docker pull ${IMAGE_NAME}:${TAG} || true
         docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
 
     - name: Build ARMHF image without cache
