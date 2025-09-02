@@ -102,9 +102,70 @@ jobs:
       env:
         PLATFORMS: ${{ steps.buildx.outputs.platforms }}
 
-    - name: Build and test and push docker images
+    - name: Build image without cache
+      if: github.event_name == 'schedule'
       run: |
-        build_helpers/publish_docker_multi.sh
+        docker build -t freqtrade:${TAG} .
+
+    - name: Build ARMHF image without cache
+      if: github.event_name == 'schedule'
+      run: |
+        docker buildx build \
+          --cache-to=type=registry,ref=${CACHE_TAG_PI} \
+          -f docker/Dockerfile.armhf \
+          --platform ${PI_PLATFORM} \
+          -t ${IMAGE_NAME}:${TAG_PI} \
+          --push \
+          --provenance=false \
+          .
+
+    - name: Build image without cache
+      if: github.event_name != 'schedule'
+      run: |
+        docker pull ${IMAGE_NAME}:${TAG}
+        docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
+
+    - name: Build ARMHF image without cache
+      if: github.event_name != 'schedule'
+      # disable provenance due to https://github.com/docker/buildx/issues/1509
+      run: |
+        docker buildx build \
+          --cache-from=type=registry,ref=${CACHE_TAG_PI} \
+          --cache-to=type=registry,ref=${CACHE_TAG} \
+          -f docker/Dockerfile.armhf \
+          --platform ${PI_PLATFORM} \
+          -t ${IMAGE_NAME}:${TAG_PI} \
+          --push \
+          --provenance=false \
+          .
+
+    - name: Run build for AI images
+      run: |
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG} -t freqtrade:${TAG_FREQAI} -f docker/Dockerfile.freqai .
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_FREQAI} -t freqtrade:${TAG_FREQAI_RL} -f docker/Dockerfile.freqai_rl .
+
+    - name: Tag images for caching
+      run: |
+        docker tag freqtrade:$TAG ${CACHE_IMAGE}:$TAG
+        docker tag freqtrade:$TAG_PLOT ${CACHE_IMAGE}:$TAG_PLOT
+        docker tag freqtrade:$TAG_FREQAI ${CACHE_IMAGE}:$TAG_FREQAI
+        docker tag freqtrade:$TAG_FREQAI_RL ${CACHE_IMAGE}:$TAG_FREQAI_RL
+
+    - name: Run backtest in Docker
+      run: |
+        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
+
+    - name: push cache images
+      run: |
+        docker push ${CACHE_IMAGE}:$TAG
+        docker push ${CACHE_IMAGE}:$TAG_PLOT
+        docker push ${CACHE_IMAGE}:$TAG_FREQAI
+        docker push ${CACHE_IMAGE}:$TAG_FREQAI_RL
+
+    - name: list Images
+      run: |
+        docker images
 
   deploy-arm:
     name: "Deploy Docker ARM64"
