@@ -1,28 +1,12 @@
 #!/bin/sh
 
-# The below assumes a correctly setup docker buildx environment
-
-# Replace / with _ to create a valid tag
-TAG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
-TAG_PLOT=${TAG}_plot
-TAG_FREQAI=${TAG}_freqai
-TAG_FREQAI_RL=${TAG_FREQAI}rl
-TAG_PI="${TAG}_pi"
-
-PI_PLATFORM="linux/arm/v7"
-echo "Running for ${TAG}"
-CACHE_TAG=${CACHE_IMAGE}:${TAG_PI}_cache
-
-# Add commit and commit_message to docker container
-echo "${GITHUB_SHA}" > freqtrade_commit
-
 if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
     echo "event ${GITHUB_EVENT_NAME}: full rebuild - skipping cache"
     # Build regular image
     docker build -t freqtrade:${TAG} .
     # Build PI image
     docker buildx build \
-        --cache-to=type=registry,ref=${CACHE_TAG} \
+        --cache-to=type=registry,ref=${CACHE_TAG_PI} \
         -f docker/Dockerfile.armhf \
         --platform ${PI_PLATFORM} \
         -t ${IMAGE_NAME}:${TAG_PI} \
@@ -39,7 +23,7 @@ else
     # docker pull --platform ${PI_PLATFORM} ${IMAGE_NAME}:${TAG}
     # disable provenance due to https://github.com/docker/buildx/issues/1509
     docker buildx build \
-        --cache-from=type=registry,ref=${CACHE_TAG} \
+        --cache-from=type=registry,ref=${CACHE_TAG_PI} \
         --cache-to=type=registry,ref=${CACHE_TAG} \
         -f docker/Dockerfile.armhf \
         --platform ${PI_PLATFORM} \

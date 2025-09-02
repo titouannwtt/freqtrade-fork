@@ -24,6 +24,7 @@ env:
   IMAGE_NAME: "freqtradeorg/freqtrade"
   CACHE_IMAGE: "freqtradeorg/freqtrade_cache"
   GHCR_IMAGE_NAME: "ghcr.io/freqtrade/freqtrade"
+  PI_PLATFORM: "linux/arm/v7"
 
 jobs:
   deploy-docker:
@@ -50,9 +51,37 @@ jobs:
         else
           BRANCH_NAME="${GITHUB_REF##*/}"
         fi
+
+        # Replace / with _ to create a valid tag
+        TAG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
+        TAG_PLOT=${TAG}_plot
+        TAG_FREQAI=${TAG}_freqai
+        TAG_FREQAI_RL=${TAG_FREQAI}rl
+        TAG_PI="${TAG}_pi"
+
+        CACHE_TAG_PI=${CACHE_IMAGE}:${TAG_PI}_cache
+
         echo "GITHUB_REF='${GITHUB_REF}'"
         echo "BRANCH_NAME='${BRANCH_NAME}'"
+        echo "TAG='${TAG}'"
+        echo "TAG_PLOT='${TAG_PLOT}'"
+        echo "TAG_FREQAI='${TAG_FREQAI}'"
+        echo "TAG_FREQAI_RL='${TAG_FREQAI_RL}'"
+        echo "TAG_PI='${TAG_PI}'"
+
         echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+        echo "TAG=${TAG}" >> "$GITHUB_ENV"
+        echo "TAG_PLOT=${TAG_PLOT}" >> "$GITHUB_ENV"
+        echo "TAG_FREQAI=${TAG_FREQAI}" >> "$GITHUB_ENV"
+        echo "TAG_FREQAI_RL=${TAG_FREQAI_RL}" >> "$GITHUB_ENV"
+        echo "TAG_PI=${TAG_PI}" >> "$GITHUB_ENV"
+
+        echo "CACHE_TAG_PI=${CACHE_TAG_PI}" >> "$GITHUB_ENV"
+
+    - name: Save commit SHA to file
+      # Add commit to docker container
+      run: |
+        echo "${GITHUB_SHA}" > freqtrade_commit
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -103,6 +132,11 @@ jobs:
         echo "GITHUB_REF='${GITHUB_REF}'"
         echo "BRANCH_NAME='${BRANCH_NAME}'"
         echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+    - name: Save commit SHA to file
+      # Add commit to docker container
+      run: |
+        echo "${GITHUB_SHA}" > freqtrade_commit
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
