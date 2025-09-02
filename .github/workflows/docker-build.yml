@@ -37,18 +37,8 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-
     - name: Set docker tag names
       uses: ./.github/actions/docker-tags
-
-    - name: Save commit SHA to file
-      # Add commit to docker container
-      run: |
-        echo "${GITHUB_SHA}" > freqtrade_commit
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -147,23 +137,8 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Extract branch name
-      env:
-        BRANCH_NAME_INPUT: ${{ github.event.inputs.branch_name }}
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          BRANCH_NAME="${BRANCH_NAME_INPUT}"
-        else
-          BRANCH_NAME="${GITHUB_REF##*/}"
-        fi
-        echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "BRANCH_NAME='${BRANCH_NAME}'"
-        echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
-
-    - name: Save commit SHA to file
-      # Add commit to docker container
-      run: |
-        echo "${GITHUB_SHA}" > freqtrade_commit
+    - name: Set docker tag names
+      uses: ./.github/actions/docker-tags
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0

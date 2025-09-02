@@ -1,24 +1,7 @@
 #!/bin/sh
 
-# Use BuildKit, otherwise building on ARM fails
-
-# Replace / with _ to create a valid tag
-TAG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
-TAG_PLOT=${TAG}_plot
-TAG_FREQAI=${TAG}_freqai
-TAG_FREQAI_RL=${TAG_FREQAI}rl
-TAG_FREQAI_TORCH=${TAG_FREQAI}torch
-TAG_PI="${TAG}_pi"
-
-TAG_ARM=${TAG}_arm
-TAG_PLOT_ARM=${TAG_PLOT}_arm
-TAG_FREQAI_ARM=${TAG_FREQAI}_arm
-TAG_FREQAI_RL_ARM=${TAG_FREQAI_RL}_arm
 
 echo "Running for ${TAG}"
-
-# Add commit and commit_message to docker container
-echo "${GITHUB_SHA}" > freqtrade_commit
 
 if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
     echo "event ${GITHUB_EVENT_NAME}: full rebuild - skipping cache"
