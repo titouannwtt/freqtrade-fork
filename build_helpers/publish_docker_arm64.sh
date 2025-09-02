@@ -1,11 +1,6 @@
 #!/bin/sh
 
 # Use BuildKit, otherwise building on ARM fails
-export DOCKER_BUILDKIT=1
-
-IMAGE_NAME=freqtradeorg/freqtrade
-CACHE_IMAGE=freqtradeorg/freqtrade_cache
-GHCR_IMAGE_NAME=ghcr.io/freqtrade/freqtrade
 
 # Replace / with _ to create a valid tag
 TAG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")

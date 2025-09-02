@@ -20,6 +20,11 @@ on:
 permissions:
   contents: read
 
+env:
+  IMAGE_NAME: "freqtradeorg/freqtrade"
+  CACHE_IMAGE: "freqtradeorg/freqtrade_cache"
+  GHCR_IMAGE_NAME: "ghcr.io/freqtrade/freqtrade"
+
 jobs:
   deploy-docker:
     name: "Deploy Docker x64 and armv7l"
