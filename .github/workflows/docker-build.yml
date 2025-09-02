@@ -42,7 +42,6 @@ jobs:
         python-version: "3.12"
 
     - name: Extract branch name
-      id: extract-branch
       env:
         BRANCH_NAME_INPUT: ${{ github.event.inputs.branch_name }}
       run: |
@@ -52,7 +51,8 @@ jobs:
           BRANCH_NAME="${GITHUB_REF##*/}"
         fi
         echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "branch=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+        echo "BRANCH_NAME='${BRANCH_NAME}'"
+        echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -74,8 +74,6 @@ jobs:
         PLATFORMS: ${{ steps.buildx.outputs.platforms }}
 
     - name: Build and test and push docker images
-      env:
-        BRANCH_NAME: ${{ steps.extract-branch.outputs.branch }}
       run: |
         build_helpers/publish_docker_multi.sh
 
@@ -94,7 +92,6 @@ jobs:
         persist-credentials: false
 
     - name: Extract branch name
-      id: extract-branch
       env:
         BRANCH_NAME_INPUT: ${{ github.event.inputs.branch_name }}
       run: |
@@ -104,7 +101,8 @@ jobs:
           BRANCH_NAME="${GITHUB_REF##*/}"
         fi
         echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "branch=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+        echo "BRANCH_NAME='${BRANCH_NAME}'"
+        echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
 
     - name: Login to Docker Hub
       uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -114,7 +112,6 @@ jobs:
 
     - name: Build and test and push docker images
       env:
-        BRANCH_NAME: ${{ steps.extract-branch.outputs.branch }}
         GHCR_USERNAME: ${{ github.actor }}
         GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
