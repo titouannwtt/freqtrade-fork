@@ -118,13 +118,13 @@ jobs:
           --provenance=false \
           .
 
-    - name: Build image without cache
+    - name: Build image with cache
       if: github.event_name != 'schedule'
       run: |
         docker pull ${IMAGE_NAME}:${TAG} || true
         docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
 
-    - name: Build ARMHF image without cache
+    - name: Build ARMHF image with cache
       if: github.event_name != 'schedule'
       # disable provenance due to https://github.com/docker/buildx/issues/1509
       run: |
