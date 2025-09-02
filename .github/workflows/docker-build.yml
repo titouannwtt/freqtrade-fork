@@ -112,7 +112,7 @@ jobs:
       run: |
         docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
 
-    - name: push cache images
+    - name: Push cache images
       run: |
         docker push ${CACHE_IMAGE}:$TAG
         docker push ${CACHE_IMAGE}:$TAG_PLOT
@@ -146,12 +146,97 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and test and push docker images
+    - name: Build image without cache
+      if: github.event_name == 'schedule'
+      run: |
+        docker build -t freqtrade:${TAG_ARM} .
+
+    - name: Build image with cache
+      if: github.event_name != 'schedule'
+      run: |
+        docker pull ${IMAGE_NAME}:${TAG_ARM} || true
+        docker build --cache-from ${IMAGE_NAME}:${TAG_ARM} -t freqtrade:${TAG_ARM} .
+
+    - name: Run build for AI images
+      run: |
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_PLOT_ARM} -f docker/Dockerfile.plot .
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_FREQAI_ARM} -f docker/Dockerfile.freqai .
+        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_FREQAI_ARM} -t freqtrade:${TAG_FREQAI_RL_ARM} -f docker/Dockerfile.freqai_rl .
+
+    - name: Tag images for caching
+      run: |
+        docker tag freqtrade:$TAG_ARM ${CACHE_IMAGE}:$TAG_ARM
+        docker tag freqtrade:$TAG_PLOT_ARM ${CACHE_IMAGE}:$TAG_PLOT_ARM
+        docker tag freqtrade:$TAG_FREQAI_ARM ${CACHE_IMAGE}:$TAG_FREQAI_ARM
+        docker tag freqtrade:$TAG_FREQAI_RL_ARM ${CACHE_IMAGE}:$TAG_FREQAI_RL_ARM
+
+    - name: Run backtest in Docker
+      run: |
+        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG_ARM} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
+
+    - name: Docker images
+      run: |
+        docker images
+
+    - name: Push cache images
+      run: |
+        docker push ${CACHE_IMAGE}:$TAG_PLOT_ARM
+        docker push ${CACHE_IMAGE}:$TAG_FREQAI_ARM
+        docker push ${CACHE_IMAGE}:$TAG_FREQAI_RL_ARM
+        docker push ${CACHE_IMAGE}:$TAG_ARM
+
+    - name: Create manifests
+      run: |
+        docker manifest create ${IMAGE_NAME}:${TAG} ${CACHE_IMAGE}:${TAG} ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI}
+        docker manifest push -p ${IMAGE_NAME}:${TAG}
+
+        docker manifest create ${IMAGE_NAME}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT_ARM}
+        docker manifest push -p ${IMAGE_NAME}:${TAG_PLOT}
+
+        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI_ARM}
+        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI}
+
+        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
+        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_RL}
+
+        # Create special Torch tag - which is identical to the RL tag.
+        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_TORCH} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
+        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
+
+    - name: Move images to ghcr.io
       env:
         GHCR_USERNAME: ${{ github.actor }}
         GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        build_helpers/publish_docker_arm64.sh
+        # setup Crane
+        alias crane="docker run --rm -i -v $(pwd)/.crane:/home/nonroot/.docker/ gcr.io/go-containerregistry/crane"
+        mkdir .crane
+        chmod a+rwx .crane
+
+        echo "${GHCR_TOKEN}" | crane auth login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
+
+        crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL}
+        crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH}
+        crane copy ${IMAGE_NAME}:${TAG_FREQAI} ${GHCR_IMAGE_NAME}:${TAG_FREQAI}
+        crane copy ${IMAGE_NAME}:${TAG_PLOT} ${GHCR_IMAGE_NAME}:${TAG_PLOT}
+        crane copy ${IMAGE_NAME}:${TAG} ${GHCR_IMAGE_NAME}:${TAG}
+
+    - name: Tag latest
+      if: env.TAG == 'develop'
+      run: |
+        # Tag image as latest
+        docker manifest create ${IMAGE_NAME}:latest ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI} ${CACHE_IMAGE}:${TAG}
+        docker manifest push -p ${IMAGE_NAME}:latest
+        crane copy ${IMAGE_NAME}:latest ${GHCR_IMAGE_NAME}:latest
+
+    - name: Crane cleanup
+      run: |
+        rm -rf .crane
+
+
+    - name: Image cleanup
+      run: |
+        docker image prune -a --force --filter "until=24h"
 
     - name: Discord notification
       uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
