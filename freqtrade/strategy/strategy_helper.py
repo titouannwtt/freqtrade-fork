@@ -95,13 +95,16 @@ def merge_informative_pair(
 
         # If date_merge of the informative dataframe candle that is above of first date of dataframe, then first raws of
         # dataframe are filled with Nans. The code below is to fix it and fulfill first raws with an appropriate values.
-        if len(dataframe) > 1 and pd.isnull(dataframe.iloc[0]["date_merge"]):
-            first_valid_idx = dataframe["date_merge"].first_valid_index()
-            first_valid_date_merge = dataframe.loc[first_valid_idx, "date_merge"]
-            matching_informative_raws = informative[informative["date_merge"] < first_valid_date_merge]
+        if len(dataframe) > 1 and len(informative) > 0 and pd.isnull(dataframe.iloc[0][date_merge]):
+            first_valid_idx = dataframe[date_merge].first_valid_index()
+            first_valid_date_merge = dataframe.loc[first_valid_idx, date_merge]
+            matching_informative_raws = informative[
+                informative[date_merge] < first_valid_date_merge
+            ]
             if not matching_informative_raws.empty:
-                dataframe.loc[:first_valid_idx - 1] = dataframe.loc[:first_valid_idx - 1].fillna(
-                    matching_informative_raws.iloc[-1])
+                dataframe.loc[: first_valid_idx - 1] = dataframe.loc[: first_valid_idx - 1].fillna(
+                    matching_informative_raws.iloc[-1]
+                )
     else:
         dataframe = pd.merge(
             dataframe, informative, left_on="date", right_on=date_merge, how="left"
