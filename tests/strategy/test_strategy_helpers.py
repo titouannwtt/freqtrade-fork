@@ -101,6 +101,7 @@ def test_merge_informative_pair_monthly():
     candle1 = result.loc[(result["date"] == "2022-12-31T22:00:00.000Z")]
     assert candle1.iloc[0]["date"] == pd.Timestamp("2022-12-31T22:00:00.000Z")
     assert candle1.iloc[0]["date_1M"] == pd.Timestamp("2022-11-01T00:00:00.000Z")
+    assert candle1.iloc[0]["volume_1M"]
 
     candle2 = result.loc[(result["date"] == "2022-12-31T23:00:00.000Z")]
     assert candle2.iloc[0]["date"] == pd.Timestamp("2022-12-31T23:00:00.000Z")
@@ -109,7 +110,8 @@ def test_merge_informative_pair_monthly():
     # Candle is empty, as the start-date did fail.
     candle3 = result.loc[(result["date"] == "2022-11-30T22:00:00.000Z")]
     assert candle3.iloc[0]["date"] == pd.Timestamp("2022-11-30T22:00:00.000Z")
-    assert candle3.iloc[0]["date_1M"] is pd.NaT
+    assert candle3.iloc[0]["date_1M"]
+    assert candle3.iloc[0]["volume_1M"]
 
     # First candle with 1M data merged.
     candle4 = result.loc[(result["date"] == "2022-11-30T23:00:00.000Z")]
