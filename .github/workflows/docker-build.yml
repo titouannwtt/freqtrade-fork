@@ -148,6 +148,13 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Login to github
+      uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build image without cache
       if: github.event_name == 'schedule'
       run: |
@@ -189,36 +196,34 @@ jobs:
 
     - name: Create manifests
       run: |
-        docker manifest create ${IMAGE_NAME}:${TAG} ${CACHE_IMAGE}:${TAG} ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI}
-        docker manifest push -p ${IMAGE_NAME}:${TAG}
+        docker buildx imagetools create \
+          --tag ${IMAGE_NAME}:${TAG} \
+          --tag ${GHCR_IMAGE_NAME}:${TAG} \
+          ${CACHE_IMAGE}:${TAG} ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI}
 
-        docker manifest create ${IMAGE_NAME}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT_ARM}
-        docker manifest push -p ${IMAGE_NAME}:${TAG_PLOT}
-
-        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI_ARM}
-        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI}
-
-        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
-        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_RL}
-
-        # Create special Torch tag - which is identical to the RL tag.
-        docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_TORCH} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
-        docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
-
-
-    - name: Login to github
-      uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Push to ghcr.io
+    - name: Create multiarch image - Plot
       run: |
-        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG}
-        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_PLOT} ${IMAGE_NAME}:${TAG_PLOT}
-        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI} ${IMAGE_NAME}:${TAG_FREQAI}
-        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL} --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH} ${IMAGE_NAME}:${TAG_FREQAI_RL}
+        docker buildx imagetools create \
+          --tag ${IMAGE_NAME}:${TAG_PLOT} \
+          --tag ${GHCR_IMAGE_NAME}:${TAG_PLOT} \
+          ${CACHE_IMAGE}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT_ARM}
+
+    - name: Create multiarch image - FreqAI
+      run: |
+        docker buildx imagetools create \
+          --tag ${IMAGE_NAME}:${TAG_FREQAI} \
+          --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI} \
+          ${CACHE_IMAGE}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI_ARM}
+
+    - name: Create multiarch image - FreqAI RL
+      run: |
+        # Create special Torch tag - which is identical to the RL tag.
+        docker buildx imagetools create \
+          --tag ${IMAGE_NAME}:${TAG_FREQAI_RL} \
+          --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL} \
+          --tag ${IMAGE_NAME}:${TAG_FREQAI_TORCH} \
+          --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH} \
+          ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
 
     - name: Tag latest
       if: env.TAG == 'develop'
