@@ -215,18 +215,23 @@ jobs:
 
     - name: Push to ghcr.io
       run: |
-        docker manifest create ${GHCR_IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG}
-        docker manifest create ${GHCR_IMAGE_NAME}:${TAG_PLOT} ${IMAGE_NAME}:${TAG_PLOT}
-        docker manifest create ${GHCR_IMAGE_NAME}:${TAG_FREQAI} ${IMAGE_NAME}:${TAG_FREQAI}
-        docker manifest create ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL} ${IMAGE_NAME}:${TAG_FREQAI_RL}
-        docker manifest create ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH} ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
+        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG}
+        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_PLOT} ${IMAGE_NAME}:${TAG_PLOT}
+        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI} ${IMAGE_NAME}:${TAG_FREQAI}
+        docker buildx imagetools create --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL} --tag ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH} ${IMAGE_NAME}:${TAG_FREQAI_RL}
 
     - name: Tag latest
       if: env.TAG == 'develop'
       run: |
         # Tag image as latest
-        docker manifest create ${IMAGE_NAME}:latest ${IMAGE_NAME}:${TAG}
-        docker manifest create ${GHCR_IMAGE_NAME}:latest ${IMAGE_NAME}:${TAG}
+        docker buildx imagetools create \
+          --tag ${GHCR_IMAGE_NAME}:${TAG} \
+          --tag ${GHCR_IMAGE_NAME}:latest \
+          ${IMAGE_NAME}:${TAG}
+
+    - name: Docker images
+      run: |
+        docker images
 
     - name: Image cleanup
       run: |
