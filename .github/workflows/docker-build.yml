@@ -205,37 +205,28 @@ jobs:
         docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_TORCH} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
         docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
 
-    - name: Move images to ghcr.io
-      env:
-        GHCR_USERNAME: ${{ github.actor }}
-        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to github
+      uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+      with:
+        username: ${{ secrets.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        registry: ghcr.io
+
+    - name: Push to ghcr.io
       run: |
-        shopt -s expand_aliases
-        # setup Crane
-        alias crane="docker run --rm -i -v $(pwd)/.crane:/home/nonroot/.docker/ gcr.io/go-containerregistry/crane"
-        mkdir .crane
-        chmod a+rwx .crane
-
-        echo "${GHCR_TOKEN}" | crane auth login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
-
-        crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL}
-        crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH}
-        crane copy ${IMAGE_NAME}:${TAG_FREQAI} ${GHCR_IMAGE_NAME}:${TAG_FREQAI}
-        crane copy ${IMAGE_NAME}:${TAG_PLOT} ${GHCR_IMAGE_NAME}:${TAG_PLOT}
-        crane copy ${IMAGE_NAME}:${TAG} ${GHCR_IMAGE_NAME}:${TAG}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:${TAG_PLOT} ${IMAGE_NAME}:${TAG_PLOT}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:${TAG_FREQAI} ${IMAGE_NAME}:${TAG_FREQAI}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL} ${IMAGE_NAME}:${TAG_FREQAI_RL}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH} ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
 
     - name: Tag latest
       if: env.TAG == 'develop'
       run: |
         # Tag image as latest
-        docker manifest create ${IMAGE_NAME}:latest ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI} ${CACHE_IMAGE}:${TAG}
-        docker manifest push -p ${IMAGE_NAME}:latest
-        crane copy ${IMAGE_NAME}:latest ${GHCR_IMAGE_NAME}:latest
-
-    - name: Crane cleanup
-      run: |
-        rm -rf .crane
-
+        docker manifest create -t ${IMAGE_NAME}:latest ${IMAGE_NAME}:${TAG}
+        docker manifest create -t ${GHCR_IMAGE_NAME}:latest ${IMAGE_NAME}:${TAG}
 
     - name: Image cleanup
       run: |
