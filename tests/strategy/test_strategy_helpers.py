@@ -101,7 +101,8 @@ def test_merge_informative_pair_monthly():
     candle1 = result.loc[(result["date"] == "2022-12-31T22:00:00.000Z")]
     assert candle1.iloc[0]["date"] == pd.Timestamp("2022-12-31T22:00:00.000Z")
     assert candle1.iloc[0]["date_1M"] == pd.Timestamp("2022-11-01T00:00:00.000Z")
-    assert candle1.iloc[0]["volume_1M"] == np.float64(199.11048557037446)
+    prev_m_vol = informative.loc[informative["date"] == "2022-11-01T00:00:00.000", "volume"]
+    assert candle1.iloc[0]["volume_1M"] == prev_m_vol.iloc[0]
 
     candle2 = result.loc[(result["date"] == "2022-12-31T23:00:00.000Z")]
     assert candle2.iloc[0]["date"] == pd.Timestamp("2022-12-31T23:00:00.000Z")
@@ -110,7 +111,8 @@ def test_merge_informative_pair_monthly():
     # Candle is empty, as the start-date did fail.
     candle3 = result.loc[(result["date"] == "2022-11-30T22:00:00.000Z")]
     assert candle3.iloc[0]["date"] == pd.Timestamp("2022-11-30T22:00:00.000Z")
-    assert candle3.iloc[0]["volume_1M"] == np.float64(199.2462638356425)
+    prev_m_vol = informative.loc[informative["date"] == "2022-10-01 00:00:00+00:00", "volume"]
+    assert candle3.iloc[0]["volume_1M"] == prev_m_vol.iloc[0]
 
     # First candle with 1M data merged.
     candle4 = result.loc[(result["date"] == "2022-11-30T23:00:00.000Z")]
