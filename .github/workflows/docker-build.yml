@@ -66,7 +66,7 @@ jobs:
       env:
         TAG: ${{ steps.tags.outputs.TAG }}
       run: |
-        docker build -t ${IMAGE_NAME}:${TAG} .
+        docker build -t ${CACHE_IMAGE}:${TAG} .
 
     - name: Build ARMHF image without cache
       if: github.event_name == 'schedule'
@@ -94,6 +94,9 @@ jobs:
     - name: Build ARMHF image with cache
       if: github.event_name != 'schedule'
       # disable provenance due to https://github.com/docker/buildx/issues/1509
+      env:
+        TAG_PI: ${{ steps.tags.outputs.TAG_PI }}
+        CACHE_TAG_PI: ${{ steps.tags.outputs.CACHE_TAG_PI }}
       run: |
         docker buildx build \
           --cache-from=type=registry,ref=${CACHE_TAG_PI} \
