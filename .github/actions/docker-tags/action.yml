@@ -32,32 +32,21 @@ runs:
 
         CACHE_TAG_PI=${CACHE_IMAGE}:${TAG_PI}_cache
 
-        echo "GITHUB_REF='${GITHUB_REF}'"
-        echo "BRANCH_NAME='${BRANCH_NAME}'"
-        echo "TAG='${TAG}'"
-        echo "TAG_PLOT='${TAG_PLOT}'"
-        echo "TAG_FREQAI='${TAG_FREQAI}'"
-        echo "TAG_FREQAI_RL='${TAG_FREQAI_RL}'"
-        echo "TAG_FREQAI_TORCH='${TAG_FREQAI_TORCH}'"
-        echo "TAG_ARM='${TAG_ARM}'"
-        echo "TAG_PLOT_ARM='${TAG_PLOT_ARM}'"
-        echo "TAG_FREQAI_ARM='${TAG_FREQAI_ARM}'"
-        echo "TAG_FREQAI_RL_ARM='${TAG_FREQAI_RL_ARM}'"
-        echo "TAG_PI='${TAG_PI}'"
+        echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+        echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+        echo "TAG_PLOT=${TAG_PLOT}" >> "$GITHUB_OUTPUT"
+        echo "TAG_FREQAI=${TAG_FREQAI}" >> "$GITHUB_OUTPUT"
+        echo "TAG_FREQAI_RL=${TAG_FREQAI_RL}" >> "$GITHUB_OUTPUT"
+        echo "TAG_FREQAI_TORCH=${TAG_FREQAI_TORCH}" >> "$GITHUB_OUTPUT"
+        echo "TAG_ARM=${TAG_ARM}" >> "$GITHUB_OUTPUT"
+        echo "TAG_PLOT_ARM=${TAG_PLOT_ARM}" >> "$GITHUB_OUTPUT"
+        echo "TAG_FREQAI_ARM=${TAG_FREQAI_ARM}" >> "$GITHUB_OUTPUT"
+        echo "TAG_FREQAI_RL_ARM=${TAG_FREQAI_RL_ARM}" >> "$GITHUB_OUTPUT"
+        echo "TAG_PI=${TAG_PI}" >> "$GITHUB_OUTPUT"
 
-        echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
-        echo "TAG=${TAG}" >> "$GITHUB_ENV"
-        echo "TAG_PLOT=${TAG_PLOT}" >> "$GITHUB_ENV"
-        echo "TAG_FREQAI=${TAG_FREQAI}" >> "$GITHUB_ENV"
-        echo "TAG_FREQAI_RL=${TAG_FREQAI_RL}" >> "$GITHUB_ENV"
-        echo "TAG_FREQAI_TORCH=${TAG_FREQAI_TORCH}" >> "$GITHUB_ENV"
-        echo "TAG_ARM=${TAG_ARM}" >> "$GITHUB_ENV"
-        echo "TAG_PLOT_ARM=${TAG_PLOT_ARM}" >> "$GITHUB_ENV"
-        echo "TAG_FREQAI_ARM=${TAG_FREQAI_ARM}" >> "$GITHUB_ENV"
-        echo "TAG_FREQAI_RL_ARM=${TAG_FREQAI_RL_ARM}" >> "$GITHUB_ENV"
-        echo "TAG_PI=${TAG_PI}" >> "$GITHUB_ENV"
+        echo "CACHE_TAG_PI=${CACHE_TAG_PI}" >> "$GITHUB_OUTPUT"
 
-        echo "CACHE_TAG_PI=${CACHE_TAG_PI}" >> "$GITHUB_ENV"
+        cat "$GITHUB_OUTPUT"
 
     - name: Save commit SHA to file
       shell: bash

@@ -38,6 +38,7 @@ jobs:
         persist-credentials: false
 
     - name: Set docker tag names
+      id: tags
       uses: ./.github/actions/docker-tags
 
     - name: Login to Docker Hub
@@ -62,11 +63,16 @@ jobs:
 
     - name: Build image without cache
       if: github.event_name == 'schedule'
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
       run: |
-        docker build -t freqtrade:${TAG} .
+        docker build -t ${IMAGE_NAME}:${TAG} .
 
     - name: Build ARMHF image without cache
       if: github.event_name == 'schedule'
+      env:
+        TAG_PI: ${{ steps.tags.outputs.TAG_PI }}
+        CACHE_TAG_PI: ${{ steps.tags.outputs.CACHE_TAG_PI }}
       run: |
         docker buildx build \
           --cache-to=type=registry,ref=${CACHE_TAG_PI} \
@@ -79,9 +85,11 @@ jobs:
 
     - name: Build image with cache
       if: github.event_name != 'schedule'
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
       run: |
         docker pull ${IMAGE_NAME}:${TAG} || true
-        docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
+        docker build --cache-from ${IMAGE_NAME}:${TAG} -t ${CACHE_IMAGE}:${TAG} .
 
     - name: Build ARMHF image with cache
       if: github.event_name != 'schedule'
@@ -98,23 +106,29 @@ jobs:
           .
 
     - name: Run build for AI images
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
+        TAG_PLOT: ${{ steps.tags.outputs.TAG_PLOT }}
+        TAG_FREQAI: ${{ steps.tags.outputs.TAG_FREQAI }}
+        TAG_FREQAI_RL: ${{ steps.tags.outputs.TAG_FREQAI_RL }}
       run: |
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG} -t freqtrade:${TAG_FREQAI} -f docker/Dockerfile.freqai .
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_FREQAI} -t freqtrade:${TAG_FREQAI_RL} -f docker/Dockerfile.freqai_rl .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG} -t ${CACHE_IMAGE}:${TAG_PLOT} -f docker/Dockerfile.plot .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG} -t ${CACHE_IMAGE}:${TAG_FREQAI} -f docker/Dockerfile.freqai .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG_FREQAI} -t ${CACHE_IMAGE}:${TAG_FREQAI_RL} -f docker/Dockerfile.freqai_rl .
 
-    - name: Tag images for caching
-      run: |
-        docker tag freqtrade:$TAG ${CACHE_IMAGE}:$TAG
-        docker tag freqtrade:$TAG_PLOT ${CACHE_IMAGE}:$TAG_PLOT
-        docker tag freqtrade:$TAG_FREQAI ${CACHE_IMAGE}:$TAG_FREQAI
-        docker tag freqtrade:$TAG_FREQAI_RL ${CACHE_IMAGE}:$TAG_FREQAI_RL
 
     - name: Run backtest in Docker
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
       run: |
-        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
+        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests ${CACHE_IMAGE}:${TAG} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
 
     - name: Push cache images
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
+        TAG_PLOT: ${{ steps.tags.outputs.TAG_PLOT }}
+        TAG_FREQAI: ${{ steps.tags.outputs.TAG_FREQAI }}
+        TAG_FREQAI_RL: ${{ steps.tags.outputs.TAG_FREQAI_RL }}
       run: |
         docker push ${CACHE_IMAGE}:$TAG
         docker push ${CACHE_IMAGE}:$TAG_PLOT
@@ -140,6 +154,7 @@ jobs:
         persist-credentials: false
 
     - name: Set docker tag names
+      id: tags
       uses: ./.github/actions/docker-tags
 
     - name: Login to Docker Hub
@@ -157,37 +172,46 @@ jobs:
 
     - name: Build image without cache
       if: github.event_name == 'schedule'
+      env:
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
-        docker build -t freqtrade:${TAG_ARM} .
+        docker build -t ${IMAGE_NAME}:${TAG_ARM} .
 
     - name: Build image with cache
       if: github.event_name != 'schedule'
+      env:
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
         docker pull ${IMAGE_NAME}:${TAG_ARM} || true
-        docker build --cache-from ${IMAGE_NAME}:${TAG_ARM} -t freqtrade:${TAG_ARM} .
+        docker build --cache-from ${IMAGE_NAME}:${TAG_ARM} -t ${CACHE_IMAGE}:${TAG_ARM} .
 
     - name: Run build for AI images
+      env:
+        TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
+        TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
+        TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
       run: |
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_PLOT_ARM} -f docker/Dockerfile.plot .
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_FREQAI_ARM} -f docker/Dockerfile.freqai .
-        docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_FREQAI_ARM} -t freqtrade:${TAG_FREQAI_RL_ARM} -f docker/Dockerfile.freqai_rl .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG_ARM} -t ${CACHE_IMAGE}:${TAG_PLOT_ARM} -f docker/Dockerfile.plot .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG_ARM} -t ${CACHE_IMAGE}:${TAG_FREQAI_ARM} -f docker/Dockerfile.freqai .
+        docker build --build-arg sourceimage=${CACHE_IMAGE} --build-arg sourcetag=${TAG_FREQAI_ARM} -t ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM} -f docker/Dockerfile.freqai_rl .
 
-    - name: Tag images for caching
-      run: |
-        docker tag freqtrade:$TAG_ARM ${CACHE_IMAGE}:$TAG_ARM
-        docker tag freqtrade:$TAG_PLOT_ARM ${CACHE_IMAGE}:$TAG_PLOT_ARM
-        docker tag freqtrade:$TAG_FREQAI_ARM ${CACHE_IMAGE}:$TAG_FREQAI_ARM
-        docker tag freqtrade:$TAG_FREQAI_RL_ARM ${CACHE_IMAGE}:$TAG_FREQAI_RL_ARM
 
     - name: Run backtest in Docker
+      env:
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
-        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG_ARM} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
+        docker run --rm -v $(pwd)/tests/testdata/config.tests.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests ${CACHE_IMAGE}:${TAG_ARM} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
 
     - name: Docker images
       run: |
         docker images
 
     - name: Push cache images
+      env:
+        TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
+        TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
+        TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
         docker push ${CACHE_IMAGE}:$TAG_PLOT_ARM
         docker push ${CACHE_IMAGE}:$TAG_FREQAI_ARM
@@ -195,6 +219,11 @@ jobs:
         docker push ${CACHE_IMAGE}:$TAG_ARM
 
     - name: Create manifests
+      env:
+        TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
+        TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
+        TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
         docker buildx imagetools create \
           --tag ${IMAGE_NAME}:${TAG} \
@@ -202,6 +231,9 @@ jobs:
           ${CACHE_IMAGE}:${TAG} ${CACHE_IMAGE}:${TAG_ARM} ${IMAGE_NAME}:${TAG_PI}
 
     - name: Create multiarch image - Plot
+      env:
+        TAG_PLOT: ${{ steps.tags.outputs.TAG_PLOT }}
+        TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
       run: |
         docker buildx imagetools create \
           --tag ${IMAGE_NAME}:${TAG_PLOT} \
@@ -209,6 +241,9 @@ jobs:
           ${CACHE_IMAGE}:${TAG_PLOT} ${CACHE_IMAGE}:${TAG_PLOT_ARM}
 
     - name: Create multiarch image - FreqAI
+      env:
+        TAG_FREQAI: ${{ steps.tags.outputs.TAG_FREQAI }}
+        TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
       run: |
         docker buildx imagetools create \
           --tag ${IMAGE_NAME}:${TAG_FREQAI} \
@@ -216,6 +251,10 @@ jobs:
           ${CACHE_IMAGE}:${TAG_FREQAI} ${CACHE_IMAGE}:${TAG_FREQAI_ARM}
 
     - name: Create multiarch image - FreqAI RL
+      env:
+        TAG_FREQAI_RL: ${{ steps.tags.outputs.TAG_FREQAI_RL }}
+        TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
+        TAG_FREQAI_TORCH: ${{ steps.tags.outputs.TAG_FREQAI_TORCH }}
       run: |
         # Create special Torch tag - which is identical to the RL tag.
         docker buildx imagetools create \
@@ -227,6 +266,8 @@ jobs:
 
     - name: Tag latest
       if: env.TAG == 'develop'
+      env:
+        TAG: ${{ steps.tags.outputs.TAG }}
       run: |
         # Tag image as latest
         docker buildx imagetools create \
