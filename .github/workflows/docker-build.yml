@@ -190,6 +190,7 @@ jobs:
 
     - name: Run build for AI images
       env:
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
         TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
         TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
         TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
@@ -211,10 +212,10 @@ jobs:
 
     - name: Push cache images
       env:
+        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
         TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
         TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
         TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
-        TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
       run: |
         docker push ${CACHE_IMAGE}:$TAG_PLOT_ARM
         docker push ${CACHE_IMAGE}:$TAG_FREQAI_ARM
@@ -223,10 +224,9 @@ jobs:
 
     - name: Create manifests
       env:
-        TAG_PLOT_ARM: ${{ steps.tags.outputs.TAG_PLOT_ARM }}
-        TAG_FREQAI_ARM: ${{ steps.tags.outputs.TAG_FREQAI_ARM }}
-        TAG_FREQAI_RL_ARM: ${{ steps.tags.outputs.TAG_FREQAI_RL_ARM }}
         TAG_ARM: ${{ steps.tags.outputs.TAG_ARM }}
+        TAG: ${{ steps.tags.outputs.TAG }}
+        TAG_PI: ${{ steps.tags.outputs.TAG_PI }}
       run: |
         docker buildx imagetools create \
           --tag ${IMAGE_NAME}:${TAG} \
