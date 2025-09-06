@@ -855,6 +855,8 @@ dataframe, last_updated = self.dp.get_analyzed_dataframe(pair=metadata['pair'],
 
 ### *orderbook(pair, maximum)*
 
+Retrieve the current order book for a pair.
+
 ``` python
 if self.dp.runmode.value in ('live', 'dry_run'):
     ob = self.dp.orderbook(metadata['pair'], 1)
