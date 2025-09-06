@@ -3259,7 +3259,7 @@ class Exchange:
             for sig in [signal.SIGINT, signal.SIGTERM]:
                 try:
                     self.loop.add_signal_handler(sig, task.cancel)
-                except NotImplementedError:
+                except (NotImplementedError, RuntimeError):
                     # Not all platforms implement signals (e.g. windows)
                     pass
             return self.loop.run_until_complete(task)
