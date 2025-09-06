@@ -2335,7 +2335,7 @@ def test_refresh_latest_ohlcv(mocker, default_conf_usdt, caplog, candle_type) ->
     if candle_type != CandleType.MARK:
         assert not res
         assert len(res) == 0
-        assert log_has_re(r"Cannot download \(IOTA\/USDT, 3m\).*", caplog)
+        assert log_has_re(r"Cannot download \(IOTA\/USDT, 3m, \S+\).*", caplog)
     else:
         assert len(res) == 1
 

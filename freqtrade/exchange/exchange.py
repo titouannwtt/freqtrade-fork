@@ -2566,13 +2566,18 @@ class Exchange:
         input_coroutines: list[Coroutine[Any, Any, OHLCVResponse]] = []
         cached_pairs = []
         for pair, timeframe, candle_type in set(pair_list):
-            if timeframe not in self.timeframes and candle_type in (
+            invalid_funding = (
+                candle_type == CandleType.FUNDING_RATE
+                and timeframe != self.get_option("funding_fee_timeframe")
+            )
+            invalid_timeframe = timeframe not in self.timeframes and candle_type in (
                 CandleType.SPOT,
                 CandleType.FUTURES,
-            ):
+            )
+            if invalid_timeframe or invalid_funding:
                 logger.warning(
-                    f"Cannot download ({pair}, {timeframe}) combination as this timeframe is "
-                    f"not available on {self.name}. Available timeframes are "
+                    f"Cannot download ({pair}, {timeframe}, {candle_type}) combination as this "
+                    f"timeframe is not available on {self.name}. Available timeframes are "
                     f"{', '.join(self.timeframes)}."
                 )
                 continue
