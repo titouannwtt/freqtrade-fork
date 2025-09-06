@@ -133,6 +133,11 @@ def _create_and_merge_informative_pair(
 
     inf_metadata = {"pair": asset, "timeframe": timeframe}
     inf_dataframe = strategy.dp.get_pair_dataframe(asset, timeframe, candle_type)
+    if inf_dataframe.empty:
+        raise ValueError(
+            f"Informative dataframe for ({asset}, {timeframe}, {candle_type}) is empty. "
+            "Can't populate informative indicators."
+        )
     inf_dataframe = populate_indicators_fn(strategy, inf_dataframe, inf_metadata)
 
     formatter: Any = None
