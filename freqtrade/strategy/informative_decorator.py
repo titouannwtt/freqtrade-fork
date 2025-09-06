@@ -100,7 +100,7 @@ def _create_and_merge_informative_pair(
     dataframe: DataFrame,
     metadata: dict,
     inf_data: InformativeData,
-    populate_indicators: PopulateIndicators,
+    populate_indicators_fn: PopulateIndicators,
 ):
     asset = inf_data.asset or ""
     timeframe = inf_data.timeframe
@@ -133,7 +133,7 @@ def _create_and_merge_informative_pair(
 
     inf_metadata = {"pair": asset, "timeframe": timeframe}
     inf_dataframe = strategy.dp.get_pair_dataframe(asset, timeframe, candle_type)
-    inf_dataframe = populate_indicators(strategy, inf_dataframe, inf_metadata)
+    inf_dataframe = populate_indicators_fn(strategy, inf_dataframe, inf_metadata)
 
     formatter: Any = None
     if callable(fmt):
