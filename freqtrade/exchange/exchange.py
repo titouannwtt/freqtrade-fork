@@ -2010,6 +2010,8 @@ class Exchange:
         Won't work for non-futures markets
         """
         try:
+            if pair not in self.markets or self.markets[pair].get("active", False) is False:
+                raise ExchangeError(f"Pair {pair} not available")
             return self._api.fetch_funding_rate(pair)
         except ccxt.NotSupported as e:
             raise OperationalException(

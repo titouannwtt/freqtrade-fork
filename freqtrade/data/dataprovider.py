@@ -577,7 +577,8 @@ class DataProvider:
         Warning: Performs a network request - so use with common sense.
         :param pair: Pair to get the data for
         :return: Funding rate dict from exchange or empty dict if funding rate is not available
-            If available, the "funding_rate" field will contain the funding rate.
+            If available, the "fundingRate" field will contain the funding rate.
+            "fundingTimestamp" and "fundingDatetime" will contain the next funding times.
             Actually filled fields may vary between exchanges.
         """
         if self._exchange is None:
