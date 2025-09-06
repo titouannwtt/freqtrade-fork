@@ -1,5 +1,8 @@
 from typing import Any, Literal, TypedDict
 
+# Re-export for easier use
+from ccxt.base.types import FundingRate  # noqa: F401
+
 from freqtrade.enums import CandleType
 
 

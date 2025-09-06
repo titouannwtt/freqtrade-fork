@@ -73,6 +73,7 @@ from freqtrade.exchange.exchange_types import (
     CcxtOrder,
     CcxtPosition,
     FtHas,
+    FundingRate,
     OHLCVResponse,
     OrderBook,
     Ticker,
@@ -1997,6 +1998,28 @@ class Exchange:
         except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
             raise TemporaryError(
                 f"Could not load ticker due to {e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
+
+    @retrier
+    def fetch_funding_rate(self, pair: str) -> FundingRate:
+        """
+        Get current Funding rate from exchange.
+        On Futures markets, this is the interest rate for holding a position.
+        Won't work for non-futures markets
+        """
+        try:
+            return self._api.fetch_funding_rate(pair)
+        except ccxt.NotSupported as e:
+            raise OperationalException(
+                f"Exchange {self._api.name} does not support fetching funding rate. Message: {e}"
+            ) from e
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Could not get funding rate due to {e.__class__.__name__}. Message: {e}"
             ) from e
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
