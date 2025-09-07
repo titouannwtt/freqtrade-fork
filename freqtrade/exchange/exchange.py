@@ -2481,7 +2481,14 @@ class Exchange:
                         data.extend(new_data)
         # Sort data again after extending the result - above calls return in "async order"
         data = sorted(data, key=lambda x: x[0])
-        return pair, timeframe, candle_type, data, self._ohlcv_partial_candle
+        return (
+            pair,
+            timeframe,
+            candle_type,
+            data,
+            # funding_rates are always complete, so never need to be dropped.
+            self._ohlcv_partial_candle if candle_type != CandleType.FUNDING_RATE else False,
+        )
 
     def _try_build_from_websocket(
         self, pair: str, timeframe: str, candle_type: CandleType
@@ -2816,7 +2823,14 @@ class Exchange:
                 logger.exception("Error loading %s. Result was %s.", pair, data)
                 return pair, timeframe, candle_type, [], self._ohlcv_partial_candle
             logger.debug("Done fetching pair %s, %s interval %s...", pair, candle_type, timeframe)
-            return pair, timeframe, candle_type, data, self._ohlcv_partial_candle
+            return (
+                pair,
+                timeframe,
+                candle_type,
+                data,
+                # funding_rates are always complete, so never need to be dropped.
+                self._ohlcv_partial_candle if candle_type != CandleType.FUNDING_RATE else False,
+            )
 
         except ccxt.NotSupported as e:
             raise OperationalException(
