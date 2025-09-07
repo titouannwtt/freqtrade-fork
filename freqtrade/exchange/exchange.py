@@ -2600,10 +2600,15 @@ class Exchange:
                 CandleType.FUTURES,
             )
             if invalid_timeframe or invalid_funding:
+                timeframes_ = (
+                    ", ".join(self.timeframes)
+                    if candle_type != CandleType.FUNDING_RATE
+                    else self.get_option("funding_fee_timeframe")
+                )
                 logger.warning(
                     f"Cannot download ({pair}, {timeframe}, {candle_type}) combination as this "
                     f"timeframe is not available on {self.name}. Available timeframes are "
-                    f"{', '.join(self.timeframes)}."
+                    f"{timeframes_}."
                 )
                 continue
 
