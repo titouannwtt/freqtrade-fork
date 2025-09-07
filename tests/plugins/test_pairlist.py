@@ -1274,11 +1274,23 @@ def test_ShuffleFilter_init(mocker, whitelist_conf, caplog) -> None:
         {"method": "StaticPairList"},
         {"method": "ShuffleFilter", "seed": 43},
     ]
-    whitelist_conf["runmode"] = "backtest"
+    whitelist_conf["runmode"] = RunMode.BACKTEST
 
     exchange = get_patched_exchange(mocker, whitelist_conf)
     plm = PairListManager(exchange, whitelist_conf)
     assert log_has("Backtesting mode detected, applying seed value: 43", caplog)
+
+    plm.refresh_pairlist()
+    pl1 = deepcopy(plm.whitelist)
+    plm.refresh_pairlist()
+    assert plm.whitelist != pl1
+    assert set(plm.whitelist) == set(pl1)
+
+    caplog.clear()
+    whitelist_conf["runmode"] = RunMode.DRY_RUN
+    plm = PairListManager(exchange, whitelist_conf)
+    assert not log_has("Backtesting mode detected, applying seed value: 42", caplog)
+    assert log_has("Live mode detected, not applying seed.", caplog)
 
     with time_machine.travel("2021-09-01 05:01:00 +00:00") as t:
         plm.refresh_pairlist()
@@ -1286,15 +1298,13 @@ def test_ShuffleFilter_init(mocker, whitelist_conf, caplog) -> None:
         plm.refresh_pairlist()
         assert plm.whitelist == pl1
 
+        target = plm._pairlist_handlers[1]._random
+        shuffle_mock = mocker.patch.object(target, "shuffle", wraps=target.shuffle)
+
         t.shift(timedelta(minutes=10))
         plm.refresh_pairlist()
-        assert plm.whitelist != pl1
-
-    caplog.clear()
-    whitelist_conf["runmode"] = RunMode.DRY_RUN
-    plm = PairListManager(exchange, whitelist_conf)
-    assert not log_has("Backtesting mode detected, applying seed value: 42", caplog)
-    assert log_has("Live mode detected, not applying seed.", caplog)
+        assert shuffle_mock.call_count == 1
+        assert set(plm.whitelist) == set(pl1)
 
 
 @pytest.mark.usefixtures("init_persistence")

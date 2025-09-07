@@ -173,6 +173,7 @@ class Backtesting:
         self.disable_database_use()
         self.init_backtest_detail()
         self.pairlists = PairListManager(self.exchange, self.config, self.dataprovider)
+        self.dinamic_pairlist = False
         self._validate_pairlists_for_backtesting()
 
         self.dataprovider.add_pairlisthandler(self.pairlists)
@@ -225,6 +226,9 @@ class Backtesting:
             raise OperationalException(
                 "PrecisionFilter not allowed for backtesting multiple strategies."
             )
+
+        if "ShuffleFilter" in self.pairlists.name_list:
+            self.dinamic_pairlist = True
 
     def log_once(self, msg: str) -> None:
         """
@@ -1582,6 +1586,11 @@ class Backtesting:
         for current_time in self._time_generator(start_date, end_date):
             # Loop for each main candle.
             self.check_abort()
+
+            if self.dinamic_pairlist:
+                self.pairlists.refresh_pairlist()
+                pairs = self.pairlists.whitelist
+
             # Reset open trade count for this candle
             # Critical to avoid exceeding max_open_trades in backtesting
             # when timeframe-detail is used and trades close within the opening candle.
