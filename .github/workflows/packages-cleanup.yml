@@ -25,7 +25,7 @@ env:
 
 jobs:
   deploy-docker:
-    name: "Deploy Docker x64 and armv7l"
+    name: "Delete Packages"
     runs-on: ubuntu-24.04
     if: github.repository == 'freqtrade/freqtrade'
     permissions:
@@ -34,7 +34,7 @@ jobs:
     steps:
     - uses: actions/delete-package-versions@v5
       with:
-        package-name: ${github.event.inputs.package_name || env.PACKAGE_NAME}
+        package-name: ${{ github.event.inputs.package_name || env.PACKAGE_NAME }}
         package-type: 'container'
         min-versions-to-keep: 10
-        delete-only-untagged-versions: ${github.event.inputs.delete-untagged || 'true'}
+        delete-only-untagged-versions: ${{ github.event.inputs.delete-untagged || 'true' }}
