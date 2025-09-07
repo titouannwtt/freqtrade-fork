@@ -137,6 +137,7 @@ class Exchange:
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
         "ohlcv_partial_candle": True,
         "ohlcv_require_since": False,
+        "download_data_parallel_quick": True,
         "always_require_api_keys": False,  # purge API keys for Dry-run. Must default to false.
         # Check https://github.com/ccxt/ccxt/issues/10767 for removal of ohlcv_volume_currency
         "ohlcv_volume_currency": "base",  # "base" or "quote"
