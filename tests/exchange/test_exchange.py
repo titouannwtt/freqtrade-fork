@@ -4455,8 +4455,7 @@ def test_ohlcv_candle_limit(default_conf, mocker, exchange_name):
     for timeframe in timeframes:
         # if 'ohlcv_candle_limit_per_timeframe' in exchange._ft_has:
         # expected = exchange._ft_has['ohlcv_candle_limit_per_timeframe'][timeframe]
-        # This should only run for bittrex
-        # assert exchange_name == 'bittrex'
+        # This should only run for htx
         assert exchange.ohlcv_candle_limit(timeframe, CandleType.SPOT) == expected
 
 
