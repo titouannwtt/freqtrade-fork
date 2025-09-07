@@ -913,9 +913,9 @@ Retrieves the current funding rate for the pair and only works for futures pairs
 ``` python
 if self.dp.runmode.value in ('live', 'dry_run'):
     funding_rate = self.dp.funding_rate(metadata['pair'])
-    dataframe.iloc[-1, 'current_funding_rate'] = funding_rate['fundingRate']
-    dataframe.iloc[-1, 'next_funding_timestamp'] = funding_rate['fundingTimestamp']
-    dataframe.iloc[-1, 'next_funding_datetime'] = funding_rate['fundingDatetime']
+    dataframe['current_funding_rate'] = funding_rate['fundingRate']
+    dataframe['next_funding_timestamp'] = funding_rate['fundingTimestamp']
+    dataframe['next_funding_datetime'] = funding_rate['fundingDatetime']
 ```
 
 The funding rate structure is aligned with the funding rate structure from [ccxt](https://github.com/ccxt/ccxt/wiki/Manual#funding-rate-structure), so the result will be formatted as follows:
