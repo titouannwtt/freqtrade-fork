@@ -593,5 +593,7 @@ jobs:
   packages-cleanup:
     name: "Docker Package Cleanup"
     uses: ./.github/workflows/packages-cleanup.yml
+    permissions:
+      packages: write
     with:
       package_name: 'freqtrade'

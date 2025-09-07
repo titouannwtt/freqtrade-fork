@@ -25,9 +25,6 @@ on:
         default: true
         type: boolean
 
-permissions:
-  contents: read
-
 env:
   PACKAGE_NAME: "freqtrade"
 
