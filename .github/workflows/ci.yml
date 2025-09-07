@@ -588,3 +588,10 @@ jobs:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+
+  packages-cleanup:
+    name: "Docker Package Cleanup"
+    uses: ./.github/workflows/packages-cleanup.yml
+    with:
+      package_name: 'freqtrade'

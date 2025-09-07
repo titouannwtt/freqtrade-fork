@@ -1,6 +1,14 @@
 name: Cleanup Packages
 
 on:
+  workflow_call:
+    inputs:
+       package_name:
+        description: 'Package name to clean up'
+        required: false
+        default: 'freqtrade'
+        type: string
+
   workflow_dispatch:
     inputs:
       package_name:
@@ -12,7 +20,7 @@ on:
           - 'freqtrade'
           - 'freqtrade-devcontainer'
       delete-untagged:
-        description: 'Whether to delete untagged images'
+        description: 'Whether to delete only untagged images'
         required: false
         default: true
         type: boolean
