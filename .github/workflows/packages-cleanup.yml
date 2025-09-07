@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 env:
-  Package name: "freqtrade"
+  PACKAGE_NAME: "freqtrade"
 
 jobs:
   deploy-docker:
@@ -34,7 +34,7 @@ jobs:
     steps:
     - uses: actions/delete-package-versions@v5
       with:
-        package-name: ${inputs.package_name || env.Package name}
+        package-name: ${github.event.inputs.package_name || env.PACKAGE_NAME}
         package-type: 'container'
         min-versions-to-keep: 10
-        delete-only-untagged-versions: ${inputs.delete-untagged || 'true'}
+        delete-only-untagged-versions: ${github.event.inputs.delete-untagged || 'true'}
