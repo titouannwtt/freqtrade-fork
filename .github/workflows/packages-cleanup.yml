@@ -32,7 +32,8 @@ jobs:
       packages: write
 
     steps:
-    - uses: actions/delete-package-versions@v5
+    - name: "Delete untagged Package Versions"
+      uses: actions/delete-package-versions@v5
       with:
         package-name: ${{ github.event.inputs.package_name || env.PACKAGE_NAME }}
         package-type: 'container'
