@@ -2813,8 +2813,6 @@ class Exchange:
                     since_ms=since_ms,
                 )
             # Some exchanges sort OHLCV in ASC order and others in DESC.
-            # Ex: Bittrex returns the list of OHLCV in ASC order (oldest first, newest last)
-            # while GDAX returns the list of OHLCV in DESC order (newest first, oldest last)
             # Only sort if necessary to save computing time
             try:
                 if data and data[0][0] > data[-1][0]:
