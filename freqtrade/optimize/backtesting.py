@@ -173,7 +173,7 @@ class Backtesting:
         self.disable_database_use()
         self.init_backtest_detail()
         self.pairlists = PairListManager(self.exchange, self.config, self.dataprovider)
-        self.dinamic_pairlist = False
+        self.dynamic_pairlist = False
         self._validate_pairlists_for_backtesting()
 
         self.dataprovider.add_pairlisthandler(self.pairlists)
@@ -228,7 +228,7 @@ class Backtesting:
             )
 
         if "ShuffleFilter" in self.pairlists.name_list:
-            self.dinamic_pairlist = True
+            self.dynamic_pairlist = True
 
     def log_once(self, msg: str) -> None:
         """
@@ -1587,7 +1587,7 @@ class Backtesting:
             # Loop for each main candle.
             self.check_abort()
 
-            if self.dinamic_pairlist:
+            if self.dynamic_pairlist:
                 self.pairlists.refresh_pairlist()
                 pairs = self.pairlists.whitelist
 
