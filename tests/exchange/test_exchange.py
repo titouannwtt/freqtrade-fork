@@ -2145,7 +2145,7 @@ def test___now_is_time_to_refresh(default_conf, mocker, exchange_name, time_mach
     assert exchange._now_is_time_to_refresh(pair, "1d", candle_type) is True
 
 
-@pytest.mark.parametrize("candle_type", ["mark", "spot"])
+@pytest.mark.parametrize("candle_type", ["mark", "spot", "futures"])
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_type):
     caplog.set_level(logging.DEBUG)
