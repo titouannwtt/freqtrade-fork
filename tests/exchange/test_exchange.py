@@ -28,6 +28,7 @@ from freqtrade.exchange import (
     Bybit,
     Exchange,
     Kraken,
+    date_minus_candles,
     market_is_active,
     timeframe_to_prev_date,
 )
@@ -2144,7 +2145,7 @@ def test___now_is_time_to_refresh(default_conf, mocker, exchange_name, time_mach
     assert exchange._now_is_time_to_refresh(pair, "1d", candle_type) is True
 
 
-@pytest.mark.parametrize("candle_type", ["mark", ""])
+@pytest.mark.parametrize("candle_type", ["mark", "spot"])
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
 def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_type):
     caplog.set_level(logging.DEBUG)
@@ -2171,24 +2172,24 @@ def test_get_historic_ohlcv(default_conf, mocker, caplog, exchange_name, candle_
 
     exchange._async_get_candle_history = Mock(wraps=mock_candle_hist)
     # one_call calculation * 1.8 should do 2 calls
+    candle_limit = exchange.ohlcv_candle_limit("5m", candle_type)
+    since = date_minus_candles("5m", candle_limit)
+    ret = exchange.get_historic_ohlcv(pair, "5m", dt_ts(since), candle_type=candle_type)
 
-    since = 5 * 60 * exchange.ohlcv_candle_limit("5m", candle_type) * 1.8
-    ret = exchange.get_historic_ohlcv(
-        pair, "5m", dt_ts(dt_now() - timedelta(seconds=since)), candle_type=candle_type
-    )
-
-    assert exchange._async_get_candle_history.call_count == 2
+    if exchange_name == "okx" and candle_type == "mark":
+        expected = 4
+    else:
+        expected = 2
+    assert exchange._async_get_candle_history.call_count == expected
     # Returns twice the above OHLCV data after truncating the open candle.
-    assert len(ret) == 2
+    assert len(ret) == expected
     assert log_has_re(r"Downloaded data for .* from ccxt with length .*\.", caplog)
 
     caplog.clear()
 
     exchange._async_get_candle_history = get_mock_coro(side_effect=TimeoutError())
     with pytest.raises(TimeoutError):
-        exchange.get_historic_ohlcv(
-            pair, "5m", dt_ts(dt_now() - timedelta(seconds=since)), candle_type=candle_type
-        )
+        exchange.get_historic_ohlcv(pair, "5m", dt_ts(since), candle_type=candle_type)
     assert log_has_re(r"Async code raised an exception: .*", caplog)
 
 
