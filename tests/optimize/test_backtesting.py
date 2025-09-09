@@ -2715,3 +2715,29 @@ def test_get_backtest_metadata_filename():
     filename = "backtest_results_zip.zip"
     expected = Path("backtest_results_zip.meta.json")
     assert get_backtest_metadata_filename(filename) == expected
+
+
+@pytest.mark.parametrize("dynamic_pairlist", [True, False])
+def test_time_pair_generator_refresh_pairlist(mocker, default_conf, dynamic_pairlist):
+    patch_exchange(mocker)
+    backtesting = Backtesting(default_conf)
+    backtesting._set_strategy(backtesting.strategylist[0])
+    backtesting.dynamic_pairlist = dynamic_pairlist
+
+    refresh_mock = mocker.patch(
+        "freqtrade.plugins.pairlistmanager.PairListManager.refresh_pairlist"
+    )
+
+    # Simulate 2 candles
+    start_date = datetime(2025, 1, 1, 0, 0, tzinfo=UTC)
+    end_date = start_date + timedelta(minutes=10)
+    pairs = default_conf["exchange"]["pair_whitelist"]
+    data = {pair: [] for pair in pairs}
+
+    # Simulate backtest loop
+    list(backtesting.time_pair_generator(start_date, end_date, pairs, data))
+
+    if dynamic_pairlist:
+        assert refresh_mock.call_count == 2
+    else:
+        assert refresh_mock.call_count == 0
