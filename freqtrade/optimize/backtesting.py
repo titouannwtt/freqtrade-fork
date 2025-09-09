@@ -1587,7 +1587,7 @@ class Backtesting:
             # Loop for each main candle.
             self.check_abort()
 
-            if self.dynamic_pairlist:
+            if self.dynamic_pairlist and self.pairlists:
                 self.pairlists.refresh_pairlist()
                 pairs = self.pairlists.whitelist
 
