@@ -157,16 +157,17 @@ class PairListManager(LoggingMixin):
         :param logmethod: Function that'll be called, `logger.info` or `logger.warning`.
         :return: pairlist - blacklisted pairs
         """
-        try:
-            blacklist = self.expanded_blacklist
-        except ValueError as err:
-            logger.error(f"Pair blacklist contains an invalid Wildcard: {err}")
-            return []
-        log_once = partial(self.log_once, logmethod=logmethod)
-        for pair in pairlist.copy():
-            if pair in blacklist:
-                log_once(f"Pair {pair} in your blacklist. Removing it from whitelist...")
-                pairlist.remove(pair)
+        if self._blacklist:
+            try:
+                blacklist = self.expanded_blacklist
+            except ValueError as err:
+                logger.error(f"Pair blacklist contains an invalid Wildcard: {err}")
+                return []
+            log_once = partial(self.log_once, logmethod=logmethod)
+            for pair in pairlist.copy():
+                if pair in blacklist:
+                    log_once(f"Pair {pair} in your blacklist. Removing it from whitelist...")
+                    pairlist.remove(pair)
         return pairlist
 
     def verify_whitelist(
