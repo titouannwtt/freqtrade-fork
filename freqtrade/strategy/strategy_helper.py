@@ -93,12 +93,12 @@ def merge_informative_pair(
             how="left",
         )
 
-        if len(dataframe) > 1 and len(informative) > 0 and pd.isnull(dataframe.iloc[0][date_merge]):
+        if len(dataframe) > 1 and len(informative) > 0 and pd.isnull(dataframe.at[0, date_merge]):
             # If the start dates of the dataframes are not aligned, the first rows will be NaN
             # We can fill these with the last available informative candle before the start date
             # while still avoiding lookahead bias - as only past data is used.
             first_valid_idx = dataframe[date_merge].first_valid_index()
-            first_valid_date_merge = dataframe.loc[first_valid_idx, date_merge]
+            first_valid_date_merge = dataframe.at[first_valid_idx, date_merge]
             matching_informative_raws = informative[
                 informative[date_merge] < first_valid_date_merge
             ]
