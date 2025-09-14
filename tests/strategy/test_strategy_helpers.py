@@ -34,7 +34,8 @@ def test_merge_informative_pair():
     assert "volume_1h" in result.columns
     assert result["volume"].equals(data["volume"])
 
-    # First 3 rows are empty
+    # First 3 rows are empty.
+    # Pre-fillup doesn't happen as there is no prior candlw in the informative dataframe
     assert result.iloc[0]["date_1h"] is pd.NaT
     assert result.iloc[1]["date_1h"] is pd.NaT
     assert result.iloc[2]["date_1h"] is pd.NaT
