@@ -173,7 +173,6 @@ class Backtesting:
         self.disable_database_use()
         self.init_backtest_detail()
         self.pairlists = PairListManager(self.exchange, self.config, self.dataprovider)
-        self.dynamic_pairlist = False
         self._validate_pairlists_for_backtesting()
 
         self.dataprovider.add_pairlisthandler(self.pairlists)
@@ -212,6 +211,7 @@ class Backtesting:
         self._can_short = self.trading_mode != TradingMode.SPOT
         self._position_stacking: bool = self.config.get("position_stacking", False)
         self.enable_protections: bool = self.config.get("enable_protections", False)
+        self.dynamic_pairlist: bool = self.config.get("enable_dynamic_pairlist", False)
         migrate_data(config, self.exchange)
 
         self.init_backtest()
@@ -226,9 +226,6 @@ class Backtesting:
             raise OperationalException(
                 "PrecisionFilter not allowed for backtesting multiple strategies."
             )
-
-        if "ShuffleFilter" in self.pairlists.name_list:
-            self.dynamic_pairlist = True
 
     def log_once(self, msg: str) -> None:
         """
