@@ -1,6 +1,6 @@
 numpy==2.3.2
 pandas==2.3.2
-bottleneck==1.5.0
+bottleneck==1.6.0
 numexpr==2.11.0
 # Indicator libraries
 ft-pandas-ta==0.3.15
