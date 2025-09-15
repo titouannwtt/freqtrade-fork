@@ -140,6 +140,11 @@ This method will work for all arguments - check the "show" command for a list of
     # Get the status of the bot
     ping = client.ping()
     print(ping)
+
+    # Add pairs to blacklist
+    client.blacklist("BTC/USDT", "ETH/USDT")
+    # Add pairs to blacklist by supplying a list
+    client.blacklist(*listPairs)
     # ... 
     ```
 
@@ -167,11 +172,6 @@ blacklist
     Show the current blacklist.
 
         :param add: List of coins to add (example: "BNB/BTC")
-    
-    Example:
-        ftclient.blacklist("BTC/USDT")
-        ftclient.blacklist("BTC/USDT", "ETH/USDT", "BNB/USDT")
-        ftclient.blacklist(*listPairs)
 
 cancel_open_order
     Cancel open order for trade.
