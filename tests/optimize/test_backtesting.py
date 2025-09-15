@@ -444,7 +444,7 @@ def test_backtesting_start_no_data(default_conf, mocker, caplog, testdatadir) ->
 
     backtesting = Backtesting(default_conf)
     backtesting._set_strategy(backtesting.strategylist[0])
-    with pytest.raises(OperationalException, match="No data found. Terminating."):
+    with pytest.raises(OperationalException, match=r"No data found. Terminating\."):
         backtesting.start()
 
 
@@ -465,7 +465,7 @@ def test_backtesting_no_pair_left(default_conf, mocker) -> None:
     default_conf["export"] = "none"
     default_conf["timerange"] = "20180101-20180102"
 
-    with pytest.raises(OperationalException, match="No pair in whitelist."):
+    with pytest.raises(OperationalException, match=r"No pair in whitelist\."):
         Backtesting(default_conf)
 
     default_conf.update(
@@ -476,7 +476,7 @@ def test_backtesting_no_pair_left(default_conf, mocker) -> None:
     )
 
     with pytest.raises(
-        OperationalException, match="Detail timeframe must be smaller than strategy timeframe."
+        OperationalException, match=r"Detail timeframe must be smaller than strategy timeframe\."
     ):
         Backtesting(default_conf)
 
@@ -517,7 +517,7 @@ def test_backtesting_pairlist_list(default_conf, mocker, tickers) -> None:
     default_conf["strategy_list"] = [CURRENT_TEST_STRATEGY, "StrategyTestV2"]
     with pytest.raises(
         OperationalException,
-        match="PrecisionFilter not allowed for backtesting multiple strategies.",
+        match=r"PrecisionFilter not allowed for backtesting multiple strategies\.",
     ):
         Backtesting(default_conf)
 

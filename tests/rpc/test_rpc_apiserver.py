@@ -355,7 +355,7 @@ def test_api__init__(default_conf, mocker):
     apiserver = ApiServer(default_conf)
     apiserver.add_rpc_handler(RPC(get_patched_freqtradebot(mocker, default_conf)))
     assert apiserver._config == default_conf
-    with pytest.raises(OperationalException, match="RPC Handler already attached."):
+    with pytest.raises(OperationalException, match=r"RPC Handler already attached\."):
         apiserver.add_rpc_handler(RPC(get_patched_freqtradebot(mocker, default_conf)))
 
     apiserver.cleanup()
