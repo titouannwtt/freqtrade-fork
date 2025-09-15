@@ -1669,7 +1669,7 @@ def test_rangestabilityfilter_checks(mocker, default_conf, markets, tickers):
 
     with pytest.raises(
         OperationalException,
-        match="RangeStabilityFilter requires sort_direction to be either None.*",
+        match=r"RangeStabilityFilter requires sort_direction to be either None\.*",
     ):
         get_patched_freqtradebot(mocker, default_conf)
 
@@ -2526,7 +2526,7 @@ def test_MarketCapPairList_exceptions(mocker, default_conf_usdt, caplog):
         }
     ]
     with pytest.raises(
-        OperationalException, match="Category layer250 not in coingecko category list."
+        OperationalException, match=r"Category layer250 not in coingecko category list\."
     ):
         PairListManager(exchange, default_conf_usdt)
 
