@@ -534,7 +534,7 @@ def test_api_reloadconf(botclient):
 
 
 def test_api_pause(botclient):
-    ftbot, client = botclient
+    _ftbot, client = botclient
 
     rc = client_post(client, f"{BASE_URI}/pause")
     assert_response(rc)
@@ -3281,7 +3281,7 @@ def test_api_download_data(botclient, mocker, tmp_path):
 
 
 def test_api_markets_live(botclient):
-    ftbot, client = botclient
+    _ftbot, client = botclient
 
     rc = client_get(client, f"{BASE_URI}/markets")
     assert_response(rc, 200)

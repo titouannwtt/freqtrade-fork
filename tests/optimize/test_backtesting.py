@@ -357,7 +357,7 @@ def test_get_pair_precision_bt(default_conf, mocker) -> None:
     pair = "UNITTEST/BTC"
     backtesting.pairlists._whitelist = [pair]
     ex_mock = mocker.patch(f"{EXMS}.get_precision_price", return_value=1e-5)
-    data, timerange = backtesting.load_bt_data()
+    data, _timerange = backtesting.load_bt_data()
     assert data
 
     assert backtesting.get_pair_precision(pair, dt_utc(2018, 1, 1)) == (1e-8, TICK_SIZE)
