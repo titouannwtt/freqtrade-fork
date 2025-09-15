@@ -661,6 +661,15 @@ class FreqtradeBot(LoggingMixin):
         """
         logger.debug(f"create_trade for pair {pair}")
 
+        delivery_time = self.exchange.check_delivery_time(pair)
+        if delivery_time:
+            delivery_date = dt_from_ts(delivery_time)
+            logger.info(
+                f"Pair {pair} has a delivery time of "
+                f"{delivery_date.strftime(constants.DATETIME_PRINT_FORMAT)}. Skipping."
+            )
+            return False
+
         analyzed_df, _ = self.dataprovider.get_analyzed_dataframe(pair, self.strategy.timeframe)
         nowtime = analyzed_df.iloc[-1]["date"] if len(analyzed_df) > 0 else None
 

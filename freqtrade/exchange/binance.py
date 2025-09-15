@@ -59,6 +59,7 @@ class Binance(Exchange):
             "BNFCR": "USDC",
             "BFUSD": "USDT",
         },
+        "delivery_column": "deliveryDate",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
