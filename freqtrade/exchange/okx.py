@@ -46,7 +46,6 @@ class Okx(Exchange):
         },
         "stoploss_blocks_assets": False,
         "ws_enabled": True,
-        "delivery_column": "expTime",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [

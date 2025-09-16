@@ -3912,31 +3912,13 @@ class Exchange:
         else:
             raise ExchangeError(f"Cannot get maintenance ratio using {self.name}")
 
-    def check_delivery_time(self, pair: str) -> int:
+    def check_delisting_time(self, pair: str) -> datetime | None:
         """
-        Check if the futures contract is a delivery contract
+        Check if the pair gonna be delisted.
+        This function should be overridden by the exchange class if the exchange
+        provides such information.
+        By default, it returns None.
         :param pair: Market symbol
-        :return: True if the contract is a delivery contract, False otherwise
+        :return: Datetime if the pair gonna be delisted, None otherwise
         """
-        if self.trading_mode != TradingMode.FUTURES:
-            return 0
-
-        column_to_check = self._ft_has.get("delivery_column", "")
-
-        delivery_time = self.markets.get(pair, {}).get("info", {}).get(column_to_check, None)
-        if delivery_time:
-            if isinstance(delivery_time, str) and (delivery_time != ""):
-                delivery_time = int(delivery_time)
-
-            if self.name == "Binance":
-                # Binance set a very high delivery time for all perpetuals.
-                # We compare with delivery time of BTC/USDT:USDT which assumed to never be delisted
-                btc_delivery_time = (
-                    self.markets.get("BTC/USDT:USDT", {}).get("info", {}).get(column_to_check, None)
-                )
-
-                if delivery_time == btc_delivery_time:
-                    return 0
-
-            return delivery_time
-        return 0
+        return None

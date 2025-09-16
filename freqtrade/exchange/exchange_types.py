@@ -63,9 +63,6 @@ class FtHas(TypedDict, total=False):
     # Websocket control
     ws_enabled: bool
 
-    # Delisting checks
-    delivery_column: str
-
 
 class Ticker(TypedDict):
     symbol: str

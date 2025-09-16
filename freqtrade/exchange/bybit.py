@@ -59,7 +59,6 @@ class Bybit(Exchange):
         "exchange_has_overrides": {
             "fetchOrder": True,
         },
-        "delivery_column": "deliveryTime",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [

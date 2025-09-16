@@ -59,7 +59,6 @@ class Binance(Exchange):
             "BNFCR": "USDC",
             "BFUSD": "USDT",
         },
-        "delivery_column": "deliveryDate",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -433,3 +432,31 @@ class Binance(Exchange):
         return await super()._async_get_trade_history_id(
             pair, until=until, since=since, from_id=from_id
         )
+
+    def check_delisting_futures(self, pair: str) -> datetime | None:
+        delivery_time = self.markets.get(pair, {}).get("info", {}).get("deliveryDate", None)
+        if delivery_time:
+            if isinstance(delivery_time, str) and (delivery_time != ""):
+                delivery_time = int(delivery_time)
+
+            # Binance set a very high delivery time for all perpetuals.
+            # We compare with delivery time of BTC/USDT:USDT which assumed to never be delisted
+            btc_delivery_time = (
+                self.markets.get("BTC/USDT:USDT", {}).get("info", {}).get("deliveryDate", None)
+            )
+
+            if delivery_time == btc_delivery_time:
+                return None
+
+            delivery_time = dt_from_ts(delivery_time)
+
+        return delivery_time
+
+    def check_delisting_spot(self, pair: str) -> datetime | None:
+        return None
+
+    def check_delisting_time(self, pair: str) -> datetime | None:
+        if self.trading_mode == TradingMode.SPOT:
+            return self.check_delisting_spot(pair)
+
+        return self.check_delisting_futures(pair)
