@@ -3924,7 +3924,7 @@ class Exchange:
         column_to_check = self._ft_has.get("delivery_column", "")
 
         delivery_time = self.markets.get(pair, {}).get("info", {}).get(column_to_check, None)
-        if delivery_time is not None:
+        if delivery_time:
             if isinstance(delivery_time, str) and (delivery_time != ""):
                 delivery_time = int(delivery_time)
 
@@ -3939,6 +3939,4 @@ class Exchange:
                     return 0
 
             return delivery_time
-        # if "delivery" in market and market["delivery"] is not None:
-        #     return True
         return 0
