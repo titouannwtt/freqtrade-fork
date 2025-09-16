@@ -666,8 +666,12 @@ class FreqtradeBot(LoggingMixin):
             delivery_date = dt_from_ts(delivery_time)
             logger.info(
                 f"Pair {pair} has a delivery time of "
-                f"{delivery_date.strftime(constants.DATETIME_PRINT_FORMAT)}. Skipping."
+                f"{delivery_date.strftime(constants.DATETIME_PRINT_FORMAT)}."
             )
+
+            if pair not in self.pairlists.blacklist:
+                self.pairlists.blacklist.append(pair)
+
             return False
 
         analyzed_df, _ = self.dataprovider.get_analyzed_dataframe(pair, self.strategy.timeframe)
