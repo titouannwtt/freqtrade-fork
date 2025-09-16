@@ -520,6 +520,5 @@ class Binance(Exchange):
                         continue
 
                     cache[ft_symbol] = delist_dt
-                    logger.info(f"{ft_symbol} delisted at {delist_dt}")
 
             return cache.get(pair, None)
