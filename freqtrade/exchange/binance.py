@@ -3,8 +3,10 @@
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Lock
 
 import ccxt
+from cachetools import TTLCache
 from pandas import DataFrame
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
@@ -67,6 +69,11 @@ class Binance(Exchange):
         (TradingMode.FUTURES, MarginMode.CROSS),
         (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._spot_delist_schedule_cache: TTLCache = TTLCache(maxsize=100, ttl=300)
+        self._spot_delist_schedule_cache_lock = Lock()
 
     def get_proxy_coin(self) -> str:
         """
@@ -452,11 +459,67 @@ class Binance(Exchange):
 
         return delivery_time
 
-    def check_delisting_spot(self, pair: str) -> datetime | None:
-        return None
-
     def check_delisting_time(self, pair: str) -> datetime | None:
         if self.trading_mode == TradingMode.SPOT:
-            return self.check_delisting_spot(pair)
+            return self.get_spot_pair_delist_time(pair, refresh=False)
 
         return self.check_delisting_futures(pair)
+
+    def get_spot_delist_schedule(self):
+        try:
+            delist_schedule = self._api.sapi_get_spot_delist_schedule()
+            return delist_schedule
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.NetworkError, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Could not get delist schedule {e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
+
+    def get_spot_pair_delist_time(self, pair: str, refresh: bool = True) -> datetime | None:
+        """
+        Get the delisting time for a pair if it will be delisted
+        :param pair: Pair to get the delisting time for
+        :param refresh: true if you need fresh data
+        :return: int: delisting time None if not delisting
+        """
+
+        if not pair:
+            return None
+
+        cache = self._spot_delist_schedule_cache
+        lock = self._spot_delist_schedule_cache_lock
+
+        if not refresh:
+            with lock:
+                delist_time = cache.get(pair, None)
+
+                if delist_time:
+                    return delist_time
+
+        delist_schedule = self.get_spot_delist_schedule()
+
+        if delist_schedule is None:
+            return None
+
+        with lock:
+            for schedule in delist_schedule:
+                delist_dt = dt_from_ts(int(schedule["delistTime"]))
+                for symbol in schedule["symbols"]:
+                    ft_symbol = next(
+                        (
+                            pair
+                            for pair, market in self.markets.items()
+                            if market.get("id", None) == symbol
+                        ),
+                        None,
+                    )
+                    if ft_symbol is None:
+                        continue
+
+                    cache[ft_symbol] = delist_dt
+                    logger.info(f"{ft_symbol} delisted at {delist_dt}")
+
+            return cache.get(pair, None)
