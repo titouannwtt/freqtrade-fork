@@ -3923,12 +3923,20 @@ class Exchange:
 
         column_to_check = self._ft_has.get("delivery_column", "")
 
-        logger.info(f"Checking delivery time at {column_to_check}")
-
         delivery_time = self.markets.get(pair, {}).get("info", {}).get(column_to_check, None)
         if delivery_time is not None:
             if isinstance(delivery_time, str) and (delivery_time != ""):
                 delivery_time = int(delivery_time)
+
+            if self.name == "Binance":
+                # Binance set a very high delivery time for all perpetuals.
+                # We compare with delivery time of BTC/USDT:USDT which assumed to never be delisted
+                btc_delivery_time = (
+                    self.markets.get("BTC/USDT:USDT", {}).get("info", {}).get(column_to_check, None)
+                )
+
+                if delivery_time == btc_delivery_time:
+                    return 0
 
             return delivery_time
         # if "delivery" in market and market["delivery"] is not None:
