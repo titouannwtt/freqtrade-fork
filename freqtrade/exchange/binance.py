@@ -10,7 +10,7 @@ from cachetools import TTLCache
 from pandas import DataFrame
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
-from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import TRADE_MODES, CandleType, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.binance_public_data import (
@@ -460,6 +460,9 @@ class Binance(Exchange):
         return delivery_time
 
     def check_delisting_time(self, pair: str) -> datetime | None:
+        if self._config["runmode"] not in TRADE_MODES:
+            return None
+
         if self.trading_mode == TradingMode.SPOT:
             return self.get_spot_pair_delist_time(pair, refresh=False)
 
