@@ -74,20 +74,17 @@ class DelistFilter(IPairList):
         delist_date = self._exchange.check_delisting_time(pair)
 
         if delist_date is not None:
-            if self._max_days_from_now == 0:
+            remove_pair = self._max_days_from_now == 0
+            if self._max_days_from_now > 0:
+                current_datetime = datetime.now(UTC)
+                max_delist_date = current_datetime + timedelta(days=self._max_days_from_now)
+                remove_pair = delist_date <= max_delist_date
+
+            if remove_pair:
                 self.log_once(
                     f"Removed {pair} from whitelist, because it will be delisted on {delist_date}.",
                     logger.info,
                 )
                 return False
-            else:
-                current_datetime = datetime.now(UTC)
-                max_delist_date = current_datetime + timedelta(days=self._max_days_from_now)
-                if delist_date <= max_delist_date:
-                    self.log_once(
-                        f"Removed {pair} from whitelist, because it will be delisted on {delist_date}.",
-                        logger.info,
-                    )
-                    return False
 
         return True
