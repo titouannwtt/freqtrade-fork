@@ -49,7 +49,7 @@ options:
                         backtesting down by a considerable amount, but will
                         include configured protections
   --enable-dynamic-pairlist
-                        Enables dynamic pairlisting in backtesting. The
+                        Enables dynamic pairlist refreshes in backtesting. The
                         pairlist will be generated for each new candle if
                         you're using a pairlist handler that supports this
                         feature, for example, ShuffleFilter.

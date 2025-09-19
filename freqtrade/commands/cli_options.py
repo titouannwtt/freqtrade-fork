@@ -192,7 +192,7 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "enable_dynamic_pairlist": Arg(
         "--enable-dynamic-pairlist",
-        help="Enables dynamic pairlisting in backtesting. "
+        help="Enables dynamic pairlist refreshes in backtesting. "
         "The pairlist will be generated for each new candle if you're using a "
         "pairlist handler that supports this feature, for example, ShuffleFilter.",
         action="store_true",
