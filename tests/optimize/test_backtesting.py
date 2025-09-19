@@ -27,7 +27,7 @@ from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename, 
 from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.persistence import LocalTrade, Trade
 from freqtrade.resolvers import StrategyResolver
-from freqtrade.util.datetime_helpers import dt_utc
+from freqtrade.util import dt_now, dt_utc
 from tests.conftest import (
     CURRENT_TEST_STRATEGY,
     EXMS,
@@ -2720,9 +2720,10 @@ def test_get_backtest_metadata_filename():
 @pytest.mark.parametrize("dynamic_pairlist", [True, False])
 def test_time_pair_generator_refresh_pairlist(mocker, default_conf, dynamic_pairlist):
     patch_exchange(mocker)
+    default_conf["enable_dynamic_pairlist"] = dynamic_pairlist
     backtesting = Backtesting(default_conf)
     backtesting._set_strategy(backtesting.strategylist[0])
-    backtesting.dynamic_pairlist = dynamic_pairlist
+    assert backtesting.dynamic_pairlist == dynamic_pairlist
 
     refresh_mock = mocker.patch(
         "freqtrade.plugins.pairlistmanager.PairListManager.refresh_pairlist"
@@ -2746,16 +2747,17 @@ def test_time_pair_generator_refresh_pairlist(mocker, default_conf, dynamic_pair
 @pytest.mark.parametrize("dynamic_pairlist", [True, False])
 def test_time_pair_generator_open_trades_first(mocker, default_conf, dynamic_pairlist):
     patch_exchange(mocker)
+    default_conf["enable_dynamic_pairlist"] = dynamic_pairlist
     backtesting = Backtesting(default_conf)
     backtesting._set_strategy(backtesting.strategylist[0])
-    backtesting.dynamic_pairlist = dynamic_pairlist
+    assert backtesting.dynamic_pairlist == dynamic_pairlist
 
     pairs = ["XRP/BTC", "LTC/BTC", "NEO/BTC", "ETH/BTC"]
 
     # Simulate open trades
     trades = [
-        LocalTrade(pair="XRP/BTC", open_date=datetime.now(tz=UTC), amount=1, open_rate=1),
-        LocalTrade(pair="NEO/BTC", open_date=datetime.now(tz=UTC), amount=1, open_rate=1),
+        LocalTrade(pair="XRP/BTC", open_date=dt_now(), amount=1, open_rate=1),
+        LocalTrade(pair="NEO/BTC", open_date=dt_now(), amount=1, open_rate=1),
     ]
     LocalTrade.bt_trades_open = trades
     LocalTrade.bt_trades_open_pp = {
