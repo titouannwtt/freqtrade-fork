@@ -9,7 +9,7 @@ from copy import deepcopy
 
 from cachetools import LRUCache
 
-from freqtrade.enums.runmode import RunMode
+from freqtrade.enums import RunMode
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 
@@ -25,7 +25,8 @@ class StaticPairList(IPairList):
         super().__init__(*args, **kwargs)
 
         self._allow_inactive = self._pairlistconfig.get("allow_inactive", False)
-        self._pair_cache: LRUCache = LRUCache(maxsize=1)
+        # Pair cache - only used for optimize modes
+        self._bt_pair_cache: LRUCache = LRUCache(maxsize=1)
 
     @property
     def needstickers(self) -> bool:
@@ -64,7 +65,7 @@ class StaticPairList(IPairList):
         :param tickers: Tickers (from exchange.get_tickers). May be cached.
         :return: List of pairs
         """
-        pairlist = self._pair_cache.get("pairlist")
+        pairlist = self._bt_pair_cache.get("pairlist")
 
         if not pairlist:
             wl = self.verify_whitelist(
@@ -78,7 +79,7 @@ class StaticPairList(IPairList):
                 pairlist = self._whitelist_for_active_markets(wl)
 
             if self._config["runmode"] in (RunMode.BACKTEST, RunMode.HYPEROPT):
-                self._pair_cache["pairlist"] = pairlist.copy()
+                self._bt_pair_cache["pairlist"] = pairlist.copy()
 
         return pairlist
 
