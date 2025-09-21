@@ -362,9 +362,7 @@ class Telegram(RPCHandler):
             await self._app.updater.start_polling(
                 bootstrap_retries=-1,
                 timeout=20,
-                # read_latency=60,  # Assumed transmission latency
                 drop_pending_updates=True,
-                # stop_signals=[],  # Necessary as we don't run on the main thread
             )
             while True:
                 await asyncio.sleep(10)
