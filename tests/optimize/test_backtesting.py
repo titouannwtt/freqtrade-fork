@@ -27,7 +27,7 @@ from freqtrade.optimize.backtest_caching import get_backtest_metadata_filename, 
 from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.persistence import LocalTrade, Trade
 from freqtrade.resolvers import StrategyResolver
-from freqtrade.util.datetime_helpers import dt_utc
+from freqtrade.util import dt_now, dt_utc
 from tests.conftest import (
     CURRENT_TEST_STRATEGY,
     EXMS,
@@ -2715,3 +2715,75 @@ def test_get_backtest_metadata_filename():
     filename = "backtest_results_zip.zip"
     expected = Path("backtest_results_zip.meta.json")
     assert get_backtest_metadata_filename(filename) == expected
+
+
+@pytest.mark.parametrize("dynamic_pairlist", [True, False])
+def test_time_pair_generator_refresh_pairlist(mocker, default_conf, dynamic_pairlist):
+    patch_exchange(mocker)
+    default_conf["enable_dynamic_pairlist"] = dynamic_pairlist
+    backtesting = Backtesting(default_conf)
+    backtesting._set_strategy(backtesting.strategylist[0])
+    assert backtesting.dynamic_pairlist == dynamic_pairlist
+
+    refresh_mock = mocker.patch(
+        "freqtrade.plugins.pairlistmanager.PairListManager.refresh_pairlist"
+    )
+
+    # Simulate 2 candles
+    start_date = datetime(2025, 1, 1, 0, 0, tzinfo=UTC)
+    end_date = start_date + timedelta(minutes=10)
+    pairs = default_conf["exchange"]["pair_whitelist"]
+    data = {pair: [] for pair in pairs}
+
+    # Simulate backtest loop
+    list(backtesting.time_pair_generator(start_date, end_date, pairs, data))
+
+    if dynamic_pairlist:
+        assert refresh_mock.call_count == 2
+    else:
+        assert refresh_mock.call_count == 0
+
+
+@pytest.mark.parametrize("dynamic_pairlist", [True, False])
+def test_time_pair_generator_open_trades_first(mocker, default_conf, dynamic_pairlist):
+    patch_exchange(mocker)
+    default_conf["enable_dynamic_pairlist"] = dynamic_pairlist
+    backtesting = Backtesting(default_conf)
+    backtesting._set_strategy(backtesting.strategylist[0])
+    assert backtesting.dynamic_pairlist == dynamic_pairlist
+
+    pairs = ["XRP/BTC", "LTC/BTC", "NEO/BTC", "ETH/BTC"]
+
+    # Simulate open trades
+    trades = [
+        LocalTrade(pair="XRP/BTC", open_date=dt_now(), amount=1, open_rate=1),
+        LocalTrade(pair="NEO/BTC", open_date=dt_now(), amount=1, open_rate=1),
+    ]
+    LocalTrade.bt_trades_open = trades
+    LocalTrade.bt_trades_open_pp = {
+        "XRP/BTC": [trades[0]],
+        "NEO/BTC": [trades[1]],
+        "LTC/BTC": [],
+        "ETH/BTC": [],
+    }
+
+    start_date = datetime(2025, 1, 1, 0, 0, tzinfo=UTC)
+    end_date = start_date + timedelta(minutes=5)
+    dummy_row = (end_date, 1.0, 1.1, 0.9, 1.0, 0, 0, 0, 0, None, None)
+    data = {pair: [dummy_row] for pair in pairs}
+
+    def mock_refresh(self):
+        # Simulate shuffle
+        self._whitelist = pairs[::-1]  # ['ETH/BTC', 'NEO/BTC', 'LTC/BTC', 'XRP/BTC']
+
+    mocker.patch("freqtrade.plugins.pairlistmanager.PairListManager.refresh_pairlist", mock_refresh)
+
+    processed_pairs = []
+    for _, pair, _, _, _ in backtesting.time_pair_generator(start_date, end_date, pairs, data):
+        processed_pairs.append(pair)
+
+    # Open trades first in both cases
+    if dynamic_pairlist:
+        assert processed_pairs == ["XRP/BTC", "NEO/BTC", "ETH/BTC", "LTC/BTC"]
+    else:
+        assert processed_pairs == ["XRP/BTC", "NEO/BTC", "LTC/BTC", "ETH/BTC"]
