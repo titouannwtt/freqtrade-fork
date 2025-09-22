@@ -1840,7 +1840,8 @@ def test_spreadfilter_invalid_data(mocker, default_conf, markets, tickers, caplo
         ),  # ConfigurationError expected
         (
             {"method": "DelistFilter", "max_days_from_now": 1},
-            "[{'DelistFilter': 'DelistFilter - Filtering pairs that will be delisted in the next 1 days.'}]",
+            "[{'DelistFilter': 'DelistFilter - Filtering pairs that will be delisted in the "
+            "next 1 days.'}]",
             None,
         ),  # ConfigurationError expected
         (

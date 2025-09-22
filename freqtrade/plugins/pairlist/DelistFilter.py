@@ -86,7 +86,8 @@ class DelistFilter(IPairList):
 
             if remove_pair:
                 self.log_once(
-                    f"Removed {pair} from whitelist, because it will be delisted on {format_date(delist_date)}.",
+                    f"Removed {pair} from whitelist, because it will be delisted on "
+                    f"{format_date(delist_date)}.",
                     logger.info,
                 )
                 return False
