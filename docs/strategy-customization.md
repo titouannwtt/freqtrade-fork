@@ -776,7 +776,6 @@ Please always check the mode of operation to select the correct method to get da
 ### Possible options for DataProvider
 
 - [`available_pairs`](#available_pairs) - Property with tuples listing cached pairs with their timeframe (pair, timeframe).
-- [`check_delisting(pair)`](#check_delisting) - Return Datetime of the pair delisting schedule if any, otherwise return None
 - [`current_whitelist()`](#current_whitelist) - Returns a current list of whitelisted pairs. Useful for accessing dynamic whitelists (i.e. VolumePairlist)
 - [`get_pair_dataframe(pair, timeframe)`](#get_pair_dataframepair-timeframe) - This is a universal method, which returns either historical data (for backtesting) or cached live data (for the Dry-Run and Live-Run modes).
 - [`get_analyzed_dataframe(pair, timeframe)`](#get_analyzed_dataframepair-timeframe) - Returns the analyzed dataframe (after calling `populate_indicators()`, `populate_buy()`, `populate_sell()`) and the time of the latest analysis.
@@ -785,6 +784,7 @@ Please always check the mode of operation to select the correct method to get da
 - `ohlcv(pair, timeframe)` - Currently cached candle (OHLCV) data for the pair, returns DataFrame or empty DataFrame.
 - [`orderbook(pair, maximum)`](#orderbookpair-maximum) - Returns latest orderbook data for the pair, a dict with bids/asks with a total of `maximum` entries.
 - [`ticker(pair)`](#tickerpair) - Returns current ticker data for the pair. See [ccxt documentation](https://github.com/ccxt/ccxt/wiki/Manual#price-tickers) for more details on the Ticker data structure.
+- [`check_delisting(pair)`](#check_delistingpair) - Return Datetime of the pair delisting schedule if any, otherwise return None
 - [`funding_rate(pair)`](#funding_ratepair) - Returns current funding rate data for the pair.
 - `runmode` - Property containing the current runmode.
 
@@ -795,15 +795,6 @@ Please always check the mode of operation to select the correct method to get da
 ``` python
 for pair, timeframe in self.dp.available_pairs:
     print(f"available {pair}, {timeframe}")
-```
-
-### *check_delisting(pair)*
-
-```python
-def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, **kwargs):
-    delisting_dt = self.dp.check_delisting(pair)
-    if delisting_dt is not None:
-        return "delist"
 ```
 
 ### *current_whitelist()*
@@ -913,6 +904,22 @@ if self.dp.runmode.value in ('live', 'dry_run'):
     vary for different exchanges. For instance, many exchanges do not return `vwap` values, and some exchanges
     do not always fill in the `last` field (so it can be None), etc. So you need to carefully verify the ticker
     data returned from the exchange and add appropriate error handling / defaults.
+
+!!! Warning "Warning about backtesting"
+    This method will always return up-to-date / real-time values. As such, usage during backtesting / hyperopt without runmode checks will lead to wrong results, e.g. your whole dataframe will contain the same single value in all rows.
+
+### *check_delisting(pair)*
+
+```python
+def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, **kwargs):
+    if self.dp.runmode.value in ('live', 'dry_run'):
+        delisting_dt = self.dp.check_delisting(pair)
+        if delisting_dt is not None:
+            return "delist"
+```
+
+!!! Note "Availabiity of delisting information"
+    This method is only available for certain exchanges and will return `None` in cases this is not available.
 
 !!! Warning "Warning about backtesting"
     This method will always return up-to-date / real-time values. As such, usage during backtesting / hyperopt without runmode checks will lead to wrong results, e.g. your whole dataframe will contain the same single value in all rows.
