@@ -1834,6 +1834,16 @@ def test_spreadfilter_invalid_data(mocker, default_conf, markets, tickers, caplo
             "PriceFilter requires max_value to be >= 0",
         ),  # OperationalException expected
         (
+            {"method": "DelistFilter", "max_days_from_now": -1},
+            None,
+            "DelistFilter requires max_days_from_now to be >= 0",
+        ),  # ConfigurationError expected
+        (
+            {"method": "DelistFilter", "max_days_from_now": 1},
+            "[{'DelistFilter': 'DelistFilter - Filtering pairs that will be delisted in the next 1 days.'}]",
+            None,
+        ),  # ConfigurationError expected
+        (
             {"method": "RangeStabilityFilter", "lookback_days": 10, "min_rate_of_change": 0.01},
             "[{'RangeStabilityFilter': 'RangeStabilityFilter - Filtering pairs with rate "
             "of change below 0.01 over the last days.'}]",
