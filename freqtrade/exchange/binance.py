@@ -41,6 +41,7 @@ class Binance(Exchange):
         "fetch_orders_limit_minutes": None,
         "l2_limit_range": [5, 10, 20, 50, 100, 500, 1000],
         "ws_enabled": True,
+        "has_delisting": True,
     }
     _ft_has_futures: FtHas = {
         "funding_fee_candle_limit": 1000,

@@ -5,7 +5,7 @@ Delist pair list filter
 import logging
 from datetime import UTC, datetime, timedelta
 
-from freqtrade.exceptions import OperationalException
+from freqtrade.exceptions import ConfigurationError
 from freqtrade.exchange.exchange_types import Ticker
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 
@@ -21,8 +21,11 @@ class DelistFilter(IPairList):
 
         self._max_days_from_now = self._pairlistconfig.get("max_days_from_now", 0)
         if self._max_days_from_now < 0:
-            raise OperationalException("DelistFilter requires max_days_from_now to be >= 0")
-        self._enabled = self._max_days_from_now >= 0
+            raise ConfigurationError("DelistFilter requires max_days_from_now to be >= 0")
+        if not self._exchange._ft_has["has_delisting"]:
+            raise ConfigurationError(
+                "DelistFilter doesn't support this exchange and trading mode combination.",
+            )
 
     @property
     def needstickers(self) -> bool:
@@ -49,7 +52,7 @@ class DelistFilter(IPairList):
 
     @staticmethod
     def description() -> str:
-        return "Filter pairs that will bbe delisted on exchange."
+        return "Filter pairs that will be delisted on exchange."
 
     @staticmethod
     def available_parameters() -> dict[str, PairlistParameter]:

@@ -409,7 +409,9 @@ This filter allows freqtrade to ignore pairs until they have been listed for at 
 
 #### DelistFilter
 
-Removes pairs that will be delisted on the exchange maximum `max_days_from_now` days from now (defaults to `0` which remove all future delisted pairs no matter how far from now).
+Removes pairs that will be delisted on the exchange maximum `max_days_from_now` days from now (defaults to `0` which remove all future delisted pairs no matter how far from now). Currently this filter only supports following exchanges:
+
+* Binance (Spot and Futures)
 
 !!! Warning "Backtesting"
     `DelistFilter` does not support backtesting mode.

@@ -84,6 +84,7 @@ Check the [configuration documentation](configuration.md) about how to set the b
 **Always use dry mode when testing as this gives you an idea of how your strategy will work in reality without risking capital.**
 
 ## Diving in deeper
+
 **For the following section we will use the [user_data/strategies/sample_strategy.py](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/templates/sample_strategy.py)
 file as reference.**
 
@@ -99,9 +100,9 @@ file as reference.**
     Some common patterns for this are listed in the [Common Mistakes](#common-mistakes-when-developing-strategies) section of this document.
 
 ??? Hint "Lookahead and recursive analysis"
-    Freqtrade includes two helpful commands to help assess common lookahead (using future data) and 
-    recursive bias (variance in indicator values) issues. Before running a strategy in dry or live more, 
-    you should always use these commands first. Please check the relevant documentation for 
+    Freqtrade includes two helpful commands to help assess common lookahead (using future data) and
+    recursive bias (variance in indicator values) issues. Before running a strategy in dry or live more,
+    you should always use these commands first. Please check the relevant documentation for
     [lookahead](lookahead-analysis.md) and [recursive](recursive-analysis.md) analysis.
 
 ### Dataframe
@@ -154,7 +155,7 @@ Vectorized operations perform calculations across the whole range of data and ar
 
 !!! Warning "Trade order assumptions"
     In backtesting, signals are generated on candle close. Trades are then initiated immeditely on next candle open.
-    
+
     In dry and live, this may be delayed due to all pair dataframes needing to be analysed first, then trade processing 
     for each of those pairs happens. This means that in dry/live you need to be mindful of having as low a computation 
     delay as possible, usually by running a low number of pairs and having a CPU with a good clock speed.
@@ -284,7 +285,7 @@ It's important to always return the dataframe without removing/modifying the col
 
 This method will also define a new column, `"enter_long"` (`"enter_short"` for shorts), which needs to contain `1` for entries, and `0` for "no action". `enter_long` is a mandatory column that must be set even if the strategy is shorting only.
 
-You can name your entry signals by using the `"enter_tag"` column, which can help debug and assess your strategy later. 
+You can name your entry signals by using the `"enter_tag"` column, which can help debug and assess your strategy later.
 
 Sample from `user_data/strategies/sample_strategy.py`:
 
@@ -555,7 +556,7 @@ A full sample can be found [in the DataProvider section](#complete-dataprovider-
 
 ??? Note "Alternative candle types"
     Informative_pairs can also provide a 3rd tuple element defining the candle type explicitly.
-    Availability of alternative candle-types will depend on the trading-mode and the exchange. 
+    Availability of alternative candle-types will depend on the trading-mode and the exchange.
     In general, spot pairs cannot be used in futures markets, and futures candles can't be used as informative pairs for spot bots.
     Details about this may vary, if they do, this can be found in the exchange documentation.
 
@@ -775,6 +776,7 @@ Please always check the mode of operation to select the correct method to get da
 ### Possible options for DataProvider
 
 - [`available_pairs`](#available_pairs) - Property with tuples listing cached pairs with their timeframe (pair, timeframe).
+- [`check_delisting(pair)`](#check_delisting) - Return Datetime of the pair delisting schedule if any, otherwise return None
 - [`current_whitelist()`](#current_whitelist) - Returns a current list of whitelisted pairs. Useful for accessing dynamic whitelists (i.e. VolumePairlist)
 - [`get_pair_dataframe(pair, timeframe)`](#get_pair_dataframepair-timeframe) - This is a universal method, which returns either historical data (for backtesting) or cached live data (for the Dry-Run and Live-Run modes).
 - [`get_analyzed_dataframe(pair, timeframe)`](#get_analyzed_dataframepair-timeframe) - Returns the analyzed dataframe (after calling `populate_indicators()`, `populate_buy()`, `populate_sell()`) and the time of the latest analysis.
@@ -793,6 +795,15 @@ Please always check the mode of operation to select the correct method to get da
 ``` python
 for pair, timeframe in self.dp.available_pairs:
     print(f"available {pair}, {timeframe}")
+```
+
+### *check_delisting(pair)*
+
+```python
+def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, **kwargs):
+    delisting_dt = self.dp.check_delisting(pair)
+    if delisting_dt is not None:
+        return "delist"
 ```
 
 ### *current_whitelist()*

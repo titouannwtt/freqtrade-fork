@@ -166,6 +166,7 @@ class Exchange:
         "proxy_coin_mapping": {},  # Mapping for proxy coins
         # Expected to be in the format {"fetchOHLCV": True} or {"fetchOHLCV": False}
         "ws_enabled": False,  # Set to true for exchanges with tested websocket support
+        "has_delisting": False,  # Set to true for exchanges that have delisting pair checks
     }
     _ft_has: FtHas = {}
     _ft_has_futures: FtHas = {}
