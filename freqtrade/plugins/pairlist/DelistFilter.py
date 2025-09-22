@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from freqtrade.exceptions import ConfigurationError
 from freqtrade.exchange.exchange_types import Ticker
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
+from freqtrade.util import format_date
 
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class DelistFilter(IPairList):
 
             if remove_pair:
                 self.log_once(
-                    f"Removed {pair} from whitelist, because it will be delisted on {delist_date}.",
+                    f"Removed {pair} from whitelist, because it will be delisted on {format_date(delist_date)}.",
                     logger.info,
                 )
                 return False
