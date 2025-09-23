@@ -473,7 +473,7 @@ class Binance(Exchange):
             return delist_schedule
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
-        except (ccxt.NetworkError, ccxt.ExchangeError) as e:
+        except (ccxt.NetworkError, ccxt.OperationFailed, ccxt.ExchangeError) as e:
             raise TemporaryError(
                 f"Could not get delist schedule {e.__class__.__name__}. Message: {e}"
             ) from e
