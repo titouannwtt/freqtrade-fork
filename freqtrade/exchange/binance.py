@@ -9,7 +9,7 @@ from cachetools import TTLCache
 from pandas import DataFrame
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
-from freqtrade.enums import TRADE_MODES, CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import TRADE_MODES, CandleType, MarginMode, PriceType, RunMode, TradingMode
 from freqtrade.exceptions import DDosProtection, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.binance_public_data import (
@@ -462,10 +462,9 @@ class Binance(Exchange):
         if self._config["runmode"] not in TRADE_MODES:
             return None
 
-        if self.trading_mode == TradingMode.SPOT:
-            return self.get_spot_pair_delist_time(pair, refresh=False)
-
-        return self.check_delisting_futures(pair)
+        if self.trading_mode == TradingMode.FUTURES:
+            return self.check_delisting_futures(pair)
+        return self.get_spot_pair_delist_time(pair, refresh=False)
 
     def get_spot_delist_schedule(self):
         try:
@@ -480,7 +479,7 @@ class Binance(Exchange):
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
-    def get_spot_pair_delist_time(self, pair: str, refresh: bool = True) -> datetime | None:
+    def get_spot_pair_delist_time(self, pair: str, refresh: bool = False) -> datetime | None:
         """
         Get the delisting time for a pair if it will be delisted
         :param pair: Pair to get the delisting time for
@@ -488,15 +487,14 @@ class Binance(Exchange):
         :return: int: delisting time None if not delisting
         """
 
-        if not pair:
+        if not pair or not self._config["runmode"] == RunMode.LIVE:
+            # Endpoint only works in live mode as it requires API keys
             return None
 
         cache = self._spot_delist_schedule_cache
 
         if not refresh:
-            delist_time = cache.get(pair, None)
-
-            if delist_time:
+            if delist_time := cache.get(pair, None):
                 return delist_time
 
         delist_schedule = self.get_spot_delist_schedule()
