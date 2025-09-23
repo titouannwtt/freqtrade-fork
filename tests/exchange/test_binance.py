@@ -1111,7 +1111,7 @@ async def test__async_get_trade_history_id_binance_fast(
     exchange.close()
 
 
-def test_check_delisting_time(default_conf_usdt, mocker):
+def test_check_delisting_time_binance(default_conf_usdt, mocker):
     exchange = get_patched_exchange(mocker, default_conf_usdt, exchange="binance")
     exchange._config["runmode"] = RunMode.BACKTEST
     delist_mock = MagicMock(return_value=None)
@@ -1141,7 +1141,7 @@ def test_check_delisting_time(default_conf_usdt, mocker):
     assert delist_fut_mock.call_count == 1
 
 
-def test_check_delisting_futures(default_conf_usdt, mocker, markets):
+def test_check_delisting_futures_binance(default_conf_usdt, mocker, markets):
     markets["BTC/USDT:USDT"] = deepcopy(markets["SOL/BUSD:BUSD"])
     markets["BTC/USDT:USDT"]["info"]["deliveryDate"] = 4133404800000
     markets["SOL/BUSD:BUSD"]["info"]["deliveryDate"] = 4133404800000
@@ -1157,7 +1157,7 @@ def test_check_delisting_futures(default_conf_usdt, mocker, markets):
     assert resp_ada == dt_utc(2025, 10, 18)
 
 
-def test_get_spot_delist_schedule(default_conf_usdt, mocker):
+def test_get_spot_delist_schedule_binance(default_conf_usdt, mocker):
     exchange = get_patched_exchange(mocker, default_conf_usdt, exchange="binance")
     ret_value = [{"delistTime": 1759114800000, "symbols": ["ETCBTC"]}]
     schedule_mock = mocker.patch.object(exchange, "get_spot_delist_schedule", return_value=None)
