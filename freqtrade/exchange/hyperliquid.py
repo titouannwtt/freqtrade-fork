@@ -44,6 +44,7 @@ class Hyperliquid(Exchange):
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
         (TradingMode.SPOT, MarginMode.NONE),
         (TradingMode.FUTURES, MarginMode.ISOLATED),
+        (TradingMode.FUTURES, MarginMode.CROSS),
     ]
 
     @property
@@ -118,7 +119,12 @@ class Hyperliquid(Exchange):
         maintenance_margin_required = position_value / max_leverage / 2
 
         # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
-        margin_available = isolated_margin - maintenance_margin_required
+        if self.margin_mode == MarginMode.ISOLATED:
+            margin_available = isolated_margin - maintenance_margin_required
+        elif self.margin_mode == MarginMode.CROSS:
+            margin_available = wallet_balance - maintenance_margin_required
+        else:
+            raise OperationalException("Unsupported margin mode for liquidation price calculation")
 
         # Docs: The maintenance margin is half of the initial margin at max leverage
         # The docs don't explicitly specify maintenance leverage, but this works.
