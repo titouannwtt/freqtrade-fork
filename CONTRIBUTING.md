@@ -9,8 +9,10 @@ Issues labeled [good first issue](https://github.com/freqtrade/freqtrade/labels/
 Few pointers for contributions:
 
 - Create your PR against the `develop` branch, not `stable`.
-- New features need to contain unit tests, must conform to PEP8 (max-line-length = 100) and should be documented with the introduction PR.
-- PR's can be declared as `[WIP]` - which signify Work in Progress Pull Requests (which are not finished).
+- Stick to english in both commit messages, PR descriptions and code comments and variable names.
+- New features need to contain unit tests, must pass CI (run pre-commit and pytest to get an early feedback) and should be documented with the introduction PR.
+- PR's can be declared as draft - signaling Work in Progress for Pull Requests (which are not finished). We'll still aim to provide feedback on draft PR's in a timely manner.
+- If you're using AI for your PR, please both mention it in the PR description and do a thorough review of the generated code. The final responsibility for the code with the PR author, not with the AI.
 
 If you are unsure, discuss the feature on our [discord server](https://discord.gg/p7nuUNVfP7) or in a [issue](https://github.com/freqtrade/freqtrade/issues) before a Pull Request.
 
