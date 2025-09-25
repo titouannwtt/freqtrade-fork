@@ -45,41 +45,41 @@ pytest tests/test_<file_name>.py
 pytest tests/test_<file_name>.py::test_<method_name>
 ```
 
-### 2. Test if your code is PEP8 compliant
+### 2. Test if your code corresponds to our style guide
 
-#### Run Ruff
+We receive a lot of code that fails preliminary CI checks.  
+To help with that, we encourage contributors to install the git pre-commit hook that will let you know immediately when you try to commit code that fails these checks.
+
+You can manually run pre-commit with `pre-commit run -a` - or install the git hook with `pre-commit install` to have it run automatically on each commit.
+
+Running `pre-commit run -a` will run all checks, including `ruff`, `mypy` and `codespell` (among others).
+
+#### Additional styles applied
+
+- Have docstrings on all public methods
+- Use double-quotes for docstrings
+- Multiline docstrings should be indented to the level of the first quote
+- Doc-strings should follow the reST format (`:param xxx: ...`, `:return: ...`, `:raises KeyError: ...`)
+
+#### Manually run the individual checks
+
+The following sections describe how to run the individual checks that are running  as part of the pre-commit hook.
+
+##### Run ruff
+
+Check your code with ruff to ensure that it follows the style guide.
 
 ```bash
 ruff check .
+ruff format .
 ```
 
-We receive a lot of code that fails the `ruff` checks.
-To help with that, we encourage you to install the git pre-commit 
-hook that will warn you when you try to commit code that fails these checks.
+##### Run mypy
 
-you can manually run pre-commit with `pre-commit run -a`.
-
-##### Additional styles applied
-
-* Have docstrings on all public methods
-* Use double-quotes for docstrings
-* Multiline docstrings should be indented to the level of the first quote
-* Doc-strings should follow the reST format (`:param xxx: ...`, `:return: ...`, `:raises KeyError: ... `)
-
-### 3. Test if all type-hints are correct
-
-#### Run mypy
+Check your code with mypy to ensure that it follows the type-hinting rules.
 
 ``` bash
 mypy freqtrade
-```
-
-### 4. Ensure formatting is correct
-
-#### Run ruff
-
-``` bash
-ruff format .
 ```
 
 ## (Core)-Committer Guide
