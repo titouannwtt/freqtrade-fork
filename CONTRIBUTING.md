@@ -120,7 +120,7 @@ Exceptions:
 - Ensure cross-platform compatibility for every change that's accepted. Windows, Mac & Linux.
 - Ensure no malicious code is introduced into the core code.
 - Create issues for any major changes and enhancements that you wish to make. Discuss things transparently and get community feedback.
-- Keep feature versions as small as possible, preferably one new feature per version.
+- Keep feature PR's as small as possible, preferably one new feature per PR.
 - Be welcoming to newcomers and encourage diverse new contributors from all backgrounds. See the Python Community Code of Conduct (https://www.python.org/psf/codeofconduct/).
 
 ### Becoming a Committer
@@ -132,6 +132,6 @@ Contributors may be given commit privileges. Preference will be given to those w
 1. Access to resources for cross-platform development and testing.
 1. Time to devote to the project regularly.
 
-Being a Committer does not grant write permission on `develop` or `stable` for security reasons (Users trust Freqtrade with their Exchange API keys).
+Being a Committer does not automatically grant write permission on `develop` or `stable` for security reasons (Users trust Freqtrade with their Exchange API keys).
 
 After being Committer for some time, a Committer may be named Core Committer and given full repository access.
