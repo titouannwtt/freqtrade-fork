@@ -467,6 +467,21 @@ class Binance(Exchange):
         return self.get_spot_pair_delist_time(pair, refresh=False)
 
     def get_spot_delist_schedule(self):
+        """
+        Get the delisting schedule for spot pairs
+        Only works in live mode as it requires API keys,
+        Return sample:
+        [{
+            "delistTime": "1759114800000",
+            "symbols": [
+                "OMNIBTC",
+                "OMNIFDUSD",
+                "OMNITRY",
+                "OMNIUSDC",
+                "OMNIUSDT"
+            ]
+        }]
+        """
         try:
             delist_schedule = self._api.sapi_get_spot_delist_schedule()
             return delist_schedule
