@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "ubuntu-22.04", "ubuntu-24.04" ]
+        os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" ]
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
@@ -46,7 +46,14 @@ jobs:
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "${{ matrix.python-version }}"
 
-    - name: Installation - *nix
+    - name: Installation - macOS (Brew)
+      if: ${{ runner.os == 'macOS' }}
+      run: |
+        # brew update
+        # TODO: Should be the brew upgrade
+        brew install libomp
+
+    - name: Installation (python)
       run: |
         uv pip install --upgrade wheel
         uv pip install -r requirements-dev.txt
@@ -102,11 +109,12 @@ jobs:
 
     - name: Backtesting (multi)
       run: |
-        cp tests/testdata/config.tests.json config.json
         freqtrade create-userdir --userdir user_data
+        cp tests/testdata/config.tests.json user_data/config.json
         freqtrade new-strategy -s AwesomeStrategy
         freqtrade new-strategy -s AwesomeStrategyMin --template minimal
-        freqtrade backtesting --datadir tests/testdata --strategy-list AwesomeStrategy AwesomeStrategyMin -i 5m
+        freqtrade new-strategy -s AwesomeStrategyAdv --template advanced
+        freqtrade backtesting --datadir tests/testdata --strategy-list AwesomeStrategy AwesomeStrategyMin AwesomeStrategyAdv -i 5m
 
     - name: Hyperopt
       run: |
@@ -127,7 +135,7 @@ jobs:
         ruff format --check
 
     - name: Mypy
-      if: matrix.os == 'ubuntu-24.04'
+      if: matrix.os == 'ubuntu-24.04' || matrix.os == 'macos-15'
       run: |
         mypy freqtrade scripts tests
 
@@ -137,99 +145,6 @@ jobs:
       with:
           severity: error
           details: Freqtrade CI failed on ${{ matrix.os }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-
-  build-macos:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ "macos-14", "macos-15" ]
-        python-version: ["3.11", "3.12", "3.13"]
-
-    steps:
-    - uses: actions/checkout@v5
-      with:
-        persist-credentials: false
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-        check-latest: true
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
-      with:
-        activate-environment: true
-        enable-cache: true
-        python-version: ${{ matrix.python-version }}
-        cache-dependency-glob: "requirements**.txt"
-        cache-suffix: "${{ matrix.python-version }}"
-
-    - name: Installation - macOS (Brew)
-      run: |
-        # brew update
-        # TODO: Should be the brew upgrade
-        brew install libomp
-
-    - name: Installation (python)
-      run: |
-        uv pip install wheel
-        uv pip install -r requirements-dev.txt
-        uv pip install -e ft_client/
-        uv pip install -e .
-
-    - name: Tests
-      run: |
-        pytest --random-order
-
-    - name: Check for repository changes
-      run: |
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "Repository is dirty, changes detected:"
-          git status
-          git diff
-          exit 1
-        else
-          echo "Repository is clean, no changes detected."
-        fi
-
-    - name: Backtesting
-      run: |
-        cp tests/testdata/config.tests.json config.json
-        freqtrade create-userdir --userdir user_data
-        freqtrade new-strategy -s AwesomeStrategyAdv --template advanced
-        freqtrade backtesting --datadir tests/testdata --strategy AwesomeStrategyAdv
-
-    - name: Hyperopt
-      run: |
-        cp tests/testdata/config.tests.json config.json
-        freqtrade create-userdir --userdir user_data
-        freqtrade hyperopt --datadir tests/testdata -e 5 --strategy SampleStrategy --hyperopt-loss SharpeHyperOptLossDaily --print-all
-
-    - name: Sort imports (isort)
-      run: |
-        isort --check .
-
-    - name: Run Ruff
-      run: |
-        ruff check --output-format=github
-
-    - name: Run Ruff format check
-      run: |
-        ruff format --check
-
-    - name: Mypy
-      if: matrix.os == 'macos-15'
-      run: |
-        mypy freqtrade scripts
-
-    - name: Discord notification
-      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
-      if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-      with:
-          severity: info
-          details: Test Succeeded!
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   build-windows:
@@ -426,7 +341,6 @@ jobs:
   notify-complete:
     needs: [
       build-linux,
-      build-macos,
       build-windows,
       docs-check,
       mypy-version-check,
@@ -459,7 +373,7 @@ jobs:
 
   build:
     name: "Build"
-    needs: [ build-linux, build-macos, build-windows, docs-check, mypy-version-check, pre-commit ]
+    needs: [ build-linux, build-windows, docs-check, mypy-version-check, pre-commit ]
     runs-on: ubuntu-22.04
 
     steps:
@@ -556,7 +470,13 @@ jobs:
 
   docker-build:
     name: "Docker Build and Deploy"
-    needs: [ build-linux, build-macos, build-windows, docs-check, mypy-version-check, pre-commit ]
+    needs: [
+      build-linux,
+      build-windows,
+      docs-check,
+      mypy-version-check,
+      pre-commit
+    ]
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release') && github.repository == 'freqtrade/freqtrade'
     uses: ./.github/workflows/docker-build.yml
     permissions:
