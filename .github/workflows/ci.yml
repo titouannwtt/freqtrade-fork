@@ -19,7 +19,7 @@ concurrency:
 permissions:
   repository-projects: read
 jobs:
-  build-linux:
+  tests:
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -336,7 +336,7 @@ jobs:
   # Notify only once - when CI completes (and after deploy) in case it's successful
   notify-complete:
     needs: [
-      build-linux,
+      tests,
       build-windows,
       docs-check,
       mypy-version-check,
@@ -369,7 +369,7 @@ jobs:
 
   build:
     name: "Build"
-    needs: [ build-linux, build-windows, docs-check, mypy-version-check, pre-commit ]
+    needs: [ tests, build-windows, docs-check, mypy-version-check, pre-commit ]
     runs-on: ubuntu-22.04
 
     steps:
@@ -467,7 +467,7 @@ jobs:
   docker-build:
     name: "Docker Build and Deploy"
     needs: [
-      build-linux,
+      tests,
       build-windows,
       docs-check,
       mypy-version-check,
