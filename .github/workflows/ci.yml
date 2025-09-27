@@ -96,7 +96,7 @@ jobs:
 
     - name: Check for repository changes
       # TODO: python 3.13 slightly changed the output of argparse.
-      if: (matrix.python-version != '3.13')
+      if: ${{ (matrix.python-version != '3.13') && (runner.os != 'Windows') }}
       run: |
         if [ -n "$(git status --porcelain)" ]; then
           echo "Repository is dirty, changes detected:"
@@ -106,6 +106,19 @@ jobs:
         else
           echo "Repository is clean, no changes detected."
         fi
+
+    - name: Check for repository changes
+      if: ${{ runner.os == 'Windows' && (matrix.python-version != '3.13') }}
+      run: |
+        if (git status --porcelain) {
+          Write-Host "Repository is dirty, changes detected:"
+          git status
+          git diff
+          exit 1
+        }
+        else {
+          Write-Host "Repository is clean, no changes detected."
+        }
 
     - name: Backtesting (multi)
       run: |
