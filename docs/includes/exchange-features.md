@@ -1,19 +1,19 @@
 
-| Exchange | Mode | Margin mode | Stoploss on exchange | 
+| Exchange | Mode | Margin mode | Stoploss type | 
 |---------|---------|------|------------------|
-| [Binance](exchanges.md#binance) | spot | | yes |
-| [Binance](exchanges.md#binance) | futures | isolated, cross | yes |
-| [Bingx](exchanges.md#bingx) | spot | | yes |
-| [Bitmart](exchanges.md#bitmart) | spot | | no |
-| [Bybit](exchanges.md#bybit) | spot | | yes |
-| [Bybit](exchanges.md#bybit) | futures | isolated | yes |
-| [Gate.io](exchanges.md#gateio) | spot | | yes |
-| [Gate.io](exchanges.md#gateio) | futures | isolated | yes |
-| [HTX](exchanges.md#htx) | spot | | yes |
-| [Hyperliquid](exchanges.md#hyperliquid) | spot | | no |
-| [Hyperliquid](exchanges.md#hyperliquid) | futures | isolated | yes |
-| [Kraken](exchanges.md#kraken) | spot | | yes |
-| [OKX](exchanges.md#okx) | spot | | yes |
-| [OKX](exchanges.md#okx) | futures | isolated | yes |
-| [Bitvavo](exchanges.md#bitvavo) | spot | | yes |
-| [Kucoin](exchanges.md#kucoin) | spot | | yes |
+| [Binance](exchanges.md#binance) | spot | | limit |
+| [Binance](exchanges.md#binance) | futures | isolated, cross | market, limit |
+| [Bingx](exchanges.md#bingx) | spot | | market, limit |
+| [Bitmart](exchanges.md#bitmart) | spot | | ❌ (not supported) |
+| [Bybit](exchanges.md#bybit) | spot | | ❌ (not supported) |
+| [Bybit](exchanges.md#bybit) | futures | isolated | market, limit |
+| [Gate.io](exchanges.md#gateio) | spot | | limit |
+| [Gate.io](exchanges.md#gateio) | futures | isolated | limit |
+| [HTX](exchanges.md#htx) | spot | | limit |
+| [Hyperliquid](exchanges.md#hyperliquid) | spot | | ❌ (not supported) |
+| [Hyperliquid](exchanges.md#hyperliquid) | futures | isolated | limit |
+| [Kraken](exchanges.md#kraken) | spot | | market, limit |
+| [OKX](exchanges.md#okx) | spot | | limit |
+| [OKX](exchanges.md#okx) | futures | isolated | limit |
+| [Bitvavo](exchanges.md#bitvavo) | spot | | ❌ (not supported) |
+| [Kucoin](exchanges.md#kucoin) | spot | | market, limit |
