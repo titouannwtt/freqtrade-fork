@@ -20,7 +20,7 @@ permissions:
   repository-projects: read
 jobs:
   tests:
-
+    name: "Tests and Linting"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -148,7 +148,7 @@ jobs:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   build-windows:
-
+    name: "Tests and Linting - Windows"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -239,7 +239,8 @@ jobs:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   mypy-version-check:
-    runs-on: ubuntu-22.04
+    name: "Mypy Version Check"
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
       with:
@@ -256,6 +257,7 @@ jobs:
         python build_helpers/pre_commit_update.py
 
   pre-commit:
+    name: "Pre-commit checks"
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v5
@@ -268,6 +270,7 @@ jobs:
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   docs-check:
+    name: "Documentation build"
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v5
@@ -299,6 +302,7 @@ jobs:
 
   build-linux-online:
     # Run pytest with "live" checks
+    name: "Tests and Linting - Online tests"
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
