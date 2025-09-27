@@ -895,7 +895,7 @@ class Exchange:
             )
 
     @classmethod
-    def combine_ft_has(cls, include_futures: bool) -> dict[str, Any]:
+    def combine_ft_has(cls, include_futures: bool) -> FtHas:
         """
         Combine all ft_has options from the class hierarchy.
         Child classes override parent classes.
