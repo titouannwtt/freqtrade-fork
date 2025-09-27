@@ -176,12 +176,8 @@ jobs:
 
     - name: Installation
       run: |
-        function uvpipFunction { uv pip $args }
-        Set-Alias -name pip -value uvpipFunction
-
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install -e .
+        uv pip install -r requirements-dev.txt
+        uv pip install -e .
 
     - name: Tests
       run: |
