@@ -67,7 +67,7 @@ jobs:
     - name: Tests
       if: (!(runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04'))
       run: |
-        pytest --random-order --durations 20
+        pytest --random-order --durations 20 -n auto
 
     - name: Tests with Coveralls
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
@@ -94,7 +94,7 @@ jobs:
       run: |
         python build_helpers/create_command_partials.py
 
-    - name: Check for repository changes
+    - name: Check for repository changes - *nix
       # TODO: python 3.13 slightly changed the output of argparse.
       if: ${{ (matrix.python-version != '3.13') && (runner.os != 'Windows') }}
       run: |
@@ -107,7 +107,7 @@ jobs:
           echo "Repository is clean, no changes detected."
         fi
 
-    - name: Check for repository changes
+    - name: Check for repository changes - Windows
       if: ${{ runner.os == 'Windows' && (matrix.python-version != '3.13') }}
       run: |
         if (git status --porcelain) {
