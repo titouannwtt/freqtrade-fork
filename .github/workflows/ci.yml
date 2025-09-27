@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" ]
+        os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" , "windows-2022", "windows-2025" ]
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
@@ -67,7 +67,7 @@ jobs:
     - name: Tests
       if: (!(runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04'))
       run: |
-        pytest --random-order
+        pytest --random-order --durations 20
 
     - name: Tests with Coveralls
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
@@ -135,91 +135,13 @@ jobs:
         ruff format --check
 
     - name: Mypy
-      if: matrix.os == 'ubuntu-24.04' || matrix.os == 'macos-15'
-      run: |
-        mypy freqtrade scripts tests
-
-    - name: Discord notification
-      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
-      if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-      with:
-          severity: error
-          details: Freqtrade CI failed on ${{ matrix.os }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-
-  build-windows:
-    name: "Tests and Linting - Windows"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ "windows-2022", "windows-2025" ]
-        python-version: ["3.11", "3.12", "3.13"]
-
-    steps:
-    - uses: actions/checkout@v5
-      with:
-        persist-credentials: false
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
-      with:
-        activate-environment: true
-        enable-cache: true
-        python-version: ${{ matrix.python-version }}
-        cache-dependency-glob: "requirements**.txt"
-        cache-suffix: "${{ matrix.python-version }}"
-
-    - name: Installation
-      run: |
-        uv pip install -r requirements-dev.txt
-        uv pip install -e .
-
-    - name: Tests
-      run: |
-        pytest --random-order --durations 20 -n auto
-
-    - name: Check for repository changes
-      run: |
-        if (git status --porcelain) {
-          Write-Host "Repository is dirty, changes detected:"
-          git status
-          git diff
-          exit 1
-        }
-        else {
-          Write-Host "Repository is clean, no changes detected."
-        }
-
-    - name: Backtesting
-      run: |
-        cp tests/testdata/config.tests.json config.json
-        freqtrade create-userdir --userdir user_data
-        freqtrade backtesting --datadir tests/testdata --strategy SampleStrategy
-
-    - name: Hyperopt
-      run: |
-        cp tests/testdata/config.tests.json config.json
-        freqtrade create-userdir --userdir user_data
-        freqtrade hyperopt --datadir tests/testdata -e 5 --strategy SampleStrategy --hyperopt-loss SharpeHyperOptLossDaily --print-all
-
-    - name: Run Ruff
-      run: |
-        ruff check --output-format=github
-
-    - name: Run Ruff format check
-      run: |
-        ruff format --check
-
-    - name: Mypy
+      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'macos-15' }}
       run: |
         mypy freqtrade scripts tests
 
     - name: Run Pester tests (PowerShell)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
       run: |
         $PSVersionTable
         Set-PSRepository psgallery -InstallationPolicy trusted
@@ -228,14 +150,12 @@ jobs:
         Invoke-Pester -Path "tests" -CI
         if ($Error.Length -gt 0) {exit 1}
 
-      shell: powershell
-
     - name: Discord notification
       uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
-      if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+      if: ${{ failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
       with:
           severity: error
-          details: Test Failed
+          details: Freqtrade CI failed on ${{ matrix.os }} with Python ${{ matrix.python-version }}!
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   mypy-version-check:
@@ -341,7 +261,6 @@ jobs:
   notify-complete:
     needs: [
       tests,
-      build-windows,
       docs-check,
       mypy-version-check,
       pre-commit,
@@ -373,7 +292,7 @@ jobs:
 
   build:
     name: "Build"
-    needs: [ tests, build-windows, docs-check, mypy-version-check, pre-commit ]
+    needs: [ tests, docs-check, mypy-version-check, pre-commit ]
     runs-on: ubuntu-22.04
 
     steps:
@@ -472,7 +391,6 @@ jobs:
     name: "Docker Build and Deploy"
     needs: [
       tests,
-      build-windows,
       docs-check,
       mypy-version-check,
       pre-commit
