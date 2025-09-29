@@ -4,7 +4,7 @@ Freqtrade provides a builtin webserver, which can serve [FreqUI](https://github.
 
 By default, the UI is automatically installed as part of the installation (script, docker).
 freqUI can also be manually installed by using the `freqtrade install-ui` command.
-This same command can also be used to update freqUI to new new releases.
+This same command can also be used to update freqUI to new releases.
 
 Once the bot is started in trade / dry-run mode (with `freqtrade trade`) - the UI will be available under the configured API port (by default `http://127.0.0.1:8080`).
 
@@ -70,7 +70,16 @@ Things you can change (among others):
 ![FreqUI - Settings view](assets/frequi-settings-dark.png#only-dark)
 ![FreqUI - Settings view](assets/frequi-settings-light.png#only-light)
 
-## Backtesting
+## Webserver mode
+
+when freqtrade is started in [webserver mode](utils.md#webserver-mode) (freqtrade started with `freqtrade webserver`), the webserver will start in a special mode allowing for additional features, for example:
+
+* Downloading data
+* Testing pairlists
+* [Backtesting strategies](#backtesting)
+* ... to be expanded
+
+### Backtesting
 
 When freqtrade is started in [webserver mode](utils.md#webserver-mode) (freqtrade started with `freqtrade webserver`), the backtesting view becomes available.
 This view allows you to backtest strategies and visualize the results.

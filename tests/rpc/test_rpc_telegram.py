@@ -177,7 +177,7 @@ def test_telegram_init(default_conf, mocker, caplog) -> None:
     assert log_has(message_str, caplog)
 
 
-async def test_telegram_startup(default_conf, mocker) -> None:
+async def test_telegram_startup(default_conf, mocker, caplog) -> None:
     app_mock = MagicMock()
     app_mock.initialize = AsyncMock()
     app_mock.start = AsyncMock()
@@ -192,6 +192,12 @@ async def test_telegram_startup(default_conf, mocker) -> None:
     assert app_mock.start.call_count == 1
     assert app_mock.updater.start_polling.call_count == 1
     assert sleep_mock.call_count == 1
+
+    # Test telegram Retries and Exceptions
+    app_mock.start = AsyncMock(side_effect=Exception("Test exception"))
+    await telegram._startup_telegram()
+    assert app_mock.start.call_count == 3
+    assert log_has("Telegram init failed.", caplog)
 
 
 async def test_telegram_cleanup(
@@ -978,7 +984,7 @@ async def test_telegram_profit_long_short_handle(
 
     mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(EXMS, fetch_ticker=ticker_usdt, get_fee=fee)
-    telegram, freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf_usdt)
+    telegram, _freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf_usdt)
 
     # When there are no trades
     await telegram._profit_long(update=update, context=MagicMock())

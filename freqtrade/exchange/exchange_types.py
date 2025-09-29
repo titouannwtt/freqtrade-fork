@@ -1,5 +1,8 @@
 from typing import Any, Literal, TypedDict
 
+# Re-export for easier use
+from ccxt.base.types import FundingRate  # noqa: F401
+
 from freqtrade.enums import CandleType
 
 
@@ -25,6 +28,8 @@ class FtHas(TypedDict, total=False):
     ohlcv_volume_currency: str
     ohlcv_candle_limit_per_timeframe: dict[str, int]
     always_require_api_keys: bool
+    # allow disabling of parallel download-data for specific exchanges
+    download_data_parallel_quick: bool
     # Tickers
     tickers_have_quoteVolume: bool
     tickers_have_percentage: bool
@@ -57,6 +62,9 @@ class FtHas(TypedDict, total=False):
 
     # Websocket control
     ws_enabled: bool
+
+    # Delisting check
+    has_delisting: bool
 
 
 class Ticker(TypedDict):

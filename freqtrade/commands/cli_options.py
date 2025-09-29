@@ -184,9 +184,17 @@ AVAILABLE_CLI_OPTIONS = {
     "enable_protections": Arg(
         "--enable-protections",
         "--enableprotections",
-        help="Enable protections for backtesting."
+        help="Enable protections for backtesting. "
         "Will slow backtesting down by a considerable amount, but will include "
         "configured protections",
+        action="store_true",
+        default=False,
+    ),
+    "enable_dynamic_pairlist": Arg(
+        "--enable-dynamic-pairlist",
+        help="Enables dynamic pairlist refreshes in backtesting. "
+        "The pairlist will be generated for each new candle if you're using a "
+        "pairlist handler that supports this feature, for example, ShuffleFilter.",
         action="store_true",
         default=False,
     ),
@@ -452,6 +460,11 @@ AVAILABLE_CLI_OPTIONS = {
     "include_inactive": Arg(
         "--include-inactive-pairs",
         help="Also download data from inactive pairs.",
+        action="store_true",
+    ),
+    "no_parallel_download": Arg(
+        "--no-parallel-download",
+        help="Disable parallel startup download. Only use this if you experience issues.",
         action="store_true",
     ),
     "new_pairs_days": Arg(
@@ -800,6 +813,14 @@ AVAILABLE_CLI_OPTIONS = {
         "--startup-candle",
         help="Specify startup candles to be checked (`199`, `499`, `999`, `1999`).",
         nargs="+",
+    ),
+    "lookahead_allow_limit_orders": Arg(
+        "--allow-limit-orders",
+        help=(
+            "Allow limit orders in lookahead analysis (could cause false positives "
+            "in lookahead analysis results)."
+        ),
+        action="store_true",
     ),
     "show_sensitive": Arg(
         "--show-sensitive",
