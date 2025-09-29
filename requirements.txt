@@ -3,7 +3,7 @@ pandas==2.3.2
 bottleneck==1.6.0
 numexpr==2.12.1
 # Indicator libraries
-ft-pandas-ta==0.3.15
+ft-pandas-ta==0.3.16
 ta-lib==0.6.7
 technical==1.5.3
 
