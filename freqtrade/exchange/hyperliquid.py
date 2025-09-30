@@ -118,10 +118,11 @@ class Hyperliquid(Exchange):
         #       3. Divide this by 2
         maintenance_margin_required = position_value / max_leverage / 2
 
-        # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
         if self.margin_mode == MarginMode.ISOLATED:
+            # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
             margin_available = isolated_margin - maintenance_margin_required
         elif self.margin_mode == MarginMode.CROSS:
+            # Docs: margin_available (cross) = account_value - maintenance_margin_required
             margin_available = wallet_balance - maintenance_margin_required
         else:
             raise OperationalException("Unsupported margin mode for liquidation price calculation")
