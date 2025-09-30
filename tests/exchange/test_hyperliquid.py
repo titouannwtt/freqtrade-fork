@@ -299,7 +299,7 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker):
             position["contracts"],
             position["collateral"],
             position["leverage"],
-            position["collateral"],
+            0.0,  # wallet balance not used in isolated margin mode
             [],
         )
         assert pytest.approx(liq_price_returned, rel=0.0001) == liq_price_calculated
