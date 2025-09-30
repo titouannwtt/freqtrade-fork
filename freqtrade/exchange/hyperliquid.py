@@ -100,7 +100,6 @@ class Hyperliquid(Exchange):
                    'SOL/USDC:USDC': 43}}
         """
         # Defining/renaming variables to match the documentation
-        isolated_margin = wallet_balance
         position_size = amount
         price = open_rate
         position_value = price * position_size
@@ -120,7 +119,7 @@ class Hyperliquid(Exchange):
 
         if self.margin_mode == MarginMode.ISOLATED:
             # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
-            margin_available = isolated_margin - maintenance_margin_required
+            margin_available = stake_amount - maintenance_margin_required
         elif self.margin_mode == MarginMode.CROSS:
             # Docs: margin_available (cross) = account_value - maintenance_margin_required
             margin_available = wallet_balance - maintenance_margin_required
