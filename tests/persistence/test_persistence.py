@@ -2889,3 +2889,47 @@ def test_recalc_trade_from_orders_dca(data) -> None:
     trade = Trade.session.scalars(select(Trade)).first()
     assert trade
     assert not trade.has_open_orders
+
+
+@pytest.mark.parametrize(
+    "is_short,lev,trading_mode",
+    [
+        (False, 1, spot),
+        (False, 1, margin),
+        (False, 10, margin),
+        (False, 1, futures),
+        (False, 10, futures),
+        (True, 1, margin),
+        (True, 10, margin),
+        (True, 1, futures),
+        (True, 10, futures),
+    ],
+)
+@pytest.mark.usefixtures("init_persistence")
+def test_close_rate_for_roi(fee, is_short, lev, trading_mode):
+    """
+    Ensure calc_close_rate_for_roi is consistent with calc_profit_ratio.
+    """
+    open_dt = datetime.fromisoformat("1970-01-01 00:00:00")
+    trade_duration = timedelta(days=10)
+    trade = Trade(
+        id=2,
+        pair="ADA/USDT",
+        stake_amount=60.0,
+        open_rate=2.0,
+        amount=30.0,
+        is_open=True,
+        open_date=open_dt,
+        close_date=open_dt + trade_duration,  # to trigger interest calculation in margin mode
+        fee_open=fee.return_value,
+        fee_close=fee.return_value,
+        exchange="binance",
+        is_short=is_short,
+        leverage=lev,
+        trading_mode=trading_mode,
+        interest_rate=0.0005,
+    )
+    trade.funding_fee_running = 0.1234
+    roi = 0.1337
+    close_rate = trade.calc_close_rate_for_roi(roi)
+    assert roi == trade.calc_profit_ratio(close_rate)
