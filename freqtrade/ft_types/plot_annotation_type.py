@@ -6,7 +6,7 @@ from typing_extensions import TypedDict
 
 
 class AnnotationType(TypedDict, total=False):
-    type: Required[Literal["area"]]
+    type: Required[Literal["area", "line"]]
     start: str | datetime
     end: str | datetime
     y_start: float
