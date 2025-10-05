@@ -1144,7 +1144,7 @@ CONF_SCHEMA = {
                 },
                 "override_exchange_check": {
                     "description": (
-                        "Override the exchange check to force FreqAI to use exchanges"
+                        "Override the exchange check to force FreqAI to use exchanges "
                         "that may not have enough historic data. Turn this to True if "
                         "you know your FreqAI model and strategy do not require historical data."
                     ),
