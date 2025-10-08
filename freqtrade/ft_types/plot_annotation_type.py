@@ -16,11 +16,11 @@ class _BaseAnnotationType(TypedDict, total=False):
 
 
 class AreaAnnotationType(_BaseAnnotationType, total=False):
-    type: Literal["area"]
+    type: Required[Literal["area"]]
 
 
 class LineAnnotationType(_BaseAnnotationType, total=False):
-    type: Literal["line"]
+    type: Required[Literal["line"]]
     width: int
     line_style: Literal["solid", "dashed", "dotted"]
 
