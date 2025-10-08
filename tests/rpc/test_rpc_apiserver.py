@@ -1901,7 +1901,18 @@ def test_api_pair_candles(botclient, ohlcv_history):
             "y_end": 98000,
             "color": "",
             "label": "some label",
-        }
+        },
+        {
+            "type": "line",
+            "start": "2024-01-01 15:00:00",
+            "end": "2024-01-01 16:00:00",
+            "y_start": 99000.2,
+            "y_end": 98000,
+            "color": "",
+            "label": "some label",
+            "width": 2,
+            "line_style": "dashed",
+        },
     ]
     plot_annotations_mock = MagicMock(return_value=fake_plot_annotations)
     ftbot.strategy.plot_annotations = plot_annotations_mock
