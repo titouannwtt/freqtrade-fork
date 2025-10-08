@@ -6,7 +6,6 @@ from typing_extensions import TypedDict
 
 
 class _BaseAnnotationType(TypedDict, total=False):
-    type: Required[Literal["area", "line"]]
     start: str | datetime
     end: str | datetime
     y_start: float
@@ -20,12 +19,12 @@ class AreaAnnotationType(_BaseAnnotationType, total=False):
     type: Literal["area"]
 
 
-class LinenAnnotationType(_BaseAnnotationType, total=False):
+class LineAnnotationType(_BaseAnnotationType, total=False):
     type: Literal["line"]
     width: int
     line_style: Literal["solid", "dashed", "dotted"]
 
 
-AnnotationType = AreaAnnotationType | LinenAnnotationType
+AnnotationType = AreaAnnotationType | LineAnnotationType
 
-AnnotationTypeTA = TypeAdapter(AnnotationType)
+AnnotationTypeTA: TypeAdapter[AnnotationType] = TypeAdapter(AnnotationType)
