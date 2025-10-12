@@ -166,50 +166,6 @@ Sample return value: ETH/BTC had 5 trades, with a total profit of 1.5% (ratio of
 {"pair": "ETH/BTC", "profit": 0.015, "count": 5}
 ```
 
-### get_enter_tag_performance
-
-Returns performance grouped by enter_tag.
-
-``` python
-from freqtrade.persistence import Trade
-
-# ...
-performance = Trade.get_enter_tag_performance('ETH/USDT')  # or None for all pairs
-```
-
-### get_exit_reason_performance
-
-Returns performance grouped by exit_reason.
-
-``` python
-from freqtrade.persistence import Trade
-
-# ...
-performance = Trade.get_exit_reason_performance('ETH/USDT')  # or None for all pairs
-```
-
-### get_mix_tag_performance
-
-Returns performance grouped by enter_tag + exit_reason combination.
-
-``` python
-from freqtrade.persistence import Trade
-
-# ...
-performance = Trade.get_mix_tag_performance('ETH/USDT')  # or None for all pairs
-```
-
-### get_best_pair
-
-Get the best performing pair with closed trades.
-
-``` python
-from freqtrade.persistence import Trade
-
-# ...
-best_pair = Trade.get_best_pair()
-```
-
 ### get_trading_volume
 
 Get total trading volume based on orders.
