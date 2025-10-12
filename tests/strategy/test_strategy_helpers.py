@@ -125,6 +125,23 @@ def test_merge_informative_pair_monthly():
     assert candle5["date_1M"] == pd.Timestamp("2022-10-01T00:00:00.000Z")
 
 
+def test_merge_informative_pair_no_overlap():
+    # Covers roughly a day
+    data = generate_test_data("1m", 1440, "2022-11-28")
+    # Data stops WAY before the main data starts
+    informative = generate_test_data("1h", 40, "2022-11-01")
+
+    result = merge_informative_pair(data, informative, "1m", "1h", ffill=True)
+
+    assert isinstance(result, pd.DataFrame)
+    assert len(result) == len(data)
+    assert "date" in result.columns
+    assert result["date"].equals(data["date"])
+    assert "date_1h" in result.columns
+    # If there's no overlap, forward filling should not fill anything
+    assert result["date_1h"].isnull().all()
+
+
 def test_merge_informative_pair_same():
     data = generate_test_data("15m", 40)
     informative = generate_test_data("15m", 40)
