@@ -211,6 +211,7 @@ class Backtesting:
         self._can_short = self.trading_mode != TradingMode.SPOT
         self._position_stacking: bool = self.config.get("position_stacking", False)
         self.enable_protections: bool = self.config.get("enable_protections", False)
+        self.dynamic_pairlist: bool = self.config.get("enable_dynamic_pairlist", False)
         migrate_data(config, self.exchange)
 
         self.init_backtest()
@@ -966,7 +967,7 @@ class Backtesting:
                     )
                 )
 
-    def get_valid_price_and_stake(
+    def get_valid_entry_price_and_stake(
         self,
         pair: str,
         row: tuple,
@@ -1089,18 +1090,20 @@ class Backtesting:
         stake_amount_ = stake_amount or (trade.stake_amount if trade else 0.0)
         precision_price, precision_mode_price = self.get_pair_precision(pair, current_time)
 
-        propose_rate, stake_amount, leverage, min_stake_amount = self.get_valid_price_and_stake(
-            pair,
-            row,
-            row[OPEN_IDX],
-            stake_amount_,
-            direction,
-            current_time,
-            entry_tag,
-            trade,
-            order_type,
-            precision_price,
-            precision_mode_price,
+        propose_rate, stake_amount, leverage, min_stake_amount = (
+            self.get_valid_entry_price_and_stake(
+                pair,
+                row,
+                row[OPEN_IDX],
+                stake_amount_,
+                direction,
+                current_time,
+                entry_tag,
+                trade,
+                order_type,
+                precision_price,
+                precision_mode_price,
+            )
         )
 
         # replace proposed rate if another rate was requested
@@ -1582,6 +1585,11 @@ class Backtesting:
         for current_time in self._time_generator(start_date, end_date):
             # Loop for each main candle.
             self.check_abort()
+
+            if self.dynamic_pairlist and self.pairlists:
+                self.pairlists.refresh_pairlist()
+                pairs = self.pairlists.whitelist
+
             # Reset open trade count for this candle
             # Critical to avoid exceeding max_open_trades in backtesting
             # when timeframe-detail is used and trades close within the opening candle.

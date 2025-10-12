@@ -12,13 +12,16 @@ from typing import Any
 from freqtrade import constants
 from freqtrade.configuration.deprecated_settings import process_temporary_deprecated_settings
 from freqtrade.configuration.directory_operations import create_datadir, create_userdata_dir
-from freqtrade.configuration.environment_vars import enironment_vars_to_dict
+from freqtrade.configuration.environment_vars import environment_vars_to_dict
 from freqtrade.configuration.load_config import load_file, load_from_files
 from freqtrade.constants import Config
 from freqtrade.enums import (
     NON_UTIL_MODES,
     TRADE_MODES,
+    CandleType,
+    MarginMode,
     RunMode,
+    TradingMode,
 )
 from freqtrade.exceptions import OperationalException
 from freqtrade.loggers import setup_logging
@@ -77,7 +80,7 @@ class Configuration:
         from freqtrade.commands.arguments import NO_CONF_ALLOWED
 
         if self.args.get("command") not in NO_CONF_ALLOWED:
-            env_data = enironment_vars_to_dict()
+            env_data = environment_vars_to_dict()
             config = deep_merge_dicts(env_data, config)
 
         # Normalize config
@@ -230,6 +233,9 @@ class Configuration:
             config["exportdirectory"] = config["user_data_dir"] / "backtest_results"
         if not config.get("exportfilename"):
             config["exportfilename"] = None
+        if config.get("exportfilename"):
+            # ensure exportfilename is a Path object
+            config["exportfilename"] = Path(config["exportfilename"])
         config["exportdirectory"] = Path(config["exportdirectory"])
 
         if self.args.get("show_sensitive"):
@@ -256,7 +262,13 @@ class Configuration:
         self._args_to_config(
             config,
             argname="enable_protections",
-            logstring="Parameter --enable-protections detected, enabling Protections. ...",
+            logstring="Parameter --enable-protections detected, enabling Protections ...",
+        )
+
+        self._args_to_config(
+            config,
+            argname="enable_dynamic_pairlist",
+            logstring="Parameter --enable-dynamic-pairlist detected, enabling dynamic pairlist ...",
         )
 
         if self.args.get("max_open_trades"):
@@ -312,7 +324,6 @@ class Configuration:
                 "recursive_strategy_search",
                 "Recursively searching for a strategy in the strategies folder.",
             ),
-            ("timeframe", "Overriding timeframe with Command line argument"),
             ("export", "Parameter --export detected: {} ..."),
             ("backtest_breakdown", "Parameter --breakdown detected ..."),
             ("backtest_cache", "Parameter --cache={} detected ..."),
@@ -391,6 +402,7 @@ class Configuration:
             ("timeframes", "timeframes --timeframes: {}"),
             ("days", "Detected --days: {}"),
             ("include_inactive", "Detected --include-inactive-pairs: {}"),
+            ("no_parallel_download", "Detected --no-parallel-download: {}"),
             ("download_trades", "Detected --dl-trades: {}"),
             ("convert_trades", "Detected --convert: {} - Converting Trade data to OHCV {}"),
             ("dataformat_ohlcv", 'Using "{}" to store OHLCV data.'),
@@ -406,6 +418,14 @@ class Configuration:
         self._args_to_config(
             config, argname="trading_mode", logstring="Detected --trading-mode: {}"
         )
+        # TODO: The following 3 lines (candle_type_def, trading_mode, margin_mode) are actually
+        # set in the exchange class. They're however necessary as fallback to avoid
+        # random errors in commands that don't initialize an exchange.
+        config["candle_type_def"] = CandleType.get_default(
+            config.get("trading_mode", "spot") or "spot"
+        )
+        config["trading_mode"] = TradingMode(config.get("trading_mode", "spot") or "spot")
+        config["margin_mode"] = MarginMode(config.get("margin_mode", "") or "")
         self._args_to_config(
             config, argname="candle_types", logstring="Detected --candle-types: {}"
         )

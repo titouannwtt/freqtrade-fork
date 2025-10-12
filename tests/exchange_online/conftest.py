@@ -28,7 +28,11 @@ EXCHANGES = {
         "leverage_tiers_public": False,
         "leverage_in_spot_market": False,
         "trades_lookback_hours": 4,
-        "private_methods": ["fapiPrivateGetPositionSideDual", "fapiPrivateGetMultiAssetsMargin"],
+        "private_methods": [
+            "fapiPrivateGetPositionSideDual",
+            "fapiPrivateGetMultiAssetsMargin",
+            "sapi_get_spot_delist_schedule",
+        ],
         "sample_order": [
             {
                 "exchange_response": {
@@ -149,6 +153,8 @@ EXCHANGES = {
                     "ADA.F": {"balance": "2.00000000", "hold_trade": "0.00000000"},
                     "XBT": {"balance": "0.00060000", "hold_trade": "0.00000000"},
                     "XBT.F": {"balance": "0.00100000", "hold_trade": "0.00000000"},
+                    "ZEUR": {"balance": "1000.00000000", "hold_trade": "0.00000000"},
+                    "ZUSD": {"balance": "1000.00000000", "hold_trade": "0.00000000"},
                 }
             },
             "expected": {
@@ -157,6 +163,8 @@ EXCHANGES = {
                 "BTC": {"free": 0.0006, "total": 0.0006, "used": 0.0},
                 # XBT.F should be mapped to BTC.F
                 "BTC.F": {"free": 0.001, "total": 0.001, "used": 0.0},
+                "EUR": {"free": 1000.0, "total": 1000.0, "used": 0.0},
+                "USD": {"free": 1000.0, "total": 1000.0, "used": 0.0},
             },
         },
     },
@@ -414,6 +422,14 @@ EXCHANGES = {
         "hasQuoteVolume": True,
         "timeframe": "1h",
         "candle_count": 1000,
+    },
+    "coinex": {
+        "pair": "BTC/USDT",
+        "stake_currency": "USDT",
+        "hasQuoteVolume": False,
+        "timeframe": "1h",
+        "candle_count": 1000,
+        "orderbook_max_entries": 50,
     },
     # TODO: re-enable htx once certificates work again
     # "htx": {

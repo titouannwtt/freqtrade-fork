@@ -84,6 +84,7 @@ Check the [configuration documentation](configuration.md) about how to set the b
 **Always use dry mode when testing as this gives you an idea of how your strategy will work in reality without risking capital.**
 
 ## Diving in deeper
+
 **For the following section we will use the [user_data/strategies/sample_strategy.py](https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/templates/sample_strategy.py)
 file as reference.**
 
@@ -99,9 +100,9 @@ file as reference.**
     Some common patterns for this are listed in the [Common Mistakes](#common-mistakes-when-developing-strategies) section of this document.
 
 ??? Hint "Lookahead and recursive analysis"
-    Freqtrade includes two helpful commands to help assess common lookahead (using future data) and 
-    recursive bias (variance in indicator values) issues. Before running a strategy in dry or live more, 
-    you should always use these commands first. Please check the relevant documentation for 
+    Freqtrade includes two helpful commands to help assess common lookahead (using future data) and
+    recursive bias (variance in indicator values) issues. Before running a strategy in dry or live more,
+    you should always use these commands first. Please check the relevant documentation for
     [lookahead](lookahead-analysis.md) and [recursive](recursive-analysis.md) analysis.
 
 ### Dataframe
@@ -154,7 +155,7 @@ Vectorized operations perform calculations across the whole range of data and ar
 
 !!! Warning "Trade order assumptions"
     In backtesting, signals are generated on candle close. Trades are then initiated immeditely on next candle open.
-    
+
     In dry and live, this may be delayed due to all pair dataframes needing to be analysed first, then trade processing 
     for each of those pairs happens. This means that in dry/live you need to be mindful of having as low a computation 
     delay as possible, usually by running a low number of pairs and having a CPU with a good clock speed.
@@ -284,7 +285,7 @@ It's important to always return the dataframe without removing/modifying the col
 
 This method will also define a new column, `"enter_long"` (`"enter_short"` for shorts), which needs to contain `1` for entries, and `0` for "no action". `enter_long` is a mandatory column that must be set even if the strategy is shorting only.
 
-You can name your entry signals by using the `"enter_tag"` column, which can help debug and assess your strategy later. 
+You can name your entry signals by using the `"enter_tag"` column, which can help debug and assess your strategy later.
 
 Sample from `user_data/strategies/sample_strategy.py`:
 
@@ -555,7 +556,7 @@ A full sample can be found [in the DataProvider section](#complete-dataprovider-
 
 ??? Note "Alternative candle types"
     Informative_pairs can also provide a 3rd tuple element defining the candle type explicitly.
-    Availability of alternative candle-types will depend on the trading-mode and the exchange. 
+    Availability of alternative candle-types will depend on the trading-mode and the exchange.
     In general, spot pairs cannot be used in futures markets, and futures candles can't be used as informative pairs for spot bots.
     Details about this may vary, if they do, this can be found in the exchange documentation.
 
@@ -783,6 +784,8 @@ Please always check the mode of operation to select the correct method to get da
 - `ohlcv(pair, timeframe)` - Currently cached candle (OHLCV) data for the pair, returns DataFrame or empty DataFrame.
 - [`orderbook(pair, maximum)`](#orderbookpair-maximum) - Returns latest orderbook data for the pair, a dict with bids/asks with a total of `maximum` entries.
 - [`ticker(pair)`](#tickerpair) - Returns current ticker data for the pair. See [ccxt documentation](https://github.com/ccxt/ccxt/wiki/Manual#price-tickers) for more details on the Ticker data structure.
+- [`check_delisting(pair)`](#check_delistingpair) - Return Datetime of the pair delisting schedule if any, otherwise return None
+- [`funding_rate(pair)`](#funding_ratepair) - Returns current funding rate data for the pair.
 - `runmode` - Property containing the current runmode.
 
 ### Example Usages
@@ -854,6 +857,8 @@ dataframe, last_updated = self.dp.get_analyzed_dataframe(pair=metadata['pair'],
 
 ### *orderbook(pair, maximum)*
 
+Retrieve the current order book for a pair.
+
 ``` python
 if self.dp.runmode.value in ('live', 'dry_run'):
     ob = self.dp.orderbook(metadata['pair'], 1)
@@ -902,6 +907,69 @@ if self.dp.runmode.value in ('live', 'dry_run'):
 
 !!! Warning "Warning about backtesting"
     This method will always return up-to-date / real-time values. As such, usage during backtesting / hyperopt without runmode checks will lead to wrong results, e.g. your whole dataframe will contain the same single value in all rows.
+
+### *check_delisting(pair)*
+
+```python
+def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, **kwargs):
+    if self.dp.runmode.value in ('live', 'dry_run'):
+        delisting_dt = self.dp.check_delisting(pair)
+        if delisting_dt is not None:
+            return "delist"
+```
+
+!!! Note "Availabiity of delisting information"
+    This method is only available for certain exchanges and will return `None` in cases this is not available or if the pair is not scheduled for delisting.
+
+!!! Warning "Warning about backtesting"
+    This method will always return up-to-date / real-time values. As such, usage during backtesting / hyperopt without runmode checks will lead to wrong results, e.g. your whole dataframe will contain the same single value in all rows.
+
+### *funding_rate(pair)*
+
+Retrieves the current funding rate for the pair and only works for futures pairs in the format of `base/quote:settle` (e.g. `ETH/USDT:USDT`).
+
+``` python
+if self.dp.runmode.value in ('live', 'dry_run'):
+    funding_rate = self.dp.funding_rate(metadata['pair'])
+    dataframe['current_funding_rate'] = funding_rate['fundingRate']
+    dataframe['next_funding_timestamp'] = funding_rate['fundingTimestamp']
+    dataframe['next_funding_datetime'] = funding_rate['fundingDatetime']
+```
+
+The funding rate structure is aligned with the funding rate structure from [ccxt](https://github.com/ccxt/ccxt/wiki/Manual#funding-rate-structure), so the result will be formatted as follows:
+
+``` python
+{
+    "info": {
+        # ... 
+    },
+    "symbol": "BTC/USDT:USDT",
+    "markPrice": 110730.7,
+    "indexPrice": 110782.52,
+    "interestRate": 0.0001,
+    "estimatedSettlePrice": 110822.67200153,
+    "timestamp": 1757146321001,
+    "datetime": "2025-09-06T08:12:01.001Z",
+    "fundingRate": 5.609e-05,
+    "fundingTimestamp": 1757174400000,
+    "fundingDatetime": "2025-09-06T16:00:00.000Z",
+    "nextFundingRate": None,
+    "nextFundingTimestamp": None,
+    "nextFundingDatetime": None,
+    "previousFundingRate": None,
+    "previousFundingTimestamp": None,
+    "previousFundingDatetime": None,
+    "interval": None,
+}
+```
+
+Therefore, using `funding_rate['fundingRate']` as demonstrated above will use the current funding rate.
+Actually available data will vary between exchanges, so this code may not work as expected across exchanges.
+
+!!! Warning "Warning about backtesting"
+    Current funding-rate is not part of the historic data which means backtesting and hyperopt will not work correctly if this method is used, as the method will return up-to-date values.
+    We recommend to use the historically available funding rate for backtesting (which is automatically downloaded, and is at the frequency of what the exchange provides, usually 4h or 8h).
+    `self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe='8h', candle_type="funding_rate")`
 
 ### Send Notification
 
