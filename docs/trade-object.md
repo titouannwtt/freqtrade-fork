@@ -23,11 +23,11 @@ The following attributes / properties are available for each individual trade - 
 | `open_trade_value` | float | Value of the open trade including fees. |
 | `close_rate` | float | Close rate - only set when is_open = False. |
 | `close_rate_requested` | float | The close rate that was requested. |
-| `safe_close_rate` | float | Close rate or close_rate_requested or 0.0 if neither is available. |
+| `safe_close_rate` | float | Close rate or `close_rate_requested` or 0.0 if neither is available. Only makes sense once the trade is closed. |
 | `stake_amount` | float | Amount in Stake (or Quote) currency. |
-| `max_stake_amount` | float | Maximum stake amount that was used in this trade (including DCA orders). |
+| `max_stake_amount` | float | Maximum stake amount that was used in this trade (sum of all filled Entry orders). |
 | `amount` | float | Amount in Asset / Base currency that is currently owned. Will be 0.0 until the initial order fills. |
-| `amount_requested` | float | Amount that was originally requested for this trade in the first entry order. |
+| `amount_requested` | float | Amount that was originally requested for this trade as part of the first entry order. |
 | `open_date` | datetime | Timestamp when trade was opened **use `open_date_utc` instead** |
 | `open_date_utc` | datetime | Timestamp when trade was opened - in UTC. |
 | `close_date` | datetime | Timestamp when trade was closed **use `close_date_utc` instead** |
@@ -68,8 +68,7 @@ The following attributes / properties are available for each individual trade - 
 | `stop_loss_pct` | float | Relative value of the stop loss. |
 | `initial_stop_loss` | float | Absolute value of the initial stop loss. |
 | `initial_stop_loss_pct` | float | Relative value of the initial stop loss. |
-| `is_stop_loss_trailing` | boolean | True if the stop loss is trailing. |
-| `stoploss_last_update_utc` | datetime | Timestamp of the last stoploss update. |
+| `stoploss_last_update_utc` | datetime | Timestamp of the last stoploss on exchange order update. |
 | `stoploss_or_liquidation` | float | Returns the more restrictive of stoploss or liquidation price and corresponds to the price a stoploss would trigger at. |
 
 ### Futures/Margin trading attributes
