@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import ccxt
 
-from freqtrade.enums import CandleType
+from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import (
     DDosProtection,
     OperationalException,
@@ -132,3 +132,63 @@ class Bitget(Exchange):
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})
+
+    def dry_run_liquidation_price(
+        self,
+        pair: str,
+        open_rate: float,
+        is_short: bool,
+        amount: float,
+        stake_amount: float,
+        leverage: float,
+        wallet_balance: float,
+        open_trades: list,
+    ) -> float | None:
+        """
+        Important: Must be fetching data from cached values as this is used by backtesting!
+
+
+        https://www.bitget.com/support/articles/12560603808759
+        MMR: Maintenance margin rate of the trading pair.
+
+        CoinMainIndexPrice: The index price for Coin-M futures. For USDT-M futures,
+                            the index price is: 1.
+
+        TakerFeeRatio: The fee rate applied when placing taker orders.
+
+        Position direction: The current position direction of the trading pair.
+                        1 indicates a long position, and -1 indicates a short position.
+
+        Formula:
+
+        Estimated liquidation price = [
+            position margin - position size x average entry price x position direction
+        ] ÷ [position size x (MMR + TakerFeeRatio - position direction)]
+
+        :param pair: Pair to calculate liquidation price for
+        :param open_rate: Entry price of position
+        :param is_short: True if the trade is a short, false otherwise
+        :param amount: Absolute value of position size incl. leverage (in base currency)
+        :param stake_amount: Stake amount - Collateral in settle currency.
+        :param leverage: Leverage used for this position.
+        :param wallet_balance: Amount of margin_mode in the wallet being used to trade
+            Cross-Margin Mode: crossWalletBalance
+            Isolated-Margin Mode: isolatedWalletBalance
+        :param open_trades: List of other open trades in the same wallet
+        """
+        market = self.markets[pair]
+        taker_fee_rate = market["taker"] or self._api.describe().get("fees", {}).get(
+            "trading", {}
+        ).get("taker", 0.001)
+        mm_ratio, _ = self.get_maintenance_ratio_and_amt(pair, stake_amount)
+
+        if self.trading_mode == TradingMode.FUTURES and self.margin_mode == MarginMode.ISOLATED:
+            position_direction = -1 if is_short else 1
+
+            return wallet_balance - (amount * open_rate * position_direction) / amount * (
+                mm_ratio + taker_fee_rate - position_direction
+            )
+        else:
+            raise OperationalException(
+                "Freqtrade only supports isolated futures for leverage trading"
+            )
