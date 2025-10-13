@@ -41,6 +41,12 @@ class Bitget(Exchange):
         "mark_ohlcv_timeframe": "4h",
     }
 
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
+        # (TradingMode.FUTURES, MarginMode.CROSS),
+    ]
+
     def ohlcv_candle_limit(
         self, timeframe: str, candle_type: CandleType, since_ms: int | None = None
     ) -> int:
