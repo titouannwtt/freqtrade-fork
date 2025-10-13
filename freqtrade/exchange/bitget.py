@@ -133,6 +133,27 @@ class Bitget(Exchange):
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})
 
+    @retrier
+    def additional_exchange_init(self) -> None:
+        """
+        Additional exchange initialization logic.
+        .api will be available at this point.
+        Must be overridden in child methods if required.
+        """
+        try:
+            if not self._config["dry_run"]:
+                if self.trading_mode == TradingMode.FUTURES:
+                    position_mode = self._api.set_position_mode(False)
+                    self._log_exchange_response("set_position_mode", position_mode)
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Error in additional_exchange_init due to {e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
+
     def dry_run_liquidation_price(
         self,
         pair: str,
