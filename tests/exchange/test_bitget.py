@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from freqtrade.enums import CandleType
+from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import RetryableOrderError
 from freqtrade.exchange.common import API_RETRY_COUNT
 from freqtrade.util import dt_now, dt_ts
@@ -120,3 +120,18 @@ def test_bitget_ohlcv_candle_limit(mocker, default_conf_usdt):
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUTURES, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.MARK, start_time) == length
         assert exch.ohlcv_candle_limit(timeframe, CandleType.FUNDING_RATE, start_time) == 200
+
+
+def test_additional_exchange_init_bitget(default_conf, mocker):
+    default_conf["dry_run"] = False
+    default_conf["trading_mode"] = TradingMode.FUTURES
+    default_conf["margin_mode"] = MarginMode.ISOLATED
+    api_mock = MagicMock()
+    api_mock.set_position_mode = MagicMock(return_value={})
+
+    get_patched_exchange(mocker, default_conf, exchange="bitget", api_mock=api_mock)
+    assert api_mock.set_position_mode.call_count == 1
+
+    ccxt_exceptionhandlers(
+        mocker, default_conf, api_mock, "bitget", "additional_exchange_init", "set_position_mode"
+    )
