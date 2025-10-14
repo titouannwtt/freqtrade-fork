@@ -40,6 +40,7 @@ class Bitget(Exchange):
     }
     _ft_has_futures: FtHas = {
         "mark_ohlcv_timeframe": "4h",
+        "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
