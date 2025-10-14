@@ -232,8 +232,8 @@ class Bitget(Exchange):
         if self.trading_mode == TradingMode.FUTURES and self.margin_mode == MarginMode.ISOLATED:
             position_direction = -1 if is_short else 1
 
-            return wallet_balance - (amount * open_rate * position_direction) / amount * (
-                mm_ratio + taker_fee_rate - position_direction
+            return (wallet_balance - (amount * open_rate * position_direction)) / (
+                amount * (mm_ratio + taker_fee_rate - position_direction)
             )
         else:
             raise OperationalException(
