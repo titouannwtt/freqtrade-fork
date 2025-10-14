@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import ccxt
 
+from freqtrade.constants import BuySell
 from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import (
     DDosProtection,
@@ -153,6 +154,31 @@ class Bitget(Exchange):
             ) from e
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
+
+    def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
+        if self.trading_mode != TradingMode.SPOT:
+            # Explicitly setting margin_mode is not necessary as marginMode can be set per order.
+            # self.set_margin_mode(pair, self.margin_mode, accept_fail)
+            self._set_leverage(leverage, pair, accept_fail)
+
+    def _get_params(
+        self,
+        side: BuySell,
+        ordertype: str,
+        leverage: float,
+        reduceOnly: bool,
+        time_in_force: str = "GTC",
+    ) -> dict:
+        params = super()._get_params(
+            side=side,
+            ordertype=ordertype,
+            leverage=leverage,
+            reduceOnly=reduceOnly,
+            time_in_force=time_in_force,
+        )
+        if self.trading_mode == TradingMode.FUTURES and self.margin_mode:
+            params["marginMode"] = self.margin_mode.value.lower()
+        return params
 
     def dry_run_liquidation_price(
         self,
