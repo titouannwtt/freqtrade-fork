@@ -5942,7 +5942,7 @@ def test_get_max_leverage_futures(default_conf, mocker, leverage_tiers):
     assert exchange.get_max_leverage("TIA/USDT:USDT", 130.008) == 40
 
 
-@pytest.mark.parametrize("exchange_name", ["binance", "kraken", "gate", "okx", "bybit"])
+@pytest.mark.parametrize("exchange_name", ["binance", "kraken", "gate", "okx", "bybit", "bitget"])
 def test__get_params(mocker, default_conf, exchange_name):
     api_mock = MagicMock()
     mocker.patch(f"{EXMS}.exchange_has", return_value=True)
@@ -5965,6 +5965,9 @@ def test__get_params(mocker, default_conf, exchange_name):
 
     if exchange_name == "bybit":
         params2["position_idx"] = 0
+
+    if exchange_name == "bitget":
+        params2["marginMode"] = "isolated"
 
     assert (
         exchange._get_params(
