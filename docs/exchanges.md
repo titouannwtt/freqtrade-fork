@@ -298,7 +298,14 @@ Without these permissions, the bot will not start correctly and show errors like
 
 Bybit supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), "FOK" (full-or-cancel), "IOC" (immediate-or-cancel) and "PO" (Post only) settings.
 
-Futures trading on bybit is currently supported for isolated futures mode.
+!!! Warning "Unified accounts"
+    Freqtrade assumes accounts to be dedicated to the bot.
+    We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
+    Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
+
+### Bybit Futures
+
+Futures trading on bybit is supported for isolated futures mode.
 
 On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
 
@@ -312,10 +319,6 @@ API Keys for live futures trading must have the following permissions:
 
 We do strongly recommend to limit all API keys to the IP you're going to use it from.
 
-!!! Warning "Unified accounts"
-    Freqtrade assumes accounts to be dedicated to the bot.
-    We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
-    Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
 
 ## Bitmart
 
