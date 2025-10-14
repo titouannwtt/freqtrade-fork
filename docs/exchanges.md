@@ -355,6 +355,12 @@ Bitget supports [time_in_force](configuration.md#understand-order_time_in_force)
     Bitget supports `stoploss_on_exchange` and can use both stop-loss-market and stop-loss-limit orders. It provides great advantages, so we recommend to benefit from it.
     You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type of stoploss shall be used.
 
+### Bitget Futures
+
+Futures trading on bitget is supported for isolated futures mode.
+
+On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
+
 ## Hyperliquid
 
 !!! Tip "Stoploss on Exchange"
