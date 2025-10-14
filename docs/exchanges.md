@@ -487,3 +487,5 @@ For example, to test the order type `FOK` with Kraken, and modify candle limit t
 
 !!! Warning
     Please make sure to fully understand the impacts of these settings before modifying them.
+    Using `_ft_has_params` overrides may lead to unexpected behavior, and may even break your bot. 
+    We will not be able to provide support for issues caused by custom settings in `_ft_has_params`.
