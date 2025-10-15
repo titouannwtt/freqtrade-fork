@@ -427,7 +427,7 @@ class Backtesting:
     def disable_database_use(self):
         disable_database_use(self.timeframe)
 
-    def reset_backtest(self, enable_protections):
+    def reset_backtest(self, enable_protections: bool = False):
         """
         Backtesting setup method - called once for every call to "backtest()".
         """
