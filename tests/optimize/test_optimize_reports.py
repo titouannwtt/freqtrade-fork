@@ -634,6 +634,24 @@ def test_generate_periodic_breakdown_stats(testdatadir):
     res = generate_periodic_breakdown_stats([], "day")
     assert res == []
 
+    # Test weekday
+    reswd = generate_periodic_breakdown_stats(bt_data, "weekday")
+    assert isinstance(reswd, list)
+    assert len(reswd) == 7
+    assert reswd[0]["date"] == "Monday"
+    assert reswd[0]["date_ts"] == 0
+    assert reswd[1]["date"] == "Tuesday"
+    assert reswd[2]["date"] == "Wednesday"
+    assert reswd[3]["date"] == "Thursday"
+    assert reswd[4]["date"] == "Friday"
+    assert reswd[5]["date"] == "Saturday"
+    assert reswd[6]["date"] == "Sunday"
+    monday = reswd[0]
+    assert "draws" in monday
+    assert "losses" in monday
+    assert "wins" in monday
+    assert "profit_abs" in monday
+
 
 def test__get_resample_from_period():
     assert _get_resample_from_period("day") == "1d"
