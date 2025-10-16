@@ -132,13 +132,8 @@ def text_table_periodic_breakdown(
     :param days_breakdown_stats: Days breakdown metrics
     :param stake_currency: Stakecurrency used
     """
-    if period == "weekday":
-        first_column = "Week day"
-    else:
-        first_column = period.capitalize()
-
     headers = [
-        first_column,
+        period.capitalize(),
         "Trades",
         f"Tot Profit {stake_currency}",
         "Profit Factor",
