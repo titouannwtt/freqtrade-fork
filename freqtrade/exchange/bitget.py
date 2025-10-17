@@ -40,6 +40,7 @@ class Bitget(Exchange):
     }
     _ft_has_futures: FtHas = {
         "mark_ohlcv_timeframe": "4h",
+        "funding_fee_candle_limit": 100,
         "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
     }
 
