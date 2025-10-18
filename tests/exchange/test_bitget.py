@@ -1,6 +1,5 @@
 from datetime import timedelta
-from sqlite3 import OperationalError
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
@@ -159,3 +158,38 @@ def test_dry_run_liquidation_price_cross_bitget(default_conf, mocker):
             100,
             [],
         )
+
+
+def test__lev_prep_bitget(default_conf, mocker):
+    api_mock = MagicMock()
+    api_mock.set_margin_mode = MagicMock()
+    api_mock.set_leverage = MagicMock()
+    type(api_mock).has = PropertyMock(return_value={"setMarginMode": True, "setLeverage": True})
+    exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="bitget")
+    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
+
+    assert api_mock.set_margin_mode.call_count == 0
+    assert api_mock.set_leverage.call_count == 0
+
+    # test in futures mode
+    api_mock.set_margin_mode.reset_mock()
+    api_mock.set_leverage.reset_mock()
+    default_conf["dry_run"] = False
+
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
+
+    exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="bitget")
+    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
+
+    assert api_mock.set_margin_mode.call_count == 0
+    assert api_mock.set_leverage.call_count == 1
+    api_mock.set_leverage.assert_called_with(symbol="BTC/USDC:USDC", leverage=3.2)
+
+    api_mock.reset_mock()
+
+    exchange._lev_prep("BTC/USDC:USDC", 19.99, "sell")
+
+    assert api_mock.set_margin_mode.call_count == 0
+    assert api_mock.set_leverage.call_count == 1
+    api_mock.set_leverage.assert_called_with(symbol="BTC/USDC:USDC", leverage=19.99)
