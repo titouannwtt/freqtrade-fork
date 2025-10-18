@@ -1,10 +1,11 @@
 from datetime import timedelta
+from sqlite3 import OperationalError
 from unittest.mock import MagicMock
 
 import pytest
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
-from freqtrade.exceptions import RetryableOrderError
+from freqtrade.exceptions import OperationalException, RetryableOrderError
 from freqtrade.exchange.common import API_RETRY_COUNT
 from freqtrade.util import dt_now, dt_ts
 from tests.conftest import EXMS, get_patched_exchange
@@ -135,3 +136,26 @@ def test_additional_exchange_init_bitget(default_conf, mocker):
     ccxt_exceptionhandlers(
         mocker, default_conf, api_mock, "bitget", "additional_exchange_init", "set_position_mode"
     )
+
+
+def test_dry_run_liquidation_price_cross_bitget(default_conf, mocker):
+    default_conf["dry_run"] = True
+    default_conf["trading_mode"] = TradingMode.FUTURES
+    default_conf["margin_mode"] = MarginMode.CROSS
+    api_mock = MagicMock()
+    mocker.patch(f"{EXMS}.get_maintenance_ratio_and_amt", MagicMock(return_value=(0.005, 0.0)))
+    exchange = get_patched_exchange(mocker, default_conf, exchange="bitget", api_mock=api_mock)
+
+    with pytest.raises(
+        OperationalException, match="Freqtrade currently only supports isolated futures for bitget"
+    ):
+        exchange.dry_run_liquidation_price(
+            "ETH/USDT:USDT",
+            100_000,
+            False,
+            0.1,
+            100,
+            10,
+            100,
+            [],
+        )

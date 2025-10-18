@@ -234,5 +234,5 @@ class Bitget(Exchange):
             )
         else:
             raise OperationalException(
-                "Freqtrade only supports isolated futures for leverage trading"
+                "Freqtrade currently only supports isolated futures for bitget"
             )
