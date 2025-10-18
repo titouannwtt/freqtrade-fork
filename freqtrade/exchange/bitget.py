@@ -29,6 +29,7 @@ class Bitget(Exchange):
         "stoploss_on_exchange": True,
         "stop_price_param": "stopPrice",
         "stop_price_prop": "stopPrice",
+        "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
         "stoploss_order_types": {"limit": "limit", "market": "market"},
         "ohlcv_candle_limit": 200,  # 200 for historical candles, 1000 for recent ones.
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
@@ -36,7 +37,6 @@ class Bitget(Exchange):
     _ft_has_futures: FtHas = {
         "mark_ohlcv_timeframe": "4h",
         "funding_fee_candle_limit": 100,
-        "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
