@@ -297,8 +297,7 @@ class Okx(Exchange):
 
 
 class MyOkx(Okx):
-    """
-    MyOkx exchange class.
+    """MyOkx exchange class.
     Minimal adjustment to disable futures trading for the EU subsidiary of Okx
     """
 
