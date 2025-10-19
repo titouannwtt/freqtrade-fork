@@ -16,6 +16,7 @@ class HyperoptableStrategy(StrategyTestV3):
     for samples and inspiration.
     """
 
+    INTERFACE_VERSION = 3
     buy_params = {
         "buy_rsi": 35,
         # Intentionally not specified, so "default" is tested
@@ -56,32 +57,10 @@ class HyperoptableStrategy(StrategyTestV3):
         self.bot_loop_started = True
 
     def bot_start(self, **kwargs) -> None:
-        """
-        Parameters can also be defined here ...
-        """
         self.bot_started = True
         self.buy_rsi = IntParameter([0, 50], default=30, space="buy")
 
-    def informative_pairs(self):
-        """
-        Define additional, informative pair/interval combinations to be cached from the exchange.
-        These pair/interval combinations are non-tradeable, unless they are part
-        of the whitelist as well.
-        For more information, please consult the documentation
-        :return: List of tuples in the format (pair, interval)
-            Sample: return [("ETH/USDT", "5m"),
-                            ("BTC/USDT", "15m"),
-                            ]
-        """
-        return []
-
-    def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        """
-        Based on TA indicators, populates the buy signal for the given dataframe
-        :param dataframe: DataFrame
-        :param metadata: Additional information, like the currently traded pair
-        :return: DataFrame with buy column
-        """
+    def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
                 (dataframe["rsi"] < self.buy_rsi.value)
@@ -90,18 +69,12 @@ class HyperoptableStrategy(StrategyTestV3):
                 & (dataframe["plus_di"] > self.buy_plusdi.value)
             )
             | ((dataframe["adx"] > 65) & (dataframe["plus_di"] > self.buy_plusdi.value)),
-            "buy",
+            "enter_long",
         ] = 1
 
         return dataframe
 
-    def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        """
-        Based on TA indicators, populates the sell signal for the given dataframe
-        :param dataframe: DataFrame
-        :param metadata: Additional information, like the currently traded pair
-        :return: DataFrame with sell column
-        """
+    def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
             (
                 (
@@ -112,6 +85,6 @@ class HyperoptableStrategy(StrategyTestV3):
                 & (dataframe["minus_di"] > 0)
             )
             | ((dataframe["adx"] > 70) & (dataframe["minus_di"] > self.sell_minusdi.value)),
-            "sell",
+            "exit_long",
         ] = 1
         return dataframe
