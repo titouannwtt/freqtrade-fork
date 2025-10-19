@@ -7,7 +7,7 @@ import logging
 import sys
 import warnings
 from datetime import UTC, datetime
-from multiprocessing import Manager
+from multiprocessing import Manager, get_all_start_methods, set_start_method
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +125,12 @@ class HyperOptimizer:
         local_queue must be a global and passed to the child process via inheritance.
         """
         global log_queue
+        try:
+            sms = get_all_start_methods()
+            if "forkserver" in sms:
+                set_start_method("forkserver")
+        except RuntimeError:
+            pass  # start method has already been set
         m = Manager()
         log_queue = m.Queue()
         logger.info(f"manager queue {type(log_queue)}")
