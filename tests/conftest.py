@@ -500,9 +500,11 @@ def patch_gc(mocker) -> None:
     mocker.patch("freqtrade.main.gc_set_threshold")
 
 
-def is_arm() -> bool:
+def is_arm(include_aarch64: bool = False) -> bool:
     machine = platform.machine()
-    return "arm" in machine or "aarch64" in machine
+    if include_aarch64:
+        return "aarch64" in machine or "arm" in machine
+    return "arm" in machine
 
 
 def is_mac() -> bool:
