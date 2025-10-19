@@ -1,10 +1,15 @@
 # pragma pylint: disable=missing-docstring, invalid-name, pointless-string-statement
 
+import logging
+
 from pandas import DataFrame
 from strategy_test_v3 import StrategyTestV3
 
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 from freqtrade.strategy import BooleanParameter, DecimalParameter, IntParameter, RealParameter
+
+
+logger = logging.getLogger(__name__)
 
 
 class HyperoptableStrategy(StrategyTestV3):
@@ -55,6 +60,7 @@ class HyperoptableStrategy(StrategyTestV3):
 
     def bot_loop_start(self, **kwargs):
         self.bot_loop_started = True
+        logger.info("Test: Bot loop started")
 
     def bot_start(self, **kwargs) -> None:
         self.bot_started = True
