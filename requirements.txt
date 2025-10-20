@@ -8,7 +8,7 @@ ta-lib==0.6.7
 technical==1.5.3
 
 ccxt==4.5.11
-cryptography==46.0.2
+cryptography==46.0.3
 aiohttp==3.13.0
 SQLAlchemy==2.0.44
 python-telegram-bot==22.5
