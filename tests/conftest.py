@@ -21,6 +21,7 @@ from freqtrade.exchange import Exchange, timeframe_to_minutes, timeframe_to_seco
 from freqtrade.freqtradebot import FreqtradeBot
 from freqtrade.persistence import LocalTrade, Order, Trade, init_db
 from freqtrade.resolvers import ExchangeResolver
+from freqtrade.system import set_mp_start_method
 from freqtrade.util import dt_now, dt_ts
 from freqtrade.worker import Worker
 from tests.conftest_trades import (
@@ -498,6 +499,15 @@ def create_mock_trades_usdt(fee, is_short: bool | None = False, use_db: bool = T
 @pytest.fixture(autouse=True)
 def patch_gc(mocker) -> None:
     mocker.patch("freqtrade.main.gc_set_threshold")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def fixture_set_mp_start_method():
+    """
+    Patch multiprocessing start mode globally
+    Auto-used, runs once per session.
+    """
+    set_mp_start_method()
 
 
 def is_arm(include_aarch64: bool = False) -> bool:
