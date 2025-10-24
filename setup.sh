@@ -49,7 +49,7 @@ function updateenv() {
     source .venv/bin/activate
     SYS_ARCH=$(uname -m)
     echo "pip install in-progress. Please wait..."
-    ${PYTHON} -m pip install --upgrade pip wheel setuptools
+    ${PYTHON} -m pip install --upgrade pip wheel setuptools uv
     REQUIREMENTS_HYPEROPT=""
     REQUIREMENTS_PLOT=""
     REQUIREMENTS_FREQAI=""
@@ -70,7 +70,7 @@ function updateenv() {
         fi
         if [ "${SYS_ARCH}" == "armv7l" ] || [ "${SYS_ARCH}" == "armv6l" ]; then
             echo "Detected Raspberry, installing cython, skipping hyperopt installation."
-            ${PYTHON} -m pip install --upgrade cython
+            ${PYTHON} -m uv pip install --upgrade cython
         else
             # Is not Raspberry
             read -p "Do you want to install hyperopt dependencies [y/N]? "
@@ -92,12 +92,12 @@ function updateenv() {
         fi
     fi
 
-    ${PYTHON} -m pip install --upgrade -r ${REQUIREMENTS} ${REQUIREMENTS_HYPEROPT} ${REQUIREMENTS_PLOT} ${REQUIREMENTS_FREQAI} ${REQUIREMENTS_FREQAI_RL}
+    ${PYTHON} -m uv pip install --upgrade -r ${REQUIREMENTS} ${REQUIREMENTS_HYPEROPT} ${REQUIREMENTS_PLOT} ${REQUIREMENTS_FREQAI} ${REQUIREMENTS_FREQAI_RL}
     if [ $? -ne 0 ]; then
         echo "Failed installing dependencies"
         exit 1
     fi
-    ${PYTHON} -m pip install -e .
+    ${PYTHON} -m uv pip install -e .
     if [ $? -ne 0 ]; then
         echo "Failed installing Freqtrade"
         exit 1
@@ -252,7 +252,7 @@ function install() {
 
 function plot() {
     echo_block "Installing dependencies for Plotting scripts"
-    ${PYTHON} -m pip install plotly --upgrade
+    ${PYTHON} -m uv pip install plotly --upgrade
 }
 
 function help() {
