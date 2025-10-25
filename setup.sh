@@ -32,6 +32,11 @@ function check_installed_python() {
         if [ $? -eq 0 ]; then
             echo "using ${PYTHON}"
             check_installed_pip
+            PIP="${PYTHON} -m pip"
+            if [ -x "$(command -v uv)" ]; then
+                echo "uv detected — using it instead of pip for faster installation."
+                PIP="uv pip"
+            fi
             return
         fi
     done
@@ -49,7 +54,7 @@ function updateenv() {
     source .venv/bin/activate
     SYS_ARCH=$(uname -m)
     echo "pip install in-progress. Please wait..."
-    ${PYTHON} -m pip install --upgrade pip wheel setuptools uv
+    ${PIP} install --upgrade pip wheel setuptools
     REQUIREMENTS_HYPEROPT=""
     REQUIREMENTS_PLOT=""
     REQUIREMENTS_FREQAI=""
@@ -92,12 +97,12 @@ function updateenv() {
         fi
     fi
 
-    ${PYTHON} -m uv pip install --upgrade -r ${REQUIREMENTS} ${REQUIREMENTS_HYPEROPT} ${REQUIREMENTS_PLOT} ${REQUIREMENTS_FREQAI} ${REQUIREMENTS_FREQAI_RL}
+    ${PIP} install --upgrade -r ${REQUIREMENTS} ${REQUIREMENTS_HYPEROPT} ${REQUIREMENTS_PLOT} ${REQUIREMENTS_FREQAI} ${REQUIREMENTS_FREQAI_RL}
     if [ $? -ne 0 ]; then
         echo "Failed installing dependencies"
         exit 1
     fi
-    ${PYTHON} -m uv pip install -e .
+    ${PIP} install -e .
     if [ $? -ne 0 ]; then
         echo "Failed installing Freqtrade"
         exit 1
@@ -252,7 +257,7 @@ function install() {
 
 function plot() {
     echo_block "Installing dependencies for Plotting scripts"
-    ${PYTHON} -m uv pip install plotly --upgrade
+    ${PIP} install plotly --upgrade
 }
 
 function help() {
