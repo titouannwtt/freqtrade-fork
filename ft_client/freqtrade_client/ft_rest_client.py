@@ -449,7 +449,7 @@ class FtRestClient:
         return self._get(
             "available_pairs",
             params={
-                "stake_currency": stake_currency if timeframe else "",
+                "stake_currency": stake_currency if stake_currency else "",
                 "timeframe": timeframe if timeframe else "",
             },
         )
