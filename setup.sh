@@ -75,7 +75,7 @@ function updateenv() {
         fi
         if [ "${SYS_ARCH}" == "armv7l" ] || [ "${SYS_ARCH}" == "armv6l" ]; then
             echo "Detected Raspberry, installing cython, skipping hyperopt installation."
-            ${PYTHON} -m uv pip install --upgrade cython
+            ${PIP} install --upgrade cython
         else
             # Is not Raspberry
             read -p "Do you want to install hyperopt dependencies [y/N]? "
