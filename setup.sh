@@ -6,6 +6,7 @@ function echo_block() {
     echo $1
     echo "----------------------------"
 }
+UV=false
 
 function check_installed_pip() {
    ${PYTHON} -m pip > /dev/null
@@ -24,6 +25,13 @@ function check_installed_python() {
         echo "You can do this by running 'deactivate'."
         exit 2
     fi
+    if [ -x "$(command -v uv)" ]; then
+        echo "uv detected — using it instead of pip for faster installation."
+        PIP="uv pip"
+        PYTHON="python3.13"
+        UV=true
+        return
+    fi
 
     for v in 13 12 11
     do
@@ -33,10 +41,6 @@ function check_installed_python() {
             echo "using ${PYTHON}"
             check_installed_pip
             PIP="${PYTHON} -m pip"
-            if [ -x "$(command -v uv)" ]; then
-                echo "uv detected — using it instead of pip for faster installation."
-                PIP="uv pip"
-            fi
             return
         fi
     done
@@ -184,7 +188,12 @@ function recreate_environments() {
     fi
 
     echo
-    ${PYTHON} -m venv .venv
+    if [ "$UV" = true ] ; then
+        echo "- Creating new virtual environment with uv"
+        uv venv .venv --python=${PYTHON}
+    else
+        ${PYTHON} -m venv .venv
+    fi
     if [ $? -ne 0 ]; then
         echo "Could not create virtual environment. Leaving now"
         exit 1
