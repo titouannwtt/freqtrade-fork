@@ -43,7 +43,7 @@ pydantic==2.12.2
 uvicorn==0.37.0
 pyjwt==2.10.1
 aiofiles==25.1.0
-psutil==7.1.0
+psutil==7.1.1
 
 # Building config files interactively
 questionary==2.1.1
