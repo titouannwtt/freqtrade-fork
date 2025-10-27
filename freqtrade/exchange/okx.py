@@ -80,11 +80,6 @@ class Okx(Exchange):
         if candle_type in (CandleType.FUTURES, CandleType.SPOT):
             return 300
 
-        if candle_type in (CandleType.MARK, CandleType.PREMIUMINDEX) and (
-            not since_ms or since_ms > (date_minus_candles(timeframe, 300).timestamp() * 1000)
-        ):
-            return 300
-
         return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
 
     @retrier
