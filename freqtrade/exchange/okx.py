@@ -11,7 +11,7 @@ from freqtrade.exceptions import (
     RetryableOrderError,
     TemporaryError,
 )
-from freqtrade.exchange import Exchange, date_minus_candles
+from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import API_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
