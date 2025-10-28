@@ -149,7 +149,7 @@ class IResolver:
                 continue
             module_path = entry.resolve()
             if entry.read_text().find(f"class {object_name}(") == -1:
-                logger.debug(f"Skipping {module_path} as it does not contain class {object_name}")
+                logger.debug(f"Skipping {module_path} as it does not contain class {object_name}.")
                 continue
 
             if obj := next(cls._get_valid_object(module_path, object_name), None):
