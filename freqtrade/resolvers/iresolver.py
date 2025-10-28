@@ -149,9 +149,7 @@ class IResolver:
                 continue
             module_path = entry.resolve()
 
-            obj = next(cls._get_valid_object(module_path, object_name), None)
-
-            if obj:
+            if obj := next(cls._get_valid_object(module_path, object_name), None):
                 obj[0].__file__ = str(entry)
                 if add_source:
                     obj[0].__source__ = obj[1]
