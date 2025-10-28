@@ -162,6 +162,10 @@ class IResolver:
     ) -> Any | None:
         """
         Try to load object from path list.
+        :param paths: list of absolute paths to search
+        :param object_name: name of the module to import
+        :param add_source: add the source code as __source__ attribute to theloaded object.
+        :param kwargs: keyword arguments to pass to the object constructor
         """
 
         for _path in paths:
