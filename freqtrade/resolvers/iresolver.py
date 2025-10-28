@@ -86,13 +86,13 @@ class IResolver:
              Tuple format: [Object, source]
         """
 
-        # Generate spec based on absolute path
-        # Pass object_name as first argument to have logging print a reasonable name.
         with PathModifier(module_path.parent):
             module_name = module_path.stem or ""
+            # Generate spec based on absolute path
+            # Pass object_name as first argument to have logging print a reasonable name.
             spec = importlib.util.spec_from_file_location(module_name, str(module_path))
             if not spec:
-                return iter([None])
+                return iter([])
 
             module = importlib.util.module_from_spec(spec)
             try:
