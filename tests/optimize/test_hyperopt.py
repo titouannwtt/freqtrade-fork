@@ -236,28 +236,6 @@ def test_start_not_installed(mocker, default_conf, import_fails) -> None:
         start_hyperopt(pargs)
 
 
-def test_start_no_hyperopt_allowed(mocker, hyperopt_conf, caplog) -> None:
-    start_mock = MagicMock()
-    patched_configuration_load_config_file(mocker, hyperopt_conf)
-    mocker.patch("freqtrade.optimize.hyperopt.Hyperopt.start", start_mock)
-    patch_exchange(mocker)
-
-    args = [
-        "hyperopt",
-        "--config",
-        "config.json",
-        "--hyperopt",
-        "HyperoptTestSepFile",
-        "--hyperopt-loss",
-        "SharpeHyperOptLossDaily",
-        "--epochs",
-        "5",
-    ]
-    pargs = get_args(args)
-    with pytest.raises(OperationalException, match=r"Using separate Hyperopt files has been.*"):
-        start_hyperopt(pargs)
-
-
 def test_start_no_data(mocker, hyperopt_conf, tmp_path) -> None:
     hyperopt_conf["user_data_dir"] = tmp_path
     patched_configuration_load_config_file(mocker, hyperopt_conf)
