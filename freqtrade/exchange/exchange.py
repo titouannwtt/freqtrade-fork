@@ -300,7 +300,7 @@ class Exchange:
 
         if self.trading_mode != TradingMode.SPOT and load_leverage_tiers:
             self.fill_leverage_tiers()
-        self.additional_exchange_init()
+        self.ft_additional_exchange_init()
 
     def __del__(self):
         """
@@ -454,6 +454,12 @@ class Exchange:
         Might need to be updated if https://github.com/ccxt/ccxt/issues/20408 is fixed.
         """
         return self._api.precisionMode
+
+    def ft_additional_exchange_init(self) -> None:
+        """
+        Wrapper around additional_exchange_init to simplify testing
+        """
+        self.additional_exchange_init()
 
     def additional_exchange_init(self) -> None:
         """
@@ -832,9 +838,15 @@ class Exchange:
 
     def validate_freqai(self, config: Config) -> None:
         freqai_enabled = config.get("freqai", {}).get("enabled", False)
-        if freqai_enabled and not self._ft_has["ohlcv_has_history"]:
+        override = config.get("freqai", {}).get("override_exchange_checks", False)
+        if not override and freqai_enabled and not self._ft_has["ohlcv_has_history"]:
             raise ConfigurationError(
                 f"Historic OHLCV data not available for {self.name}. Can't use freqAI."
+            )
+        elif override and freqai_enabled and not self._ft_has["ohlcv_has_history"]:
+            logger.warning(
+                "Overriding exchange checks for freqAI. Make sure that your exchange supports "
+                "fetching historic OHLCV data, otherwise freqAI will not work."
             )
 
     def validate_required_startup_candles(self, startup_candles: int, timeframe: str) -> int:
@@ -3873,7 +3885,10 @@ class Exchange:
         """
 
         market = self.markets[pair]
-        taker_fee_rate = market["taker"]
+        # default to some default fee if not available from exchange
+        taker_fee_rate = market["taker"] or self._api.describe().get("fees", {}).get(
+            "trading", {}
+        ).get("taker", 0.001)
         mm_ratio, _ = self.get_maintenance_ratio_and_amt(pair, stake_amount)
 
         if self.trading_mode == TradingMode.FUTURES and self.margin_mode == MarginMode.ISOLATED:

@@ -153,6 +153,8 @@ EXCHANGES = {
                     "ADA.F": {"balance": "2.00000000", "hold_trade": "0.00000000"},
                     "XBT": {"balance": "0.00060000", "hold_trade": "0.00000000"},
                     "XBT.F": {"balance": "0.00100000", "hold_trade": "0.00000000"},
+                    "ZEUR": {"balance": "1000.00000000", "hold_trade": "0.00000000"},
+                    "ZUSD": {"balance": "1000.00000000", "hold_trade": "0.00000000"},
                 }
             },
             "expected": {
@@ -161,6 +163,8 @@ EXCHANGES = {
                 "BTC": {"free": 0.0006, "total": 0.0006, "used": 0.0},
                 # XBT.F should be mapped to BTC.F
                 "BTC.F": {"free": 0.001, "total": 0.001, "used": 0.0},
+                "EUR": {"free": 1000.0, "total": 1000.0, "used": 0.0},
+                "USD": {"free": 1000.0, "total": 1000.0, "used": 0.0},
             },
         },
     },
@@ -418,6 +422,18 @@ EXCHANGES = {
         "hasQuoteVolume": True,
         "timeframe": "1h",
         "candle_count": 1000,
+        "futures": True,
+        "futures_pair": "BTC/USDT:USDT",
+        "leverage_tiers_public": True,
+        "leverage_in_spot_market": True,
+    },
+    "coinex": {
+        "pair": "BTC/USDT",
+        "stake_currency": "USDT",
+        "hasQuoteVolume": False,
+        "timeframe": "1h",
+        "candle_count": 1000,
+        "orderbook_max_entries": 50,
     },
     # TODO: re-enable htx once certificates work again
     # "htx": {
@@ -569,10 +585,7 @@ def get_futures_exchange(exchange_name, exchange_conf, class_mocker):
 
         class_mocker.patch("freqtrade.exchange.binance.Binance.fill_leverage_tiers")
         class_mocker.patch(f"{EXMS}.fetch_trading_fees")
-        class_mocker.patch("freqtrade.exchange.okx.Okx.additional_exchange_init")
-        class_mocker.patch("freqtrade.exchange.binance.Binance.additional_exchange_init")
-        class_mocker.patch("freqtrade.exchange.bybit.Bybit.additional_exchange_init")
-        class_mocker.patch("freqtrade.exchange.gate.Gate.additional_exchange_init")
+        class_mocker.patch(f"{EXMS}.ft_additional_exchange_init")
         class_mocker.patch(f"{EXMS}.load_cached_leverage_tiers", return_value=None)
         class_mocker.patch(f"{EXMS}.cache_leverage_tiers")
 
@@ -581,7 +594,7 @@ def get_futures_exchange(exchange_name, exchange_conf, class_mocker):
 
 @pytest.fixture(params=EXCHANGES, scope="class")
 def exchange(request, exchange_conf, class_mocker):
-    class_mocker.patch("freqtrade.exchange.bybit.Bybit.additional_exchange_init")
+    class_mocker.patch(f"{EXMS}.ft_additional_exchange_init")
     exchange, name = get_exchange(request.param, exchange_conf)
     yield exchange, name
     exchange.close()

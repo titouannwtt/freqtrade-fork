@@ -38,7 +38,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d # v7.1.0
       with:
         activate-environment: true
         enable-cache: true
@@ -248,7 +248,7 @@ jobs:
         python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d # v7.1.0
       with:
         activate-environment: true
         enable-cache: true
@@ -265,7 +265,7 @@ jobs:
 
     - name: Tests incl. ccxt compatibility tests
       env:
-        CI_WEB_PROXY: http://152.67.78.211:13128
+        CI_WEB_PROXY: http://152.67.66.8:13128
       run: |
         pytest --random-order --longrun --durations 20 -n auto
 

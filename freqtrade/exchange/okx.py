@@ -11,7 +11,7 @@ from freqtrade.exceptions import (
     RetryableOrderError,
     TemporaryError,
 )
-from freqtrade.exchange import Exchange, date_minus_candles
+from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import API_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import safe_value_fallback2
@@ -78,11 +78,6 @@ class Okx(Exchange):
         :return: Candle limit as integer
         """
         if candle_type in (CandleType.FUTURES, CandleType.SPOT):
-            return 300
-
-        if candle_type in (CandleType.MARK, CandleType.PREMIUMINDEX) and (
-            not since_ms or since_ms > (date_minus_candles(timeframe, 300).timestamp() * 1000)
-        ):
             return 300
 
         return super().ohlcv_candle_limit(timeframe, candle_type, since_ms)
@@ -296,10 +291,19 @@ class Okx(Exchange):
         return orders
 
 
-class MyOkx(Okx):
-    """
-    MyOkx exchange class.
+class Myokx(Okx):
+    """MyOkx exchange class.
     Minimal adjustment to disable futures trading for the EU subsidiary of Okx
+    """
+
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.SPOT, MarginMode.NONE),
+    ]
+
+
+class Okxus(Okx):
+    """Okxus exchange class.
+    Minimal adjustment to disable futures trading for the US subsidiary of Okx
     """
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [

@@ -48,7 +48,6 @@ MAP_EXCHANGE_CHILDCLASS = {
     "binanceus": "binance",
     "binanceusdm": "binance",
     "okex": "okx",
-    "okxus": "okx",
     "gateio": "gate",
     "huboi": "htx",
 }
@@ -57,6 +56,7 @@ SUPPORTED_EXCHANGES = [
     "binance",
     "bingx",
     "bitmart",
+    "bitget",
     "bybit",
     "gate",
     "htx",
@@ -96,7 +96,6 @@ EXCHANGE_HAS_OPTIONAL = [
     # 'fetchPositions',  # Futures trading
     # 'fetchLeverageTiers',  # Futures initialization
     # 'fetchMarketLeverageTiers',  # Futures initialization
-    # 'fetchOpenOrder', 'fetchClosedOrder',  # replacement for fetchOrder
     # 'fetchOpenOrders', 'fetchClosedOrders',  # 'fetchOrders',  # Refinding balance...
     # ccxt.pro
     "watchOHLCV",
