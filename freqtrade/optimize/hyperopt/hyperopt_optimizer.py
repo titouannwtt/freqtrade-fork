@@ -71,11 +71,6 @@ class HyperOptimizer:
 
     def __init__(self, config: Config, data_pickle_file: Path) -> None:
         self.spaces: dict[str, list[DimensionProtocol]] = {}
-        self.protection_space: list[DimensionProtocol] = []
-        self.roi_space: list[DimensionProtocol] = []
-        self.stoploss_space: list[DimensionProtocol] = []
-        self.trailing_space: list[DimensionProtocol] = []
-        self.max_open_trades_space: list[DimensionProtocol] = []
         self.dimensions: list[DimensionProtocol] = []
         self.o_dimensions: dict = {}
 
@@ -166,37 +161,39 @@ class HyperOptimizer:
         """
         result: dict = {}
 
-        for indicator in self.spaces.keys():
-            result[indicator] = round_dict(
-                {p.name: params.get(p.name) for p in self.spaces.get(indicator, [])}, 13
-            )
-        if HyperoptTools.has_space(self.config, "protection"):
-            result["protection"] = round_dict(
-                {p.name: params.get(p.name) for p in self.protection_space}, 13
-            )
-        if HyperoptTools.has_space(self.config, "roi"):
-            result["roi"] = round_dict(
-                {str(k): v for k, v in self.custom_hyperopt.generate_roi_table(params).items()}, 13
-            )
-        if HyperoptTools.has_space(self.config, "stoploss"):
-            result["stoploss"] = round_dict(
-                {p.name: params.get(p.name) for p in self.stoploss_space}, 13
-            )
-        if HyperoptTools.has_space(self.config, "trailing"):
-            result["trailing"] = round_dict(
-                self.custom_hyperopt.generate_trailing_params(params), 13
-            )
-        if HyperoptTools.has_space(self.config, "trades"):
-            result["max_open_trades"] = round_dict(
-                {
-                    "max_open_trades": (
-                        self.backtesting.strategy.max_open_trades
-                        if self.backtesting.strategy.max_open_trades != float("inf")
-                        else -1
-                    )
-                },
-                13,
-            )
+        for space in self.spaces.keys():
+            if space == "protection":
+                result["protection"] = round_dict(
+                    {p.name: params.get(p.name) for p in self.spaces[space]}, 13
+                )
+            elif space == "roi":
+                result["roi"] = round_dict(
+                    {str(k): v for k, v in self.custom_hyperopt.generate_roi_table(params).items()},
+                    13,
+                )
+            elif space == "stoploss":
+                result["stoploss"] = round_dict(
+                    {p.name: params.get(p.name) for p in self.spaces[space]}, 13
+                )
+            elif space == "trailing":
+                result["trailing"] = round_dict(
+                    self.custom_hyperopt.generate_trailing_params(params), 13
+                )
+            elif space == "trades":
+                result["max_open_trades"] = round_dict(
+                    {
+                        "max_open_trades": (
+                            self.backtesting.strategy.max_open_trades
+                            if self.backtesting.strategy.max_open_trades != float("inf")
+                            else -1
+                        )
+                    },
+                    13,
+                )
+            else:
+                result[space] = round_dict(
+                    {p.name: params.get(p.name) for p in self.spaces[space]}, 13
+                )
 
         return result
 
@@ -225,43 +222,28 @@ class HyperOptimizer:
         """
         Assign the dimensions in the hyperoptimization space.
         """
-        if HyperoptTools.has_space(self.config, "protection"):
-            # Protections can only be optimized when using the Parameter interface
-            logger.debug("Hyperopt has 'protection' space")
-            # Enable Protections if protection space is selected.
-            self.config["enable_protections"] = True
-            self.backtesting.enable_protections = True
-            self.protection_space = self.custom_hyperopt.protection_space()
+        for space in ["buy", "sell", "protection", "roi", "stoploss", "trailing", "trades"]:
+            if not HyperoptTools.has_space(self.config, space):
+                continue
+            logger.debug(f"Hyperopt has '{space}' space")
+            if space == "protection":
+                # Protections can only be optimized when using the Parameter interface
+                # Enable Protections if protection space is selected.
+                self.config["enable_protections"] = True
+                self.backtesting.enable_protections = True
+                self.spaces[space] = self.custom_hyperopt.protection_space()
+            elif space == "roi":
+                self.spaces[space] = self.custom_hyperopt.roi_space()
+            elif space == "stoploss":
+                self.spaces[space] = self.custom_hyperopt.stoploss_space()
+            elif space == "trailing":
+                self.spaces[space] = self.custom_hyperopt.trailing_space()
+            elif space == "trades":
+                self.spaces[space] = self.custom_hyperopt.max_open_trades_space()
+            else:
+                self.spaces[space] = self.custom_hyperopt.get_indicator_space(space)
 
-        for indicator in ["buy", "sell"]:
-            if HyperoptTools.has_space(self.config, indicator):
-                logger.debug(f"Hyperopt has '{indicator}' space")
-                self.spaces[indicator] = self.custom_hyperopt.get_indicator_space(indicator)
-
-        if HyperoptTools.has_space(self.config, "roi"):
-            logger.debug("Hyperopt has 'roi' space")
-            self.roi_space = self.custom_hyperopt.roi_space()
-
-        if HyperoptTools.has_space(self.config, "stoploss"):
-            logger.debug("Hyperopt has 'stoploss' space")
-            self.stoploss_space = self.custom_hyperopt.stoploss_space()
-
-        if HyperoptTools.has_space(self.config, "trailing"):
-            logger.debug("Hyperopt has 'trailing' space")
-            self.trailing_space = self.custom_hyperopt.trailing_space()
-
-        if HyperoptTools.has_space(self.config, "trades"):
-            logger.debug("Hyperopt has 'trades' space")
-            self.max_open_trades_space = self.custom_hyperopt.max_open_trades_space()
-
-        self.dimensions = (
-            [s for space in self.spaces.values() for s in space]
-            + self.protection_space
-            + self.roi_space
-            + self.stoploss_space
-            + self.trailing_space
-            + self.max_open_trades_space
-        )
+        self.dimensions = [s for space in self.spaces.values() for s in space]
 
     def assign_params(self, params_dict: dict[str, Any], category: str) -> None:
         """
