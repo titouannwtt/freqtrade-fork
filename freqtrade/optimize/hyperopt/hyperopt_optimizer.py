@@ -231,7 +231,7 @@ class HyperOptimizer:
                 # Enable Protections if protection space is selected.
                 self.config["enable_protections"] = True
                 self.backtesting.enable_protections = True
-                self.spaces[space] = self.custom_hyperopt.protection_space()
+                self.spaces[space] = self.custom_hyperopt.get_indicator_space(space)
             elif space == "roi":
                 self.spaces[space] = self.custom_hyperopt.roi_space()
             elif space == "stoploss":

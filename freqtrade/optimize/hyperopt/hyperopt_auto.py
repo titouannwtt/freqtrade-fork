@@ -71,15 +71,6 @@ class HyperOptAuto(IHyperOpt):
             )
             return []
 
-    def buy_indicator_space(self) -> list["Dimension"]:
-        return self.get_indicator_space("buy")
-
-    def sell_indicator_space(self) -> list["Dimension"]:
-        return self.get_indicator_space("sell")
-
-    def protection_space(self) -> list["Dimension"]:
-        return self.get_indicator_space("protection")
-
     def generate_roi_table(self, params: dict) -> dict[int, float]:
         return self._get_func("generate_roi_table")(params)
 
