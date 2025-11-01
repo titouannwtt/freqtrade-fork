@@ -244,6 +244,11 @@ class HyperOptimizer:
                 self.spaces[space] = self.custom_hyperopt.get_indicator_space(space)
 
         self.dimensions = [s for space in self.spaces.values() for s in space]
+        if len(self.dimensions) == 0:
+            raise OperationalException(
+                "No hyperopt parameters found to optimize. Did you intend to use different spaces?"
+            )
+        self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
     def assign_params(self, params_dict: dict[str, Any], category: str) -> None:
         """
@@ -413,7 +418,6 @@ class HyperOptimizer:
         o_sampler = self.custom_hyperopt.generate_estimator(
             dimensions=self.dimensions, random_state=random_state
         )
-        self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
         if isinstance(o_sampler, str):
             if o_sampler not in optuna_samplers_dict.keys():
