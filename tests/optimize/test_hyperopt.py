@@ -906,7 +906,8 @@ def test_simplified_interface_all_failed(mocker, hyperopt_conf, caplog) -> None:
     hyperopt.hyperopter.backtesting.strategy.advise_all_indicators = MagicMock()
     hyperopt.hyperopter.custom_hyperopt.generate_roi_table = MagicMock(return_value={})
 
-    with pytest.raises(OperationalException, match=r"The 'protection' space is included into *"):
+    # The first one to fail raises the exception
+    with pytest.raises(OperationalException, match=r"The 'buy' space is included into *"):
         hyperopt.hyperopter.init_spaces()
 
     hyperopt.config["hyperopt_ignore_missing_space"] = True
