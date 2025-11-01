@@ -913,7 +913,7 @@ def test_simplified_interface_all_failed(mocker, hyperopt_conf, caplog) -> None:
     caplog.clear()
     hyperopt.hyperopter.init_spaces()
     assert log_has_re(r"The 'protection' space is included into *", caplog)
-    assert hyperopt.hyperopter.protection_space == []
+    assert hyperopt.hyperopter.spaces["protection"] == []
 
 
 def test_simplified_interface_buy(mocker, hyperopt_conf, capsys) -> None:
