@@ -7,6 +7,7 @@ This module implements a convenience auto-hyperopt class, which can be used toge
 import logging
 from collections.abc import Callable
 from contextlib import suppress
+from typing import Literal
 
 from freqtrade.exceptions import OperationalException
 
@@ -59,7 +60,7 @@ class HyperOptAuto(IHyperOpt):
             if attr.optimize:
                 yield attr.get_space(attr_name)
 
-    def _get_indicator_space(self, category) -> list:
+    def get_indicator_space(self, category: Literal["buy", "sell", "protection"]) -> list:
         # TODO: is this necessary, or can we call "generate_space" directly?
         indicator_space = list(self._generate_indicator_space(category))
         if len(indicator_space) > 0:
@@ -71,13 +72,13 @@ class HyperOptAuto(IHyperOpt):
             return []
 
     def buy_indicator_space(self) -> list["Dimension"]:
-        return self._get_indicator_space("buy")
+        return self.get_indicator_space("buy")
 
     def sell_indicator_space(self) -> list["Dimension"]:
-        return self._get_indicator_space("sell")
+        return self.get_indicator_space("sell")
 
     def protection_space(self) -> list["Dimension"]:
-        return self._get_indicator_space("protection")
+        return self.get_indicator_space("protection")
 
     def generate_roi_table(self, params: dict) -> dict[int, float]:
         return self._get_func("generate_roi_table")(params)
