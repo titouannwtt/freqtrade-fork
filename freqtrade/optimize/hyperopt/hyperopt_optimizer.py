@@ -70,8 +70,7 @@ class HyperOptimizer:
     """
 
     def __init__(self, config: Config, data_pickle_file: Path) -> None:
-        self.buy_space: list[DimensionProtocol] = []
-        self.sell_space: list[DimensionProtocol] = []
+        self.spaces: dict[str, list[DimensionProtocol]] = {}
         self.protection_space: list[DimensionProtocol] = []
         self.roi_space: list[DimensionProtocol] = []
         self.stoploss_space: list[DimensionProtocol] = []
@@ -167,10 +166,10 @@ class HyperOptimizer:
         """
         result: dict = {}
 
-        if HyperoptTools.has_space(self.config, "buy"):
-            result["buy"] = round_dict({p.name: params.get(p.name) for p in self.buy_space}, 13)
-        if HyperoptTools.has_space(self.config, "sell"):
-            result["sell"] = round_dict({p.name: params.get(p.name) for p in self.sell_space}, 13)
+        for indicator in self.spaces.keys():
+            result[indicator] = round_dict(
+                {p.name: params.get(p.name) for p in self.spaces.get(indicator, [])}, 13
+            )
         if HyperoptTools.has_space(self.config, "protection"):
             result["protection"] = round_dict(
                 {p.name: params.get(p.name) for p in self.protection_space}, 13
@@ -234,13 +233,10 @@ class HyperOptimizer:
             self.backtesting.enable_protections = True
             self.protection_space = self.custom_hyperopt.protection_space()
 
-        if HyperoptTools.has_space(self.config, "buy"):
-            logger.debug("Hyperopt has 'buy' space")
-            self.buy_space = self.custom_hyperopt.buy_indicator_space()
-
-        if HyperoptTools.has_space(self.config, "sell"):
-            logger.debug("Hyperopt has 'sell' space")
-            self.sell_space = self.custom_hyperopt.sell_indicator_space()
+        for indicator in ["buy", "sell"]:
+            if HyperoptTools.has_space(self.config, indicator):
+                logger.debug(f"Hyperopt has '{indicator}' space")
+                self.spaces[indicator] = self.custom_hyperopt.get_indicator_space(indicator)
 
         if HyperoptTools.has_space(self.config, "roi"):
             logger.debug("Hyperopt has 'roi' space")
@@ -259,8 +255,7 @@ class HyperOptimizer:
             self.max_open_trades_space = self.custom_hyperopt.max_open_trades_space()
 
         self.dimensions = (
-            self.buy_space
-            + self.sell_space
+            [s for space in self.spaces.values() for s in space]
             + self.protection_space
             + self.roi_space
             + self.stoploss_space
