@@ -917,6 +917,35 @@ def test_simplified_interface_all_failed(mocker, hyperopt_conf, caplog) -> None:
     assert hyperopt.hyperopter.spaces["protection"] == []
 
 
+def test_simplified_interface_none_selected(mocker, hyperopt_conf, caplog) -> None:
+    mocker.patch("freqtrade.optimize.hyperopt.hyperopt_optimizer.dump", MagicMock())
+    mocker.patch("freqtrade.optimize.hyperopt.hyperopt.file_dump_json")
+    mocker.patch(
+        "freqtrade.optimize.backtesting.Backtesting.load_bt_data",
+        MagicMock(return_value=(MagicMock(), None)),
+    )
+    mocker.patch(
+        "freqtrade.optimize.hyperopt.hyperopt_optimizer.get_timerange",
+        MagicMock(return_value=(datetime(2017, 12, 10), datetime(2017, 12, 13))),
+    )
+
+    patch_exchange(mocker)
+
+    hyperopt_conf.update(
+        {
+            "spaces": [],
+        }
+    )
+
+    hyperopt = Hyperopt(hyperopt_conf)
+    hyperopt.hyperopter.backtesting.strategy.advise_all_indicators = MagicMock()
+    hyperopt.hyperopter.custom_hyperopt.generate_roi_table = MagicMock(return_value={})
+
+    # The first one to fail raises the exception
+    with pytest.raises(OperationalException, match=r"No hyperopt parameters found to optimize\..*"):
+        hyperopt.hyperopter.init_spaces()
+
+
 def test_simplified_interface_buy(mocker, hyperopt_conf, capsys) -> None:
     dumper = mocker.patch("freqtrade.optimize.hyperopt.hyperopt_optimizer.dump")
     dumper2 = mocker.patch("freqtrade.optimize.hyperopt.Hyperopt._save_result")
