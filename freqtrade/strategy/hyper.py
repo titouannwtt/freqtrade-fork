@@ -181,34 +181,6 @@ class HyperStrategyMixin:
         return params
 
 
-def detect_parameters(
-    obj: HyperStrategyMixin | type[HyperStrategyMixin], category: str
-) -> Iterator[tuple[str, BaseParameter]]:
-    """
-    TODO: replace with the below logic completely
-    Detect all parameters for 'category' for "obj"
-    :param obj: Strategy object or class
-    :param category: category - usually `'buy', 'sell', 'protection',...
-    """
-    for attr_name in dir(obj):
-        if not attr_name.startswith("__"):  # Ignore internals, not strictly necessary.
-            attr = getattr(obj, attr_name)
-            if issubclass(attr.__class__, BaseParameter):
-                if (
-                    attr_name.startswith(category + "_")
-                    and attr.category is not None
-                    and attr.category != category
-                ):
-                    raise OperationalException(
-                        f"Inconclusive parameter name {attr_name}, category: {attr.category}."
-                    )
-
-                if category == attr.category or (
-                    attr_name.startswith(category + "_") and attr.category is None
-                ):
-                    yield attr_name, attr
-
-
 def detect_all_parameters(
     obj: HyperStrategyMixin | type[HyperStrategyMixin],
 ) -> AllSpaceParams:
