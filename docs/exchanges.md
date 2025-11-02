@@ -407,11 +407,11 @@ To use these with Freqtrade, you will need to use the following configuration pa
 ``` json
 "exchange": {
     "name": "hyperliquid",
-    "walletAddress": "your_master_wallet_address", // Your master wallet address (not API wallet address and not vault/subaccount address).
-    "privateKey": "your_api_private_key", // API wallet private key (see https://app.hyperliquid.xyz/API). You'll only need private key, API wallet address is not needed.
+    "walletAddress": "your_master_wallet_address", // Your master wallet address (not the API wallet address and not the vault/subaccount address).
+    "privateKey": "your_api_private_key", // API wallet private key (see https://app.hyperliquid.xyz/API). You'll only need the private key.
     "ccxt_config": {
         "options": {
-            "vaultAddress": "your_vault_address", // Optional, only if you want to use a vault OR...
+            "vaultAddress": "your_vault_address", // Optional, only if you want to use a vault ...
             "subAccountAddress": "your_subaccount_address" // OR optional, only if you want to use a subaccount
         }
     },
@@ -420,6 +420,9 @@ To use these with Freqtrade, you will need to use the following configuration pa
 ```
 
 Your balance and trades will now be used from your vault / subaccount - and no longer from your main account.
+
+!!! Note
+    You can only use either a vault or a subaccount - not both at the same time.
 
 ### Historic Hyperliquid data
 
