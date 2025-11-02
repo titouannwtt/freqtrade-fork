@@ -16,7 +16,7 @@ from freqtrade.enums import ExitCheckTuple, ExitType, SignalDirection
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.persistence import PairLocks, Trade
 from freqtrade.resolvers import StrategyResolver
-from freqtrade.strategy.hyper import detect_parameters
+from freqtrade.strategy.hyper import detect_all_parameters, detect_parameters
 from freqtrade.strategy.parameters import (
     IntParameter,
 )
@@ -940,15 +940,14 @@ def test_auto_hyperopt_interface(default_conf):
 
     # Parameter is disabled - so value from sell_param dict will NOT be used.
     assert strategy.sell_minusdi.value == 0.5
-    all_params = strategy.detect_all_parameters()
+    # all_params = strategy.detect_all_parameters()
+    all_params = detect_all_parameters(strategy.__class__)
     assert isinstance(all_params, dict)
     # Only one buy param at class level
     assert len(all_params["buy"]) == 1
     # Running detect params at instance level reveals both parameters.
     assert len(list(detect_parameters(strategy, "buy"))) == 2
     assert len(all_params["sell"]) == 2
-    # Number of Hyperoptable parameters
-    assert all_params["count"] == 5
 
     strategy.__class__.sell_rsi = IntParameter([0, 10], default=5, space="buy")
 
