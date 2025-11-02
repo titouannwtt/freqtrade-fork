@@ -52,15 +52,6 @@ class HyperStrategyMixin:
         for par in params:
             yield par.name, par
 
-    @classmethod
-    def detect_all_parameters(cls) -> dict:
-        """Detect all parameters and return them as a list"""
-        params = detect_all_parameters(cls)
-
-        params.update({"count": len(params["buy"] + params["sell"] + params["protection"])})
-
-        return params
-
     def ft_load_params_from_file(self) -> None:
         """
         Load Parameters from parameter file

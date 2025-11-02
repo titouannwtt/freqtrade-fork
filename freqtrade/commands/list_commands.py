@@ -140,6 +140,7 @@ def start_list_strategies(args: dict[str, Any]) -> None:
     """
     from freqtrade.configuration import setup_utils_configuration
     from freqtrade.resolvers import StrategyResolver
+    from freqtrade.strategy.hyper import detect_all_parameters
 
     config = setup_utils_configuration(args, RunMode.UTIL_NO_EXCHANGE)
 
@@ -153,7 +154,7 @@ def start_list_strategies(args: dict[str, Any]) -> None:
     strategy_objs = sorted(strategy_objs, key=lambda x: x["name"])
     for obj in strategy_objs:
         if obj["class"]:
-            obj["hyperoptable"] = obj["class"].detect_all_parameters()
+            obj["hyperoptable"] = detect_all_parameters(obj["class"])
         else:
             obj["hyperoptable"] = {"count": 0}
 
