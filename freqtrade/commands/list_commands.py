@@ -117,7 +117,7 @@ def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
         if "hyperoptable" in s:
             objs_to_print[idx].update(
                 {
-                    "hyperoptable": "Yes" if s["hyperoptable"]["count"] > 0 else "No",
+                    "hyperoptable": "Yes" if len(s["hyperoptable"]) > 0 else "No",
                     "buy-Params": str(len(s["hyperoptable"].get("buy", []))),
                     "sell-Params": str(len(s["hyperoptable"].get("sell", []))),
                 }
