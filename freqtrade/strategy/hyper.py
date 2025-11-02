@@ -19,6 +19,11 @@ from freqtrade.strategy.parameters import BaseParameter
 logger = logging.getLogger(__name__)
 
 
+# Type aliases
+SpaceParams = dict[str, BaseParameter]
+AllSpaceParams = dict[str, SpaceParams]
+
+
 class HyperStrategyMixin:
     """
     A helper base class which allows HyperOptAuto class to reuse implementations of buy/sell
@@ -91,18 +96,13 @@ class HyperStrategyMixin:
         * Parameters defined in parameters objects (buy_params, sell_params, ...)
         * Parameter defaults
         """
-        spaces = ["buy", "sell", "protection"]
-        spaces += [
-            s
-            for s in self.config.get("spaces", [])
-            if s not in spaces and s not in HYPEROPT_BUILTIN_SPACES
-        ]
+        params = detect_all_parameters(self)
 
-        for space in spaces:
-            params = deep_merge_dicts(
+        for space in params.keys():
+            params_values = deep_merge_dicts(
                 self._ft_params_from_file.get(space, {}), getattr(self, f"{space}_params", {})
             )
-            self._ft_load_params(params, space, hyperopt)
+            self._ft_load_params(params[space], params_values, space, hyperopt)
 
     def load_params_from_file(self) -> dict:
         filename_str = getattr(self, "__file__", "")
@@ -136,34 +136,35 @@ class HyperStrategyMixin:
             setattr(self, container_name, [])
         return getattr(self, container_name)
 
-    def _ft_load_params(self, params: dict, space: str, hyperopt: bool = False) -> None:
+    def _ft_load_params(
+        self, params: SpaceParams, param_values: dict, space: str, hyperopt: bool = False
+    ) -> None:
         """
         Set optimizable parameter values.
         :param params: Dictionary with new parameter values.
         """
-        if not params:
+        if not param_values:
             logger.info(f"No params for {space} found, using default values.")
         param_container: list[BaseParameter] = self._ft_get_param_container(space)
 
-        for attr_name, attr in detect_parameters(self, space):
-            attr.name = attr_name
-            attr.in_space = hyperopt and HyperoptTools.has_space(self.config, space)
-            if not attr.category:
-                attr.category = space
+        for param_name, param in params.items():
+            param.in_space = hyperopt and HyperoptTools.has_space(self.config, space)
+            if not param.category:
+                param.category = space
 
-            param_container.append(attr)
+            param_container.append(param)
 
-            if params and attr_name in params:
-                if attr.load:
-                    attr.value = params[attr_name]
-                    logger.info(f"Strategy Parameter: {attr_name} = {attr.value}")
+            if param_values and param_name in param_values:
+                if param.load:
+                    param.value = param_values[param_name]
+                    logger.info(f"Strategy Parameter: {param_name} = {param.value}")
                 else:
                     logger.warning(
-                        f'Parameter "{attr_name}" exists, but is disabled. '
-                        f'Default value "{attr.value}" used.'
+                        f'Parameter "{param_name}" exists, but is disabled. '
+                        f'Default value "{param.value}" used.'
                     )
             else:
-                logger.info(f"Strategy Parameter(default): {attr_name} = {attr.value}")
+                logger.info(f"Strategy Parameter(default): {param_name} = {param.value}")
 
     def get_no_optimize_params(self) -> dict[str, dict]:
         """
@@ -210,13 +211,13 @@ def detect_parameters(
 
 def detect_all_parameters(
     obj: HyperStrategyMixin | type[HyperStrategyMixin],
-) -> dict[str, list[BaseParameter]]:
+) -> AllSpaceParams:
     """
     Detect all hyperoptable parameters for this object.
     :param obj: Strategy object or class
     """
     auto_categories = ["buy", "sell", "protection"]
-    result: dict[str, list[BaseParameter]] = defaultdict(list)
+    result: AllSpaceParams = defaultdict(dict)
     for attr_name in dir(obj):
         if attr_name.startswith("__"):  # Ignore internals
             continue
@@ -239,6 +240,6 @@ def detect_all_parameters(
             raise OperationalException(
                 f"Inconclusive parameter name {attr_name}, space: {attr.category}."
             )
-
-        result[attr.category].append(attr)
+        attr.name = attr_name
+        result[attr.category][attr_name] = attr
     return result
