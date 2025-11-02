@@ -255,15 +255,6 @@ class HyperOptimizer:
             )
         self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
-    def assign_params(self, params_dict: dict[str, Any], category: str) -> None:
-        """
-        Assign hyperoptable parameters
-        """
-        for attr_name, attr in self.backtesting.strategy.enumerate_parameters(category):
-            if attr.optimize:
-                # noinspection PyProtectedMember
-                attr.value = params_dict[attr_name]
-
     @delayed
     @wrap_non_picklable_objects
     def generate_optimizer_wrapped(self, params_dict: dict[str, Any]) -> dict[str, Any]:
@@ -279,15 +270,9 @@ class HyperOptimizer:
         HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
         backtest_start_time = datetime.now(UTC)
 
-        # Apply parameters
-        if HyperoptTools.has_space(self.config, "buy"):
-            self.assign_params(params_dict, "buy")
-
-        if HyperoptTools.has_space(self.config, "sell"):
-            self.assign_params(params_dict, "sell")
-
-        if HyperoptTools.has_space(self.config, "protection"):
-            self.assign_params(params_dict, "protection")
+        for attr_name, attr in self.backtesting.strategy.enumerate_parameters():
+            if attr.in_space and attr.optimize:
+                attr.value = params_dict[attr_name]
 
         if HyperoptTools.has_space(self.config, "roi"):
             self.backtesting.strategy.minimal_roi = self.custom_hyperopt.generate_roi_table(
