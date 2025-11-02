@@ -7,9 +7,8 @@ import logging
 from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
-from freqtrade.constants import HYPEROPT_BUILTIN_SPACES, Config
+from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts
 from freqtrade.optimize.hyperopt_tools import HyperoptTools
@@ -165,6 +164,7 @@ def detect_all_parameters(
     """
     Detect all hyperoptable parameters for this object.
     :param obj: Strategy object or class
+    :return: Dictionary of detected parameters by space
     """
     auto_categories = ["buy", "sell", "protection"]
     result: AllSpaceParams = defaultdict(dict)
