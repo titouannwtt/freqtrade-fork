@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from freqtrade.constants import Config
+from freqtrade.constants import HYPEROPT_BUILTIN_SPACES, Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts
 from freqtrade.optimize.hyperopt_tools import HyperoptTools
@@ -29,9 +29,6 @@ class HyperStrategyMixin:
         Initialize hyperoptable strategy mixin.
         """
         self.config = config
-        self.ft_buy_params: list[BaseParameter] = []
-        self.ft_sell_params: list[BaseParameter] = []
-        self.ft_protection_params: list[BaseParameter] = []
 
         params = self.load_params_from_file()
         params = params.get("params", {})
@@ -46,15 +43,10 @@ class HyperStrategyMixin:
         :param category:
         :return:
         """
-        if category not in ("buy", "sell", "protection", None):
-            raise OperationalException(
-                'Category must be one of: "buy", "sell", "protection", None.'
-            )
-
         if category is None:
             params = self.ft_buy_params + self.ft_sell_params + self.ft_protection_params
         else:
-            params = getattr(self, f"ft_{category}_params")
+            params = self._ft_get_param_container(category)
 
         for par in params:
             yield par.name, par
@@ -110,20 +102,16 @@ class HyperStrategyMixin:
         * Parameters defined in parameters objects (buy_params, sell_params, ...)
         * Parameter defaults
         """
+        spaces = ["buy", "sell", "protection"]
+        spaces += [
+            s for s in self.config["spaces"] if s not in spaces and s not in HYPEROPT_BUILTIN_SPACES
+        ]
 
-        buy_params = deep_merge_dicts(
-            self._ft_params_from_file.get("buy", {}), getattr(self, "buy_params", {})
-        )
-        sell_params = deep_merge_dicts(
-            self._ft_params_from_file.get("sell", {}), getattr(self, "sell_params", {})
-        )
-        protection_params = deep_merge_dicts(
-            self._ft_params_from_file.get("protection", {}), getattr(self, "protection_params", {})
-        )
-
-        self._ft_load_params(buy_params, "buy", hyperopt)
-        self._ft_load_params(sell_params, "sell", hyperopt)
-        self._ft_load_params(protection_params, "protection", hyperopt)
+        for space in spaces:
+            params = deep_merge_dicts(
+                self._ft_params_from_file.get(space, {}), getattr(self, f"{space}_params", {})
+            )
+            self._ft_load_params(params, space, hyperopt)
 
     def load_params_from_file(self) -> dict:
         filename_str = getattr(self, "__file__", "")
@@ -145,6 +133,18 @@ class HyperStrategyMixin:
 
         return {}
 
+    def _ft_get_param_container(self, category: str) -> list[BaseParameter]:
+        """
+        Get parameter container for category/space.
+        Creates the attribute if it does not exist yet.
+        :param category: category - usually 'buy', 'sell', 'protection',...
+        :return: list of parameters for category
+        """
+        container_name = f"ft_{category}_params"
+        if not hasattr(self, container_name):
+            setattr(self, container_name, [])
+        return getattr(self, container_name)
+
     def _ft_load_params(self, params: dict, space: str, hyperopt: bool = False) -> None:
         """
         Set optimizable parameter values.
@@ -152,7 +152,7 @@ class HyperStrategyMixin:
         """
         if not params:
             logger.info(f"No params for {space} found, using default values.")
-        param_container: list[BaseParameter] = getattr(self, f"ft_{space}_params")
+        param_container: list[BaseParameter] = self._ft_get_param_container(space)
 
         for attr_name, attr in detect_parameters(self, space):
             attr.name = attr_name
