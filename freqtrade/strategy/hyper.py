@@ -4,6 +4,7 @@ This module defines a base class for auto-hyperoptable strategies.
 """
 
 import logging
+from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -54,11 +55,8 @@ class HyperStrategyMixin:
     @classmethod
     def detect_all_parameters(cls) -> dict:
         """Detect all parameters and return them as a list"""
-        params: dict[str, Any] = {
-            "buy": list(detect_parameters(cls, "buy")),
-            "sell": list(detect_parameters(cls, "sell")),
-            "protection": list(detect_parameters(cls, "protection")),
-        }
+        params = detect_all_parameters(cls)
+
         params.update({"count": len(params["buy"] + params["sell"] + params["protection"])})
 
         return params
@@ -195,6 +193,7 @@ def detect_parameters(
     obj: HyperStrategyMixin | type[HyperStrategyMixin], category: str
 ) -> Iterator[tuple[str, BaseParameter]]:
     """
+    TODO: replace with the below logic completely
     Detect all parameters for 'category' for "obj"
     :param obj: Strategy object or class
     :param category: category - usually `'buy', 'sell', 'protection',...
@@ -216,3 +215,39 @@ def detect_parameters(
                     attr_name.startswith(category + "_") and attr.category is None
                 ):
                     yield attr_name, attr
+
+
+def detect_all_parameters(
+    obj: HyperStrategyMixin | type[HyperStrategyMixin],
+) -> dict[str, list[BaseParameter]]:
+    """
+    Detect all hyperoptable parameters for this object.
+    :param obj: Strategy object or class
+    """
+    auto_categories = ["buy", "sell", "protection"]
+    result: dict[str, list[BaseParameter]] = defaultdict(list)
+    for attr_name in dir(obj):
+        if attr_name.startswith("__"):  # Ignore internals
+            continue
+        attr = getattr(obj, attr_name)
+        if not issubclass(attr.__class__, BaseParameter):
+            continue
+        category = attr.category
+        if attr.category is None:
+            # Category auto detection
+            for category in auto_categories:
+                if category == attr.category or (
+                    attr_name.startswith(category + "_") and attr.category is None
+                ):
+                    attr.category = category
+        if attr.category is None or (
+            attr_name.startswith(category + "_")
+            and attr.category is not None
+            and attr.category != category
+        ):
+            raise OperationalException(
+                f"Inconclusive parameter name {attr_name}, space: {attr.category}."
+            )
+
+        result[attr.category].append(attr)
+    return result
