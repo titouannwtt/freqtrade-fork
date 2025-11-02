@@ -16,7 +16,7 @@ from freqtrade.enums import ExitCheckTuple, ExitType, SignalDirection
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.persistence import PairLocks, Trade
 from freqtrade.resolvers import StrategyResolver
-from freqtrade.strategy.hyper import detect_all_parameters, detect_parameters
+from freqtrade.strategy.hyper import detect_all_parameters
 from freqtrade.strategy.parameters import (
     IntParameter,
 )
@@ -946,13 +946,14 @@ def test_auto_hyperopt_interface(default_conf):
     # Only one buy param at class level
     assert len(all_params["buy"]) == 1
     # Running detect params at instance level reveals both parameters.
-    assert len(list(detect_parameters(strategy, "buy"))) == 2
-    assert len(all_params["sell"]) == 2
+    params_inst = detect_all_parameters(strategy)
+    assert len(params_inst["buy"]) == 2
+    assert len(params_inst["sell"]) == 2
 
     strategy.__class__.sell_rsi = IntParameter([0, 10], default=5, space="buy")
 
     with pytest.raises(OperationalException, match=r"Inconclusive parameter.*"):
-        [x for x in detect_parameters(strategy, "sell")]
+        detect_all_parameters(strategy.__class__)
 
 
 def test_auto_hyperopt_interface_loadparams(default_conf, mocker, caplog):
