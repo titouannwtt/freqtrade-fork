@@ -35,7 +35,7 @@ class HyperStrategyMixin:
         Initialize hyperoptable strategy mixin.
         """
         self.config = config
-        self.__ft_hyper_params: AllSpaceParams = {}
+        self._ft_hyper_params: AllSpaceParams = {}
 
         params = self.load_params_from_file()
         params = params.get("params", {})
@@ -50,8 +50,8 @@ class HyperStrategyMixin:
         :param category:
         :return:
         """
-        for category in [c for c in self.__ft_hyper_params if category is None or c == category]:
-            for par in self.__ft_hyper_params[category].values():
+        for category in [c for c in self._ft_hyper_params if category is None or c == category]:
+            for par in self._ft_hyper_params[category].values():
                 yield par.name, par
 
     def ft_load_params_from_file(self) -> None:
@@ -93,13 +93,13 @@ class HyperStrategyMixin:
         * Parameters defined in parameters objects (buy_params, sell_params, ...)
         * Parameter defaults
         """
-        self.__ft_hyper_params = detect_all_parameters(self)
+        self._ft_hyper_params = detect_all_parameters(self)
 
-        for space in self.__ft_hyper_params.keys():
+        for space in self._ft_hyper_params.keys():
             params_values = deep_merge_dicts(
                 self._ft_params_from_file.get(space, {}), getattr(self, f"{space}_params", {})
             )
-            self._ft_load_params(self.__ft_hyper_params[space], params_values, space, hyperopt)
+            self._ft_load_params(self._ft_hyper_params[space], params_values, space, hyperopt)
 
     def load_params_from_file(self) -> dict:
         filename_str = getattr(self, "__file__", "")
@@ -152,11 +152,7 @@ class HyperStrategyMixin:
         """
         Returns list of Parameters that are not part of the current optimize job
         """
-        params: dict[str, dict] = {
-            "buy": {},
-            "sell": {},
-            "protection": {},
-        }
+        params: dict[str, dict] = defaultdict(dict)
         for name, p in self.enumerate_parameters():
             if p.category and (not p.optimize or not p.in_space):
                 params[p.category][name] = p.value
