@@ -35,6 +35,7 @@ class HyperStrategyMixin:
         Initialize hyperoptable strategy mixin.
         """
         self.config = config
+        self.__ft_hyper_params: AllSpaceParams = {}
 
         params = self.load_params_from_file()
         params = params.get("params", {})
@@ -49,13 +50,9 @@ class HyperStrategyMixin:
         :param category:
         :return:
         """
-        if category is None:
-            params = self.ft_buy_params + self.ft_sell_params + self.ft_protection_params
-        else:
-            params = self._ft_get_param_container(category)
-
-        for par in params:
-            yield par.name, par
+        for category in [c for c in self.__ft_hyper_params if category is None or c == category]:
+            for par in self.__ft_hyper_params[category].values():
+                yield par.name, par
 
     def ft_load_params_from_file(self) -> None:
         """
@@ -96,13 +93,13 @@ class HyperStrategyMixin:
         * Parameters defined in parameters objects (buy_params, sell_params, ...)
         * Parameter defaults
         """
-        params = detect_all_parameters(self)
+        self.__ft_hyper_params = detect_all_parameters(self)
 
-        for space in params.keys():
+        for space in self.__ft_hyper_params.keys():
             params_values = deep_merge_dicts(
                 self._ft_params_from_file.get(space, {}), getattr(self, f"{space}_params", {})
             )
-            self._ft_load_params(params[space], params_values, space, hyperopt)
+            self._ft_load_params(self.__ft_hyper_params[space], params_values, space, hyperopt)
 
     def load_params_from_file(self) -> dict:
         filename_str = getattr(self, "__file__", "")
@@ -124,18 +121,6 @@ class HyperStrategyMixin:
 
         return {}
 
-    def _ft_get_param_container(self, category: str) -> list[BaseParameter]:
-        """
-        Get parameter container for category/space.
-        Creates the attribute if it does not exist yet.
-        :param category: category - usually 'buy', 'sell', 'protection',...
-        :return: list of parameters for category
-        """
-        container_name = f"ft_{category}_params"
-        if not hasattr(self, container_name):
-            setattr(self, container_name, [])
-        return getattr(self, container_name)
-
     def _ft_load_params(
         self, params: SpaceParams, param_values: dict, space: str, hyperopt: bool = False
     ) -> None:
@@ -145,14 +130,11 @@ class HyperStrategyMixin:
         """
         if not param_values:
             logger.info(f"No params for {space} found, using default values.")
-        param_container: list[BaseParameter] = self._ft_get_param_container(space)
 
         for param_name, param in params.items():
             param.in_space = hyperopt and HyperoptTools.has_space(self.config, space)
             if not param.category:
                 param.category = space
-
-            param_container.append(param)
 
             if param_values and param_name in param_values:
                 if param.load:
