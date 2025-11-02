@@ -104,7 +104,9 @@ class HyperStrategyMixin:
         """
         spaces = ["buy", "sell", "protection"]
         spaces += [
-            s for s in self.config["spaces"] if s not in spaces and s not in HYPEROPT_BUILTIN_SPACES
+            s
+            for s in self.config.get("spaces", [])
+            if s not in spaces and s not in HYPEROPT_BUILTIN_SPACES
         ]
 
         for space in spaces:
