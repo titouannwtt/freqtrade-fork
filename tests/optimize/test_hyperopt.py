@@ -501,7 +501,7 @@ def test_populate_indicators(hyperopt, testdatadir) -> None:
 def test_generate_optimizer(mocker, hyperopt_conf) -> None:
     hyperopt_conf.update(
         {
-            "spaces": "all",
+            "spaces": ["all"],
             "hyperopt_min_trades": 1,
         }
     )
@@ -616,7 +616,7 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
             "max_open_trades": {"max_open_trades": 3},
         },
         "params_dict": optimizer_param,
-        "params_not_optimized": {"buy": {}, "protection": {}, "sell": {}},
+        "params_not_optimized": {},
         "results_metrics": ANY,
         "total_profit": 3.1e-08,
     }
