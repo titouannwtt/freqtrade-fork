@@ -223,8 +223,9 @@ class HyperoptTools:
             spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "max_open_trades"]
             spaces += [s for s in all_spaces if s not in spaces]
             for space in spaces:
+                name = space.capitalize() if space != "roi" else space.upper()
                 HyperoptTools._params_pretty_print(
-                    params, space, f"{space.capitalize()} hyperspace params:", non_optimized
+                    params, space, f"{name} parameters:", non_optimized
                 )
 
     @staticmethod
