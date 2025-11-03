@@ -9,7 +9,7 @@ import numpy as np
 import rapidjson
 from pandas import isna, json_normalize
 
-from freqtrade.constants import FTHYPT_FILEVERSION, Config
+from freqtrade.constants import FTHYPT_FILEVERSION, HYPEROPT_BUILTIN_SPACES, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts, round_dict, safe_value_fallback2
@@ -223,7 +223,14 @@ class HyperoptTools:
             spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "max_open_trades"]
             spaces += [s for s in all_spaces if s not in spaces]
             for space in spaces:
-                name = space.capitalize() if space != "roi" else space.upper()
+                lookup = {
+                    "roi": "ROI",
+                    "trailing": "Trailing stop",
+                }
+                name = lookup.get(
+                    space, space.capitalize() if space in HYPEROPT_BUILTIN_SPACES else space
+                )
+
                 HyperoptTools._params_pretty_print(
                     params, space, f"{name} parameters:", non_optimized
                 )
