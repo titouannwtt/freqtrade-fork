@@ -928,8 +928,7 @@ def test_auto_hyperopt_interface(default_conf):
     PairLocks.timeframe = default_conf["timeframe"]
     strategy = StrategyResolver.load_strategy(default_conf)
     strategy.ft_bot_start()
-    with pytest.raises(OperationalException):
-        next(strategy.enumerate_parameters("deadBeef"))
+    assert list(strategy.enumerate_parameters("deadBeef")) == []
 
     assert strategy.buy_rsi.value == strategy.buy_params["buy_rsi"]
     # PlusDI is NOT in the buy-params, so default should be used
