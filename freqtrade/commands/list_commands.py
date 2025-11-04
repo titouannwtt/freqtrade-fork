@@ -101,7 +101,7 @@ def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
     names = [s["name"] for s in objs]
     objs_to_print: list[dict[str, Text | str]] = [
         {
-            "name": Text(s["name"] if s["name"] else "--"),
+            "Strategy name": Text(s["name"] if s["name"] else "--"),
             "location": s["location_rel"],
             "status": (
                 Text("LOAD FAILED", style="bold red")
@@ -115,11 +115,18 @@ def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
     ]
     for idx, s in enumerate(objs):
         if "hyperoptable" in s:
+            custom_params = [
+                f"{space}: {len(params)}"
+                for space, params in s["hyperoptable"].items()
+                if space not in ["buy", "sell", "protection"]
+            ]
             objs_to_print[idx].update(
                 {
                     "hyperoptable": "Yes" if len(s["hyperoptable"]) > 0 else "No",
                     "buy-Params": str(len(s["hyperoptable"].get("buy", []))),
                     "sell-Params": str(len(s["hyperoptable"].get("sell", []))),
+                    "protection-Params": str(len(s["hyperoptable"].get("protection", []))),
+                    "custom-Params": ", ".join(custom_params) if custom_params else "",
                 }
             )
     table = Table()
