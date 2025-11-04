@@ -941,7 +941,6 @@ def test_simplified_interface_none_selected(mocker, hyperopt_conf, caplog) -> No
     hyperopt.hyperopter.backtesting.strategy.advise_all_indicators = MagicMock()
     hyperopt.hyperopter.custom_hyperopt.generate_roi_table = MagicMock(return_value={})
 
-    # The first one to fail raises the exception
     with pytest.raises(OperationalException, match=r"No hyperopt parameters found to optimize\..*"):
         hyperopt.hyperopter.init_spaces()
 

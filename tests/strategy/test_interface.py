@@ -939,7 +939,6 @@ def test_auto_hyperopt_interface(default_conf):
 
     # Parameter is disabled - so value from sell_param dict will NOT be used.
     assert strategy.sell_minusdi.value == 0.5
-    # all_params = strategy.detect_all_parameters()
     all_params = detect_all_parameters(strategy.__class__)
     assert isinstance(all_params, dict)
     # Only one buy param at class level
