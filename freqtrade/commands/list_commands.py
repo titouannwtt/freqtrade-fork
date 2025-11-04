@@ -156,7 +156,7 @@ def start_list_strategies(args: dict[str, Any]) -> None:
         if obj["class"]:
             obj["hyperoptable"] = detect_all_parameters(obj["class"])
         else:
-            obj["hyperoptable"] = {"count": 0}
+            obj["hyperoptable"] = {}
 
     if args["print_one_column"]:
         print("\n".join([s["name"] for s in strategy_objs]))
