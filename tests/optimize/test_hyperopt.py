@@ -569,6 +569,7 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
         "buy_rsi": 35,
         "sell_minusdi": 0.02,
         "sell_rsi": 75,
+        "exitaaa": 7,
         "protection_cooldown_lookback": 20,
         "protection_enabled": True,
         "roi_t1": 60.0,
@@ -596,6 +597,9 @@ def test_generate_optimizer(mocker, hyperopt_conf) -> None:
             "buy": {
                 "buy_plusdi": 0.02,
                 "buy_rsi": 35,
+            },
+            "exit": {
+                "exitaaa": 7,
             },
             "roi": {"0": 0.12, "20.0": 0.02, "50.0": 0.01, "110.0": 0},
             "protection": {
