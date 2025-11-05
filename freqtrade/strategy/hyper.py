@@ -192,6 +192,10 @@ def detect_all_parameters(
             raise OperationalException(
                 f"Conflicting parameter space for {attr_name}: {auto_category} vs {attr.category}."
             )
+        if attr.category in ("all", "default") or attr.category.isidentifier() is False:
+            raise OperationalException(
+                f"'{attr.category}' is not a valid space. Parameter: {attr_name}."
+            )
         attr.name = attr_name
         result[attr.category][attr_name] = attr
     return result

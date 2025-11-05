@@ -952,11 +952,26 @@ def test_auto_hyperopt_interface(default_conf):
 
     with pytest.raises(OperationalException, match=r"Conflicting parameter space.*"):
         detect_all_parameters(strategy.__class__)
+    del strategy.__class__.sell_rsi
 
     strategy.__class__.exit22_rsi = IntParameter([0, 10], default=5)
 
     with pytest.raises(
         OperationalException, match=r"Cannot determine parameter space for exit22_rsi\."
+    ):
+        detect_all_parameters(strategy.__class__)
+
+    # Invalid parameter space
+    strategy.__class__.exit22_rsi = IntParameter([0, 10], default=5, space="all")
+    with pytest.raises(
+        OperationalException, match=r"'all' is not a valid space\. Parameter: exit22_rsi\."
+    ):
+        detect_all_parameters(strategy.__class__)
+
+    strategy.__class__.exit22_rsi = IntParameter([0, 10], default=5, space="hello:world:22")
+    with pytest.raises(
+        OperationalException,
+        match=r"'hello:world:22' is not a valid space\. Parameter: exit22_rsi\.",
     ):
         detect_all_parameters(strategy.__class__)
 
