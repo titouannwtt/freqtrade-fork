@@ -249,7 +249,10 @@ class HyperOptimizer:
         self.dimensions = [s for space in self.spaces.values() for s in space]
         if len(self.dimensions) == 0:
             raise OperationalException(
-                "No hyperopt parameters found to optimize. Did you intend to use different spaces?"
+                "No hyperopt parameters found to optimize."
+                f"Available spaces: {', '.join(spaces)}. "
+                "Check your strategy's parameter definitions or verify the configured spaces "
+                "in your command."
             )
         self.o_dimensions = self.convert_dimensions_to_optuna_space(self.dimensions)
 
