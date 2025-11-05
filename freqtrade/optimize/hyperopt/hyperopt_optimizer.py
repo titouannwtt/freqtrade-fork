@@ -223,9 +223,7 @@ class HyperOptimizer:
         Assign the dimensions in the hyperoptimization space.
         """
         spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "trades"]
-        spaces += [
-            s for s in self.config["spaces"] if s not in spaces and s not in ("all", "default")
-        ]
+        spaces += [s for s in self.custom_hyperopt.get_available_spaces() if s not in spaces]
 
         for space in spaces:
             if not HyperoptTools.has_space(self.config, space):

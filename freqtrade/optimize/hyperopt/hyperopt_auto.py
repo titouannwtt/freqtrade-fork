@@ -42,6 +42,13 @@ class HyperOptAuto(IHyperOpt):
     sell_indicator_space methods, but other hyperopt methods can be overridden as well.
     """
 
+    def get_available_spaces(self) -> list[str]:
+        """
+        Get list of available spaces defined in strategy.
+        :return: list of available spaces.
+        """
+        return list(self.strategy._ft_hyper_params)
+
     def _get_func(self, name) -> Callable:
         """
         Return a function defined in Strategy.HyperOpt class, or one defined in super() class.
