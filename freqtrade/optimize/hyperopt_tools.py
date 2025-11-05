@@ -220,6 +220,7 @@ class HyperoptTools:
 
         else:
             all_spaces = list(params.keys() | non_optimized.keys())
+            # Explicitly listed to keep original sort order
             spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "max_open_trades"]
             spaces += [s for s in all_spaces if s not in spaces]
             lookup = {

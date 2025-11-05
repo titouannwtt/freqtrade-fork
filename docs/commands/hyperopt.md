@@ -55,10 +55,11 @@ options:
   -e INT, --epochs INT  Specify number of epochs (default: 100).
   --spaces SPACES [SPACES ...]
                         Specify which parameters to hyperopt. Space-separated
-                        list. Available options: all, buy, sell, roi,
-                        stoploss, trailing, protection, trades, default.
-                        Default: `default` - which includes all spaces except
-                        for 'trailing', 'protection', and 'trades'.
+                        list. Available builtin options (custom spaces will
+                        not be listed here): default, all, buy, sell, roi,
+                        stoploss, trailing, protection, trades. Default:
+                        `default` - which includes all spaces except for
+                        'trailing', 'protection', and 'trades'.
   --print-all           Print all results, not only the best ones.
   --print-json          Print output in JSON format.
   -j JOBS, --job-workers JOBS

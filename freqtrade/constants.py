@@ -42,7 +42,6 @@ HYPEROPT_LOSS_BUILTIN = [
     "MultiMetricHyperOptLoss",
 ]
 HYPEROPT_BUILTIN_SPACES = [
-    "all",
     "buy",
     "sell",
     "roi",
@@ -50,8 +49,8 @@ HYPEROPT_BUILTIN_SPACES = [
     "trailing",
     "protection",
     "trades",
-    "default",
 ]
+HYPEROPT_BUILTIN_SPACE_OPTIONS = ["default", "all"] + HYPEROPT_BUILTIN_SPACES
 
 AVAILABLE_PAIRLISTS = [
     "StaticPairList",
