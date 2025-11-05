@@ -38,8 +38,8 @@ def _format_exception_message(space: str, ignore_missing_space: bool) -> None:
 class HyperOptAuto(IHyperOpt):
     """
     This class delegates functionality to Strategy(IHyperStrategy) and Strategy.HyperOpt classes.
-     Most of the time Strategy.HyperOpt class would only implement indicator_space and
-     sell_indicator_space methods, but other hyperopt methods can be overridden as well.
+    Most of the time Strategy.HyperOpt class would only implement indicator_space and
+    sell_indicator_space methods, but other hyperopt methods can be overridden as well.
     """
 
     def _get_func(self, name) -> Callable:
