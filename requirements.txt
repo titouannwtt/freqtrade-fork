@@ -8,6 +8,8 @@ ta-lib==0.6.8
 technical==1.5.3
 
 ccxt==4.5.14
+# for fast ECDSA signatures/verification
+coincurve==21.0.0
 cryptography==46.0.3
 aiohttp==3.13.2
 SQLAlchemy==2.0.44
