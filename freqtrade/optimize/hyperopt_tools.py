@@ -222,11 +222,11 @@ class HyperoptTools:
             all_spaces = list(params.keys() | non_optimized.keys())
             spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "max_open_trades"]
             spaces += [s for s in all_spaces if s not in spaces]
+            lookup = {
+                "roi": "ROI",
+                "trailing": "Trailing stop",
+            }
             for space in spaces:
-                lookup = {
-                    "roi": "ROI",
-                    "trailing": "Trailing stop",
-                }
                 name = lookup.get(
                     space, space.capitalize() if space in HYPEROPT_BUILTIN_SPACES else space
                 )
