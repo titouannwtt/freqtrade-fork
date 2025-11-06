@@ -167,8 +167,9 @@ We use these to either enable or disable the ADX and RSI guards.
 The last one we call `trigger` and use it to decide which buy trigger we want to use.
 
 !!! Note "Parameter space assignment"
-    Parameters must either be assigned to a variable named `buy_*`, `sell_*` or `protection_*` - or contain have a space assigned explicitly via parameter (`space='buy'`, `space='sell'`, `space='protection'`).
-    If no parameter is available for a space, you'll receive the error that no space was found when running hyperopt.  
+    - Parameters must either be assigned to a variable named `buy_*`, `sell_*`, `enter_*` or `exit_*` or `protection_*` - or contain have a space assigned explicitly via parameter (`space='buy'`, `space='sell'`, `space='protection'`).  
+    - Parameters with conflicting assignments (e.g. `buy_adx = IntParameter(4, 24, default=14, space='sell')`) will use the explicit space assignment.  
+    - If no parameter is available for a space, you'll receive the error that no space was found when running hyperopt.  
     Parameters with unclear space (e.g. `adx_period = IntParameter(4, 24, default=14)` - no explicit nor implicit space) will not be detected and will therefore be ignored.
     Spaces can also be custom named (e.g. `space='my_custom_space'`), with the only limitation that the space name cannot be `all`, `default` - and must result in a valid python identifier.
 
