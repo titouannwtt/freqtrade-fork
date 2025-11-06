@@ -174,24 +174,15 @@ def detect_all_parameters(
         attr = getattr(obj, attr_name)
         if not issubclass(attr.__class__, BaseParameter):
             continue
-        auto_category: str | None = None
-        # Category auto detection
-        for category in auto_categories:
-            if attr_name.startswith(category + "_"):
-                auto_category = category
-                break
-        if auto_category is None and attr.category is None:
+        if not attr.category:
+            # Category auto detection
+            for category in auto_categories:
+                if attr_name.startswith(category + "_"):
+                    attr.category = category
+                    break
+        if attr.category is None:
             raise OperationalException(f"Cannot determine parameter space for {attr_name}.")
-        if auto_category is not None and attr.category is None:
-            attr.category = auto_category
-        if (
-            auto_category is not None
-            and attr.category is not None
-            and auto_category != attr.category
-        ):
-            raise OperationalException(
-                f"Conflicting parameter space for {attr_name}: {auto_category} vs {attr.category}."
-            )
+
         if attr.category in ("all", "default") or attr.category.isidentifier() is False:
             raise OperationalException(
                 f"'{attr.category}' is not a valid space. Parameter: {attr_name}."
