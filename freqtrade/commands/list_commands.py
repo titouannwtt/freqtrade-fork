@@ -120,12 +120,13 @@ def _print_objs_tabular(objs: list, print_colorized: bool) -> None:
                 for space, params in s["hyperoptable"].items()
                 if space not in ["buy", "sell", "protection"]
             ]
+            hyp = s["hyperoptable"]
             objs_to_print[idx].update(
                 {
-                    "hyperoptable": "Yes" if len(s["hyperoptable"]) > 0 else "No",
-                    "buy-Params": str(len(s["hyperoptable"].get("buy", []))),
-                    "sell-Params": str(len(s["hyperoptable"].get("sell", []))),
-                    "protection-Params": str(len(s["hyperoptable"].get("protection", []))),
+                    "hyperoptable": "Yes" if len(hyp) > 0 else "No",
+                    "buy-Params": str(len(hyp.get("buy", []))),
+                    "sell-Params": str(len(hyp.get("sell", []))),
+                    "protection-Params": str(len(hyp.get("protection", []))),
                     "custom-Params": ", ".join(custom_params) if custom_params else "",
                 }
             )
