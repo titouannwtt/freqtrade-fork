@@ -46,11 +46,16 @@ Depending on the space you want to optimize, only some of the below are required
 
 * define parameters with `space='buy'` - for entry signal optimization
 * define parameters with `space='sell'` - for exit signal optimization
+* define parameters with `space='enter'` - for entry signal optimization
+* define parameters with `space='exit'` - for exit signal optimization
 * define parameters with `space='protection'` - for protection optimization
 * define parameters with `space='random_spacename'` - for better control over which parameters are optimized together
 
+Pick the space name that suits the parameter best. We recommend to use either `buy` / `sell` or `enter` / `exit` for clarity (however there's no technical limitation in this regard).
+
 !!! Note
     `populate_indicators` needs to create all indicators any of the spaces may use, otherwise hyperopt will not work.
+
 
 Rarely you may also need to create a [nested class](advanced-hyperopt.md#overriding-pre-defined-spaces) named `HyperOpt` and implement
 
@@ -532,6 +537,8 @@ Legal values are:
 * `all`: optimize everything (including custom spaces)
 * `buy`: just search for a new buy strategy
 * `sell`: just search for a new sell strategy
+* `enter`: just search for a new entry logic
+* `exit`: just search for a new entry logic
 * `roi`: just optimize the minimal profit table for your strategy
 * `stoploss`: search for the best stoploss value
 * `trailing`: search for the best trailing stop values
