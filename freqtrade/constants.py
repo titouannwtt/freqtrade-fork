@@ -44,6 +44,8 @@ HYPEROPT_LOSS_BUILTIN = [
 HYPEROPT_BUILTIN_SPACES = [
     "buy",
     "sell",
+    "enter",
+    "exit",
     "roi",
     "stoploss",
     "trailing",

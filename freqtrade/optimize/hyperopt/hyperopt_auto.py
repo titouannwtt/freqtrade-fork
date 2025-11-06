@@ -67,7 +67,9 @@ class HyperOptAuto(IHyperOpt):
             if attr.optimize:
                 yield attr.get_space(attr_name)
 
-    def get_indicator_space(self, category: Literal["buy", "sell", "protection"] | str) -> list:
+    def get_indicator_space(
+        self, category: Literal["buy", "sell", "enter", "exit", "protection"] | str
+    ) -> list:
         """
         Get indicator space for a given space.
         :param category: parameter space to get.

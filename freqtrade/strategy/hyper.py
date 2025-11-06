@@ -166,7 +166,7 @@ def detect_all_parameters(
     :param obj: Strategy object or class
     :return: Dictionary of detected parameters by space
     """
-    auto_categories = ["buy", "sell", "protection"]
+    auto_categories = ["buy", "sell", "enter", "exit", "protection"]
     result: AllSpaceParams = defaultdict(dict)
     for attr_name in dir(obj):
         if attr_name.startswith("__"):  # Ignore internals

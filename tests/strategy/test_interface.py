@@ -974,6 +974,16 @@ def test_auto_hyperopt_interface(default_conf):
         match=r"'hello:world:22' is not a valid space\. Parameter: exit22_rsi\.",
     ):
         detect_all_parameters(strategy.__class__)
+    del strategy.__class__.exit22_rsi
+
+    # Valid exit parameter
+    strategy.__class__.exit_rsi = IntParameter([0, 10], default=5)
+    strategy.__class__.enter_rsi = IntParameter([0, 10], default=5)
+    spaces = detect_all_parameters(strategy.__class__)
+    assert "exit" in spaces
+    assert "enter" in spaces
+    del strategy.__class__.exit_rsi
+    del strategy.__class__.enter_rsi
 
 
 def test_auto_hyperopt_interface_loadparams(default_conf, mocker, caplog):
