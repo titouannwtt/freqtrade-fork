@@ -950,8 +950,9 @@ def test_auto_hyperopt_interface(default_conf):
 
     strategy.__class__.sell_rsi = IntParameter([0, 10], default=5, space="buy")
 
-    with pytest.raises(OperationalException, match=r"Conflicting parameter space.*"):
-        detect_all_parameters(strategy.__class__)
+    spaces = detect_all_parameters(strategy.__class__)
+    assert "buy" in spaces
+    assert spaces["buy"]["sell_rsi"] == strategy.sell_rsi
     del strategy.__class__.sell_rsi
 
     strategy.__class__.exit22_rsi = IntParameter([0, 10], default=5)
