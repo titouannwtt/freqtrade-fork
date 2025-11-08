@@ -905,13 +905,9 @@ def test_simplified_interface_all_failed(mocker, hyperopt_conf, caplog) -> None:
         }
     )
 
-    mocker.patch(
-        "freqtrade.optimize.hyperopt.hyperopt_auto.HyperOptAuto._generate_indicator_space",
-        return_value=[],
-    )
-
     hyperopt = Hyperopt(hyperopt_conf)
     hyperopt.hyperopter.backtesting.strategy.advise_all_indicators = MagicMock()
+    hyperopt.hyperopter.backtesting.strategy.enumerate_parameters = MagicMock(return_value=[])
     hyperopt.hyperopter.custom_hyperopt.generate_roi_table = MagicMock(return_value={})
 
     # The first one to fail raises the exception
@@ -1084,16 +1080,13 @@ def test_simplified_interface_failed(mocker, hyperopt_conf, space) -> None:
         "freqtrade.optimize.hyperopt.hyperopt_optimizer.get_timerange",
         MagicMock(return_value=(datetime(2017, 12, 10), datetime(2017, 12, 13))),
     )
-    mocker.patch(
-        "freqtrade.optimize.hyperopt.hyperopt_auto.HyperOptAuto._generate_indicator_space",
-        return_value=[],
-    )
 
     patch_exchange(mocker)
 
     hyperopt_conf.update({"spaces": [space]})
 
     hyperopt = Hyperopt(hyperopt_conf)
+    hyperopt.hyperopter.backtesting.strategy.enumerate_parameters = MagicMock(return_value=[])
     hyperopt.hyperopter.backtesting.strategy.advise_all_indicators = MagicMock()
     hyperopt.hyperopter.custom_hyperopt.generate_roi_table = MagicMock(return_value={})
 
