@@ -32,7 +32,7 @@ class BaseParameter(ABC):
     Defines a parameter that can be optimized by hyperopt.
     """
 
-    category: str | None
+    space: str | None
     default: Any
     value: Any
     in_space: bool = False
@@ -61,7 +61,7 @@ class BaseParameter(ABC):
             raise OperationalException(
                 "Name is determined by parameter field name and can not be specified manually."
             )
-        self.category = space
+        self.space = space
         self._space_params = kwargs
         self.value = default
         self.optimize = optimize
