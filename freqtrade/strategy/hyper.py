@@ -4,9 +4,9 @@ This module defines a base class for auto-hyperoptable strategies.
 """
 
 import logging
+from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
@@ -16,6 +16,11 @@ from freqtrade.strategy.parameters import BaseParameter
 
 
 logger = logging.getLogger(__name__)
+
+
+# Type aliases
+SpaceParams = dict[str, BaseParameter]
+AllSpaceParams = dict[str, SpaceParams]
 
 
 class HyperStrategyMixin:
@@ -29,9 +34,7 @@ class HyperStrategyMixin:
         Initialize hyperoptable strategy mixin.
         """
         self.config = config
-        self.ft_buy_params: list[BaseParameter] = []
-        self.ft_sell_params: list[BaseParameter] = []
-        self.ft_protection_params: list[BaseParameter] = []
+        self._ft_hyper_params: AllSpaceParams = {}
 
         params = self.load_params_from_file()
         params = params.get("params", {})
@@ -46,30 +49,9 @@ class HyperStrategyMixin:
         :param category:
         :return:
         """
-        if category not in ("buy", "sell", "protection", None):
-            raise OperationalException(
-                'Category must be one of: "buy", "sell", "protection", None.'
-            )
-
-        if category is None:
-            params = self.ft_buy_params + self.ft_sell_params + self.ft_protection_params
-        else:
-            params = getattr(self, f"ft_{category}_params")
-
-        for par in params:
-            yield par.name, par
-
-    @classmethod
-    def detect_all_parameters(cls) -> dict:
-        """Detect all parameters and return them as a list"""
-        params: dict[str, Any] = {
-            "buy": list(detect_parameters(cls, "buy")),
-            "sell": list(detect_parameters(cls, "sell")),
-            "protection": list(detect_parameters(cls, "protection")),
-        }
-        params.update({"count": len(params["buy"] + params["sell"] + params["protection"])})
-
-        return params
+        for category in [c for c in self._ft_hyper_params if category is None or c == category]:
+            for par in self._ft_hyper_params[category].values():
+                yield par.name, par
 
     def ft_load_params_from_file(self) -> None:
         """
@@ -110,20 +92,13 @@ class HyperStrategyMixin:
         * Parameters defined in parameters objects (buy_params, sell_params, ...)
         * Parameter defaults
         """
+        self._ft_hyper_params = detect_all_parameters(self)
 
-        buy_params = deep_merge_dicts(
-            self._ft_params_from_file.get("buy", {}), getattr(self, "buy_params", {})
-        )
-        sell_params = deep_merge_dicts(
-            self._ft_params_from_file.get("sell", {}), getattr(self, "sell_params", {})
-        )
-        protection_params = deep_merge_dicts(
-            self._ft_params_from_file.get("protection", {}), getattr(self, "protection_params", {})
-        )
-
-        self._ft_load_params(buy_params, "buy", hyperopt)
-        self._ft_load_params(sell_params, "sell", hyperopt)
-        self._ft_load_params(protection_params, "protection", hyperopt)
+        for space in self._ft_hyper_params.keys():
+            params_values = deep_merge_dicts(
+                self._ft_params_from_file.get(space, {}), getattr(self, f"{space}_params", {})
+            )
+            self._ft_load_params(self._ft_hyper_params[space], params_values, space, hyperopt)
 
     def load_params_from_file(self) -> dict:
         filename_str = getattr(self, "__file__", "")
@@ -145,72 +120,73 @@ class HyperStrategyMixin:
 
         return {}
 
-    def _ft_load_params(self, params: dict, space: str, hyperopt: bool = False) -> None:
+    def _ft_load_params(
+        self, params: SpaceParams, param_values: dict, space: str, hyperopt: bool = False
+    ) -> None:
         """
         Set optimizable parameter values.
         :param params: Dictionary with new parameter values.
         """
-        if not params:
+        if not param_values:
             logger.info(f"No params for {space} found, using default values.")
-        param_container: list[BaseParameter] = getattr(self, f"ft_{space}_params")
 
-        for attr_name, attr in detect_parameters(self, space):
-            attr.name = attr_name
-            attr.in_space = hyperopt and HyperoptTools.has_space(self.config, space)
-            if not attr.category:
-                attr.category = space
+        for param_name, param in params.items():
+            param.in_space = hyperopt and HyperoptTools.has_space(self.config, space)
+            if not param.category:
+                param.category = space
 
-            param_container.append(attr)
-
-            if params and attr_name in params:
-                if attr.load:
-                    attr.value = params[attr_name]
-                    logger.info(f"Strategy Parameter: {attr_name} = {attr.value}")
+            if param_values and param_name in param_values:
+                if param.load:
+                    param.value = param_values[param_name]
+                    logger.info(f"Strategy Parameter: {param_name} = {param.value}")
                 else:
                     logger.warning(
-                        f'Parameter "{attr_name}" exists, but is disabled. '
-                        f'Default value "{attr.value}" used.'
+                        f'Parameter "{param_name}" exists, but is disabled. '
+                        f'Default value "{param.value}" used.'
                     )
             else:
-                logger.info(f"Strategy Parameter(default): {attr_name} = {attr.value}")
+                logger.info(f"Strategy Parameter(default): {param_name} = {param.value}")
 
     def get_no_optimize_params(self) -> dict[str, dict]:
         """
         Returns list of Parameters that are not part of the current optimize job
         """
-        params: dict[str, dict] = {
-            "buy": {},
-            "sell": {},
-            "protection": {},
-        }
+        params: dict[str, dict] = defaultdict(dict)
         for name, p in self.enumerate_parameters():
             if p.category and (not p.optimize or not p.in_space):
                 params[p.category][name] = p.value
         return params
 
 
-def detect_parameters(
-    obj: HyperStrategyMixin | type[HyperStrategyMixin], category: str
-) -> Iterator[tuple[str, BaseParameter]]:
+def detect_all_parameters(
+    obj: HyperStrategyMixin | type[HyperStrategyMixin],
+) -> AllSpaceParams:
     """
-    Detect all parameters for 'category' for "obj"
+    Detect all hyperoptable parameters for this object.
     :param obj: Strategy object or class
-    :param category: category - usually `'buy', 'sell', 'protection',...
+    :return: Dictionary of detected parameters by space
     """
+    auto_categories = ["buy", "sell", "enter", "exit", "protection"]
+    result: AllSpaceParams = defaultdict(dict)
     for attr_name in dir(obj):
-        if not attr_name.startswith("__"):  # Ignore internals, not strictly necessary.
-            attr = getattr(obj, attr_name)
-            if issubclass(attr.__class__, BaseParameter):
-                if (
-                    attr_name.startswith(category + "_")
-                    and attr.category is not None
-                    and attr.category != category
-                ):
-                    raise OperationalException(
-                        f"Inconclusive parameter name {attr_name}, category: {attr.category}."
-                    )
+        if attr_name.startswith("__"):  # Ignore internals
+            continue
+        attr = getattr(obj, attr_name)
+        if not issubclass(attr.__class__, BaseParameter):
+            continue
+        if not attr.category:
+            # Category auto detection
+            for category in auto_categories:
+                if attr_name.startswith(category + "_"):
+                    attr.category = category
+                    break
+        if attr.category is None:
+            raise OperationalException(f"Cannot determine parameter space for {attr_name}.")
 
-                if category == attr.category or (
-                    attr_name.startswith(category + "_") and attr.category is None
-                ):
-                    yield attr_name, attr
+        if attr.category in ("all", "default") or attr.category.isidentifier() is False:
+            raise OperationalException(
+                f"'{attr.category}' is not a valid space. Parameter: {attr_name}."
+            )
+        attr.name = attr_name
+        result[attr.category][attr_name] = attr
+    return result
