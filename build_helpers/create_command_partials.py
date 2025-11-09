@@ -2,6 +2,11 @@ import subprocess  # noqa: S404, RUF100
 from pathlib import Path
 
 
+def _write_partial_file(filename: str, content: str):
+    with Path(filename).open("w") as f:
+        f.write(f"```\n{content}\n```\n")
+
+
 def extract_command_partials():
     subcommands = [
         "trade",
@@ -42,21 +47,18 @@ def extract_command_partials():
 
     result = subprocess.run(["freqtrade", "--help"], capture_output=True, text=True)
 
-    with Path("docs/commands/main.md").open("w") as f:
-        f.write(f"```\n{result.stdout}\n```\n")
+    _write_partial_file("docs/commands/main.md", result.stdout)
 
     for command in subcommands:
         print(f"Running for {command}")
         result = subprocess.run(["freqtrade", command, "--help"], capture_output=True, text=True)
 
-        with Path(f"docs/commands/{command}.md").open("w") as f:
-            f.write(f"```\n{result.stdout}\n```\n")
+        _write_partial_file(f"docs/commands/{command}.md", result.stdout)
 
     print("Running for freqtrade-client")
     result_client = subprocess.run(["freqtrade-client", "--show"], capture_output=True, text=True)
 
-    with Path("docs/commands/freqtrade-client.md").open("w") as f:
-        f.write(f"```\n{result_client.stdout}\n```\n")
+    _write_partial_file("docs/commands/freqtrade-client.md", result_client.stdout)
 
 
 if __name__ == "__main__":
