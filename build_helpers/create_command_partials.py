@@ -51,3 +51,10 @@ for command in subcommands:
 
     with Path(f"docs/commands/{command}.md").open("w") as f:
         f.write(f"```\n{result.stdout}\n```\n")
+
+
+print("Running for freqtrade-client")
+result_client = subprocess.run(["freqtrade-client", "--show"], capture_output=True, text=True)
+
+with Path("docs/commands/freqtrade-client.md").open("w") as f:
+    f.write(f"```\n{result_client.stdout}\n```\n")
