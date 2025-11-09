@@ -91,7 +91,7 @@ jobs:
 
     - name: Run command docs partials extract
       # This should be kept before the repository check to ensure that the docs are up-to-date
-      if: ${{ (matrix.python-version != '3.13') }}
+      if: ${{ (matrix.python-version == '3.13') }}
       run: |
         python build_helpers/create_command_partials.py
 
