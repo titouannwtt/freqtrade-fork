@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade hyperopt-list [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                [-c PATH] [-d PATH] [--userdir PATH] [--best]
                                [--profitable] [--min-trades INT]

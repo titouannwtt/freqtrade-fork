@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade create-userdir [-h] [--userdir PATH] [--reset]
 
 options:

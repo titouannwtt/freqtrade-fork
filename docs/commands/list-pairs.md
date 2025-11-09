@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade list-pairs [-h] [-v] [--no-color] [--logfile FILE] [-V]
                             [-c PATH] [-d PATH] [--userdir PATH]
                             [--exchange EXCHANGE] [--print-list]

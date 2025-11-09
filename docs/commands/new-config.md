@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade new-config [-h] [-c PATH]
 
 options:

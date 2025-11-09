@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade show-config [-h] [--userdir PATH] [-c PATH]
                              [--show-sensitive]
 

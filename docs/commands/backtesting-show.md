@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade backtesting-show [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                   [-c PATH] [-d PATH] [--userdir PATH]
                                   [--backtest-filename PATH]

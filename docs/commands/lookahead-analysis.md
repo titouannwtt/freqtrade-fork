@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade lookahead-analysis [-h] [-v] [--no-color] [--logfile FILE]
                                     [-V] [-c PATH] [-d PATH] [--userdir PATH]
                                     [-s NAME] [--strategy-path PATH]

@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade download-data [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                [-c PATH] [-d PATH] [--userdir PATH]
                                [-p PAIRS [PAIRS ...]] [--pairs-file FILE]

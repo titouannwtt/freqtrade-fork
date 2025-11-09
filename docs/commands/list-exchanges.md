@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade list-exchanges [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                 [-c PATH] [-d PATH] [--userdir PATH] [-1] [-a]
                                 [--trading-mode {spot,margin,futures}]

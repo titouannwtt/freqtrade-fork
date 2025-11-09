@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade trades-to-ohlcv [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                  [-c PATH] [-d PATH] [--userdir PATH]
                                  [-p PAIRS [PAIRS ...]]

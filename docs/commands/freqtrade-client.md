@@ -1,4 +1,4 @@
-```
+``` output
 Possible commands:
 
 available_pairs

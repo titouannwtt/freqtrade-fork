@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade new-strategy [-h] [--userdir PATH] [-s NAME]
                               [--strategy-path PATH]
                               [--template {full,minimal,advanced}]

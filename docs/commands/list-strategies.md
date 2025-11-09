@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade list-strategies [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                  [-c PATH] [-d PATH] [--userdir PATH]
                                  [--strategy-path PATH] [-1]

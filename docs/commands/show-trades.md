@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade show-trades [-h] [-v] [--no-color] [--logfile FILE] [-V]
                              [-c PATH] [-d PATH] [--userdir PATH]
                              [--db-url PATH]

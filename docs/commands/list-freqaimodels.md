@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade list-freqaimodels [-h] [-v] [--no-color] [--logfile FILE]
                                    [-V] [-c PATH] [-d PATH] [--userdir PATH]
                                    [--freqaimodel-path PATH] [-1]

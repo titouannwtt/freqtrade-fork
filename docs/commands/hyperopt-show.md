@@ -1,4 +1,4 @@
-```
+``` output
 usage: freqtrade hyperopt-show [-h] [-v] [--no-color] [--logfile FILE] [-V]
                                [-c PATH] [-d PATH] [--userdir PATH] [--best]
                                [--profitable] [-n INT] [--print-json]
