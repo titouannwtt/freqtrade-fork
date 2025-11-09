@@ -207,6 +207,10 @@ forceenter
         :param pair: Pair to buy (ETH/BTC)
         :param side: 'long' or 'short'
         :param price: Optional - price to buy
+        :param order_type: Optional keyword argument - 'limit' or 'market'
+        :param stake_amount: Optional keyword argument - stake amount (as float)
+        :param leverage: Optional keyword argument - leverage (as float)
+        :param enter_tag: Optional keyword argument - entry tag (as string, default: 'force_enter')
 
 forceexit
     Force-exit a trade.
@@ -359,7 +363,7 @@ All endpoints in the below table need to be prefixed with the base URL of the AP
 | `/locks/<lockid>` | DELETE | Deletes (disables) the lock by id.<br/>*Params:*<br/>- `lockid` (`int`)
 | `/profit` | GET | Display a summary of your profit/loss from close trades and some stats about your performance.
 | `/forceexit` | POST | Instantly exits the given trade (ignoring `minimum_roi`), using the given order type ("market" or "limit", uses your config setting if not specified), and the chosen amount (full sell if not specified). If `all` is supplied as the `tradeid`, then all currently open trades will be forced to exit.<br/>*Params:*<br/>- `<tradeid>` (`int` or `str`)<br/>- `<ordertype>` (`str`)<br/>- `[amount]` (`float`)
-| `/forceenter` | POST | Instantly enters the given pair. Side is optional and is either `long` or `short` (default is `long`). Rate is optional. (`force_entry_enable` must be set to True)<br/>*Params:*<br/>- `<pair>` (`str`)<br/>- `<side>` (`str`)<br/>- `[rate]` (`float`)
+| `/forceenter` | POST | Instantly enters the given pair. Side is optional and is either `long` or `short` (default is `long`). Price, stake amount, entry tag and leverage are optional. Order type is optional and is either `market` or `long` (default using the value set in config). (`force_entry_enable` must be set to True)<br/>*Params:*<br/>- `<pair>` (`str`)<br/>- `<side>` (`str`)<br/>- `[price]` (`float`)<br/>- `[ordertype]` (`str`)<br/>- `[stakeamount]` (`float`)<br/>- `[entry_tag]` (`str`)<br/>- `[leverage]` (`float`)
 | `/performance` | GET | Show performance of each finished trade grouped by pair.
 | `/balance` | GET | Show account balance per currency.
 | `/daily` | GET | Shows profit or loss per day, over the last n days (n defaults to 7).<br/>*Params:*<br/>- `timescale` (`int`)
