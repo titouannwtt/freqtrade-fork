@@ -4,7 +4,7 @@ from pathlib import Path
 
 def _write_partial_file(filename: str, content: str):
     with Path(filename).open("w") as f:
-        f.write(f"```\n{content}\n```\n")
+        f.write(f"``` output\n{content}\n```\n")
 
 
 def extract_command_partials():
