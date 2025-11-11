@@ -1,5 +1,6 @@
 import logging
 import shutil
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -33,6 +34,9 @@ def can_run_model(model: str) -> None:
 
     if is_arm() and "Catboost" in model:
         pytest.skip("CatBoost is not supported on ARM.")
+
+    if "Catboost" in model and sys.version_info >= (3, 14):
+        pytest.skip("CatBoost is not supported on Python 3.14+.")
 
     if is_pytorch_model and is_mac():
         pytest.skip("Reinforcement learning / PyTorch module not available on intel based Mac OS.")
