@@ -225,7 +225,7 @@ def calculate_max_drawdown(
     high_idx = max_drawdown_df.iloc[: idxmin + 1]["high_value"].idxmax()
     high_date = profit_results.loc[high_idx, date_col]
     low_date = profit_results.loc[idxmin, date_col]
-    high_val = max_drawdown_df.loc[high_idx, "cumulative"]
+    high_val = max_drawdown_df.loc[high_idx, "high_value"]
     low_val = max_drawdown_df.loc[idxmin, "cumulative"]
     max_drawdown_rel = max_drawdown_df.loc[idxmin, "drawdown_relative"]
 
