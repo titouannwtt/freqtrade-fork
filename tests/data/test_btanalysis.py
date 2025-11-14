@@ -575,6 +575,9 @@ def test_calculate_max_drawdown2():
     # No losing trade ...
     drawdown = calculate_max_drawdown(df, date_col="open_date", value_col="profit")
     assert drawdown.drawdown_abs == 0.0
+    assert drawdown.low_value == 0.0
+    assert drawdown.current_high_value >= 0.0
+    assert drawdown.current_drawdown_abs == 0.0
 
     df1 = DataFrame(zip(values[:5], dates[:5], strict=False), columns=["profit", "open_date"])
     df1.loc[:, "profit"] = df1["profit"] * -1
@@ -583,6 +586,7 @@ def test_calculate_max_drawdown2():
     assert drawdown.drawdown_abs == 0.055545
     assert drawdown.high_value == 0.0
     assert drawdown.current_high_value == 0.0
+    assert drawdown.current_drawdown_abs == 0.055545
 
 
 @pytest.mark.parametrize(
