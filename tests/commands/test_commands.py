@@ -198,6 +198,8 @@ def test_list_timeframes(mocker, capsys):
         "1h": "hour",
         "1d": "day",
     }
+    api_mock.options = {}
+
     patch_exchange(mocker, api_mock=api_mock, exchange="bybit")
     args = [
         "list-timeframes",
