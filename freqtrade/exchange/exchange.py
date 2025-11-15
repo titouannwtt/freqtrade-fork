@@ -430,7 +430,15 @@ class Exchange:
 
     @property
     def timeframes(self) -> list[str]:
-        return list((self._api.timeframes or {}).keys())
+        market_type = (
+            "spot"
+            if self.trading_mode != TradingMode.FUTURES
+            else self._ft_has["ccxt_futures_name"]
+        )
+        timeframes = self._api.options.get("timeframes", {}).get(market_type)
+        if timeframes is None:
+            timeframes = self._api.timeframes
+        return list((timeframes or {}).keys())
 
     @property
     def markets(self) -> dict[str, Any]:
