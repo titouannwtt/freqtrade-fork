@@ -1425,7 +1425,7 @@ class Backtesting:
             # Row is treated as "current incomplete candle".
             # entry / exit signals are shifted by 1 to compensate for this.
             row = data[pair][row_index]
-        except IndexError:
+        except (IndexError, KeyError):
             # missing Data for one pair at the end.
             # Warnings for this are shown during data loading
             return None
