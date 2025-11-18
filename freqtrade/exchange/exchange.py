@@ -1119,6 +1119,7 @@ class Exchange:
         leverage: float,
         params: dict | None = None,
         stop_loss: bool = False,
+        stop_price: float | None = None,
     ) -> CcxtOrder:
         now = dt_now()
         order_id = f"dry_run_{side}_{pair}_{now.timestamp()}"
@@ -1145,7 +1146,7 @@ class Exchange:
         }
         if stop_loss:
             dry_order["info"] = {"stopPrice": dry_order["price"]}
-            dry_order[self._ft_has["stop_price_prop"]] = dry_order["price"]
+            dry_order[self._ft_has["stop_price_prop"]] = stop_price or dry_order["price"]
             # Workaround to avoid filling stoploss orders immediately
             dry_order["ft_order_type"] = "stoploss"
         orderbook: OrderBook | None = None
@@ -1517,8 +1518,9 @@ class Exchange:
                 ordertype,
                 side,
                 amount,
-                stop_price_norm,
+                limit_rate or stop_price_norm,
                 stop_loss=True,
+                stop_price=stop_price_norm,
                 leverage=leverage,
             )
             return dry_order
