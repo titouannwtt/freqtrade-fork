@@ -1303,7 +1303,7 @@ class Exchange:
 
         return order
 
-    def fetch_dry_run_order(self, order_id) -> CcxtOrder:
+    def fetch_dry_run_order(self, order_id: str) -> CcxtOrder:
         """
         Return dry-run order
         Only call if running in dry-run mode.
@@ -1315,11 +1315,12 @@ class Exchange:
         except KeyError as e:
             from freqtrade.persistence import Order
 
-            order = Order.order_by_id(order_id)
-            if order:
-                ccxt_order = order.to_ccxt_object(self._ft_has["stop_price_prop"])
-                self._dry_run_open_orders[order_id] = ccxt_order
-                return ccxt_order
+            order_obj = Order.order_by_id(order_id)
+            if order_obj:
+                order = order_obj.to_ccxt_object(self._ft_has["stop_price_prop"])
+                order = self.check_dry_limit_order_filled(order)
+                self._dry_run_open_orders[order_id] = order
+                return order
             # Gracefully handle errors with dry-run orders.
             raise InvalidOrderException(
                 f"Tried to get an invalid dry-run-order (id: {order_id}). Message: {e}"
