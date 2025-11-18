@@ -437,9 +437,6 @@ class TestCCXTExchange:
     def test_ccxt_get_fee_futures(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange_futures
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
-        if exchangename == "gate":
-            # gate futures fees are sometimes zero
-            pytest.skip("Gate futures fees are currently not working.")
         self._ccxt_get_fee(exch, pair)
 
     def test_ccxt_get_max_leverage_spot(self, exchange: EXCHANGE_FIXTURE_TYPE):
