@@ -1254,13 +1254,14 @@ class Exchange:
         limit: float,
         orderbook: OrderBook | None = None,
         offset: float = 0.0,
+        is_stop: bool = False,
     ) -> bool:
         if not self.exchange_has("fetchL2OrderBook"):
             return True
         if not orderbook:
             orderbook = self.fetch_l2_order_book(pair, 1)
         try:
-            if side == "buy":
+            if (side == "buy" and not is_stop) or (side == "sell" and is_stop):
                 price = orderbook["asks"][0][0]
                 if limit * (1 - offset) >= price:
                     return True
