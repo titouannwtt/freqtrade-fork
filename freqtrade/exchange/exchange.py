@@ -1164,7 +1164,11 @@ class Exchange:
 
         if dry_order["type"] == "market" and not dry_order.get("ft_order_type"):
             # Update market order pricing
-            average = self.get_dry_market_fill_price(pair, side, amount, rate, orderbook)
+            slippage = 0.05
+            worst_rate = rate * ((1 + slippage) if side == "buy" else (1 - slippage))
+            average = self.get_dry_market_fill_price(
+                pair, side, amount, rate, worst_rate, orderbook
+            )
             dry_order.update(
                 {
                     "average": average,
@@ -1204,7 +1208,13 @@ class Exchange:
         return dry_order
 
     def get_dry_market_fill_price(
-        self, pair: str, side: str, amount: float, rate: float, orderbook: OrderBook | None
+        self,
+        pair: str,
+        side: str,
+        amount: float,
+        rate: float,
+        worst_rate: float,
+        orderbook: OrderBook | None,
     ) -> float:
         """
         Get the market order fill price based on orderbook interpolation
@@ -1213,8 +1223,6 @@ class Exchange:
             if not orderbook:
                 orderbook = self.fetch_l2_order_book(pair, 20)
             ob_type: OBLiteral = "asks" if side == "buy" else "bids"
-            slippage = 0.05
-            max_slippage_val = rate * ((1 + slippage) if side == "buy" else (1 - slippage))
 
             remaining_amount = amount
             filled_value = 0.0
@@ -1238,11 +1246,10 @@ class Exchange:
             forecast_avg_filled_price = max(filled_value, 0) / amount
             # Limit max. slippage to specified value
             if side == "buy":
-                forecast_avg_filled_price = min(forecast_avg_filled_price, max_slippage_val)
+                forecast_avg_filled_price = min(forecast_avg_filled_price, worst_rate)
 
             else:
-                forecast_avg_filled_price = max(forecast_avg_filled_price, max_slippage_val)
-
+                forecast_avg_filled_price = max(forecast_avg_filled_price, worst_rate)
             return self.price_to_precision(pair, forecast_avg_filled_price)
 
         return rate
