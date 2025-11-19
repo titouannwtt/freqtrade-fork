@@ -1,10 +1,11 @@
 import logging
-from datetime import timedelta
+import time
+from datetime import datetime, timedelta
 
 import ccxt
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import CandleType, MarginMode, TradingMode
+from freqtrade.enums import TRADE_MODES, CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import (
     DDosProtection,
     OperationalException,
@@ -14,7 +15,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import API_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
-from freqtrade.util.datetime_helpers import dt_now, dt_ts
+from freqtrade.util.datetime_helpers import dt_from_ts, dt_now, dt_ts
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class Bitget(Exchange):
     _ft_has_futures: FtHas = {
         "mark_ohlcv_timeframe": "4h",
         "funding_fee_candle_limit": 100,
+        "has_delisting": True,
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -236,3 +238,38 @@ class Bitget(Exchange):
             raise OperationalException(
                 "Freqtrade currently only supports isolated futures for bitget"
             )
+
+    def check_delisting_time(self, pair: str) -> datetime | None:
+        """
+        Check if the pair gonna be delisted.
+        By default, it returns None.
+        :param pair: Market symbol
+        :return: Datetime if the pair gonna be delisted, None otherwise
+        """
+        if self._config["runmode"] not in TRADE_MODES:
+            return None
+
+        if self.trading_mode == TradingMode.FUTURES:
+            return self._check_delisting_futures(pair)
+        return None
+
+    def _check_delisting_futures(self, pair: str) -> datetime | None:
+        delivery_time = self.markets.get(pair, {}).get("info", {}).get("limitOpenTime", None)
+        if delivery_time:
+            if delivery_time == "-1":
+                return None
+
+            if isinstance(delivery_time, str) and (delivery_time != ""):
+                delivery_time = int(delivery_time)
+
+            if not isinstance(delivery_time, int) or delivery_time <= 0:
+                return None
+
+            max_delivery = int(time.time() * 1000) + (
+                14 * 24 * 60 * 60 * 1000
+            )  # Assume exchange don't announce delisting more than 14 days in advance
+
+            if delivery_time < max_delivery:
+                return dt_from_ts(delivery_time)
+
+        return None
