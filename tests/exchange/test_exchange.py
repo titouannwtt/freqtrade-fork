@@ -1111,21 +1111,29 @@ def test_create_dry_run_order_fees(
 
 
 @pytest.mark.parametrize(
-    "side,limit,offset,expected",
+    "side,limit,offset,is_stop,expected",
     [
-        ("buy", 46.0, 0.0, True),
-        ("buy", 26.0, 0.0, True),
-        ("buy", 25.55, 0.0, False),
-        ("buy", 1, 0.0, False),  # Very far away
-        ("sell", 25.5, 0.0, True),
-        ("sell", 50, 0.0, False),  # Very far away
-        ("sell", 25.58, 0.0, False),
-        ("sell", 25.563, 0.01, False),
-        ("sell", 5.563, 0.01, True),
+        ("buy", 46.0, 0.0, False, True),
+        ("buy", 46.0, 0.0, True, False),
+        ("buy", 26.0, 0.0, False, True),
+        ("buy", 26.0, 0.0, True, False),  # Stop - didn't trigger
+        ("buy", 25.55, 0.0, False, False),
+        ("buy", 25.55, 0.0, True, True),  # Stop - triggered
+        ("buy", 1, 0.0, False, False),  # Very far away
+        ("buy", 1, 0.0, True, True),  # Current price is above stop - triggered
+        ("sell", 25.5, 0.0, False, True),
+        ("sell", 50, 0.0, False, False),  # Very far away
+        ("sell", 25.58, 0.0, False, False),
+        ("sell", 25.563, 0.01, False, False),
+        ("sell", 25.563, 0.0, True, False),  # stop order - Not triggered, best bid
+        ("sell", 25.566, 0.0, True, True),  # stop order - triggered
+        ("sell", 26, 0.01, True, True),  # stop order - triggered
+        ("sell", 5.563, 0.01, False, True),
+        ("sell", 5.563, 0.0, True, False),  # stop order - not triggered
     ],
 )
 def test__dry_is_price_crossed_with_orderbook(
-    default_conf, mocker, order_book_l2_usd, side, limit, offset, expected
+    default_conf, mocker, order_book_l2_usd, side, limit, offset, is_stop, expected
 ):
     # Best bid 25.563
     # Best ask 25.566
@@ -1134,14 +1142,14 @@ def test__dry_is_price_crossed_with_orderbook(
     exchange.fetch_l2_order_book = order_book_l2_usd
     orderbook = order_book_l2_usd.return_value
     result = exchange._dry_is_price_crossed(
-        "LTC/USDT", side, limit, orderbook=orderbook, offset=offset
+        "LTC/USDT", side, limit, orderbook=orderbook, offset=offset, is_stop=is_stop
     )
     assert result is expected
     assert order_book_l2_usd.call_count == 0
 
     # Test without passing orderbook
     order_book_l2_usd.reset_mock()
-    result = exchange._dry_is_price_crossed("LTC/USDT", side, limit, offset=offset)
+    result = exchange._dry_is_price_crossed("LTC/USDT", side, limit, offset=offset, is_stop=is_stop)
     assert result is expected
 
 
