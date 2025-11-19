@@ -1173,7 +1173,10 @@ def test__dry_is_price_crossed_without_orderbook_support(default_conf, mocker):
     exchange.fetch_l2_order_book = MagicMock()
     mocker.patch(f"{EXMS}.exchange_has", return_value=False)
     assert exchange._dry_is_price_crossed("LTC/USDT", "buy", 1.0)
+    assert exchange._dry_is_price_crossed("LTC/USDT", "sell", 1.0)
     assert exchange.fetch_l2_order_book.call_count == 0
+    assert not exchange._dry_is_price_crossed("LTC/USDT", "buy", 1.0, is_stop=True)
+    assert not exchange._dry_is_price_crossed("LTC/USDT", "sell", 1.0, is_stop=True)
 
 
 @pytest.mark.parametrize(

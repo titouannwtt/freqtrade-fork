@@ -1257,7 +1257,8 @@ class Exchange:
         is_stop: bool = False,
     ) -> bool:
         if not self.exchange_has("fetchL2OrderBook"):
-            return True
+            # True unless checking a stoploss order
+            return not is_stop
         if not orderbook:
             orderbook = self.fetch_l2_order_book(pair, 1)
         try:
