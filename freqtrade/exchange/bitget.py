@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime, timedelta
 
 import ccxt
@@ -265,7 +264,7 @@ class Bitget(Exchange):
             if not isinstance(delivery_time, int) or delivery_time <= 0:
                 return None
 
-            max_delivery = int(time.time() * 1000) + (
+            max_delivery = dt_ts() + (
                 14 * 24 * 60 * 60 * 1000
             )  # Assume exchange don't announce delisting more than 14 days in advance
 
