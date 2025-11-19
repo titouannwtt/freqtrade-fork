@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime, timedelta
 
 import ccxt
@@ -11,7 +10,7 @@ from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 from freqtrade.misc import deep_merge_dicts
-from freqtrade.util.datetime_helpers import dt_from_ts
+from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts
 
 
 logger = logging.getLogger(__name__)
@@ -321,7 +320,7 @@ class Bybit(Exchange):
             if not isinstance(delivery_time, int) or delivery_time <= 0:
                 return None
 
-            max_delivery = int(time.time() * 1000) + (
+            max_delivery = dt_ts() + (
                 14 * 24 * 60 * 60 * 1000
             )  # Assume exchange don't announce delisting more than 14 days in advance
 
