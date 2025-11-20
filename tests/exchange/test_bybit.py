@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, PropertyMock
 import pytest
 
 from freqtrade.enums import MarginMode, RunMode, TradingMode
-from freqtrade.util.datetime_helpers import dt_utc
+from freqtrade.util import dt_utc
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange, log_has
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
