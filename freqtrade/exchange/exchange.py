@@ -1288,6 +1288,38 @@ class Exchange:
         """
         Check dry-run limit order fill and update fee (if it filled).
         """
+        if order["status"] != "closed" and order.get("ft_order_type") == "stoploss":
+            pair = order["symbol"]
+            if not orderbook and self.exchange_has("fetchL2OrderBook"):
+                orderbook = self.fetch_l2_order_book(pair, 20)
+            price = order[self._ft_has["stop_price_prop"]]
+            crossed = self._dry_is_price_crossed(
+                pair, order["side"], price, orderbook, is_stop=True
+            )
+            if crossed:
+                average = self.get_dry_market_fill_price(
+                    pair,
+                    order["side"],
+                    order["amount"],
+                    price,
+                    worst_rate=order["price"],
+                    orderbook=orderbook,
+                )
+                order.update(
+                    {
+                        "status": "closed",
+                        "filled": order["amount"],
+                        "remaining": 0,
+                        "average": average,
+                        "cost": order["amount"] * average,
+                    }
+                )
+                self.add_dry_order_fee(
+                    pair,
+                    order,
+                    "taker" if immediate else "maker",
+                )
+            return order
         if (
             order["status"] != "closed"
             and order["type"] in ["limit"]
