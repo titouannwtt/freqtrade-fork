@@ -255,9 +255,6 @@ class Bitget(Exchange):
     def _check_delisting_futures(self, pair: str) -> datetime | None:
         delivery_time = self.markets.get(pair, {}).get("info", {}).get("limitOpenTime", None)
         if delivery_time:
-            if delivery_time == "-1":
-                return None
-
             if isinstance(delivery_time, str) and (delivery_time != ""):
                 delivery_time = int(delivery_time)
 
