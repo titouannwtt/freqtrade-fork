@@ -1111,6 +1111,64 @@ def test_create_dry_run_order_fees(
 
 
 @pytest.mark.parametrize(
+    "side,limit,offset,expected",
+    [
+        ("buy", 46.0, 0.0, True),
+        ("buy", 26.0, 0.0, True),
+        ("buy", 25.55, 0.0, False),
+        ("buy", 1, 0.0, False),  # Very far away
+        ("sell", 25.5, 0.0, True),
+        ("sell", 50, 0.0, False),  # Very far away
+        ("sell", 25.58, 0.0, False),
+        ("sell", 25.563, 0.01, False),
+        ("sell", 5.563, 0.01, True),
+    ],
+)
+def test__dry_is_price_crossed_with_orderbook(
+    default_conf, mocker, order_book_l2_usd, side, limit, offset, expected
+):
+    # Best bid 25.563
+    # Best ask 25.566
+    exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    exchange.fetch_l2_order_book = order_book_l2_usd
+    orderbook = order_book_l2_usd.return_value
+    result = exchange._dry_is_price_crossed(
+        "LTC/USDT", side, limit, orderbook=orderbook, offset=offset
+    )
+    assert result is expected
+    assert order_book_l2_usd.call_count == 0
+
+    # Test without passing orderbook
+    order_book_l2_usd.reset_mock()
+    result = exchange._dry_is_price_crossed("LTC/USDT", side, limit, offset=offset)
+    assert result is expected
+
+
+def test__dry_is_price_crossed_empty_orderbook(default_conf, mocker):
+    exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    empty_book = {"asks": [], "bids": []}
+    assert not exchange._dry_is_price_crossed("LTC/USDT", "buy", 100.0, orderbook=empty_book)
+
+
+def test__dry_is_price_crossed_fetches_orderbook(default_conf, mocker, order_book_l2_usd):
+    exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    exchange.fetch_l2_order_book = order_book_l2_usd
+    assert exchange._dry_is_price_crossed("LTC/USDT", "buy", 26.0)
+    assert order_book_l2_usd.call_count == 1
+
+
+def test__dry_is_price_crossed_without_orderbook_support(default_conf, mocker):
+    exchange = get_patched_exchange(mocker, default_conf)
+    exchange.fetch_l2_order_book = MagicMock()
+    mocker.patch(f"{EXMS}.exchange_has", return_value=False)
+    assert exchange._dry_is_price_crossed("LTC/USDT", "buy", 1.0)
+    assert exchange.fetch_l2_order_book.call_count == 0
+
+
+@pytest.mark.parametrize(
     "side,price,filled,converted",
     [
         # order_book_l2_usd spread:
