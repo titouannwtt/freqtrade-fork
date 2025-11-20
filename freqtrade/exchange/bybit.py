@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import ccxt
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import TRADE_MODES, MarginMode, PriceType, TradingMode
+from freqtrade.enums import OPTIMIZE_MODES, MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import DDosProtection, ExchangeError, OperationalException, TemporaryError
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.common import retrier
@@ -304,7 +304,7 @@ class Bybit(Exchange):
         :param pair: Market symbol
         :return: Datetime if the pair gonna be delisted, None otherwise
         """
-        if self._config["runmode"] not in TRADE_MODES:
+        if self._config["runmode"] in OPTIMIZE_MODES:
             return None
 
         if self.trading_mode == TradingMode.FUTURES:
