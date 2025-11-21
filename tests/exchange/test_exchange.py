@@ -1169,6 +1169,58 @@ def test__dry_is_price_crossed_without_orderbook_support(default_conf, mocker):
 
 
 @pytest.mark.parametrize(
+    "crossed,immediate,side,amount,expected_status,expected_fee_rate,expected_calls,taker_or_maker",
+    [
+        (True, True, "buy", 2.0, "closed", 0.005, 1, "taker"),
+        (True, False, "sell", 1.5, "closed", 0.005, 1, "maker"),
+        (False, False, "sell", 1.0, "open", None, 0, None),
+    ],
+)
+def test_check_dry_limit_order_filled_parametrized(
+    default_conf,
+    mocker,
+    crossed,
+    immediate,
+    side,
+    amount,
+    expected_status,
+    expected_fee_rate,
+    expected_calls,
+    taker_or_maker,
+):
+    exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=crossed)
+    fee_mock = mocker.patch(f"{EXMS}.get_fee", return_value=0.005)
+
+    order = {
+        "symbol": "LTC/USDT",
+        "status": "open",
+        "type": "limit",
+        "side": side,
+        "price": 25.0,
+        "amount": amount,
+        "filled": 0.0,
+        "remaining": amount,
+        "cost": 25.0 * amount,
+        "fee": None,
+    }
+
+    result = exchange.check_dry_limit_order_filled(order, immediate=immediate)
+
+    assert result["status"] == expected_status
+    if crossed:
+        assert result["filled"] == amount
+        assert result["remaining"] == 0.0
+        assert result["fee"]["rate"] == expected_fee_rate
+        fee_mock.assert_called_once_with("LTC/USDT", taker_or_maker=taker_or_maker)
+    else:
+        assert result["filled"] == 0.0
+        assert result["remaining"] == amount
+        assert result["fee"] is None
+    assert fee_mock.call_count == expected_calls
+
+
+@pytest.mark.parametrize(
     "side,price,filled,converted",
     [
         # order_book_l2_usd spread:
