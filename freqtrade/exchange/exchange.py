@@ -104,6 +104,7 @@ from freqtrade.misc import (
     deep_merge_dicts,
     file_dump_json,
     file_load_json,
+    safe_value_fallback,
     safe_value_fallback2,
 )
 from freqtrade.util import FtTTLCache, PeriodicCache, dt_from_ts, dt_now
@@ -1292,7 +1293,7 @@ class Exchange:
             pair = order["symbol"]
             if not orderbook and self.exchange_has("fetchL2OrderBook"):
                 orderbook = self.fetch_l2_order_book(pair, 20)
-            price = order[self._ft_has["stop_price_prop"]]
+            price = safe_value_fallback(order, self._ft_has["stop_price_prop"], "price")
             crossed = self._dry_is_price_crossed(
                 pair, order["side"], price, orderbook, is_stop=True
             )
