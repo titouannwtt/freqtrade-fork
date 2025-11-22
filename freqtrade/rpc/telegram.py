@@ -806,15 +806,14 @@ class Telegram(RPCHandler):
 
             if r["is_open"]:
                 if r.get("realized_profit"):
-                    lines.extend(
-                        [
-                            f"*Realized Profit:* `{r['realized_profit_ratio']:.2%} "
-                            f"({r['realized_profit_r']})`",
-                            (
-                                f"*Total Profit:* `{r['total_profit_ratio']:.2%} "
-                                f"({r['total_profit_abs_r']})`"
-                            ),
-                        ]
+                    lines.append(
+                        f"*Realized Profit:* `{r['realized_profit_ratio']:.2%} "
+                        f"({r['realized_profit_r']})`"
+                    )
+                if r.get("total_profit_ratio"):
+                    lines.append(
+                        f"*Total Profit:* `{r['total_profit_ratio']:.2%} "
+                        f"({r['total_profit_abs_r']})`"
                     )
 
                 # Append empty line to improve readability
