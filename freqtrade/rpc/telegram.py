@@ -825,6 +825,10 @@ class Telegram(RPCHandler):
 
                 # Append empty line to improve readability
                 lines.append(" ")
+                # Adding liquidation only if it is not None
+                if liquidation := r.get("liquidation_price"):
+                    lines.append(f"*Liquidation:* `{round_value(liquidation, 8)}`")
+
                 if (
                     r["stop_loss_abs"] != r["initial_stop_loss_abs"]
                     and r["initial_stop_loss_ratio"] is not None
@@ -834,12 +838,7 @@ class Telegram(RPCHandler):
                         "*Initial Stoploss:* `{initial_stop_loss_abs:.8f}` "
                         "`({initial_stop_loss_ratio:.2%})`"
                     )
-                # Adding liquidation only if it is not None
-                lines.append(
-                    f"*Liquidation:* `{round_value(r['liquidation_price'], 8)}`"
-                    if r.get("liquidation_price")
-                    else ""
-                )
+
                 # Adding stoploss and stoploss percentage only if it is not None
                 lines.append(
                     f"*Stoploss:* `{round_value(r['stop_loss_abs'], 8)}` "
