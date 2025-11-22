@@ -837,7 +837,7 @@ class Telegram(RPCHandler):
                 # Adding liquidation only if it is not None
                 lines.append(
                     f"*Liquidation:* `{round_value(r['liquidation_price'], 8)}`"
-                    if r["liquidation_price"]
+                    if r.get("liquidation_price")
                     else ""
                 )
                 # Adding stoploss and stoploss percentage only if it is not None
