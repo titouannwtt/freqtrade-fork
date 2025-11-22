@@ -765,7 +765,6 @@ class Telegram(RPCHandler):
                     if not o["ft_is_entry"] and not o["ft_order_side"] == "stoploss"
                 ]
             )
-            r["exit_reason"] = r.get("exit_reason", "")
             r["stake_amount_r"] = fmt_coin(r["stake_amount"], r["quote_currency"])
             r["max_stake_amount_r"] = fmt_coin(
                 r["max_stake_amount"] or r["stake_amount"], r["quote_currency"]
@@ -784,7 +783,7 @@ class Telegram(RPCHandler):
                 f"*Amount:* `{r['amount']} ({r['stake_amount_r']})`",
                 f"*Total invested:* `{r['max_stake_amount_r']}`" if position_adjust else "",
                 f"*Enter Tag:* `{r['enter_tag']}`" if r["enter_tag"] else "",
-                f"*Exit Reason:* `{r['exit_reason']}`" if r["exit_reason"] else "",
+                f"*Exit Reason:* `{r['exit_reason']}`" if r.get("exit_reason") else "",
             ]
 
             if position_adjust:
@@ -820,7 +819,7 @@ class Telegram(RPCHandler):
                             f"({r['realized_profit_r']})`",
                             (
                                 f"*Total Profit:* `{r['total_profit_ratio']:.2%} "
-                                f"({r['total_profit_abs_r']})`",
+                                f"({r['total_profit_abs_r']})`"
                             ),
                         ]
                     )
