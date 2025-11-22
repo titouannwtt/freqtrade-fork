@@ -701,7 +701,7 @@ class Telegram(RPCHandler):
 
         results = self._rpc._rpc_trade_status(trade_ids=trade_ids)
         for r in results:
-            lines = ["*Order List for Trade #*`{trade_id}`"]
+            lines = [f"*Order List for Trade #*`{r['trade_id']}`"]
 
             lines_detail = self._prepare_order_details(
                 r["orders"], r["quote_currency"], r["is_open"]
@@ -720,10 +720,10 @@ class Telegram(RPCHandler):
                 if (len(msg) + len(line) + 1) < MAX_MESSAGE_LENGTH:
                     msg += line + "\n"
                 else:
-                    await self._send_msg(msg.format(**r))
-                    msg = "*Order List for Trade #*`{trade_id}` - continued\n" + line + "\n"
+                    await self._send_msg(msg)
+                    msg = f"*Order List for Trade #*`{r['trade_id']}` - continued\n" + line + "\n"
 
-        await self._send_msg(msg.format(**r))
+        await self._send_msg(msg)
 
     @authorized_only
     async def _status(self, update: Update, context: CallbackContext) -> None:
