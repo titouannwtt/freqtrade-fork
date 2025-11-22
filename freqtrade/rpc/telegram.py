@@ -670,7 +670,7 @@ class Telegram(RPCHandler):
                 # TODO: This calculation ignores fees.
                 price_to_1st_entry = (cur_entry_average - first_avg) / first_avg
                 if is_open:
-                    lines.append("({})".format(dt_humanize_delta(order["order_filled_date"])))
+                    lines.append(f"({dt_humanize_delta(order['order_filled_date'])})")
                 lines.append(
                     f"*Amount:* {round_value(cur_entry_amount, 8)} "
                     f"({fmt_coin(order['cost'], quote_currency)})"
@@ -818,7 +818,10 @@ class Telegram(RPCHandler):
                         [
                             f"*Realized Profit:* `{r['realized_profit_ratio']:.2%} "
                             f"({r['realized_profit_r']})`",
-                            f"*Total Profit:* `{r['total_profit_ratio']:.2%} ({r['total_profit_abs_r']})`",
+                            (
+                                f"*Total Profit:* `{r['total_profit_ratio']:.2%} "
+                                f"({r['total_profit_abs_r']})`",
+                            ),
                         ]
                     )
 
