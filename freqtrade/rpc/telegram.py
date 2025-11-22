@@ -757,14 +757,7 @@ class Telegram(RPCHandler):
         max_entries = self._config.get("max_entry_position_adjustment", -1)
         for r in results:
             r["open_date_hum"] = dt_humanize_delta(r["open_date"])
-            r["num_entries"] = len([o for o in r["orders"] if o["ft_is_entry"]])
-            r["num_exits"] = len(
-                [
-                    o
-                    for o in r["orders"]
-                    if not o["ft_is_entry"] and not o["ft_order_side"] == "stoploss"
-                ]
-            )
+
             r["stake_amount_r"] = fmt_coin(r["stake_amount"], r["quote_currency"])
             r["max_stake_amount_r"] = fmt_coin(
                 r["max_stake_amount"] or r["stake_amount"], r["quote_currency"]
@@ -790,8 +783,8 @@ class Telegram(RPCHandler):
                 max_buy_str = f"/{max_entries + 1}" if (max_entries > 0) else ""
                 lines.extend(
                     [
-                        f"*Number of Entries:* `{r['num_entries']}{max_buy_str}`",
-                        f"*Number of Exits:* `{r['num_exits']}`",
+                        f"*Number of Entries:* `{r['nr_of_successful_entries']}{max_buy_str}`",
+                        f"*Number of Exits:* `{r['nr_of_successful_exits']}`",
                     ]
                 )
 
