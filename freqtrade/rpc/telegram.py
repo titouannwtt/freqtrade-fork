@@ -774,26 +774,25 @@ class Telegram(RPCHandler):
             r["realized_profit_r"] = fmt_coin(r["realized_profit"], r["quote_currency"])
             r["total_profit_abs_r"] = fmt_coin(r["total_profit_abs"], r["quote_currency"])
             lines = [
-                "*Trade ID:* `{trade_id}`" + (" `(since {open_date_hum})`" if r["is_open"] else ""),
-                "*Current Pair:* {pair}",
+                f"*Trade ID:* `{r['trade_id']}`"
+                + (f" `(since {r['open_date_hum']})`" if r["is_open"] else ""),
+                f"*Current Pair:* {r['pair']}",
                 (
                     f"*Direction:* {'`Short`' if r.get('is_short') else '`Long`'}"
-                    + " ` ({leverage}x)`"
-                    if r.get("leverage")
-                    else ""
+                    + (f" ` ({r['leverage']}x)`" if r.get("leverage") else "")
                 ),
-                "*Amount:* `{amount} ({stake_amount_r})`",
-                "*Total invested:* `{max_stake_amount_r}`" if position_adjust else "",
-                "*Enter Tag:* `{enter_tag}`" if r["enter_tag"] else "",
-                "*Exit Reason:* `{exit_reason}`" if r["exit_reason"] else "",
+                f"*Amount:* `{r['amount']} ({r['stake_amount_r']})`",
+                f"*Total invested:* `{r['max_stake_amount_r']}`" if position_adjust else "",
+                f"*Enter Tag:* `{r['enter_tag']}`" if r["enter_tag"] else "",
+                f"*Exit Reason:* `{r['exit_reason']}`" if r["exit_reason"] else "",
             ]
 
             if position_adjust:
                 max_buy_str = f"/{max_entries + 1}" if (max_entries > 0) else ""
                 lines.extend(
                     [
-                        "*Number of Entries:* `{num_entries}" + max_buy_str + "`",
-                        "*Number of Exits:* `{num_exits}`",
+                        f"*Number of Entries:* `{r['num_entries']}{max_buy_str}`",
+                        f"*Number of Exits:* `{r['num_exits']}`",
                     ]
                 )
 
@@ -801,15 +800,15 @@ class Telegram(RPCHandler):
                 [
                     f"*Open Rate:* `{round_value(r['open_rate'], 8)}`",
                     f"*Close Rate:* `{round_value(r['close_rate'], 8)}`" if r["close_rate"] else "",
-                    "*Open Date:* `{open_date}`",
-                    "*Close Date:* `{close_date}`" if r["close_date"] else "",
+                    f"*Open Date:* `{r['open_date']}`",
+                    f"*Close Date:* `{r['close_date']}`" if r["close_date"] else "",
                     (
                         f" \n*Current Rate:* `{round_value(r['current_rate'], 8)}`"
                         if r["is_open"]
                         else ""
                     ),
                     ("*Unrealized Profit:* " if r["is_open"] else "*Close Profit: *")
-                    + "`{profit_ratio:.2%}` `({profit_abs_r})`",
+                    + f"`{r['profit_ratio']:.2%}` `({r['profit_abs_r']})`",
                 ]
             )
 
@@ -817,9 +816,9 @@ class Telegram(RPCHandler):
                 if r.get("realized_profit"):
                     lines.extend(
                         [
-                            "*Realized Profit:* `{realized_profit_ratio:.2%} "
-                            "({realized_profit_r})`",
-                            "*Total Profit:* `{total_profit_ratio:.2%} ({total_profit_abs_r})`",
+                            f"*Realized Profit:* `{r['realized_profit_ratio']:.2%} "
+                            f"({r['realized_profit_r']})`",
+                            f"*Total Profit:* `{r['total_profit_ratio']:.2%} ({r['total_profit_abs_r']})`",
                         ]
                     )
 
@@ -835,23 +834,23 @@ class Telegram(RPCHandler):
                 ):
                     # Adding initial stoploss only if it is different from stoploss
                     lines.append(
-                        "*Initial Stoploss:* `{initial_stop_loss_abs:.8f}` "
-                        "`({initial_stop_loss_ratio:.2%})`"
+                        f"*Initial Stoploss:* `{r['initial_stop_loss_abs']:.8f}` "
+                        f"`({r['initial_stop_loss_ratio']:.2%})`"
                     )
 
                 # Adding stoploss and stoploss percentage only if it is not None
                 lines.append(
                     f"*Stoploss:* `{round_value(r['stop_loss_abs'], 8)}` "
-                    + ("`({stop_loss_ratio:.2%})`" if r["stop_loss_ratio"] else "")
+                    + (f"`({r['stop_loss_ratio']:.2%})`" if r["stop_loss_ratio"] else "")
                 )
                 lines.append(
                     f"*Stoploss distance:* `{round_value(r['stoploss_current_dist'], 8)}` "
-                    "`({stoploss_current_dist_ratio:.2%})`"
+                    f"`({r['stoploss_current_dist_ratio']:.2%})`"
                 )
-                if r.get("open_orders"):
+                if open_orders := r.get("open_orders"):
                     lines.append(
-                        "*Open Order:* `{open_orders}`"
-                        + ("- `{exit_order_status}`" if r["exit_order_status"] else "")
+                        f"*Open Order:* `{open_orders}`"
+                        + (f"- `{r['exit_order_status']}`" if r["exit_order_status"] else "")
                     )
 
             await self.__send_status_msg(lines, r)
@@ -867,10 +866,10 @@ class Telegram(RPCHandler):
                 if (len(msg) + len(line) + 1) < MAX_MESSAGE_LENGTH:
                     msg += line + "\n"
                 else:
-                    await self._send_msg(msg.format(**r))
-                    msg = "*Trade ID:* `{trade_id}` - continued\n" + line + "\n"
+                    await self._send_msg(msg)
+                    msg = f"*Trade ID:* `{r['trade_id']}` - continued\n" + line + "\n"
 
-        await self._send_msg(msg.format(**r))
+        await self._send_msg(msg)
 
     @authorized_only
     async def _status_table(self, update: Update, context: CallbackContext) -> None:
