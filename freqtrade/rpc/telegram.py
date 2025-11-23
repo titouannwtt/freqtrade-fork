@@ -806,7 +806,10 @@ class Telegram(RPCHandler):
             )
 
             if r["is_open"]:
-                if r.get("realized_profit") is not None:
+                if (
+                    r.get("realized_profit") is not None
+                    and r.get("realized_profit_ratio") is not None
+                ):
                     lines.append(
                         f"*Realized Profit:* `{format_pct(r['realized_profit_ratio'])} "
                         f"({r['realized_profit_r']})`"
