@@ -1,6 +1,13 @@
 from datetime import timedelta
 
-from freqtrade.util import decimals_per_coin, fmt_coin, fmt_coin2, format_duration, round_value
+from freqtrade.util import (
+    decimals_per_coin,
+    fmt_coin,
+    fmt_coin2,
+    format_duration,
+    format_pct,
+    round_value,
+)
 
 
 def test_decimals_per_coin():
@@ -55,3 +62,13 @@ def test_format_duration():
     assert format_duration(timedelta(minutes=1445)) == "1d 00:05"
     assert format_duration(timedelta(minutes=11445)) == "7d 22:45"
     assert format_duration(timedelta(minutes=101445)) == "70d 10:45"
+
+
+def test_format_pct():
+    assert format_pct(0.1234) == "12.34%"
+    assert format_pct(0.1) == "10.00%"
+    assert format_pct(0.0) == "0.00%"
+    assert format_pct(-0.0567) == "-5.67%"
+    assert format_pct(-1.5567) == "-155.67%"
+    assert format_pct(None) == "N/A"
+    assert format_pct(float("nan")) == "N/A"
