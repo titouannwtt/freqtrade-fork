@@ -48,6 +48,7 @@ from freqtrade.util import (
     fmt_coin,
     fmt_coin2,
     format_date,
+    format_pct,
     round_value,
 )
 
@@ -800,19 +801,19 @@ class Telegram(RPCHandler):
                         else ""
                     ),
                     ("*Unrealized Profit:* " if r["is_open"] else "*Close Profit: *")
-                    + f"`{r['profit_ratio']:.2%}` `({r['profit_abs_r']})`",
+                    + f"`{format_pct(r['profit_ratio'])}` `({r['profit_abs_r']})`",
                 ]
             )
 
             if r["is_open"]:
                 if r.get("realized_profit"):
                     lines.append(
-                        f"*Realized Profit:* `{r['realized_profit_ratio']:.2%} "
+                        f"*Realized Profit:* `{format_pct(r['realized_profit_ratio'])} "
                         f"({r['realized_profit_r']})`"
                     )
                 if r.get("total_profit_ratio"):
                     lines.append(
-                        f"*Total Profit:* `{r['total_profit_ratio']:.2%} "
+                        f"*Total Profit:* `{format_pct(r['total_profit_ratio'])} "
                         f"({r['total_profit_abs_r']})`"
                     )
 
@@ -829,17 +830,17 @@ class Telegram(RPCHandler):
                     # Adding initial stoploss only if it is different from stoploss
                     lines.append(
                         f"*Initial Stoploss:* `{r['initial_stop_loss_abs']:.8f}` "
-                        f"`({r['initial_stop_loss_ratio']:.2%})`"
+                        f"`({format_pct(r['initial_stop_loss_ratio'])})`"
                     )
 
                 # Adding stoploss and stoploss percentage only if it is not None
                 lines.append(
                     f"*Stoploss:* `{round_value(r['stop_loss_abs'], 8)}` "
-                    + (f"`({r['stop_loss_ratio']:.2%})`" if r["stop_loss_ratio"] else "")
+                    + (f"`({format_pct(r['stop_loss_ratio'])})`" if r["stop_loss_ratio"] else "")
                 )
                 lines.append(
                     f"*Stoploss distance:* `{round_value(r['stoploss_current_dist'], 8)}` "
-                    f"`({r['stoploss_current_dist_ratio']:.2%})`"
+                    f"`({format_pct(r['stoploss_current_dist_ratio'])})`"
                 )
                 if open_orders := r.get("open_orders"):
                     lines.append(
