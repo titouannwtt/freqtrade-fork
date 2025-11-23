@@ -780,6 +780,7 @@ def test_download_all_pairs_history_parallel(mocker, default_conf_usdt):
     exchange.refresh_latest_ohlcv.reset_mock()
 
     # Test without timerange
+    # expected to call refresh_latest_ohlcv - as we can't know how much will be required.
     result3 = _download_all_pairs_history_parallel(
         exchange=exchange,
         pairs=pairs,
@@ -787,8 +788,8 @@ def test_download_all_pairs_history_parallel(mocker, default_conf_usdt):
         candle_type=candle_type,
         timerange=None,
     )
-    assert result3 == {}
-    assert exchange.refresh_latest_ohlcv.call_count == 0
+    assert result3 == expected
+    assert exchange.refresh_latest_ohlcv.call_count == 1
 
 
 def test_download_pair_history_with_pair_candles(mocker, default_conf, tmp_path, caplog) -> None:
