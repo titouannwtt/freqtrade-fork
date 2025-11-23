@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from numpy import isnan
+
 from freqtrade.constants import DECIMAL_PER_COIN_FALLBACK, DECIMALS_PER_COIN
 
 
@@ -80,3 +82,15 @@ def format_duration(td: timedelta) -> str:
     h, r = divmod(td.seconds, 3600)
     m, _ = divmod(r, 60)
     return f"{d}d {h:02d}:{m:02d}"
+
+
+def format_pct(value: float | None) -> str:
+    """
+    Format a float value as percentage string with 2 decimals
+    None and NaN values are formatted as "N/A"
+    :param value: Float value to format
+    :return: Formatted percentage string
+    """
+    if value is None or isnan(value):
+        return "N/A"
+    return f"{value:.2%}"
