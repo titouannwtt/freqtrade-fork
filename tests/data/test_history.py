@@ -582,6 +582,23 @@ def test_refresh_backtest_ohlcv_data(
         assert log_has_re(r"Downloading pair ETH/BTC, funding_rate, interval 8h\.", caplog)
         assert log_has_re(r"Downloading pair ETH/BTC, mark, interval 4h\.", caplog)
 
+    # Test with only one pair - no parallel download should happen 1 pair/timeframe combination
+    # doesn't justify parallelization
+    parallel_mock.reset_mock()
+    dl_mock.reset_mock()
+    refresh_backtest_ohlcv_data(
+        exchange=ex,
+        pairs=[
+            "ETH/BTC",
+        ],
+        timeframes=["5m"],
+        datadir=testdatadir,
+        timerange=timerange,
+        erase=False,
+        trading_mode=trademode,
+    )
+    assert parallel_mock.call_count == 0
+
 
 def test_download_data_no_markets(mocker, default_conf, caplog, testdatadir):
     dl_mock = mocker.patch(
