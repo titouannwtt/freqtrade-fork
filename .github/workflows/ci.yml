@@ -81,6 +81,12 @@ jobs:
       with:
         use_oidc: true
 
+    - name: Cleanup codecov dirty state files
+      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
+      run: |
+        # See https://github.com/codecov/codecov-action/issues/1851
+        rm -rf codecov codecov.SHA256SUM codecov.SHA256SUM.sig
+
     - name: Run json schema extract
       # This should be kept before the repository check to ensure that the schema is up-to-date
       run: |
