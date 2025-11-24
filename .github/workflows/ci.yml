@@ -26,6 +26,8 @@ jobs:
       matrix:
         os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" , "windows-2022", "windows-2025" ]
         python-version: ["3.11", "3.12", "3.13"]
+    permissions:
+      id-token: write
 
     steps:
     - uses: actions/checkout@v5
@@ -74,15 +76,9 @@ jobs:
       run: |
         pytest --random-order --cov=freqtrade --cov=freqtrade_client --cov-config=.coveragerc
 
-    - name: Coveralls
-      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
-      env:
-        # Coveralls token. Not used as secret due to github not providing secrets to forked repositories
-        COVERALLS_REPO_TOKEN: 6D1m0xupS3FgutfuGao8keFf9Hc0FpIXu
-      run: |
-        # Allow failure for coveralls
-        uv pip install coveralls
-        coveralls || true
+    - uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+      with:
+        use_oidc: true
 
     - name: Run json schema extract
       # This should be kept before the repository check to ensure that the schema is up-to-date
