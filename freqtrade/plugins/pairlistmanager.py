@@ -5,7 +5,7 @@ PairList manager class
 import logging
 from functools import partial
 
-from cachetools import LRUCache, TTLCache, cached
+from cachetools import LRUCache, cached
 
 from freqtrade.constants import Config, ListPairsWithTimeframes
 from freqtrade.data.dataprovider import DataProvider
@@ -17,6 +17,7 @@ from freqtrade.mixins import LoggingMixin
 from freqtrade.plugins.pairlist.IPairList import IPairList, SupportsBacktesting
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.resolvers import PairListResolver
+from freqtrade.util import FtTTLCache
 
 
 logger = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ class PairListManager(LoggingMixin):
         """List of short_desc for each Pairlist Handler"""
         return [{p.name: p.short_desc()} for p in self._pairlist_handlers]
 
-    @cached(TTLCache(maxsize=1, ttl=1800))
+    @cached(FtTTLCache(maxsize=1, ttl=1800))
     def _get_cached_tickers(self) -> Tickers:
         return self._exchange.get_tickers()
 
