@@ -275,10 +275,7 @@ jobs:
   # Notify only once - when CI completes (and after deploy) in case it's successful
   notify-complete:
     needs: [
-      tests,
-      docs-check,
-      mypy-version-check,
-      pre-commit,
+      build,
       build-linux-online
     ]
     runs-on: ubuntu-22.04
@@ -308,7 +305,12 @@ jobs:
   build:
     if: always()
     name: "Build"
-    needs: [ tests, docs-check, mypy-version-check, pre-commit ]
+    needs: [
+      tests,
+      docs-check,
+      mypy-version-check,
+      pre-commit,
+    ]
     runs-on: ubuntu-22.04
 
     steps:
