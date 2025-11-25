@@ -275,10 +275,7 @@ jobs:
   # Notify only once - when CI completes (and after deploy) in case it's successful
   notify-complete:
     needs: [
-      tests,
-      docs-check,
-      mypy-version-check,
-      pre-commit,
+      build,
       build-linux-online
     ]
     runs-on: ubuntu-22.04
@@ -306,11 +303,23 @@ jobs:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   build:
+    if: always()
     name: "Build"
-    needs: [ tests, docs-check, mypy-version-check, pre-commit ]
+    needs: [
+      tests,
+      docs-check,
+      mypy-version-check,
+      pre-commit,
+    ]
     runs-on: ubuntu-22.04
 
     steps:
+
+    - name: Decide whether the needed jobs succeeded or failed
+      uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe  # v1.2.2
+      with:
+        jobs: ${{ toJSON(needs) }}
+
     - uses: actions/checkout@v5
       with:
         persist-credentials: false
@@ -405,10 +414,7 @@ jobs:
   docker-build:
     name: "Docker Build and Deploy"
     needs: [
-      tests,
-      docs-check,
-      mypy-version-check,
-      pre-commit
+     build,
     ]
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release') && github.repository == 'freqtrade/freqtrade'
     uses: ./.github/workflows/docker-build.yml
