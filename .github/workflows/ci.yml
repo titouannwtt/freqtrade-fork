@@ -26,8 +26,6 @@ jobs:
       matrix:
         os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" , "windows-2022", "windows-2025" ]
         python-version: ["3.11", "3.12", "3.13"]
-    permissions:
-      id-token: write
 
     steps:
     - uses: actions/checkout@v5
@@ -79,7 +77,8 @@ jobs:
     - uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
       with:
-        use_oidc: true
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Cleanup codecov dirty state files
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
