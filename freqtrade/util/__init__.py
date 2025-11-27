@@ -18,9 +18,11 @@ from freqtrade.util.formatters import (
     fmt_coin,
     fmt_coin2,
     format_duration,
+    format_pct,
     round_value,
 )
 from freqtrade.util.ft_precise import FtPrecise
+from freqtrade.util.ft_ttlcache import FtTTLCache
 from freqtrade.util.measure_time import MeasureTime
 from freqtrade.util.periodic_cache import PeriodicCache
 from freqtrade.util.progress_tracker import (  # noqa F401
@@ -44,6 +46,7 @@ __all__ = [
     "format_date",
     "format_ms_time",
     "format_ms_time_det",
+    "format_pct",
     "get_dry_run_wallet",
     "FtPrecise",
     "PeriodicCache",
@@ -57,4 +60,5 @@ __all__ = [
     "print_rich_table",
     "print_df_rich_table",
     "CustomProgress",
+    "FtTTLCache",
 ]
