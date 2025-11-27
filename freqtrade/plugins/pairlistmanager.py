@@ -134,8 +134,20 @@ class PairListManager(LoggingMixin):
     def _get_cached_tickers(self) -> Tickers:
         return self._exchange.get_tickers()
 
-    def refresh_pairlist(self) -> None:
-        """Run pairlist through all configured Pairlist Handlers."""
+    def refresh_pairlist(self, only_first: bool = False, pairs: list[str] | None = None) -> None:
+        """
+        Run pairlist through all configured Pairlist Handlers.
+
+        :param only_first: If True, only run the first PairList handler (the generator)
+            and skip all subsequent filters. Used during backtesting startup to ensure
+            historic data is loaded for the complete universe of pairs that the
+            generator can produce (even if later filters would reduce the list size).
+            Prevents missing data when a filter returns a variable number of pairs
+            across refresh cycles.
+        :param pairs: Optional list of pairs to intersect with the generated pairlist.
+            Only pairs present both in the generated list and this parameter are kept.
+            Used in backtesting to filter out pairs with no available data.
+        """
         # Tickers should be cached to avoid calling the exchange on each call.
         tickers: dict = {}
         if self._tickers_needed:
@@ -144,10 +156,15 @@ class PairListManager(LoggingMixin):
         # Generate the pairlist with first Pairlist Handler in the chain
         pairlist = self._pairlist_handlers[0].gen_pairlist(tickers)
 
-        # Process all Pairlist Handlers in the chain
-        # except for the first one, which is the generator.
-        for pairlist_handler in self._pairlist_handlers[1:]:
-            pairlist = pairlist_handler.filter_pairlist(pairlist, tickers)
+        # Optional intersection with an explicit list of pairs (used in backtesting)
+        if pairs is not None:
+            pairlist = [p for p in pairlist if p in pairs]
+
+        if not only_first:
+            # Process all Pairlist Handlers in the chain
+            # except for the first one, which is the generator.
+            for pairlist_handler in self._pairlist_handlers[1:]:
+                pairlist = pairlist_handler.filter_pairlist(pairlist, tickers)
 
         # Validation against blacklist happens after the chain of Pairlist Handlers
         # to ensure blacklist is respected.
