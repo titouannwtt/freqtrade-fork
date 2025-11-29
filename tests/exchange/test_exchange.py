@@ -1232,6 +1232,70 @@ def test_check_dry_limit_order_filled(
 
 
 @pytest.mark.parametrize(
+    "immediate,crossed,expected_status,expected_fee_type",
+    [
+        (True, True, "closed", "taker"),
+        (False, True, "closed", "maker"),
+        (True, False, "open", None),
+    ],
+)
+def test_check_dry_limit_order_filled_stoploss(
+    default_conf, mocker, immediate, crossed, expected_status, expected_fee_type, order_book_l2_usd
+):
+    exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch.multiple(
+        EXMS,
+        exchange_has=MagicMock(return_value=True),
+        _dry_is_price_crossed=MagicMock(return_value=crossed),
+        fetch_l2_order_book=order_book_l2_usd,
+    )
+    average_mock = mocker.patch(f"{EXMS}.get_dry_market_fill_price", return_value=24.25)
+    fee_mock = mocker.patch(
+        f"{EXMS}.add_dry_order_fee",
+        autospec=True,
+        side_effect=lambda self, pair, dry_order, taker_or_maker: dry_order,
+    )
+
+    amount = 1.75
+    order = {
+        "symbol": "LTC/USDT",
+        "status": "open",
+        "type": "limit",
+        "side": "sell",
+        "amount": amount,
+        "filled": 0.0,
+        "remaining": amount,
+        "price": 25.0,
+        "average": 0.0,
+        "cost": 0.0,
+        "fee": None,
+        "ft_order_type": "stoploss",
+        "stopLossPrice": 24.5,
+    }
+
+    result = exchange.check_dry_limit_order_filled(order, immediate=immediate)
+
+    assert result["status"] == expected_status
+    assert order_book_l2_usd.call_count == 1
+    if crossed:
+        assert result["filled"] == amount
+        assert result["remaining"] == 0
+        assert result["average"] == 24.25
+        assert result["cost"] == pytest.approx(amount * 24.25)
+        assert average_mock.call_count == 1
+        assert fee_mock.call_count == 1
+        assert fee_mock.call_args[0][1] == "LTC/USDT"
+        assert fee_mock.call_args[0][3] == expected_fee_type
+    else:
+        assert result["filled"] == 0.0
+        assert result["remaining"] == amount
+        assert result["average"] == 0.0
+
+        assert average_mock.call_count == 0
+        assert fee_mock.call_count == 0
+
+
+@pytest.mark.parametrize(
     "side,price,filled,converted",
     [
         # order_book_l2_usd spread:
