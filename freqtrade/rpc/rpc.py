@@ -19,7 +19,16 @@ from freqtrade import __version__
 from freqtrade.configuration.timerange import TimeRange
 from freqtrade.constants import CANCEL_REASON, DEFAULT_DATAFRAME_COLUMNS, Config
 from freqtrade.data.history import load_data
-from freqtrade.data.metrics import DrawDownResult, calculate_expectancy, calculate_max_drawdown
+from freqtrade.data.metrics import (
+    DrawDownResult,
+    calculate_cagr,
+    calculate_calmar,
+    calculate_expectancy,
+    calculate_max_drawdown,
+    calculate_sharpe,
+    calculate_sortino,
+    calculate_sqn,
+)
 from freqtrade.enums import (
     CandleType,
     ExitCheckTuple,
@@ -689,6 +698,34 @@ class RPC:
         last_date = trades[-1].open_date_utc if trades else None
         num = float(len(durations) or 1)
         bot_start = KeyValueStore.get_datetime_value("bot_start_time")
+
+        sharpe = calculate_sharpe(
+            trades=trades_df,
+            min_date=first_date,
+            max_date=last_date,
+            starting_balance=starting_balance,
+        )
+        sortino = calculate_sortino(
+            trades=trades_df,
+            min_date=first_date,
+            max_date=last_date,
+            starting_balance=starting_balance,
+        )
+        sqn = calculate_sqn(trades=trades_df, starting_balance=starting_balance)
+        calmar = calculate_calmar(
+            trades=trades_df,
+            min_date=first_date,
+            max_date=last_date,
+            starting_balance=starting_balance,
+        )
+        current_balance = self._freqtrade.wallets.get_total_stake_amount()
+        days_passed = max(1, (last_date - first_date).days)
+        cagr = calculate_cagr(
+            starting_balance=starting_balance,
+            final_balance=current_balance,
+            days_passed=days_passed,
+        )
+
         return {
             "profit_closed_coin": profit_closed_coin_sum,
             "profit_closed_percent_mean": round(profit_closed_ratio_mean * 100, 2),
@@ -725,6 +762,11 @@ class RPC:
             "winrate": winrate,
             "expectancy": expectancy,
             "expectancy_ratio": expectancy_ratio,
+            "sharpe": sharpe,
+            "sortino": sortino,
+            "sqn": sqn,
+            "calmar": calmar,
+            "cagr": cagr,
             "max_drawdown": drawdown.relative_account_drawdown,
             "max_drawdown_abs": drawdown.drawdown_abs,
             "max_drawdown_start": format_date(drawdown.high_date),
