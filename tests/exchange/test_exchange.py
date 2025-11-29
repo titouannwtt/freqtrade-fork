@@ -1187,7 +1187,7 @@ def test__dry_is_price_crossed_without_orderbook_support(default_conf, mocker):
         (False, False, "sell", 1.0, "open", None, 0, None),
     ],
 )
-def test_check_dry_limit_order_filled_parametrized(
+def test_check_dry_limit_order_filled(
     default_conf,
     mocker,
     crossed,
