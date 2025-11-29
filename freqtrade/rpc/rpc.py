@@ -719,7 +719,7 @@ class RPC:
             starting_balance=starting_balance,
         )
         current_balance = self._freqtrade.wallets.get_total_stake_amount()
-        days_passed = max(1, (last_date - first_date).days)
+        days_passed = max(1, (last_date - first_date).days) if first_date and last_date else 1
         cagr = calculate_cagr(
             starting_balance=starting_balance,
             final_balance=current_balance,
