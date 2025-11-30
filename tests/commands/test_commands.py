@@ -198,6 +198,8 @@ def test_list_timeframes(mocker, capsys):
         "1h": "hour",
         "1d": "day",
     }
+    api_mock.options = {}
+
     patch_exchange(mocker, api_mock=api_mock, exchange="bybit")
     args = [
         "list-timeframes",
@@ -285,6 +287,52 @@ def test_list_timeframes(mocker, capsys):
     assert re.search(r"^5m$", captured.out, re.MULTILINE)
     assert re.search(r"^1h$", captured.out, re.MULTILINE)
     assert re.search(r"^1d$", captured.out, re.MULTILINE)
+
+    api_mock.options = {
+        "timeframes": {
+            "spot": {"1m": "1m", "5m": "5m", "15m": "15m"},
+            "swap": {"1m": "1m", "15m": "15m", "1h": "1h"},
+        }
+    }
+
+    args = [
+        "list-timeframes",
+        "--exchange",
+        "binance",
+    ]
+    start_list_timeframes(get_args(args))
+    captured = capsys.readouterr()
+    assert re.match(
+        "Timeframes available for the exchange `Binance`: 1m, 5m, 15m",
+        captured.out,
+    )
+
+    args = [
+        "list-timeframes",
+        "--exchange",
+        "binance",
+        "--trading-mode",
+        "spot",
+    ]
+    start_list_timeframes(get_args(args))
+    captured = capsys.readouterr()
+    assert re.match(
+        "Timeframes available for the exchange `Binance`: 1m, 5m, 15m",
+        captured.out,
+    )
+    args = [
+        "list-timeframes",
+        "--exchange",
+        "binance",
+        "--trading-mode",
+        "futures",
+    ]
+    start_list_timeframes(get_args(args))
+    captured = capsys.readouterr()
+    assert re.match(
+        "Timeframes available for the exchange `Binance`: 1m, 15m, 1h",
+        captured.out,
+    )
 
 
 def test_list_markets(mocker, markets_static, capsys):
@@ -1319,10 +1367,10 @@ def test_hyperopt_list(mocker, capsys, caplog, tmp_path):
             " 2/12",
             " 10/12",
             "Best result:",
-            "Buy hyperspace params",
-            "Sell hyperspace params",
-            "ROI table",
-            "Stoploss",
+            "Buy parameters",
+            "Sell parameters",
+            "ROI parameters",
+            "Stoploss parameters",
         ]
     )
     assert all(

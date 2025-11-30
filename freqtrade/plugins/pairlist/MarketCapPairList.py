@@ -7,11 +7,10 @@ Provides dynamic pair list based on Market Cap
 import logging
 import math
 
-from cachetools import TTLCache
-
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
+from freqtrade.util import FtTTLCache
 from freqtrade.util.coin_gecko import FtCoinGeckoApi
 
 
@@ -25,18 +24,20 @@ class MarketCapPairList(IPairList):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        if "number_assets" not in self._pairlistconfig:
+        self._mode = self._pairlistconfig.get("mode", "whitelist")
+
+        if (self._mode == "whitelist") and ("number_assets" not in self._pairlistconfig):
             raise OperationalException(
                 "`number_assets` not specified. Please check your configuration "
                 'for "pairlist.config.number_assets"'
             )
 
         self._stake_currency = self._config["stake_currency"]
-        self._number_assets = self._pairlistconfig["number_assets"]
+        self._number_assets = self._pairlistconfig.get("number_assets", 30)
         self._max_rank = self._pairlistconfig.get("max_rank", 30)
         self._refresh_period = self._pairlistconfig.get("refresh_period", 86400)
         self._categories = self._pairlistconfig.get("categories", [])
-        self._marketcap_cache: TTLCache = TTLCache(maxsize=1, ttl=self._refresh_period)
+        self._marketcap_cache: FtTTLCache = FtTTLCache(maxsize=1, ttl=self._refresh_period)
 
         _coingecko_config = self._config.get("coingecko", {})
 
@@ -78,7 +79,9 @@ class MarketCapPairList(IPairList):
         """
         num = self._number_assets
         rank = self._max_rank
-        msg = f"{self.name} - {num} pairs placed within top {rank} market cap."
+        mode = self._mode
+        pair_text = num if (mode == "whitelist") else "blacklisting"
+        msg = f"{self.name} - {pair_text} pairs placed within top {rank} market cap."
         return msg
 
     @staticmethod
@@ -114,6 +117,13 @@ class MarketCapPairList(IPairList):
                 "default": 86400,
                 "description": "Refresh period",
                 "help": "Refresh period in seconds",
+            },
+            "mode": {
+                "type": "option",
+                "default": "whitelist",
+                "options": ["whitelist", "blacklist"],
+                "description": "Mode of operation",
+                "help": "Mode of operation (whitelist/blacklist)",
             },
         }
 
@@ -186,6 +196,9 @@ class MarketCapPairList(IPairList):
         :return: new whitelist
         """
         marketcap_list = self._marketcap_cache.get("marketcap")
+        mode = self._mode
+        is_whitelist_mode = mode == "whitelist"
+        filtered_pairlist: list[str] = []
 
         default_kwargs = {
             "vs_currency": "usd",
@@ -219,12 +232,10 @@ class MarketCapPairList(IPairList):
                 self._marketcap_cache["marketcap"] = marketcap_list
 
         if marketcap_list:
-            filtered_pairlist: list[str] = []
-
             market = self._exchange._config["trading_mode"]
-            pair_format = f"{self._stake_currency.upper()}"
-            if market == "futures":
-                pair_format += f":{self._stake_currency.upper()}"
+            pair_format = f"{self._stake_currency.upper()}" + (
+                f":{self._stake_currency.upper()}" if market == "futures" else ""
+            )
 
             top_marketcap = marketcap_list[: self._max_rank :]
             markets = self.get_markets_exchange()
@@ -234,13 +245,16 @@ class MarketCapPairList(IPairList):
                 resolved = self.resolve_marketcap_pair(pair, pairlist, markets, filtered_pairlist)
 
                 if resolved:
+                    if not is_whitelist_mode:
+                        pairlist.remove(resolved)
+                        continue
+
                     filtered_pairlist.append(resolved)
+                    if len(filtered_pairlist) == self._number_assets:
+                        break
 
-                if len(filtered_pairlist) == self._number_assets:
-                    break
-
-            if len(filtered_pairlist) > 0:
-                return filtered_pairlist
+        if not is_whitelist_mode:
+            return pairlist
 
         # If no pairs are found, return the original pairlist
-        return []
+        return filtered_pairlist
