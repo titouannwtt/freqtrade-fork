@@ -50,7 +50,14 @@ def test_may_execute_exit_stoploss_on_exchange_multi(default_conf, ticker, fee, 
     stoploss_order_mock = MagicMock(side_effect=stop_orders)
     # Sell 3rd trade (not called for the first trade)
     should_sell_mock = MagicMock(side_effect=[[], [ExitCheckTuple(exit_type=ExitType.EXIT_SIGNAL)]])
-    cancel_order_mock = MagicMock()
+
+    def patch_stoploss(order_id, *args, **kwargs):
+        slo = stoploss_order_open.copy()
+        slo["id"] = order_id
+        slo["status"] = "canceled"
+        return slo
+
+    cancel_order_mock = MagicMock(side_effect=patch_stoploss)
     mocker.patch.multiple(
         EXMS,
         create_stoploss=stoploss,
