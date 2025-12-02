@@ -2387,6 +2387,8 @@ class FreqtradeBot(LoggingMixin):
                 self.strategy.ft_stoploss_adjust(
                     current_rate, trade, datetime.now(UTC), profit, 0, after_fill=True
                 )
+            if not trade.is_open:
+                self.cancel_stoploss_on_exchange(trade)
             # Updating wallets when order is closed
             self.wallets.update()
         return trade
