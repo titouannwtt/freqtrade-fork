@@ -5304,6 +5304,7 @@ def test_combine_funding_and_mark(
             {"date": trade_date, "open": mark_price},
         ]
     )
+    # Test fallback to futures funding rate for missing funding rates
     df = exchange.combine_funding_and_mark(funding_rates, mark_rates, futures_funding_rate)
 
     if futures_funding_rate is not None:
@@ -5330,6 +5331,33 @@ def test_combine_funding_and_mark(
     df = exchange.combine_funding_and_mark(funding_rates, mark_candles, futures_funding_rate)
 
     assert len(df) == 0
+
+    # Test fallback to futures funding rate for middle missing funding rate
+    funding_rates = DataFrame(
+        [
+            {"date": prior2_date, "open": funding_rate},
+            # missing 1 hour
+            {"date": trade_date, "open": funding_rate},
+        ],
+    )
+    mark_rates = DataFrame(
+        [
+            {"date": prior2_date, "open": mark_price},
+            {"date": prior_date, "open": mark_price},
+            {"date": trade_date, "open": mark_price},
+        ]
+    )
+    df = exchange.combine_funding_and_mark(funding_rates, mark_rates, futures_funding_rate)
+
+    if futures_funding_rate is not None:
+        assert len(df) == 3
+        assert df.iloc[0]["open_fund"] == funding_rate
+        assert df.iloc[1]["open_fund"] == futures_funding_rate
+        assert df.iloc[2]["open_fund"] == funding_rate
+        assert df["date"].to_list() == [prior2_date, prior_date, trade_date]
+    else:
+        assert len(df) == 2
+        assert df["date"].to_list() == [prior2_date, trade_date]
 
 
 @pytest.mark.parametrize(
