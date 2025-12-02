@@ -3784,10 +3784,11 @@ class Exchange:
         :param mark_rates: Dataframe containing Mark rates (Type mark_ohlcv_price)
         :param futures_funding_rate: Fake funding rate to use if funding_rates are not available
         """
+        relevant_cols = ["date", "open_mark", "open_fund"]
         if futures_funding_rate is None:
             return mark_rates.merge(
                 funding_rates, on="date", how="inner", suffixes=["_mark", "_fund"]
-            )
+            )[relevant_cols]
         else:
             if len(funding_rates) == 0:
                 # No funding rate candles - full fillup with fallback variable
@@ -3800,7 +3801,7 @@ class Exchange:
                         "low": "low_mark",
                         "volume": "volume_mark",
                     }
-                )
+                )[relevant_cols]
 
             else:
                 # Fill up missing funding_rate candles with fallback value
@@ -3808,7 +3809,7 @@ class Exchange:
                     funding_rates, on="date", how="left", suffixes=["_mark", "_fund"]
                 )
                 combined["open_fund"] = combined["open_fund"].fillna(futures_funding_rate)
-                return combined
+                return combined[relevant_cols]
 
     def calculate_funding_fees(
         self,
