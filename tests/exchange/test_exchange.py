@@ -5350,11 +5350,12 @@ def test_combine_funding_and_mark(
     df = exchange.combine_funding_and_mark(funding_rates, mark_rates, futures_funding_rate)
 
     if futures_funding_rate is not None:
-        assert len(df) == 3
+        assert len(df) == 2
         assert df.iloc[0]["open_fund"] == funding_rate
-        assert df.iloc[1]["open_fund"] == futures_funding_rate
-        assert df.iloc[2]["open_fund"] == funding_rate
-        assert df["date"].to_list() == [prior2_date, prior_date, trade_date]
+        # assert df.iloc[1]["open_fund"] == futures_funding_rate
+        assert df.iloc[-1]["open_fund"] == funding_rate
+        # Mid-candle is dropped ...
+        assert df["date"].to_list() == [prior2_date, trade_date]
     else:
         assert len(df) == 2
         assert df["date"].to_list() == [prior2_date, trade_date]

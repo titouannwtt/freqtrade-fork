@@ -3808,8 +3808,16 @@ class Exchange:
                 combined = mark_rates.merge(
                     funding_rates, on="date", how="left", suffixes=["_mark", "_fund"]
                 )
-                combined["open_fund"] = combined["open_fund"].fillna(futures_funding_rate)
-                return combined[relevant_cols]
+                # Fill only leading missing funding rates so gaps stay untouched
+                first_valid_idx = combined["open_fund"].first_valid_index()
+                if first_valid_idx is None:
+                    combined["open_fund"] = futures_funding_rate
+                else:
+                    is_leading_na = (combined.index <= first_valid_idx) & combined[
+                        "open_fund"
+                    ].isna()
+                    combined.loc[is_leading_na, "open_fund"] = futures_funding_rate
+                return combined[relevant_cols].dropna()
 
     def calculate_funding_fees(
         self,
