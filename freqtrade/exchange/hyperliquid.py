@@ -67,6 +67,30 @@ class Hyperliquid(Exchange):
 
         return parent_check
 
+    def get_balances(self) -> dict:
+        """
+        Fetch balance including HIP-3 DEX balances if configured.
+
+        For Hyperliquid, this fetches balances from the default DEX and any
+        configured HIP-3 DEXes (e.g., 'xyz' for equities).
+        """
+        balances = super().get_balances()
+
+        # Fetch raw balance info (CCXT normalizes and removes 'info')
+        try:
+            raw_balance = self._api.fetch_balance()
+            if "info" in raw_balance:
+                balances["info"] = raw_balance["info"]
+        except Exception as e:
+            logger.warning(f"Could not fetch raw balance info: {e}")
+
+        # Fetch HIP-3 DEX balances if configured
+        hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
+        if hip3_dexes:
+            balances = self._fetch_hip3_balances(hip3_dexes, balances)
+
+        return balances
+
     def _fetch_hip3_balances(self, hip3_dexes: list[str], base_balance: dict) -> dict:
         """Fetch balances from configured HIP-3 DEXes and merge them."""
         logger.info(f"Fetching balances from {len(hip3_dexes)} HIP-3 DEX(es): {hip3_dexes}")
@@ -95,25 +119,6 @@ class Hyperliquid(Exchange):
 
         return base_balance
 
-    def get_balances(self) -> dict:
-        """Fetch balance including HIP-3 DEX balances if configured."""
-        balances = super().get_balances()
-
-        # Fetch raw balance info (CCXT normalizes and removes 'info')
-        try:
-            raw_balance = self._api.fetch_balance()
-            if "info" in raw_balance:
-                balances["info"] = raw_balance["info"]
-        except Exception as e:
-            logger.warning(f"Could not fetch raw balance info: {e}")
-
-        # Fetch HIP-3 DEX balances if configured
-        hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
-        if hip3_dexes:
-            balances = self._fetch_hip3_balances(hip3_dexes, balances)
-
-        return balances
-
     def _merge_hip3_balances(self, base_balance: dict, new_balance: dict) -> dict:
         """Merge balances from different Hyperliquid DEXes."""
         # Merge assetPositions (raw API response)
@@ -141,12 +146,13 @@ class Hyperliquid(Exchange):
 
     def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
         """
-        Fetch positions including HIP-3 positions from assetPositions.
+        Fetch positions including HIP-3 positions.
 
-        Override standard fetch_positions to add HIP-3 equity positions
-        which are not returned by the standard CCXT fetch_positions call.
+        Hyperliquid supports fetching positions from different DEXes using the
+        'dex' parameter. This method fetches positions from the default DEX and
+        all configured HIP-3 DEXes.
         """
-        # Fetch standard positions directly from CCXT to avoid parameter issues
+        # Fetch standard positions from default DEX
         try:
             if pair:
                 positions = self._api.fetch_positions([pair])
@@ -156,80 +162,22 @@ class Hyperliquid(Exchange):
             logger.warning(f"Could not fetch standard positions: {e}")
             positions = []
 
+        # Fetch HIP-3 positions if configured
         hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
-        if not hip3_dexes:
-            return positions
+        if hip3_dexes:
+            for dex in hip3_dexes:
+                try:
+                    logger.debug(f"Fetching positions from HIP-3 DEX: {dex}")
+                    hip3_positions = self._api.fetch_positions(params={"dex": dex})
 
-        try:
-            balances = self.get_balances()
-            hip3_positions = self._parse_hip3_positions(balances)
+                    if hip3_positions:
+                        positions.extend(hip3_positions)
+                        logger.debug(f"Added {len(hip3_positions)} position(s) from DEX '{dex}'")
 
-            if hip3_positions:
-                positions.extend(hip3_positions)
-                logger.debug(f"Added {len(hip3_positions)} HIP-3 position(s)")
-
-        except Exception as e:
-            logger.warning(f"Could not fetch HIP-3 positions: {e}")
+                except Exception as e:
+                    logger.error(f"Could not fetch positions from HIP-3 DEX '{dex}': {e}")
 
         return positions
-
-    def _parse_hip3_positions(self, balances: dict) -> list[CcxtPosition]:
-        """
-        Parse HIP-3 positions from balance info into CCXT position format.
-
-        HIP-3 positions are stored in assetPositions with a colon in the coin name
-        (e.g., 'xyz:TSLA'). This method converts them to the standard CCXT format
-        that Freqtrade expects.
-        """
-        hip3_positions: list[CcxtPosition] = []
-
-        asset_positions = balances.get("info", {}).get("assetPositions", [])
-        if not isinstance(asset_positions, list):
-            return hip3_positions
-
-        for asset_pos in asset_positions:
-            position = asset_pos.get("position", {})
-            if not isinstance(position, dict):
-                continue
-
-            coin = position.get("coin", "")
-            if not coin or ":" not in coin:
-                continue  # Skip non-HIP-3 positions
-
-            szi = float(position.get("szi", 0))
-            if szi == 0:
-                continue  # Skip empty positions
-
-            # Parse leverage
-            leverage_info = position.get("leverage", {})
-            if isinstance(leverage_info, dict):
-                leverage = float(leverage_info.get("value", 1))
-            else:
-                leverage = 1.0
-
-            # Parse collateral
-            collateral = float(position.get("marginUsed", 0))
-
-            # Convert to pair format: xyz:TSLA → XYZ-TSLA/USDC:USDC
-            symbol = f"{coin.upper().replace(':', '-')}/USDC:USDC"
-            side = "short" if szi < 0 else "long"
-            contracts = abs(szi)
-
-            hip3_positions.append(
-                {
-                    "symbol": symbol,
-                    "contracts": contracts,
-                    "side": side,
-                    "collateral": collateral,
-                    "initialMargin": collateral,
-                    "leverage": leverage,
-                    "liquidationPrice": None,
-                }
-            )
-
-            logger.debug(f"Parsed HIP-3 position: {symbol} = {contracts} contracts {side}")
-
-        return hip3_positions
 
     def get_max_leverage(self, pair: str, stake_amount: float | None) -> float:
         # There are no leverage tiers
