@@ -146,7 +146,15 @@ class Hyperliquid(Exchange):
         Override standard fetch_positions to add HIP-3 equity positions
         which are not returned by the standard CCXT fetch_positions call.
         """
-        positions = super().fetch_positions(pair)
+        # Fetch standard positions directly from CCXT to avoid parameter issues
+        try:
+            if pair:
+                positions = self._api.fetch_positions([pair])
+            else:
+                positions = self._api.fetch_positions()
+        except Exception as e:
+            logger.warning(f"Could not fetch standard positions: {e}")
+            positions = []
 
         hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
         if not hip3_dexes:
