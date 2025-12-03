@@ -397,6 +397,9 @@ class IDataHandler(ABC):
         pairdf = self._ohlcv_load(
             pair, timeframe, timerange=timerange_startup, candle_type=candle_type
         )
+        if not pairdf.empty and candle_type == CandleType.FUNDING_RATE:
+            # Funding rate data is sometimes off by a couple of ms - floor to seconds
+            pairdf["date"] = pairdf["date"].dt.floor("s")
         if self._check_empty_df(pairdf, pair, timeframe, candle_type, warn_no_data):
             return pairdf
         else:
