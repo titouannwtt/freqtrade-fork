@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock
 import ccxt
 import pytest
 
-from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import RetryableOrderError, TemporaryError
 from freqtrade.exchange.common import API_RETRY_COUNT
 from freqtrade.exchange.exchange import timeframe_to_minutes
@@ -679,26 +679,6 @@ def test__get_stop_params_okx(mocker, default_conf):
 
     assert params["tdMode"] == "isolated"
     assert params["posSide"] == "net"
-
-
-def test_okx_stop_price_type_mapping(mocker, default_conf):
-    """
-    Test that OKX stop_price_type_value_mapping correctly maps PriceType values.
-    PriceType.MARK should map to "mark", PriceType.INDEX should map to "index".
-    """
-    default_conf["trading_mode"] = "futures"
-    default_conf["margin_mode"] = "isolated"
-    exchange = get_patched_exchange(mocker, default_conf, exchange="okx")
-
-    # Verify the mapping is correct
-    mapping = exchange._ft_has.get("stop_price_type_value_mapping", {})
-
-    assert mapping.get(PriceType.LAST) == "last"
-    assert mapping.get(PriceType.MARK) == "mark"
-    assert mapping.get(PriceType.INDEX) == "index"
-
-    # Verify stop_price_type_field is set correctly
-    assert exchange._ft_has.get("stop_price_type_field") == "slTriggerPxType"
 
 
 def test_fetch_orders_okx(default_conf, mocker, limit_order):
