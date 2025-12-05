@@ -511,8 +511,15 @@ class IDataHandler(ABC):
         Applies to bybit and okx, where funding-fee and mark candles have different timeframes.
         """
         paircombs = self.ohlcv_get_available_data(self._datadir, TradingMode.FUTURES)
+        ff_timeframe_s = timeframe_to_seconds(ff_timeframe)
+
         funding_rate_combs = [
-            f for f in paircombs if f[2] == CandleType.FUNDING_RATE and f[1] != ff_timeframe
+            f
+            for f in paircombs
+            if f[2] == CandleType.FUNDING_RATE
+            and f[1] != ff_timeframe
+            # Only allow smaller timeframes to move from smaller to larger timeframes
+            and timeframe_to_seconds(f[1]) < ff_timeframe_s
         ]
 
         if funding_rate_combs:
