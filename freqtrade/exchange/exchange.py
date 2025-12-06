@@ -2690,10 +2690,16 @@ class Exchange:
         input_coroutines: list[Coroutine[Any, Any, OHLCVResponse]] = []
         cached_pairs = []
         for pair, timeframe, candle_type in set(pair_list):
-            invalid_funding = (
-                candle_type == CandleType.FUNDING_RATE
-                and timeframe != self.get_option("funding_fee_timeframe")
-            )
+            if candle_type == CandleType.FUNDING_RATE and timeframe != (
+                ff_tf := self.get_option("funding_fee_timeframe")
+            ):
+                # TODO: does this message make sense? would docs be better?
+                # if any, this should be cached to avoid log spam!
+                logger.warning(
+                    f"Wrong funding rate timeframe {timeframe} for pair {pair}, "
+                    f"downloading {ff_tf} instead."
+                )
+                timeframe = ff_tf
             invalid_timeframe = timeframe not in self.timeframes and candle_type in (
                 CandleType.SPOT,
                 CandleType.FUTURES,
@@ -2705,13 +2711,6 @@ class Exchange:
                     f"{', '.join(self.timeframes)}."
                 )
                 continue
-            if invalid_funding:
-                # TODO: does this message make sense? would docs be better?
-                # if any, this should be cached to avoid log spam!
-                logger.warning(
-                    f"Wrong funding rate timeframe {timeframe} for pair {pair}, "
-                    f"downloading {self.get_option('funding_fee_timeframe')} instead."
-                )
 
             if (
                 (pair, timeframe, candle_type) not in self._klines
