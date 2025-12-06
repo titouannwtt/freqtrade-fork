@@ -37,7 +37,6 @@ class Hyperliquid(Exchange):
         "stoploss_order_types": {"limit": "limit"},
         "stoploss_blocks_assets": False,
         "stop_price_prop": "stopPrice",
-        "funding_fee_timeframe": "1h",
         "funding_fee_candle_limit": 500,
         "uses_leverage_tiers": False,
     }

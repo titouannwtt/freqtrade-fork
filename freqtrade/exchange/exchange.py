@@ -153,8 +153,8 @@ class Exchange:
         "l2_limit_range_required": True,  # Allow Empty L2 limit (kucoin)
         "l2_limit_upper": None,  # Upper limit for L2 limit
         "mark_ohlcv_price": "mark",
-        "mark_ohlcv_timeframe": "8h",
-        "funding_fee_timeframe": "8h",
+        "mark_ohlcv_timeframe": "1h",
+        "funding_fee_timeframe": "1h",
         "ccxt_futures_name": "swap",
         "needs_trading_fees": False,  # use fetch_trading_fees to cache fees
         "order_props_in_contracts": ["amount", "filled", "remaining"],
