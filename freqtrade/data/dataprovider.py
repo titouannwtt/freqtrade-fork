@@ -348,6 +348,22 @@ class DataProvider:
             )
         return total_candles
 
+    def __fix_funding_rate_timeframe(
+        self, pair: str, timeframe: str | None, candle_type: str
+    ) -> str:
+        if (
+            candle_type == CandleType.FUNDING_RATE
+            and (ff_tf := self.get_funding_rate_timeframe()) != timeframe
+        ):
+            # TODO: does this message make sense? might be pointless as funding fees don't
+            # have a timeframe
+            logger.warning(
+                f"{pair}, {timeframe} requested - funding rate timeframe not matching {ff_tf}. "
+            )
+            return ff_tf
+
+        return timeframe
+
     def get_pair_dataframe(
         self, pair: str, timeframe: str | None = None, candle_type: str = ""
     ) -> DataFrame:
@@ -361,6 +377,7 @@ class DataProvider:
         :return: Dataframe for this pair
         :param candle_type: '', mark, index, premiumIndex, or funding_rate
         """
+        timeframe = self.__fix_funding_rate_timeframe(pair, timeframe, candle_type)
         if self.runmode in (RunMode.DRY_RUN, RunMode.LIVE):
             # Get live OHLCV data.
             data = self.ohlcv(pair=pair, timeframe=timeframe, candle_type=candle_type)
