@@ -2744,7 +2744,11 @@ class Exchange:
         has_cache = cache and (pair, timeframe, c_type) in self._klines
         # in case of existing cache, fill_missing happens after concatenation
         ohlcv_df = ohlcv_to_dataframe(
-            ticks, timeframe, pair=pair, fill_missing=not has_cache, drop_incomplete=drop_incomplete
+            ticks,
+            timeframe,
+            pair=pair,
+            fill_missing=not has_cache and c_type != CandleType.FUNDING_RATE,
+            drop_incomplete=drop_incomplete,
         )
         # keeping parsed dataframe in cache
         if cache:
@@ -2755,7 +2759,7 @@ class Exchange:
                     concat([old, ohlcv_df], axis=0),
                     timeframe,
                     pair,
-                    fill_missing=True,
+                    fill_missing=c_type != CandleType.FUNDING_RATE,
                     drop_incomplete=False,
                 )
                 candle_limit = self.ohlcv_candle_limit(timeframe, self._config["candle_type_def"])
