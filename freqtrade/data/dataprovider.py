@@ -620,3 +620,12 @@ class DataProvider:
         except ExchangeError:
             logger.warning(f"Could not fetch market data for {pair}. Assuming no delisting.")
             return None
+
+    def get_funding_rate_timeframe(self) -> str:
+        """
+        Get the funding rate timeframe from exchange options
+        :return: Timeframe string
+        """
+        if self._exchange is None:
+            raise OperationalException(NO_EXCHANGE_EXCEPTION)
+        return self._exchange.get_option("funding_fee_timeframe")
