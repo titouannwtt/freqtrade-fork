@@ -35,7 +35,8 @@ class Bitget(Exchange):
         "order_time_in_force": ["GTC", "FOK", "IOC", "PO"],
     }
     _ft_has_futures: FtHas = {
-        "mark_ohlcv_timeframe": "4h",
+        "mark_ohlcv_timeframe": "1h",
+        "funding_fee_timeframe": "1h",
         "funding_fee_candle_limit": 100,
         "has_delisting": True,
     }
