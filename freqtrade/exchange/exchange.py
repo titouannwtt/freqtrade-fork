@@ -2698,7 +2698,7 @@ class Exchange:
                 CandleType.SPOT,
                 CandleType.FUTURES,
             )
-            if invalid_timeframe or invalid_funding:
+            if invalid_timeframe:
                 timeframes_ = (
                     ", ".join(self.timeframes)
                     if candle_type != CandleType.FUNDING_RATE
@@ -2710,6 +2710,13 @@ class Exchange:
                     f"{timeframes_}."
                 )
                 continue
+            if invalid_funding:
+                # TODO: does this message make sense? would docs be better?
+                # if any, this should be cached to avoid log spam!
+                logger.warning(
+                    f"Wrong funding rate timeframe {timeframe} for pair {pair}, "
+                    f"downloading {self.get_option('funding_fee_timeframe')} instead."
+                )
 
             if (
                 (pair, timeframe, candle_type) not in self._klines
