@@ -350,7 +350,7 @@ class DataProvider:
 
     def __fix_funding_rate_timeframe(
         self, pair: str, timeframe: str | None, candle_type: str
-    ) -> str:
+    ) -> str | None:
         if (
             candle_type == CandleType.FUNDING_RATE
             and (ff_tf := self.get_funding_rate_timeframe()) != timeframe
