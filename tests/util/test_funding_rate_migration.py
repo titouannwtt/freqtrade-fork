@@ -7,7 +7,6 @@ def test_migrate_funding_rate_timeframe(default_conf_usdt, tmp_path, testdatadir
     copytree(testdatadir / "futures", tmp_path / "futures")
     file_30m = tmp_path / "futures" / "XRP_USDT_USDT-30m-funding_rate.feather"
     file_1h_fr = tmp_path / "futures" / "XRP_USDT_USDT-1h-funding_rate.feather"
-    file_1h_fr = tmp_path / "futures" / "XRP_USDT_USDT-1h-funding_rate.feather"
     file_1h = tmp_path / "futures" / "XRP_USDT_USDT-1h-futures.feather"
     file_1h_fr.rename(file_30m)
     assert file_1h.exists()

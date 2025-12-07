@@ -358,7 +358,7 @@ class DataProvider:
             # TODO: does this message make sense? might be pointless as funding fees don't
             # have a timeframe
             logger.warning(
-                f"{pair}, {timeframe} requested - funding rate timeframe not matching {ff_tf}. "
+                f"{pair}, {timeframe} requested - funding rate timeframe not matching {ff_tf}."
             )
             return ff_tf
 
