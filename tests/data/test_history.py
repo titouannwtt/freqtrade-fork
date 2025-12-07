@@ -579,8 +579,8 @@ def test_refresh_backtest_ohlcv_data(
 
     assert log_has_re(r"Downloading pair ETH/BTC, .* interval 1m\.", caplog)
     if trademode == "futures":
-        assert log_has_re(r"Downloading pair ETH/BTC, funding_rate, interval 8h\.", caplog)
-        assert log_has_re(r"Downloading pair ETH/BTC, mark, interval 4h\.", caplog)
+        assert log_has_re(r"Downloading pair ETH/BTC, funding_rate, interval 1h\.", caplog)
+        assert log_has_re(r"Downloading pair ETH/BTC, mark, interval 1h\.", caplog)
 
     # Test with only one pair - no parallel download should happen 1 pair/timeframe combination
     # doesn't justify parallelization
