@@ -2896,7 +2896,7 @@ class Exchange:
             )
 
             if candle_type and candle_type not in (CandleType.SPOT, CandleType.FUTURES):
-                params.update({"price": candle_type.value})
+                params.update({"price": str(candle_type)})
             if candle_type != CandleType.FUNDING_RATE:
                 data = await self._api_async.fetch_ohlcv(
                     pair, timeframe=timeframe, since=since_ms, limit=candle_limit, params=params
