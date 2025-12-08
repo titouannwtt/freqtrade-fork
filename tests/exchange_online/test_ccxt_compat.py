@@ -353,6 +353,7 @@ class TestCCXTExchange:
         timeframe_ff = exchange._ft_has.get(
             "funding_fee_timeframe", exchange._ft_has["mark_ohlcv_timeframe"]
         )
+        timeframe_ff_8h = "8h"
         pair_tf = (pair, timeframe_ff, CandleType.FUNDING_RATE)
 
         funding_ohlcv = exchange.refresh_latest_ohlcv(
@@ -366,14 +367,26 @@ class TestCCXTExchange:
         hour1 = timeframe_to_prev_date(timeframe_ff, this_hour - timedelta(minutes=1))
         hour2 = timeframe_to_prev_date(timeframe_ff, hour1 - timedelta(minutes=1))
         hour3 = timeframe_to_prev_date(timeframe_ff, hour2 - timedelta(minutes=1))
-        val0 = rate[rate["date"] == this_hour].iloc[0]["open"]
-        val1 = rate[rate["date"] == hour1].iloc[0]["open"]
-        val2 = rate[rate["date"] == hour2].iloc[0]["open"]
-        val3 = rate[rate["date"] == hour3].iloc[0]["open"]
+        # Alternative 8h timeframe - funding fee timeframe is not stable.
+        h8_this_hour = timeframe_to_prev_date(timeframe_ff_8h)
+        h8_hour1 = timeframe_to_prev_date(timeframe_ff_8h, h8_this_hour - timedelta(minutes=1))
+        h8_hour2 = timeframe_to_prev_date(timeframe_ff_8h, h8_hour1 - timedelta(minutes=1))
+        h8_hour3 = timeframe_to_prev_date(timeframe_ff_8h, h8_hour2 - timedelta(minutes=1))
+        row0 = rate.iloc[-1]
+        row1 = rate.iloc[-2]
+        row2 = rate.iloc[-3]
+        row3 = rate.iloc[-4]
+
+        assert row0["date"] == this_hour or row0["date"] == h8_this_hour
+        assert row1["date"] == hour1 or row1["date"] == h8_hour1
+        assert row2["date"] == hour2 or row2["date"] == h8_hour2
+        assert row3["date"] == hour3 or row3["date"] == h8_hour3
 
         # Test For last 4 hours
         # Avoids random test-failure when funding-fees are 0 for a few hours.
-        assert val0 != 0.0 or val1 != 0.0 or val2 != 0.0 or val3 != 0.0
+        assert (
+            row0["open"] != 0.0 or row1["open"] != 0.0 or row2["open"] != 0.0 or row3["open"] != 0.0
+        )
         # We expect funding rates to be different from 0.0 - or moving around.
         assert (
             rate["open"].max() != 0.0
