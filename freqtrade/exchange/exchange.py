@@ -2963,17 +2963,15 @@ class Exchange:
         data = [[x["timestamp"], x["fundingRate"], 0, 0, 0, 0] for x in data]
         return data
 
-    def verify_candle_type_support(self, candle_type: CandleType) -> None:
+    def check_candle_type_support(self, candle_type: CandleType) -> bool:
         """
-        Verify that the exchange supports the given candle type.
+        Check that the exchange supports the given candle type.
         :param candle_type: CandleType to verify
-        :raises OperationalException: if the candle type is not supported
+        :return: True if supported, False otherwise
         """
         if candle_type == CandleType.FUNDING_RATE:
             if not self.exchange_has("fetchFundingRateHistory"):
-                raise OperationalException(
-                    f"Exchange {self._api.name} does not support fetching funding rate history."
-                )
+                return False
         elif candle_type not in (CandleType.SPOT, CandleType.FUTURES):
             mapping = {
                 CandleType.MARK: "fetchMarkOHLCV",
@@ -2983,9 +2981,19 @@ class Exchange:
             }
             _method = mapping.get(candle_type, "fetchOHLCV")
             if not self.exchange_has(_method):
-                raise OperationalException(
-                    f"Exchange {self._api.name} does not support fetching {candle_type} candles."
-                )
+                return False
+        return True
+
+    def verify_candle_type_support(self, candle_type: CandleType) -> None:
+        """
+        Verify that the exchange supports the given candle type.
+        :param candle_type: CandleType to verify
+        :raises OperationalException: if the candle type is not supported
+        """
+        if not self.check_candle_type_support(candle_type):
+            raise OperationalException(
+                f"Exchange {self._api.name} does not support fetching {candle_type} candles."
+            )
 
     # fetch Trade data stuff
 
