@@ -174,6 +174,7 @@ ARGS_DOWNLOAD_DATA = [
     "dataformat_ohlcv",
     "dataformat_trades",
     "trading_mode",
+    "candle_types",
     "prepend_data",
 ]
 

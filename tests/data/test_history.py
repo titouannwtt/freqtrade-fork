@@ -538,7 +538,7 @@ def test_validate_backtest_data(default_conf, mocker, caplog, testdatadir) -> No
     [
         ("spot", 4, 2),
         ("margin", 4, 2),
-        ("futures", 8, 2),  # Called 8 times - 4 normal, 2 funding and 2 mark/index calls
+        ("futures", 8, 4),  # Called 8 times - 4 normal, 2 funding and 2 mark/index calls
     ],
 )
 def test_refresh_backtest_ohlcv_data(
