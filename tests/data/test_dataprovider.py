@@ -9,7 +9,7 @@ from freqtrade.enums import CandleType, RunMode
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.plugins.pairlistmanager import PairListManager
 from freqtrade.util import dt_utc
-from tests.conftest import EXMS, generate_test_data, get_patched_exchange
+from tests.conftest import EXMS, generate_test_data, get_patched_exchange, log_has_re
 
 
 @pytest.mark.parametrize(
@@ -183,6 +183,28 @@ def test_get_pair_dataframe(mocker, default_conf, ohlcv_history, candle_type):
     df = dp.get_pair_dataframe("UNITTEST/BTC", timeframe, candle_type=candle_type)
     assert isinstance(df, DataFrame)
     assert len(df) == 2  # ohlcv_history is limited to 2 rows now
+
+
+def test_get_pair_dataframe_funding_rate(mocker, default_conf, ohlcv_history, caplog):
+    default_conf["runmode"] = RunMode.DRY_RUN
+    timeframe = "1h"
+    exchange = get_patched_exchange(mocker, default_conf)
+    candletype = CandleType.FUNDING_RATE
+    exchange._klines[("XRP/BTC", timeframe, candletype)] = ohlcv_history
+    exchange._klines[("UNITTEST/BTC", timeframe, candletype)] = ohlcv_history
+
+    dp = DataProvider(default_conf, exchange)
+    assert dp.runmode == RunMode.DRY_RUN
+    assert ohlcv_history.equals(
+        dp.get_pair_dataframe("UNITTEST/BTC", timeframe, candle_type="funding_rate")
+    )
+    msg = r".*funding rate timeframe not matching"
+    assert not log_has_re(msg, caplog)
+
+    assert ohlcv_history.equals(
+        dp.get_pair_dataframe("UNITTEST/BTC", "5h", candle_type="funding_rate")
+    )
+    assert log_has_re(msg, caplog)
 
 
 def test_available_pairs(mocker, default_conf, ohlcv_history):
