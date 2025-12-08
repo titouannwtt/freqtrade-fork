@@ -534,15 +534,15 @@ def test_validate_backtest_data(default_conf, mocker, caplog, testdatadir) -> No
 
 
 @pytest.mark.parametrize(
-    "trademode,callcount",
+    "trademode,callcount, callcount_parallel",
     [
-        ("spot", 4),
-        ("margin", 4),
-        ("futures", 8),  # Called 8 times - 4 normal, 2 funding and 2 mark/index calls
+        ("spot", 4, 2),
+        ("margin", 4, 2),
+        ("futures", 8, 2),  # Called 8 times - 4 normal, 2 funding and 2 mark/index calls
     ],
 )
 def test_refresh_backtest_ohlcv_data(
-    mocker, default_conf, markets, caplog, testdatadir, trademode, callcount
+    mocker, default_conf, markets, caplog, testdatadir, trademode, callcount, callcount_parallel
 ):
     caplog.set_level(logging.DEBUG)
     dl_mock = mocker.patch("freqtrade.data.history.history_utils._download_pair_history")
@@ -573,7 +573,8 @@ def test_refresh_backtest_ohlcv_data(
     )
 
     # Called once per timeframe (as we return an empty dataframe)
-    assert parallel_mock.call_count == 2
+    # called twice for spot/margin and 4 times for futures
+    assert parallel_mock.call_count == callcount_parallel
     assert dl_mock.call_count == callcount
     assert dl_mock.call_args[1]["timerange"].starttype == "date"
 
