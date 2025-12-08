@@ -353,6 +353,7 @@ def _download_pair_history(
 
 def refresh_backtest_ohlcv_data(
     exchange: Exchange,
+    *,
     pairs: list[str],
     timeframes: list[str],
     datadir: Path,
