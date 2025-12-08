@@ -274,6 +274,7 @@ class TestCCXTExchange:
         self, exchange, pair: str, timeframe: str, candle_type: CandleType, factor: float = 0.9
     ):
         timeframe_ms = timeframe_to_msecs(timeframe)
+        timeframe_ms_8h = timeframe_to_msecs("8h")
         now = timeframe_to_prev_date(timeframe, datetime.now(UTC))
         for offset_days in (360, 120, 30, 10, 5, 2):
             since = now - timedelta(days=offset_days)
@@ -291,7 +292,14 @@ class TestCCXTExchange:
             candles = res[3]
             candle_count = exchange.ohlcv_candle_limit(timeframe, candle_type, since_ms) * factor
             candle_count1 = (now.timestamp() * 1000 - since_ms) // timeframe_ms * factor
-            assert len(candles) >= min(candle_count, candle_count1), (
+            # funding fees can be 1h or 8h - depending on pair and time.
+            candle_count2 = (now.timestamp() * 1000 - since_ms) // timeframe_ms_8h * factor
+            min_value = min(
+                candle_count,
+                candle_count1,
+                candle_count2 if candle_type == CandleType.FUNDING_RATE else candle_count1,
+            )
+            assert len(candles) >= min_value, (
                 f"{len(candles)} < {candle_count} in {timeframe} {offset_days=} {factor=}"
             )
             # Check if first-timeframe is either the start, or start + 1
