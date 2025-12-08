@@ -270,11 +270,13 @@ class TestCCXTExchange:
         assert exch.klines(pair_tf).iloc[-1]["date"] >= timeframe_to_prev_date(timeframe, now)
         assert exch.klines(pair_tf)["date"].astype(int).iloc[0] // 1e6 == since_ms
 
-    def _ccxt__async_get_candle_history(self, exchange, pair, timeframe, candle_type, factor=0.9):
+    def _ccxt__async_get_candle_history(
+        self, exchange, pair: str, timeframe: str, candle_type: CandleType, factor: float = 0.9
+    ):
         timeframe_ms = timeframe_to_msecs(timeframe)
         now = timeframe_to_prev_date(timeframe, datetime.now(UTC))
-        for offset in (360, 120, 30, 10, 5, 2):
-            since = now - timedelta(days=offset)
+        for offset_days in (360, 120, 30, 10, 5, 2):
+            since = now - timedelta(days=offset_days)
             since_ms = int(since.timestamp() * 1000)
 
             res = exchange.loop.run_until_complete(
@@ -290,7 +292,7 @@ class TestCCXTExchange:
             candle_count = exchange.ohlcv_candle_limit(timeframe, candle_type, since_ms) * factor
             candle_count1 = (now.timestamp() * 1000 - since_ms) // timeframe_ms * factor
             assert len(candles) >= min(candle_count, candle_count1), (
-                f"{len(candles)} < {candle_count} in {timeframe}, Offset: {offset} {factor}"
+                f"{len(candles)} < {candle_count} in {timeframe} {offset_days=} {factor=}"
             )
             # Check if first-timeframe is either the start, or start + 1
             assert candles[0][0] == since_ms or (since_ms + timeframe_ms)
