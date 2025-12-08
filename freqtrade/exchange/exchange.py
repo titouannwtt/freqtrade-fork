@@ -2895,9 +2895,10 @@ class Exchange:
                 timeframe, candle_type=candle_type, since_ms=since_ms
             )
 
-            if candle_type and candle_type not in (CandleType.SPOT, CandleType.FUTURES):
-                params.update({"price": str(candle_type)})
             if candle_type != CandleType.FUNDING_RATE:
+                if candle_type and candle_type not in (CandleType.SPOT, CandleType.FUTURES):
+                    self.verify_candle_type_support(candle_type)
+                    params.update({"price": str(candle_type)})
                 data = await self._api_async.fetch_ohlcv(
                     pair, timeframe=timeframe, since=since_ms, limit=candle_limit, params=params
                 )
@@ -2961,6 +2962,30 @@ class Exchange:
         # Convert funding rate to candle pattern
         data = [[x["timestamp"], x["fundingRate"], 0, 0, 0, 0] for x in data]
         return data
+
+    def verify_candle_type_support(self, candle_type: CandleType) -> None:
+        """
+        Verify that the exchange supports the given candle type.
+        :param candle_type: CandleType to verify
+        :raises OperationalException: if the candle type is not supported
+        """
+        if candle_type == CandleType.FUNDING_RATE:
+            if not self.exchange_has("fetchFundingRateHistory"):
+                raise OperationalException(
+                    f"Exchange {self._api.name} does not support fetching funding rate history."
+                )
+        elif candle_type not in (CandleType.SPOT, CandleType.FUTURES):
+            mapping = {
+                CandleType.MARK: "fetchMarkOHLCV",
+                CandleType.INDEX: "fetchIndexOHLCV",
+                CandleType.PREMIUMINDEX: "fetchPremiumIndexOHLCV",
+                CandleType.FUNDING_RATE: "fetchFundingRateHistory",
+            }
+            _method = mapping.get(candle_type, "fetchOHLCV")
+            if not self.exchange_has(_method):
+                raise OperationalException(
+                    f"Exchange {self._api.name} does not support fetching {candle_type} candles."
+                )
 
     # fetch Trade data stuff
 

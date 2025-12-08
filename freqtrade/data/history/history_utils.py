@@ -391,6 +391,8 @@ def refresh_backtest_ohlcv_data(
         tf_mark = exchange.get_option("mark_ohlcv_timeframe")
 
         if candle_types:
+            for ct in candle_types:
+                exchange.verify_candle_type_support(ct)
             timeframes_with_candletype = [
                 (tf, ct)
                 for ct in candle_types
