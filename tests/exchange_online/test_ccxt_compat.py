@@ -311,6 +311,8 @@ class TestCCXTExchange:
         [
             CandleType.FUTURES,
             CandleType.FUNDING_RATE,
+            CandleType.INDEX,
+            CandleType.PREMIUMINDEX,
             CandleType.MARK,
         ],
     )
@@ -324,6 +326,10 @@ class TestCCXTExchange:
             timeframe = exchange._ft_has.get(
                 "funding_fee_timeframe", exchange._ft_has["mark_ohlcv_timeframe"]
             )
+        else:
+            # never skip funding rate!
+            if not exchange.check_candle_type_support(candle_type):
+                pytest.skip(f"Exchange does not support candle type {candle_type}")
         self._ccxt__async_get_candle_history(
             exchange,
             pair=pair,
