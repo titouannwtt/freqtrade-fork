@@ -352,7 +352,7 @@ class Arguments:
             opt = AVAILABLE_CLI_OPTIONS[val]
             options = deepcopy(opt.kwargs)
             help_text = options.pop("help", None)
-            if opt.fthelp and isinstance(opt.fthelp, dict):
+            if opt.fthelp and isinstance(opt.fthelp, dict) and hasattr(parser, "prog"):
                 help_text = opt.fthelp.get(parser.prog, help_text)
             parser.add_argument(*opt.cli, dest=val, help=help_text, **options)
 
