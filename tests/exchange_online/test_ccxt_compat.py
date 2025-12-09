@@ -398,7 +398,10 @@ class TestCCXTExchange:
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename].get("futures_pair", EXCHANGES[exchangename]["pair"])
         since = int((datetime.now(UTC) - timedelta(days=5)).timestamp() * 1000)
-        pair_tf = (pair, "1h", CandleType.MARK)
+        candle_type = CandleType.from_string(
+            exchange.get_option("mark_ohlcv_price", default=CandleType.MARK)
+        )
+        pair_tf = (pair, "1h", candle_type)
 
         mark_ohlcv = exchange.refresh_latest_ohlcv([pair_tf], since_ms=since, drop_incomplete=False)
 
