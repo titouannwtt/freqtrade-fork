@@ -39,6 +39,7 @@ class Hyperliquid(Exchange):
         "stop_price_prop": "stopPrice",
         "funding_fee_candle_limit": 500,
         "uses_leverage_tiers": False,
+        "mark_ohlcv_price": "futures",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
