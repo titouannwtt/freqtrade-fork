@@ -6646,3 +6646,23 @@ def test_verify_candle_type_support(default_conf, mocker):
         match=r"Exchange .* does not support fetching premiumindex candles\.",
     ):
         exchange.verify_candle_type_support(CandleType.PREMIUMINDEX)
+
+    type(api_mock).has = PropertyMock(
+        return_value={
+            "fetchFundingRateHistory": False,
+            "fetchIndexOHLCV": False,
+            "fetchMarkOHLCV": False,
+            "fetchPremiumIndexOHLCV": True,
+        }
+    )
+    for candle_type in [
+        CandleType.FUNDING_RATE,
+        CandleType.INDEX,
+        CandleType.MARK,
+    ]:
+        with pytest.raises(
+            OperationalException,
+            match=rf"Exchange .* does not support fetching {candle_type.value} candles\.",
+        ):
+            exchange.verify_candle_type_support(candle_type)
+    exchange.verify_candle_type_support(CandleType.PREMIUMINDEX)
