@@ -407,7 +407,8 @@ def refresh_backtest_ohlcv_data(
             # All exchanges need FundingRate for futures trading.
             # The timeframe is aligned to the mark-price timeframe.
             timeframes_with_candletype.append((tf_funding_rate, CandleType.FUNDING_RATE))
-
+    # Deduplicate list ...
+    timeframes_with_candletype = list(dict.fromkeys(timeframes_with_candletype))
     logger.debug(
         "Downloading %s.", ", ".join(f'"{tf} {ct}"' for tf, ct in timeframes_with_candletype)
     )
