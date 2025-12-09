@@ -546,6 +546,7 @@ def test_refresh_backtest_ohlcv_data(
 ):
     caplog.set_level(logging.DEBUG)
     dl_mock = mocker.patch("freqtrade.data.history.history_utils._download_pair_history")
+    mocker.patch(f"{EXMS}.verify_candle_type_support", MagicMock())
 
     def parallel_mock(pairs, timeframe, candle_type, **kwargs):
         return {(pair, timeframe, candle_type): DataFrame() for pair in pairs}
@@ -599,6 +600,24 @@ def test_refresh_backtest_ohlcv_data(
         trading_mode=trademode,
     )
     assert parallel_mock.call_count == 0
+
+    if trademode == "futures":
+        dl_mock.reset_mock()
+        refresh_backtest_ohlcv_data(
+            exchange=ex,
+            pairs=[
+                "ETH/BTC",
+            ],
+            timeframes=["5m", "1h"],
+            datadir=testdatadir,
+            timerange=timerange,
+            erase=False,
+            trading_mode=trademode,
+            no_parallel_download=True,
+            candle_types=["premiumIndex", "funding_rate"],
+        )
+        assert parallel_mock.call_count == 0
+        assert dl_mock.call_count == 3  # 2 timeframes premiumIndex + 1x funding_rate
 
 
 def test_download_data_no_markets(mocker, default_conf, caplog, testdatadir):
