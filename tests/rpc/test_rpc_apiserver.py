@@ -1034,8 +1034,7 @@ def test_api_delete_trade(botclient, mocker, fee, markets, is_short):
     stoploss_mock = MagicMock()
     cancel_mock = MagicMock()
     mocker.patch.multiple(
-        EXMS,
-        markets=PropertyMock(return_value=markets),
+        ftbot.exchange,
         cancel_order=cancel_mock,
         cancel_stoploss_order=stoploss_mock,
     )
