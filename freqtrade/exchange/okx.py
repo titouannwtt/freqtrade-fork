@@ -266,14 +266,7 @@ class Okx(Exchange):
         return order["id"]
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        params1 = {"stop": True}
-        # 'ordType': 'conditional'
-        #
-        return self.cancel_order(
-            order_id=order_id,
-            pair=pair,
-            params=params1,
-        )
+        return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})
 
     def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
