@@ -8,6 +8,8 @@ ta-lib==0.6.8
 technical==1.5.3
 
 ccxt==4.5.26
+# TODO: remove pycares pin must wait until aiodns releases a new version: # https://github.com/aio-libs/aiodns/issues/214
+pycares==4.11.0
 cryptography==46.0.3
 aiohttp==3.13.2
 SQLAlchemy==2.0.44
