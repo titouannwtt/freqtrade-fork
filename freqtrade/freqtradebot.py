@@ -2101,7 +2101,7 @@ class FreqtradeBot(LoggingMixin):
 
         order_type = ordertype or self.strategy.order_types[exit_type]
         if exit_check.exit_type == ExitType.EMERGENCY_EXIT:
-            # Emergency sells (default to market!)
+            # Emergency exits (default to market!)
             order_type = self.strategy.order_types.get("emergency_exit", "market")
 
         amount = self._safe_exit_amount(trade, trade.pair, sub_trade_amt or trade.amount)
@@ -2130,7 +2130,7 @@ class FreqtradeBot(LoggingMixin):
                 return False
 
         try:
-            # Execute sell and update trade record
+            # Execute exit and update trade record
             order = self.exchange.create_order(
                 pair=trade.pair,
                 ordertype=order_type,
@@ -2157,7 +2157,7 @@ class FreqtradeBot(LoggingMixin):
         trade.exit_reason = exit_reason
 
         self._notify_exit(trade, order_type, sub_trade=bool(sub_trade_amt), order=order_obj)
-        # In case of market sell orders the order can be closed immediately
+        # In case of market exit orders the order can be closed immediately
         if order.get("status", "unknown") in ("closed", "expired"):
             self.update_trade_state(trade, order_obj.order_id, order)
         Trade.commit()
