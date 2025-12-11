@@ -2011,14 +2011,14 @@ class FreqtradeBot(LoggingMixin):
 
     def _safe_exit_amount(self, trade: Trade, pair: str, amount: float) -> float:
         """
-        Get sellable amount.
+        Get exitable amount.
         Should be trade.amount - but will fall back to the available amount if necessary.
         This should cover cases where get_real_amount() was not able to update the amount
         for whatever reason.
         :param trade: Trade we're working with
-        :param pair: Pair we're trying to sell
+        :param pair: Pair we're trying to exit
         :param amount: amount we expect to be available
-        :return: amount to sell
+        :return: amount to exit
         :raise: DependencyException: if available balance is not within 2% of the available amount.
         """
         # Update wallets to ensure amounts tied up in a stoploss is now free!
@@ -2058,7 +2058,7 @@ class FreqtradeBot(LoggingMixin):
         """
         Executes a trade exit for the given trade and limit
         :param trade: Trade instance
-        :param limit: limit rate for the sell order
+        :param limit: limit rate for the exit order
         :param exit_check: CheckTuple with signal and reason
         :return: True if it succeeds False
         """
