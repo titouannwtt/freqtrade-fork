@@ -92,7 +92,8 @@ logger = logging.getLogger(__name__)
 # 2.42: Add /pair_history endpoint with live data
 # 2.43: Add /profit_all endpoint
 # 2.44: Add candle_types parameter to download-data endpoint
-API_VERSION = 2.44
+# 2.45: Add price to forceexit endpoint
+API_VERSION = 2.45
 
 # Public API, requires no auth.
 router_public = APIRouter()
@@ -325,7 +326,9 @@ def force_entry(payload: ForceEnterPayload, rpc: RPC = Depends(get_rpc)):
 @router.post("/forcesell", response_model=ResultMsg, tags=["trading"])
 def forceexit(payload: ForceExitPayload, rpc: RPC = Depends(get_rpc)):
     ordertype = payload.ordertype.value if payload.ordertype else None
-    return rpc._rpc_force_exit(str(payload.tradeid), ordertype, amount=payload.amount)
+    return rpc._rpc_force_exit(
+        str(payload.tradeid), ordertype, amount=payload.amount, price=payload.price
+    )
 
 
 @router.get("/blacklist", response_model=BlacklistResponse, tags=["info", "pairlist"])
