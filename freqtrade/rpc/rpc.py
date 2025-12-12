@@ -992,7 +992,12 @@ class RPC:
                 sub_amount = amount
 
             self._freqtrade.execute_trade_exit(
-                trade, current_rate, exit_check, ordertype=order_type, sub_trade_amt=sub_amount
+                trade,
+                current_rate,
+                exit_check,
+                ordertype=order_type,
+                sub_trade_amt=sub_amount,
+                skip_custom_exit_price=price is not None and ordertype == "limit",
             )
 
             return True
