@@ -1013,7 +1013,7 @@ class RPC:
     ) -> dict[str, str]:
         """
         Handler for forceexit <id>.
-        exts the given trade. Uses current price if price is None.
+        exits the given trade. Uses current price if price is None.
         """
 
         if self._freqtrade.state == State.STOPPED:
