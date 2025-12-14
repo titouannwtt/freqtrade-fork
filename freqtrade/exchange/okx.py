@@ -29,8 +29,6 @@ class Okx(Exchange):
 
     _ft_has: FtHas = {
         "ohlcv_candle_limit": 100,  # Warning, special case with data prior to X months
-        "mark_ohlcv_timeframe": "4h",
-        "funding_fee_timeframe": "8h",
         "stoploss_order_types": {"limit": "limit"},
         "stoploss_on_exchange": True,
         "trades_has_history": False,  # Endpoint doesn't have a "since" parameter

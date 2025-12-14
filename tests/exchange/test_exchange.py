@@ -2389,6 +2389,7 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
         ]
     ]
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     # Monkey-patch async function
     exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
 
@@ -2439,6 +2440,7 @@ def test_refresh_latest_ohlcv(mocker, default_conf_usdt, caplog, candle_type) ->
 
     caplog.set_level(logging.DEBUG)
     exchange = get_patched_exchange(mocker, default_conf_usdt)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
 
     pairs = [("IOTA/USDT", "5m", candle_type), ("XRP/USDT", "5m", candle_type)]
@@ -2689,6 +2691,7 @@ def test_refresh_latest_ohlcv_cache(mocker, default_conf, candle_type, time_mach
     time_machine.move_to(start + timedelta(hours=99, minutes=30))
 
     exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     exchange._set_startup_candle_count(default_conf)
 
     mocker.patch(f"{EXMS}.ohlcv_candle_limit", return_value=100)
@@ -2835,6 +2838,29 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     assert ohlcv_mock.call_count == 1
     assert len(ohlcv_mock.call_args_list[0][0][0]) == 5
     assert ohlcv_mock.call_args_list[0][0][0] == pairs
+
+
+def test_refresh_latest_ohlcv_funding_rate(mocker, default_conf_usdt, caplog) -> None:
+    ohlcv = generate_test_data_raw("1h", 24, "2025-01-02 12:00:00+00:00")
+    funding_data = [{"timestamp": x[0], "fundingRate": x[1]} for x in ohlcv]
+
+    caplog.set_level(logging.DEBUG)
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+    exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
+    exchange._api_async.fetch_funding_rate_history = get_mock_coro(funding_data)
+
+    pairs = [
+        ("IOTA/USDT:USDT", "8h", CandleType.FUNDING_RATE),
+        ("XRP/USDT:USDT", "1h", CandleType.FUNDING_RATE),
+    ]
+    # empty dicts
+    assert not exchange._klines
+    res = exchange.refresh_latest_ohlcv(pairs, cache=False)
+
+    assert len(res) == len(pairs)
+    assert log_has_re(r"Wrong funding rate timeframe 8h for pair IOTA/USDT:USDT", caplog)
+    assert not log_has_re(r"Wrong funding rate timeframe 8h for pair XRP/USDT:USDT", caplog)
+    assert exchange._api_async.fetch_ohlcv.call_count == 0
 
 
 @pytest.mark.parametrize("exchange_name", EXCHANGES)
@@ -5342,11 +5368,12 @@ def test_combine_funding_and_mark(
     df = exchange.combine_funding_and_mark(funding_rates, mark_rates, futures_funding_rate)
 
     if futures_funding_rate is not None:
-        assert len(df) == 3
+        assert len(df) == 2
         assert df.iloc[0]["open_fund"] == funding_rate
-        assert df.iloc[1]["open_fund"] == futures_funding_rate
-        assert df.iloc[2]["open_fund"] == funding_rate
-        assert df["date"].to_list() == [prior2_date, prior_date, trade_date]
+        # assert df.iloc[1]["open_fund"] == futures_funding_rate
+        assert df.iloc[-1]["open_fund"] == funding_rate
+        # Mid-candle is dropped ...
+        assert df["date"].to_list() == [prior2_date, trade_date]
     else:
         assert len(df) == 2
         assert df["date"].to_list() == [prior2_date, trade_date]
@@ -5440,8 +5467,13 @@ def test__fetch_and_calculate_funding_fees(
     api_mock = MagicMock()
     api_mock.fetch_funding_rate_history = get_mock_coro(return_value=funding_rate_history)
     api_mock.fetch_ohlcv = get_mock_coro(return_value=mark_ohlcv)
-    type(api_mock).has = PropertyMock(return_value={"fetchOHLCV": True})
-    type(api_mock).has = PropertyMock(return_value={"fetchFundingRateHistory": True})
+    type(api_mock).has = PropertyMock(
+        return_value={
+            "fetchFundingRateHistory": True,
+            "fetchMarkOHLCV": True,
+            "fetchOHLCV": True,
+        }
+    )
 
     ex = get_patched_exchange(mocker, default_conf, api_mock, exchange=exchange)
     mocker.patch(f"{EXMS}.timeframes", PropertyMock(return_value=["1h", "4h", "8h"]))
@@ -5485,8 +5517,13 @@ def test__fetch_and_calculate_funding_fees_datetime_called(
     api_mock.fetch_funding_rate_history = get_mock_coro(
         return_value=funding_rate_history_octohourly
     )
-    type(api_mock).has = PropertyMock(return_value={"fetchOHLCV": True})
-    type(api_mock).has = PropertyMock(return_value={"fetchFundingRateHistory": True})
+    type(api_mock).has = PropertyMock(
+        return_value={
+            "fetchFundingRateHistory": True,
+            "fetchMarkOHLCV": True,
+            "fetchOHLCV": True,
+        }
+    )
     mocker.patch(f"{EXMS}.timeframes", PropertyMock(return_value=["4h", "8h"]))
     exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange=exchange)
     d1 = datetime.strptime("2021-08-31 23:00:01 +0000", "%Y-%m-%d %H:%M:%S %z")
@@ -6573,3 +6610,51 @@ def test_fetch_funding_rate(default_conf, mocker, exchange_name):
 
     with pytest.raises(DependencyException, match=r"Pair XRP/ETH not available"):
         exchange.fetch_funding_rate(pair="XRP/ETH")
+
+
+def test_verify_candle_type_support(default_conf, mocker):
+    api_mock = MagicMock()
+    type(api_mock).has = PropertyMock(
+        return_value={
+            "fetchFundingRateHistory": True,
+            "fetchIndexOHLCV": True,
+            "fetchMarkOHLCV": True,
+            "fetchPremiumIndexOHLCV": False,
+        }
+    )
+    exchange = get_patched_exchange(mocker, default_conf, api_mock)
+
+    # Should pass
+    exchange.verify_candle_type_support("futures")
+    exchange.verify_candle_type_support(CandleType.FUTURES)
+    exchange.verify_candle_type_support(CandleType.FUNDING_RATE)
+    exchange.verify_candle_type_support(CandleType.SPOT)
+    exchange.verify_candle_type_support(CandleType.MARK)
+
+    # Should fail:
+
+    with pytest.raises(
+        OperationalException,
+        match=r"Exchange .* does not support fetching premiumindex candles\.",
+    ):
+        exchange.verify_candle_type_support(CandleType.PREMIUMINDEX)
+
+    type(api_mock).has = PropertyMock(
+        return_value={
+            "fetchFundingRateHistory": False,
+            "fetchIndexOHLCV": False,
+            "fetchMarkOHLCV": False,
+            "fetchPremiumIndexOHLCV": True,
+        }
+    )
+    for candle_type in [
+        CandleType.FUNDING_RATE,
+        CandleType.INDEX,
+        CandleType.MARK,
+    ]:
+        with pytest.raises(
+            OperationalException,
+            match=rf"Exchange .* does not support fetching {candle_type.value} candles\.",
+        ):
+            exchange.verify_candle_type_support(candle_type)
+    exchange.verify_candle_type_support(CandleType.PREMIUMINDEX)

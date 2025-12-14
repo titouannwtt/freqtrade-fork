@@ -3250,6 +3250,7 @@ def test_api_download_data(botclient, mocker, tmp_path):
     body = {
         "pairs": ["ETH/BTC", "XRP/BTC"],
         "timeframes": ["5m"],
+        "candle_types": ["spot"],
     }
 
     # Fail, already running

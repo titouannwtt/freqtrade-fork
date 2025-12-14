@@ -91,7 +91,8 @@ logger = logging.getLogger(__name__)
 # 2.41: Add download-data endpoint
 # 2.42: Add /pair_history endpoint with live data
 # 2.43: Add /profit_all endpoint
-API_VERSION = 2.43
+# 2.44: Add candle_types parameter to download-data endpoint
+API_VERSION = 2.44
 
 # Public API, requires no auth.
 router_public = APIRouter()
