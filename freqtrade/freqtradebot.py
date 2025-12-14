@@ -2081,7 +2081,12 @@ class FreqtradeBot(LoggingMixin):
         ):
             exit_type = "stoploss"
 
-        order_type = ordertype or self.strategy.order_types[exit_type]
+        order_type = (
+            (ordertype or self.strategy.order_types[exit_type])
+            if exit_check.exit_type != ExitType.EMERGENCY_EXIT
+            else self.strategy.order_types.get("emergency_exit", "market")
+        )
+
         # set custom_exit_price if available
         proposed_limit_rate = limit
         custom_exit_price = limit
@@ -2103,10 +2108,6 @@ class FreqtradeBot(LoggingMixin):
 
         # First cancelling stoploss on exchange ...
         trade = self.cancel_stoploss_on_exchange(trade, allow_nonblocking=True)
-
-        if exit_check.exit_type == ExitType.EMERGENCY_EXIT:
-            # Emergency exits (default to market!)
-            order_type = self.strategy.order_types.get("emergency_exit", "market")
 
         amount = self._safe_exit_amount(trade, trade.pair, sub_trade_amt or trade.amount)
         time_in_force = self.strategy.order_time_in_force["exit"]
