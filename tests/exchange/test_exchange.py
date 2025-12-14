@@ -2388,8 +2388,8 @@ async def test__async_get_historic_ohlcv(default_conf, mocker, caplog, exchange_
             5,  # volume (in quote currency)
         ]
     ]
-    mocker.patch(f"{EXMS}.verify_candle_type_support", MagicMock())
     exchange = get_patched_exchange(mocker, default_conf, exchange=exchange_name)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     # Monkey-patch async function
     exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
 
@@ -2439,8 +2439,8 @@ def test_refresh_latest_ohlcv(mocker, default_conf_usdt, caplog, candle_type) ->
     ]
 
     caplog.set_level(logging.DEBUG)
-    mocker.patch(f"{EXMS}.verify_candle_type_support", MagicMock())
     exchange = get_patched_exchange(mocker, default_conf_usdt)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     exchange._api_async.fetch_ohlcv = get_mock_coro(ohlcv)
 
     pairs = [("IOTA/USDT", "5m", candle_type), ("XRP/USDT", "5m", candle_type)]
@@ -2690,8 +2690,8 @@ def test_refresh_latest_ohlcv_cache(mocker, default_conf, candle_type, time_mach
     ohlcv = generate_test_data_raw("1h", 100, start.strftime("%Y-%m-%d"))
     time_machine.move_to(start + timedelta(hours=99, minutes=30))
 
-    mocker.patch(f"{EXMS}.verify_candle_type_support", MagicMock())
     exchange = get_patched_exchange(mocker, default_conf)
+    mocker.patch.object(exchange, "verify_candle_type_support")
     exchange._set_startup_candle_count(default_conf)
 
     mocker.patch(f"{EXMS}.ohlcv_candle_limit", return_value=100)
