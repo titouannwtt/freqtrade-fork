@@ -1852,7 +1852,33 @@ def test_api_forceexit(botclient, mocker, ticker, fee, markets):
     Trade.rollback()
 
     trade = Trade.get_trades([Trade.id == 5]).first()
+    last_order = trade.orders[-1]
+
+    assert last_order.side == "sell"
+    assert last_order.status == "closed"
+    assert last_order.order_type == "market"
+    assert last_order.amount == 23
     assert pytest.approx(trade.amount) == 100
+    assert trade.is_open is True
+
+    # Test with explicit price
+    rc = client_post(
+        client,
+        f"{BASE_URI}/forceexit",
+        data={"tradeid": "5", "ordertype": "limit", "amount": 25, "price": 0.12345},
+    )
+    assert_response(rc)
+    assert rc.json() == {"result": "Created exit order for trade 5."}
+    Trade.rollback()
+
+    trade = Trade.get_trades([Trade.id == 5]).first()
+    last_order = trade.orders[-1]
+    assert last_order.status == "closed"
+    assert last_order.order_type == "limit"
+    assert pytest.approx(last_order.safe_price) == 0.12345
+    assert pytest.approx(last_order.amount) == 25
+
+    assert pytest.approx(trade.amount) == 75
     assert trade.is_open is True
 
     rc = client_post(client, f"{BASE_URI}/forceexit", data={"tradeid": "5"})

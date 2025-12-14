@@ -426,6 +426,7 @@ class ForceExitPayload(BaseModel):
     tradeid: str | int
     ordertype: OrderTypeValues | None = None
     amount: float | None = None
+    price: float | None = None
 
 
 class BlacklistPayload(BaseModel):
