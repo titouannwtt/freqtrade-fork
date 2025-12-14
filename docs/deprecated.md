@@ -107,6 +107,13 @@ As a consequence, the mark and funding rate timeframes have been changed to 1h f
 As the timeframe for both mark and funding_fee candles has changed (usually from 8h to 1h) - already downloaded data will have to be adjusted or partially re-downloaded.
 You can either re-download everything (`freqtrade download-data [...] --erase` - :warning: can take a long time) - or download the updated data selectively.
 
+### Strategy
+
+Most strategies should not need adjustments to continue to work as expected - however, strategies using `@informative("8h", candle_type="funding_rate")` or similar will have to switch the timeframe to 1h.
+The same is true for `dp.get_pair_dataframe(metadata["pair"], "8h", candle_type="funding_rate")` - which will need to be switched to 1h.
+
+freqtrade will auto-adjust the timeframe and return `funding_rates` despite the wrongly given timeframe. It'll issue a warning - and may still break your strategy.
+
 ### Selective data re-download
 
 The script below should serve as an example - you may need to adjust the timeframe and exchange to your needs!
