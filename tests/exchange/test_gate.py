@@ -42,7 +42,7 @@ def test_fetch_stoploss_order_gate(default_conf, mocker):
 
 def test_cancel_stoploss_order_gate(default_conf, mocker):
     exchange = get_patched_exchange(mocker, default_conf, exchange="gate")
-    cancel_order_mock = mocker.patch.object(exchange, "cancel_order")
+    cancel_order_mock = mocker.patch.object(exchange, "cancel_order", autospec=True)
 
     exchange.cancel_stoploss_order("1234", "ETH/BTC")
     assert cancel_order_mock.call_count == 1

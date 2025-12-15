@@ -661,7 +661,7 @@ def test_stoploss_adjust_okx(mocker, default_conf, sl1, sl2, sl3, side):
 
 def test_stoploss_cancel_okx(mocker, default_conf):
     exchange = get_patched_exchange(mocker, default_conf, exchange="okx")
-    co_mock = mocker.patch.object(exchange, "cancel_order")
+    co_mock = mocker.patch.object(exchange, "cancel_order", autospec=True)
 
     exchange.cancel_stoploss_order("1234", "ETH/USDT")
     assert co_mock.call_count == 1
