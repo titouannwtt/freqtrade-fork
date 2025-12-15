@@ -1742,6 +1742,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
+        if self.get_option("stoploss_fetch_requires_stop_param"):
+            params = params or {}
+            params["stop"] = True
         return self.cancel_order(order_id, pair, params)
 
     def is_cancel_order_result_suitable(self, corder) -> TypeGuard[CcxtOrder]:

@@ -168,12 +168,6 @@ class Binance(Exchange):
 
         return order
 
-    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        if self.trading_mode == TradingMode.FUTURES:
-            params = params or {}
-            params.update({"stop": True})
-        return self.cancel_order(order_id=order_id, pair=pair, params=params)
-
     def get_historic_ohlcv(
         self,
         pair: str,

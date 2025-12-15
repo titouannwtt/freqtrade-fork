@@ -264,9 +264,6 @@ class Okx(Exchange):
             return safe_value_fallback2(order, order, "id_stop", "id")
         return order["id"]
 
-    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})
-
     def _fetch_orders_emulate(self, pair: str, since_ms: int) -> list[CcxtOrder]:
         orders = []
 

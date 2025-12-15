@@ -129,9 +129,6 @@ class Bitget(Exchange):
 
         return self._fetch_stop_order_fallback(order_id, pair)
 
-    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        return self.cancel_order(order_id=order_id, pair=pair, params={"stop": True})
-
     @retrier
     def additional_exchange_init(self) -> None:
         """
