@@ -1405,8 +1405,9 @@ class Exchange:
         amount: float,
         rate: float,
         leverage: float,
-        reduceOnly: bool = False,
         time_in_force: str = "GTC",
+        reduceOnly: bool = False,
+        initial_order: bool = True,
     ) -> CcxtOrder:
         if self._config["dry_run"]:
             dry_order = self.create_dry_run_order(
@@ -1423,7 +1424,7 @@ class Exchange:
             rate_for_order = self.price_to_precision(pair, rate) if needs_price else None
 
             if not reduceOnly:
-                self._lev_prep(pair, leverage, side)
+                self._lev_prep(pair, leverage, side, accept_fail=not initial_order)
 
             order = self._api.create_order(
                 pair,
