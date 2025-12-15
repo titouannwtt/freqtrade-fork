@@ -661,14 +661,13 @@ def test_stoploss_adjust_okx(mocker, default_conf, sl1, sl2, sl3, side):
 
 def test_stoploss_cancel_okx(mocker, default_conf):
     exchange = get_patched_exchange(mocker, default_conf, exchange="okx")
-
-    exchange.cancel_order = MagicMock()
+    co_mock = mocker.patch.object(exchange, "cancel_order")
 
     exchange.cancel_stoploss_order("1234", "ETH/USDT")
-    assert exchange.cancel_order.call_count == 1
-    assert exchange.cancel_order.call_args_list[0][1]["order_id"] == "1234"
-    assert exchange.cancel_order.call_args_list[0][1]["pair"] == "ETH/USDT"
-    assert exchange.cancel_order.call_args_list[0][1]["params"] == {"stop": True}
+    assert co_mock.call_count == 1
+    assert co_mock.call_args_list[0][1]["order_id"] == "1234"
+    assert co_mock.call_args_list[0][1]["pair"] == "ETH/USDT"
+    assert co_mock.call_args_list[0][1]["params"] == {"stop": True}
 
 
 def test__get_stop_params_okx(mocker, default_conf):
