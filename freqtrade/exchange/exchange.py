@@ -132,6 +132,7 @@ class Exchange:
         "stop_price_prop": "stopLossPrice",  # Used for stoploss_on_exchange response parsing
         "stoploss_order_types": {},
         "stoploss_blocks_assets": True,  # By default stoploss orders block assets
+        "stoploss_fetch_requires_stop_param": False,  # Require "stop": True" to fetch stop orders
         "order_time_in_force": ["GTC"],
         "ohlcv_params": {},
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv

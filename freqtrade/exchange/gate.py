@@ -30,6 +30,7 @@ class Gate(Exchange):
         "stoploss_order_types": {"limit": "limit"},
         "stop_price_param": "stopPrice",
         "stop_price_prop": "stopPrice",
+        "stoploss_fetch_requires_stop_param": True,
         "l2_limit_upper": 1000,
         "marketOrderRequiresPrice": True,
         "trades_has_history": False,  # Endpoint would support this - but ccxt doesn't.
