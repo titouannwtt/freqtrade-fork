@@ -665,9 +665,9 @@ def test_stoploss_cancel_okx(mocker, default_conf):
 
     exchange.cancel_stoploss_order("1234", "ETH/USDT")
     assert co_mock.call_count == 1
-    assert co_mock.call_args_list[0][1]["order_id"] == "1234"
-    assert co_mock.call_args_list[0][1]["pair"] == "ETH/USDT"
-    assert co_mock.call_args_list[0][1]["params"] == {"stop": True}
+    assert co_mock.call_args_list[0][0][0] == "1234"
+    assert co_mock.call_args_list[0][0][1] == "ETH/USDT"
+    assert co_mock.call_args_list[0][0][2] == {"stop": True}
 
 
 def test__get_stop_params_okx(mocker, default_conf):

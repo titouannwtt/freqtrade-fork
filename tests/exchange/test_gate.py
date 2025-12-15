@@ -46,9 +46,9 @@ def test_cancel_stoploss_order_gate(default_conf, mocker):
 
     exchange.cancel_stoploss_order("1234", "ETH/BTC")
     assert cancel_order_mock.call_count == 1
-    assert cancel_order_mock.call_args_list[0][1]["order_id"] == "1234"
-    assert cancel_order_mock.call_args_list[0][1]["pair"] == "ETH/BTC"
-    assert cancel_order_mock.call_args_list[0][1]["params"] == {"stop": True}
+    assert cancel_order_mock.call_args_list[0][0][0] == "1234"
+    assert cancel_order_mock.call_args_list[0][0][1] == "ETH/BTC"
+    assert cancel_order_mock.call_args_list[0][0][2] == {"stop": True}
 
 
 @pytest.mark.parametrize(
