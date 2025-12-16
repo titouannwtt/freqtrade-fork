@@ -16,9 +16,9 @@ def test_fetch_stoploss_order_gate(default_conf, mocker):
 
     exchange.fetch_stoploss_order("1234", "ETH/BTC")
     assert fetch_order_mock.call_count == 1
-    assert fetch_order_mock.call_args_list[0][1]["order_id"] == "1234"
-    assert fetch_order_mock.call_args_list[0][1]["pair"] == "ETH/BTC"
-    assert fetch_order_mock.call_args_list[0][1]["params"] == {"stop": True}
+    assert fetch_order_mock.call_args_list[0][0][0] == "1234"
+    assert fetch_order_mock.call_args_list[0][0][1] == "ETH/BTC"
+    assert fetch_order_mock.call_args_list[0][0][2] == {"stop": True}
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
@@ -36,7 +36,7 @@ def test_fetch_stoploss_order_gate(default_conf, mocker):
 
     exchange.fetch_stoploss_order("1234", "ETH/BTC")
     assert exchange.fetch_order.call_count == 2
-    assert exchange.fetch_order.call_args_list[0][1]["order_id"] == "1234"
+    assert exchange.fetch_order.call_args_list[0][0][0] == "1234"
     assert exchange.fetch_order.call_args_list[1][1]["order_id"] == "222555"
 
 
