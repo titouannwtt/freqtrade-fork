@@ -1692,19 +1692,18 @@ class Exchange:
             params = params or {}
             params["stop"] = True
         order = self.fetch_order(order_id, pair, params)
-        if (val := self.get_option("stoploss_algo_order_info_id")) and order.get(
-            "status", "open"
-        ) == "closed":
+        val = self.get_option("stoploss_algo_order_info_id")
+        if val and order.get("status", "open") == "closed":
             if new_orderid := order.get("info", {}).get(val):
                 # Fetch real order, which was placed by the algo order.
-                order1 = self.fetch_order(order_id=new_orderid, pair=pair, params=None)
-                order1["id_stop"] = order1["id"]
-                order1["id"] = order_id
-                order1["type"] = "stoploss"
-                order1["stopPrice"] = order.get("stopPrice")
-                order1["status_stop"] = "triggered"
+                actual_order = self.fetch_order(order_id=new_orderid, pair=pair, params=None)
+                actual_order["id_stop"] = actual_order["id"]
+                actual_order["id"] = order_id
+                actual_order["type"] = "stoploss"
+                actual_order["stopPrice"] = order.get("stopPrice")
+                actual_order["status_stop"] = "triggered"
 
-                return order1
+                return actual_order
 
         return order
 
