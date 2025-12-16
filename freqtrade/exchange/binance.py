@@ -151,7 +151,21 @@ class Binance(Exchange):
         if self.trading_mode == TradingMode.FUTURES:
             params = params or {}
             params.update({"stop": True})
-        return self.fetch_order(order_id, pair, params)
+        order = self.fetch_order(order_id, pair, params)
+        if self.trading_mode == TradingMode.FUTURES and order.get("status", "open") == "closed":
+            # Places a real order - which we need to fetch explicitly.
+
+            if new_orderid := order.get("info", {}).get("actualOrderId"):
+                order1 = self.fetch_order(order_id=new_orderid, pair=pair, params={})
+                order1["id_stop"] = order1["id"]
+                order1["id"] = order_id
+                order1["type"] = "stoploss"
+                order1["stopPrice"] = order.get("stopPrice")
+                order1["status_stop"] = "triggered"
+
+                return order1
+
+        return order
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
         if self.trading_mode == TradingMode.FUTURES:
