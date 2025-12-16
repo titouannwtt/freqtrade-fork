@@ -31,7 +31,7 @@ class Okx(Exchange):
         "ohlcv_candle_limit": 100,  # Warning, special case with data prior to X months
         "stoploss_order_types": {"limit": "limit"},
         "stoploss_on_exchange": True,
-        "stoploss_fetch_requires_stop_param": True,
+        "stoploss_query_requires_stop_flag": True,
         "trades_has_history": False,  # Endpoint doesn't have a "since" parameter
         "ws_enabled": True,
     }

@@ -132,7 +132,7 @@ class Exchange:
         "stop_price_prop": "stopLossPrice",  # Used for stoploss_on_exchange response parsing
         "stoploss_order_types": {},
         "stoploss_blocks_assets": True,  # By default stoploss orders block assets
-        "stoploss_fetch_requires_stop_param": False,  # Require "stop": True" to fetch stop orders
+        "stoploss_query_requires_stop_flag": False,  # Require "stop": True" to fetch stop orders
         "order_time_in_force": ["GTC"],
         "ohlcv_params": {},
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
@@ -1688,7 +1688,7 @@ class Exchange:
     def fetch_stoploss_order(
         self, order_id: str, pair: str, params: dict | None = None
     ) -> CcxtOrder:
-        if self.get_option("stoploss_fetch_requires_stop_param"):
+        if self.get_option("stoploss_query_requires_stop_flag"):
             params = params or {}
             params["stop"] = True
         order = self.fetch_order(order_id, pair, params)
@@ -1760,7 +1760,7 @@ class Exchange:
             raise OperationalException(e) from e
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        if self.get_option("stoploss_fetch_requires_stop_param"):
+        if self.get_option("stoploss_query_requires_stop_flag"):
             params = params or {}
             params["stop"] = True
         return self.cancel_order(order_id, pair, params)

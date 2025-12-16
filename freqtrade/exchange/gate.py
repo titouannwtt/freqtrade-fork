@@ -30,7 +30,7 @@ class Gate(Exchange):
         "stoploss_order_types": {"limit": "limit"},
         "stop_price_param": "stopPrice",
         "stop_price_prop": "stopPrice",
-        "stoploss_fetch_requires_stop_param": True,
+        "stoploss_query_requires_stop_flag": True,
         "stoploss_algo_order_info_id": "fired_order_id",
         "l2_limit_upper": 1000,
         "marketOrderRequiresPrice": True,
