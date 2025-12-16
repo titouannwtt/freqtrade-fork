@@ -99,6 +99,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         "contract_size": 1,
         "has_open_orders": False,
         "nr_of_successful_entries": ANY,
+        "nr_of_successful_exits": ANY,
         "orders": [
             {
                 "amount": 91.07468123,
@@ -309,7 +310,7 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker, time_machine) -> No
     )
     assert "now" == result[0][2]
     assert "ETH/BTC" in result[0][1]
-    assert "nan%" == result[0][3]
+    assert "N/A" == result[0][3]
     assert isnan(fiat_profit_sum)
 
 
@@ -385,11 +386,14 @@ def test_rpc_delete_trade(mocker, default_conf, fee, markets, caplog, is_short):
     mocker.patch.multiple(
         EXMS,
         markets=PropertyMock(return_value=markets),
-        cancel_order=cancel_mock,
-        cancel_stoploss_order=stoploss_mock,
     )
 
     freqtradebot = get_patched_freqtradebot(mocker, default_conf)
+    mocker.patch.multiple(
+        freqtradebot.exchange,
+        cancel_order=cancel_mock,
+        cancel_stoploss_order=stoploss_mock,
+    )
     freqtradebot.strategy.order_types["stoploss_on_exchange"] = True
     create_mock_trades(fee, is_short)
     rpc = RPC(freqtradebot)
@@ -425,13 +429,17 @@ def test_rpc_delete_trade(mocker, default_conf, fee, markets, caplog, is_short):
     assert stoploss_mock.call_count == 1
     assert res["cancel_order_count"] == 1
 
-    stoploss_mock = mocker.patch(f"{EXMS}.cancel_stoploss_order", side_effect=InvalidOrderException)
+    stoploss_mock = mocker.patch.object(
+        freqtradebot.exchange, "cancel_stoploss_order", side_effect=InvalidOrderException
+    )
 
     res = rpc._rpc_delete("3")
     assert stoploss_mock.call_count == 1
     stoploss_mock.reset_mock()
 
-    cancel_mock = mocker.patch(f"{EXMS}.cancel_order", side_effect=InvalidOrderException)
+    cancel_mock = mocker.patch.object(
+        freqtradebot.exchange, "cancel_order", side_effect=InvalidOrderException
+    )
 
     res = rpc._rpc_delete("4")
     assert cancel_mock.call_count == 1

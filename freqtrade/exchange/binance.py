@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import ccxt
-from cachetools import TTLCache
 from pandas import DataFrame
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS
@@ -18,9 +17,10 @@ from freqtrade.exchange.binance_public_data import (
     download_archive_trades,
 )
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import FtHas, Tickers
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
 from freqtrade.misc import deep_merge_dicts, json_load
+from freqtrade.util import FtTTLCache
 from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts
 
 
@@ -76,7 +76,7 @@ class Binance(Exchange):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._spot_delist_schedule_cache: TTLCache = TTLCache(maxsize=100, ttl=300)
+        self._spot_delist_schedule_cache: FtTTLCache = FtTTLCache(maxsize=100, ttl=300)
 
     def get_proxy_coin(self) -> str:
         """
@@ -144,6 +144,20 @@ class Binance(Exchange):
 
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
+
+    def fetch_stoploss_order(
+        self, order_id: str, pair: str, params: dict | None = None
+    ) -> CcxtOrder:
+        if self.trading_mode == TradingMode.FUTURES:
+            params = params or {}
+            params.update({"stop": True})
+        return self.fetch_order(order_id, pair, params)
+
+    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
+        if self.trading_mode == TradingMode.FUTURES:
+            params = params or {}
+            params.update({"stop": True})
+        return self.cancel_order(order_id=order_id, pair=pair, params=params)
 
     def get_historic_ohlcv(
         self,
@@ -544,3 +558,26 @@ class Binance(Exchange):
                 cache[ft_symbol] = delist_dt
 
         return cache.get(pair, None)
+
+
+class Binanceusdm(Binance):
+    """Binacne USDM Exchange
+    Same as Binance - only futures trading is supported (via ccxt).
+
+    Not actually necessary, binance should be preferred.
+    """
+
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.FUTURES, MarginMode.CROSS),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
+    ]
+
+
+class Binanceus(Binance):
+    """Binance US exchange class.
+    Minimal adjustment to disable futures trading for the US subsidiary of Binance
+    """
+
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.SPOT, MarginMode.NONE),
+    ]

@@ -16,7 +16,6 @@ from typing import Any, Literal, TypeGuard, TypeVar
 
 import ccxt
 import ccxt.pro as ccxt_pro
-from cachetools import TTLCache
 from ccxt import TICK_SIZE
 from dateutil import parser
 from pandas import DataFrame, concat
@@ -105,11 +104,11 @@ from freqtrade.misc import (
     deep_merge_dicts,
     file_dump_json,
     file_load_json,
+    safe_value_fallback,
     safe_value_fallback2,
 )
-from freqtrade.util import dt_from_ts, dt_now
+from freqtrade.util import FtTTLCache, PeriodicCache, dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize_delta, dt_ts, format_ms_time
-from freqtrade.util.periodic_cache import PeriodicCache
 
 
 logger = logging.getLogger(__name__)
@@ -154,8 +153,8 @@ class Exchange:
         "l2_limit_range_required": True,  # Allow Empty L2 limit (kucoin)
         "l2_limit_upper": None,  # Upper limit for L2 limit
         "mark_ohlcv_price": "mark",
-        "mark_ohlcv_timeframe": "8h",
-        "funding_fee_timeframe": "8h",
+        "mark_ohlcv_timeframe": "1h",
+        "funding_fee_timeframe": "1h",
         "ccxt_futures_name": "swap",
         "needs_trading_fees": False,  # use fetch_trading_fees to cache fees
         "order_props_in_contracts": ["amount", "filled", "remaining"],
@@ -230,13 +229,13 @@ class Exchange:
 
         self._cache_lock = Lock()
         # Cache for 10 minutes ...
-        self._fetch_tickers_cache: TTLCache = TTLCache(maxsize=4, ttl=60 * 10)
+        self._fetch_tickers_cache: FtTTLCache = FtTTLCache(maxsize=4, ttl=60 * 10)
         # Cache values for 300 to avoid frequent polling of the exchange for prices
         # Caching only applies to RPC methods, so prices for open trades are still
         # refreshed once every iteration.
         # Shouldn't be too high either, as it'll freeze UI updates in case of open orders.
-        self._exit_rate_cache: TTLCache = TTLCache(maxsize=100, ttl=300)
-        self._entry_rate_cache: TTLCache = TTLCache(maxsize=100, ttl=300)
+        self._exit_rate_cache: FtTTLCache = FtTTLCache(maxsize=100, ttl=300)
+        self._entry_rate_cache: FtTTLCache = FtTTLCache(maxsize=100, ttl=300)
 
         # Holds candles
         self._klines: dict[PairWithTimeframe, DataFrame] = {}
@@ -430,7 +429,15 @@ class Exchange:
 
     @property
     def timeframes(self) -> list[str]:
-        return list((self._api.timeframes or {}).keys())
+        market_type = (
+            "spot"
+            if self.trading_mode != TradingMode.FUTURES
+            else self._ft_has["ccxt_futures_name"]
+        )
+        timeframes = self._api.options.get("timeframes", {}).get(market_type)
+        if timeframes is None:
+            timeframes = self._api.timeframes
+        return list((timeframes or {}).keys())
 
     @property
     def markets(self) -> dict[str, Any]:
@@ -1113,6 +1120,7 @@ class Exchange:
         leverage: float,
         params: dict | None = None,
         stop_loss: bool = False,
+        stop_price: float | None = None,
     ) -> CcxtOrder:
         now = dt_now()
         order_id = f"dry_run_{side}_{pair}_{now.timestamp()}"
@@ -1139,7 +1147,7 @@ class Exchange:
         }
         if stop_loss:
             dry_order["info"] = {"stopPrice": dry_order["price"]}
-            dry_order[self._ft_has["stop_price_prop"]] = dry_order["price"]
+            dry_order[self._ft_has["stop_price_prop"]] = stop_price or dry_order["price"]
             # Workaround to avoid filling stoploss orders immediately
             dry_order["ft_order_type"] = "stoploss"
         orderbook: OrderBook | None = None
@@ -1157,7 +1165,11 @@ class Exchange:
 
         if dry_order["type"] == "market" and not dry_order.get("ft_order_type"):
             # Update market order pricing
-            average = self.get_dry_market_fill_price(pair, side, amount, rate, orderbook)
+            slippage = 0.05
+            worst_rate = rate * ((1 + slippage) if side == "buy" else (1 - slippage))
+            average = self.get_dry_market_fill_price(
+                pair, side, amount, rate, worst_rate, orderbook
+            )
             dry_order.update(
                 {
                     "average": average,
@@ -1197,7 +1209,13 @@ class Exchange:
         return dry_order
 
     def get_dry_market_fill_price(
-        self, pair: str, side: str, amount: float, rate: float, orderbook: OrderBook | None
+        self,
+        pair: str,
+        side: str,
+        amount: float,
+        rate: float,
+        worst_rate: float,
+        orderbook: OrderBook | None,
     ) -> float:
         """
         Get the market order fill price based on orderbook interpolation
@@ -1206,8 +1224,6 @@ class Exchange:
             if not orderbook:
                 orderbook = self.fetch_l2_order_book(pair, 20)
             ob_type: OBLiteral = "asks" if side == "buy" else "bids"
-            slippage = 0.05
-            max_slippage_val = rate * ((1 + slippage) if side == "buy" else (1 - slippage))
 
             remaining_amount = amount
             filled_value = 0.0
@@ -1231,11 +1247,10 @@ class Exchange:
             forecast_avg_filled_price = max(filled_value, 0) / amount
             # Limit max. slippage to specified value
             if side == "buy":
-                forecast_avg_filled_price = min(forecast_avg_filled_price, max_slippage_val)
+                forecast_avg_filled_price = min(forecast_avg_filled_price, worst_rate)
 
             else:
-                forecast_avg_filled_price = max(forecast_avg_filled_price, max_slippage_val)
-
+                forecast_avg_filled_price = max(forecast_avg_filled_price, worst_rate)
             return self.price_to_precision(pair, forecast_avg_filled_price)
 
         return rate
@@ -1247,13 +1262,15 @@ class Exchange:
         limit: float,
         orderbook: OrderBook | None = None,
         offset: float = 0.0,
+        is_stop: bool = False,
     ) -> bool:
         if not self.exchange_has("fetchL2OrderBook"):
-            return True
+            # True unless checking a stoploss order
+            return not is_stop
         if not orderbook:
             orderbook = self.fetch_l2_order_book(pair, 1)
         try:
-            if side == "buy":
+            if (side == "buy" and not is_stop) or (side == "sell" and is_stop):
                 price = orderbook["asks"][0][0]
                 if limit * (1 - offset) >= price:
                     return True
@@ -1272,6 +1289,38 @@ class Exchange:
         """
         Check dry-run limit order fill and update fee (if it filled).
         """
+        if order["status"] != "closed" and order.get("ft_order_type") == "stoploss":
+            pair = order["symbol"]
+            if not orderbook and self.exchange_has("fetchL2OrderBook"):
+                orderbook = self.fetch_l2_order_book(pair, 20)
+            price = safe_value_fallback(order, self._ft_has["stop_price_prop"], "price")
+            crossed = self._dry_is_price_crossed(
+                pair, order["side"], price, orderbook, is_stop=True
+            )
+            if crossed:
+                average = self.get_dry_market_fill_price(
+                    pair,
+                    order["side"],
+                    order["amount"],
+                    price,
+                    worst_rate=order["price"],
+                    orderbook=orderbook,
+                )
+                order.update(
+                    {
+                        "status": "closed",
+                        "filled": order["amount"],
+                        "remaining": 0,
+                        "average": average,
+                        "cost": order["amount"] * average,
+                    }
+                )
+                self.add_dry_order_fee(
+                    pair,
+                    order,
+                    "taker" if immediate else "maker",
+                )
+            return order
         if (
             order["status"] != "closed"
             and order["type"] in ["limit"]
@@ -1295,7 +1344,7 @@ class Exchange:
 
         return order
 
-    def fetch_dry_run_order(self, order_id) -> CcxtOrder:
+    def fetch_dry_run_order(self, order_id: str) -> CcxtOrder:
         """
         Return dry-run order
         Only call if running in dry-run mode.
@@ -1307,11 +1356,12 @@ class Exchange:
         except KeyError as e:
             from freqtrade.persistence import Order
 
-            order = Order.order_by_id(order_id)
-            if order:
-                ccxt_order = order.to_ccxt_object(self._ft_has["stop_price_prop"])
-                self._dry_run_open_orders[order_id] = ccxt_order
-                return ccxt_order
+            order_obj = Order.order_by_id(order_id)
+            if order_obj:
+                order = order_obj.to_ccxt_object(self._ft_has["stop_price_prop"])
+                order = self.check_dry_limit_order_filled(order)
+                self._dry_run_open_orders[order_id] = order
+                return order
             # Gracefully handle errors with dry-run orders.
             raise InvalidOrderException(
                 f"Tried to get an invalid dry-run-order (id: {order_id}). Message: {e}"
@@ -1355,8 +1405,9 @@ class Exchange:
         amount: float,
         rate: float,
         leverage: float,
-        reduceOnly: bool = False,
         time_in_force: str = "GTC",
+        reduceOnly: bool = False,
+        initial_order: bool = True,
     ) -> CcxtOrder:
         if self._config["dry_run"]:
             dry_order = self.create_dry_run_order(
@@ -1373,7 +1424,7 @@ class Exchange:
             rate_for_order = self.price_to_precision(pair, rate) if needs_price else None
 
             if not reduceOnly:
-                self._lev_prep(pair, leverage, side)
+                self._lev_prep(pair, leverage, side, accept_fail=not initial_order)
 
             order = self._api.create_order(
                 pair,
@@ -1510,8 +1561,9 @@ class Exchange:
                 ordertype,
                 side,
                 amount,
-                stop_price_norm,
+                limit_rate or stop_price_norm,
                 stop_loss=True,
+                stop_price=stop_price_norm,
                 leverage=leverage,
             )
             return dry_order
@@ -1762,7 +1814,7 @@ class Exchange:
             balances.pop("total", None)
             balances.pop("used", None)
 
-            self._log_exchange_response("fetch_balances", balances)
+            self._log_exchange_response("fetch_balance", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
@@ -1783,9 +1835,9 @@ class Exchange:
         if self._config["dry_run"] or self.trading_mode != TradingMode.FUTURES:
             return []
         try:
-            symbols = []
+            symbols = None
             if pair:
-                symbols.append(pair)
+                symbols = [pair]
             positions: list[CcxtPosition] = self._api.fetch_positions(symbols)
             self._log_exchange_response("fetch_positions", positions)
             return positions
@@ -2155,7 +2207,9 @@ class Exchange:
         name = side.capitalize()
         strat_name = "entry_pricing" if side == "entry" else "exit_pricing"
 
-        cache_rate: TTLCache = self._entry_rate_cache if side == "entry" else self._exit_rate_cache
+        cache_rate: FtTTLCache = (
+            self._entry_rate_cache if side == "entry" else self._exit_rate_cache
+        )
         if not refresh:
             with self._cache_lock:
                 rate = cache_rate.get(pair)
@@ -2637,24 +2691,25 @@ class Exchange:
         input_coroutines: list[Coroutine[Any, Any, OHLCVResponse]] = []
         cached_pairs = []
         for pair, timeframe, candle_type in set(pair_list):
-            invalid_funding = (
-                candle_type == CandleType.FUNDING_RATE
-                and timeframe != self.get_option("funding_fee_timeframe")
-            )
+            if candle_type == CandleType.FUNDING_RATE and timeframe != (
+                ff_tf := self.get_option("funding_fee_timeframe")
+            ):
+                # TODO: does this message make sense? would docs be better?
+                # if any, this should be cached to avoid log spam!
+                logger.warning(
+                    f"Wrong funding rate timeframe {timeframe} for pair {pair}, "
+                    f"downloading {ff_tf} instead."
+                )
+                timeframe = ff_tf
             invalid_timeframe = timeframe not in self.timeframes and candle_type in (
                 CandleType.SPOT,
                 CandleType.FUTURES,
             )
-            if invalid_timeframe or invalid_funding:
-                timeframes_ = (
-                    ", ".join(self.timeframes)
-                    if candle_type != CandleType.FUNDING_RATE
-                    else self.get_option("funding_fee_timeframe")
-                )
+            if invalid_timeframe:
                 logger.warning(
                     f"Cannot download ({pair}, {timeframe}, {candle_type}) combination as this "
                     f"timeframe is not available on {self.name}. Available timeframes are "
-                    f"{timeframes_}."
+                    f"{', '.join(self.timeframes)}."
                 )
                 continue
 
@@ -2691,7 +2746,11 @@ class Exchange:
         has_cache = cache and (pair, timeframe, c_type) in self._klines
         # in case of existing cache, fill_missing happens after concatenation
         ohlcv_df = ohlcv_to_dataframe(
-            ticks, timeframe, pair=pair, fill_missing=not has_cache, drop_incomplete=drop_incomplete
+            ticks,
+            timeframe,
+            pair=pair,
+            fill_missing=not has_cache and c_type != CandleType.FUNDING_RATE,
+            drop_incomplete=drop_incomplete,
         )
         # keeping parsed dataframe in cache
         if cache:
@@ -2702,7 +2761,7 @@ class Exchange:
                     concat([old, ohlcv_df], axis=0),
                     timeframe,
                     pair,
-                    fill_missing=True,
+                    fill_missing=c_type != CandleType.FUNDING_RATE,
                     drop_incomplete=False,
                 )
                 candle_limit = self.ohlcv_candle_limit(timeframe, self._config["candle_type_def"])
@@ -2837,9 +2896,10 @@ class Exchange:
                 timeframe, candle_type=candle_type, since_ms=since_ms
             )
 
-            if candle_type and candle_type not in (CandleType.SPOT, CandleType.FUTURES):
-                params.update({"price": candle_type.value})
             if candle_type != CandleType.FUNDING_RATE:
+                if candle_type and candle_type not in (CandleType.SPOT, CandleType.FUTURES):
+                    self.verify_candle_type_support(candle_type)
+                    params.update({"price": str(candle_type)})
                 data = await self._api_async.fetch_ohlcv(
                     pair, timeframe=timeframe, since=since_ms, limit=candle_limit, params=params
                 )
@@ -2903,6 +2963,38 @@ class Exchange:
         # Convert funding rate to candle pattern
         data = [[x["timestamp"], x["fundingRate"], 0, 0, 0, 0] for x in data]
         return data
+
+    def check_candle_type_support(self, candle_type: CandleType) -> bool:
+        """
+        Check that the exchange supports the given candle type.
+        :param candle_type: CandleType to verify
+        :return: True if supported, False otherwise
+        """
+        if candle_type == CandleType.FUNDING_RATE:
+            if not self.exchange_has("fetchFundingRateHistory"):
+                return False
+        elif candle_type not in (CandleType.SPOT, CandleType.FUTURES):
+            mapping = {
+                CandleType.MARK: "fetchMarkOHLCV",
+                CandleType.INDEX: "fetchIndexOHLCV",
+                CandleType.PREMIUMINDEX: "fetchPremiumIndexOHLCV",
+                CandleType.FUNDING_RATE: "fetchFundingRateHistory",
+            }
+            _method = mapping.get(candle_type, "fetchOHLCV")
+            if not self.exchange_has(_method):
+                return False
+        return True
+
+    def verify_candle_type_support(self, candle_type: CandleType) -> None:
+        """
+        Verify that the exchange supports the given candle type.
+        :param candle_type: CandleType to verify
+        :raises OperationalException: if the candle type is not supported
+        """
+        if not self.check_candle_type_support(candle_type):
+            raise OperationalException(
+                f"Exchange {self._api.name} does not support fetching {candle_type} candles."
+            )
 
     # fetch Trade data stuff
 
@@ -3731,10 +3823,11 @@ class Exchange:
         :param mark_rates: Dataframe containing Mark rates (Type mark_ohlcv_price)
         :param futures_funding_rate: Fake funding rate to use if funding_rates are not available
         """
+        relevant_cols = ["date", "open_mark", "open_fund"]
         if futures_funding_rate is None:
             return mark_rates.merge(
                 funding_rates, on="date", how="inner", suffixes=["_mark", "_fund"]
-            )
+            )[relevant_cols]
         else:
             if len(funding_rates) == 0:
                 # No funding rate candles - full fillup with fallback variable
@@ -3747,15 +3840,23 @@ class Exchange:
                         "low": "low_mark",
                         "volume": "volume_mark",
                     }
-                )
+                )[relevant_cols]
 
             else:
                 # Fill up missing funding_rate candles with fallback value
                 combined = mark_rates.merge(
                     funding_rates, on="date", how="left", suffixes=["_mark", "_fund"]
                 )
-                combined["open_fund"] = combined["open_fund"].fillna(futures_funding_rate)
-                return combined
+                # Fill only leading missing funding rates so gaps stay untouched
+                first_valid_idx = combined["open_fund"].first_valid_index()
+                if first_valid_idx is None:
+                    combined["open_fund"] = futures_funding_rate
+                else:
+                    is_leading_na = (combined.index <= first_valid_idx) & combined[
+                        "open_fund"
+                    ].isna()
+                    combined.loc[is_leading_na, "open_fund"] = futures_funding_rate
+                return combined[relevant_cols].dropna()
 
     def calculate_funding_fees(
         self,

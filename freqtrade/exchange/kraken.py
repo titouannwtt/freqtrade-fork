@@ -35,7 +35,6 @@ class Kraken(Exchange):
         "trades_pagination_arg": "since",
         "trades_pagination_overlap": False,
         "trades_has_history": True,
-        "mark_ohlcv_timeframe": "4h",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -82,7 +81,7 @@ class Kraken(Exchange):
             balances.pop("free", None)
             balances.pop("total", None)
             balances.pop("used", None)
-            self._log_exchange_response("fetch_balances", balances)
+            self._log_exchange_response("fetch_balance", balances)
 
             # Consolidate balances
             balances = self.consolidate_balances(balances)
@@ -104,7 +103,7 @@ class Kraken(Exchange):
                 balances[bal]["used"] = sum(order[1] for order in order_list if order[0] == bal)
                 balances[bal]["free"] = balances[bal]["total"] - balances[bal]["used"]
 
-            self._log_exchange_response("fetch_balances2", balances)
+            self._log_exchange_response("fetch_balance2", balances)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
