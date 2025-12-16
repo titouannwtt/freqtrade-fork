@@ -20,6 +20,7 @@ class FtHas(TypedDict, total=False):
     stoploss_order_types: dict[str, str]
     stoploss_blocks_assets: bool
     stoploss_fetch_requires_stop_param: bool
+    stoploss_algo_order_info_id: str
     # ohlcv
     ohlcv_params: dict
     ohlcv_candle_limit: int

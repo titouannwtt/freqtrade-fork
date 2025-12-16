@@ -17,7 +17,7 @@ from freqtrade.exchange.binance_public_data import (
     download_archive_trades,
 )
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import CcxtOrder, FtHas, Tickers
+from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
 from freqtrade.misc import deep_merge_dicts, json_load
 from freqtrade.util import FtTTLCache
@@ -52,6 +52,7 @@ class Binance(Exchange):
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
         "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
         "stoploss_fetch_requires_stop_param": True,
+        "stoploss_algo_order_info_id": "actualOrderId",
         "tickers_have_price": False,
         "floor_leverage": True,
         "fetch_orders_limit_minutes": 7 * 1440,  # "fetch_orders" is limited to 7 days
@@ -145,28 +146,6 @@ class Binance(Exchange):
 
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
-
-    def fetch_stoploss_order(
-        self, order_id: str, pair: str, params: dict | None = None
-    ) -> CcxtOrder:
-        if self.trading_mode == TradingMode.FUTURES:
-            params = params or {}
-            params.update({"stop": True})
-        order = self.fetch_order(order_id, pair, params)
-        if self.trading_mode == TradingMode.FUTURES and order.get("status", "open") == "closed":
-            # Places a real order - which we need to fetch explicitly.
-
-            if new_orderid := order.get("info", {}).get("actualOrderId"):
-                order1 = self.fetch_order(order_id=new_orderid, pair=pair, params={})
-                order1["id_stop"] = order1["id"]
-                order1["id"] = order_id
-                order1["type"] = "stoploss"
-                order1["stopPrice"] = order.get("stopPrice")
-                order1["status_stop"] = "triggered"
-
-                return order1
-
-        return order
 
     def get_historic_ohlcv(
         self,

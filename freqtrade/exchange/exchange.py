@@ -1688,7 +1688,25 @@ class Exchange:
     def fetch_stoploss_order(
         self, order_id: str, pair: str, params: dict | None = None
     ) -> CcxtOrder:
-        return self.fetch_order(order_id, pair, params)
+        if self.get_option("stoploss_fetch_requires_stop_param"):
+            params = params or {}
+            params["stop"] = True
+        order = self.fetch_order(order_id, pair, params)
+        if (val := self.get_option("stoploss_algo_order_info_id")) and order.get(
+            "status", "open"
+        ) == "closed":
+            if new_orderid := order.get("info", {}).get(val):
+                # Fetch real order, which was placed by the algo order.
+                order1 = self.fetch_order(order_id=new_orderid, pair=pair, params=None)
+                order1["id_stop"] = order1["id"]
+                order1["id"] = order_id
+                order1["type"] = "stoploss"
+                order1["stopPrice"] = order.get("stopPrice")
+                order1["status_stop"] = "triggered"
+
+                return order1
+
+        return order
 
     def fetch_order_or_stoploss_order(
         self, order_id: str, pair: str, stoploss_order: bool = False
