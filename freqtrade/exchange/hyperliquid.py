@@ -3,7 +3,6 @@
 import logging
 from copy import deepcopy
 from datetime import datetime
-from typing import Any
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
@@ -37,9 +36,9 @@ class Hyperliquid(Exchange):
         "stoploss_order_types": {"limit": "limit"},
         "stoploss_blocks_assets": False,
         "stop_price_prop": "stopPrice",
-        "funding_fee_timeframe": "1h",
         "funding_fee_candle_limit": 500,
         "uses_leverage_tiers": False,
+        "mark_ohlcv_price": "futures",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -57,125 +56,58 @@ class Hyperliquid(Exchange):
         config.update(super()._ccxt_config)
         return config
 
-    def market_is_tradable(self, market: dict[str, Any]) -> bool:
-        parent_check = super().market_is_tradable(market)
-        hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
+    def _get_required_hip3_dexes(self) -> set[str]:
+        """
+        Get HIP-3 DEXes that are needed based on tradable pairs.
+        Completely automatic - no configuration needed!
+        """
+        required_dexes = set()
 
-        # Allow HIP-3 markets (with ':' in base) only if hip3_dexes configured
-        if ":" in market["base"]:
-            return parent_check and bool(hip3_dexes)
+        for market in self.markets.values():
+            if not super().market_is_tradable(market):
+                continue
 
-        return parent_check
+            market_info = market.get("info", {})
+            if market_info.get("hip3") is True:
+                dex = market_info.get("dex")
+                if dex:
+                    required_dexes.add(dex)
+
+        return required_dexes
 
     def get_balances(self) -> dict:
-        """
-        Fetch balance including HIP-3 DEX balances if configured.
-
-        For Hyperliquid, this fetches balances from the default DEX and any
-        configured HIP-3 DEXes (e.g., 'xyz' for equities).
-        """
+        """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs."""
         balances = super().get_balances()
 
-        # Fetch raw balance info (CCXT normalizes and removes 'info')
-        try:
-            raw_balance = self._api.fetch_balance()
-            if "info" in raw_balance:
-                balances["info"] = raw_balance["info"]
-        except Exception as e:
-            logger.warning(f"Could not fetch raw balance info: {e}")
-
-        # Fetch HIP-3 DEX balances if configured
-        hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
-        if hip3_dexes:
-            balances = self._fetch_hip3_balances(hip3_dexes, balances)
-
-        return balances
-
-    def _fetch_hip3_balances(self, hip3_dexes: list[str], base_balance: dict) -> dict:
-        """Fetch balances from configured HIP-3 DEXes and merge them."""
-        logger.info(f"Fetching balances from {len(hip3_dexes)} HIP-3 DEX(es): {hip3_dexes}")
-
-        for dex in hip3_dexes:
+        for dex in self._get_required_hip3_dexes():
             try:
-                logger.debug(f"Fetching balance for HIP-3 DEX: {dex}")
                 dex_balance = self._api.fetch_balance({"dex": dex})
 
-                if not dex_balance or "info" not in dex_balance:
-                    logger.error(
-                        f"HIP-3 DEX '{dex}' returned invalid response. Check configuration."
-                    )
-                    continue
+                for currency, amount_info in dex_balance.items():
+                    if currency in ["info", "free", "used", "total", "datetime", "timestamp"]:
+                        continue
 
-                base_balance = self._merge_hip3_balances(base_balance, dex_balance)
-
-                positions_count = len(dex_balance.get("info", {}).get("assetPositions", []))
-                if positions_count > 0:
-                    logger.info(f"Merged {positions_count} position(s) from HIP-3 DEX '{dex}'")
-                else:
-                    logger.warning(f"HIP-3 DEX '{dex}' returned no positions")
+                    if currency not in balances:
+                        balances[currency] = amount_info
+                    else:
+                        balances[currency]["free"] += amount_info["free"]
+                        balances[currency]["used"] += amount_info["used"]
+                        balances[currency]["total"] += amount_info["total"]
 
             except Exception as e:
                 logger.error(f"Could not fetch balance for HIP-3 DEX '{dex}': {e}")
 
-        return base_balance
-
-    def _merge_hip3_balances(self, base_balance: dict, new_balance: dict) -> dict:
-        """Merge balances from different Hyperliquid DEXes."""
-        # Merge assetPositions (raw API response)
-        if "info" in new_balance and "assetPositions" in new_balance.get("info", {}):
-            if "info" not in base_balance:
-                base_balance["info"] = {}
-            if "assetPositions" not in base_balance["info"]:
-                base_balance["info"]["assetPositions"] = []
-
-            new_positions = new_balance["info"]["assetPositions"]
-            base_balance["info"]["assetPositions"].extend(new_positions)
-            logger.debug(f"Merged {len(new_positions)} asset position(s) from HIP-3 DEX")
-
-        # Merge normalized CCXT balance structure (skip standard fields)
-        for currency, amount_info in new_balance.items():
-            if currency in ["info", "USDC", "free", "used", "total"]:
-                continue
-
-            if isinstance(amount_info, dict):
-                normalized_currency = currency.upper() if ":" in currency else currency
-                base_balance[normalized_currency] = amount_info
-                logger.debug(f"Added balance for currency: {normalized_currency}")
-
-        return base_balance
+        return balances
 
     def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
-        """
-        Fetch positions including HIP-3 positions.
+        """Fetch positions from default DEX and HIP-3 DEXes needed by tradable pairs."""
+        positions = super().fetch_positions(pair)
 
-        Hyperliquid supports fetching positions from different DEXes using the
-        'dex' parameter. This method fetches positions from the default DEX and
-        all configured HIP-3 DEXes.
-        """
-        # Fetch standard positions from default DEX
-        try:
-            if pair:
-                positions = self._api.fetch_positions([pair])
-            else:
-                positions = self._api.fetch_positions()
-        except Exception as e:
-            logger.warning(f"Could not fetch standard positions: {e}")
-            positions = []
-
-        # Fetch HIP-3 positions if configured
-        hip3_dexes = self._config.get("exchange", {}).get("hip3_dexes", [])
-        if hip3_dexes:
-            for dex in hip3_dexes:
-                try:
-                    logger.debug(f"Fetching positions from HIP-3 DEX: {dex}")
-                    hip3_positions = self._api.fetch_positions(params={"dex": dex})
-
-                    if hip3_positions:
-                        positions.extend(hip3_positions)
-                        logger.debug(f"Added {len(hip3_positions)} position(s) from DEX '{dex}'")
-
-                except Exception as e:
-                    logger.error(f"Could not fetch positions from HIP-3 DEX '{dex}': {e}")
+        for dex in self._get_required_hip3_dexes():
+            try:
+                positions.extend(self._api.fetch_positions(params={"dex": dex}))
+            except Exception as e:
+                logger.error(f"Could not fetch positions from HIP-3 DEX '{dex}': {e}")
 
         return positions
 
