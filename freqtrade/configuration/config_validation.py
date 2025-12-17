@@ -168,15 +168,6 @@ def _validate_edge(conf: dict[str, Any]) -> None:
         )
 
 
-def _validate_hyperliquid_settings(conf: dict[str, Any]) -> None:
-    exchange_conf = conf.get("exchange", {})
-    exchange_name = exchange_conf.get("name")
-    hip3_dexes = exchange_conf.get("hip3_dexes")
-
-    if hip3_dexes and exchange_name != "hyperliquid":
-        raise ConfigurationError('"hip3_dexes" is only supported If Exchange is hyperliquid')
-
-
 def _validate_whitelist(conf: dict[str, Any]) -> None:
     """
     Dynamic whitelist does not require pair_whitelist to be set - however StaticWhitelist does.
