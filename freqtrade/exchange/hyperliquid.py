@@ -59,7 +59,6 @@ class Hyperliquid(Exchange):
     def _get_required_hip3_dexes(self) -> set[str]:
         """
         Get HIP-3 DEXes that are needed based on tradable pairs.
-        Completely automatic - no configuration needed!
         """
         required_dexes = set()
 
