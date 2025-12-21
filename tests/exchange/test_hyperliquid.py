@@ -11,10 +11,22 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker, margin_mode
     # test if liq price calculated by dry_run_liquidation_price() is close to ccxt liq price
     # testing different pairs with large/small prices, different leverages, long, short
     markets = {
-        "BTC/USDC:USDC": {"limits": {"leverage": {"max": 50}}},
-        "ETH/USDC:USDC": {"limits": {"leverage": {"max": 50}}},
-        "SOL/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
-        "DOGE/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
+        "BTC/USDC:USDC": {"limits": {"leverage": {"max": 50}}, "info": {}},
+        "ETH/USDC:USDC": {"limits": {"leverage": {"max": 50}}, "info": {}},
+        "SOL/USDC:USDC": {"limits": {"leverage": {"max": 20}}, "info": {}},
+        "DOGE/USDC:USDC": {"limits": {"leverage": {"max": 20}}, "info": {}},
+        "XYZ-AAPL/USDC:USDC": {
+            "limits": {"leverage": {"max": 10}},
+            "info": {"hip3": True, "dex": "xyz"},
+        },
+        "XYZ-TSLA/USDC:USDC": {
+            "limits": {"leverage": {"max": 10}},
+            "info": {"hip3": True, "dex": "xyz"},
+        },
+        "XYZ-GOOGL/USDC:USDC": {
+            "limits": {"leverage": {"max": 10}},
+            "info": {"hip3": True, "dex": "xyz"},
+        },
     }
     positions = [
         {
@@ -278,12 +290,86 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker, margin_mode
             "leverage": 3.0,
             "liquidationPrice": 45236.52992613,
         },
+        {
+            "symbol": "XYZ-AAPL/USDC:USDC",
+            "entryPrice": 250.0,
+            "side": "long",
+            "contracts": 0.5,
+            "collateral": 25.0,
+            "leverage": 5.0,
+            "liquidationPrice": 210.5263157894737,
+        },
+        {
+            "symbol": "XYZ-AAPL/USDC:USDC",
+            "entryPrice": 280.0,
+            "side": "long",
+            "contracts": 0.5,
+            "collateral": 14.0,
+            "leverage": 10.0,
+            "liquidationPrice": 265.2631578947368,
+        },
+        {
+            "symbol": "XYZ-AAPL/USDC:USDC",
+            "entryPrice": 260.0,
+            "side": "short",
+            "contracts": 0.5,
+            "collateral": 26.0,
+            "leverage": 5.0,
+            "liquidationPrice": 297.1428571428571,
+        },
+        {
+            "symbol": "XYZ-GOOGL/USDC:USDC",
+            "entryPrice": 180.0,
+            "side": "long",
+            "contracts": 1.0,
+            "collateral": 60.0,
+            "leverage": 3.0,
+            "liquidationPrice": 126.3157894736842,
+        },
+        {
+            "symbol": "XYZ-GOOGL/USDC:USDC",
+            "entryPrice": 190.0,
+            "side": "short",
+            "contracts": 0.5,
+            "collateral": 9.5,
+            "leverage": 10.0,
+            "liquidationPrice": 199.04761904761904,
+        },
+        {
+            "symbol": "XYZ-TSLA/USDC:USDC",
+            "entryPrice": 350.0,
+            "side": "long",
+            "contracts": 1.0,
+            "collateral": 50.0,
+            "leverage": 7.0,
+            "liquidationPrice": 315.7894736842105,
+        },
+        {
+            "symbol": "XYZ-TSLA/USDC:USDC",
+            "entryPrice": 340.0,
+            "side": "short",
+            "contracts": 0.9999705882352942,
+            "collateral": 113.33,
+            "leverage": 3.0,
+            "liquidationPrice": 431.74603174603175,
+        },
+        {
+            "symbol": "XYZ-TSLA/USDC:USDC",
+            "entryPrice": 360.0,
+            "side": "long",
+            "contracts": 0.5,
+            "collateral": 90.0,
+            "leverage": 2.0,
+            "liquidationPrice": 189.4736842105263,
+        },
     ]
 
     api_mock = MagicMock()
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = margin_mode
     default_conf["stake_currency"] = "USDC"
+    # Configure HIP-3 DEXes
+    default_conf["exchange"]["hip3_dexes"] = ["xyz"]
     api_mock.load_markets = get_mock_coro()
     api_mock.markets = markets
     exchange = get_patched_exchange(
@@ -331,15 +417,33 @@ def test_hyperliquid_get_funding_fees(default_conf, mocker):
     now = datetime.now(UTC)
     exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
     exchange._fetch_and_calculate_funding_fees = MagicMock()
+
+    # Spot mode - no funding fees
     exchange.get_funding_fees("BTC/USDC:USDC", 1, False, now)
     assert exchange._fetch_and_calculate_funding_fees.call_count == 0
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+
+    # Mock validate_config to skip validation
+    mocker.patch("freqtrade.exchange.hyperliquid.Hyperliquid.validate_config")
+
     exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
     exchange._fetch_and_calculate_funding_fees = MagicMock()
-    exchange.get_funding_fees("BTC/USDC:USDC", 1, False, now)
 
+    # Normal market
+    exchange.get_funding_fees("BTC/USDC:USDC", 1, False, now)
+    assert exchange._fetch_and_calculate_funding_fees.call_count == 1
+
+    # HIP-3 XYZ market
+    exchange._fetch_and_calculate_funding_fees.reset_mock()
+    exchange.get_funding_fees("XYZ-TSLA/USDC:USDC", 1, False, now)
+    assert exchange._fetch_and_calculate_funding_fees.call_count == 1
+
+    # HIP-3 VNTL market
+    exchange._fetch_and_calculate_funding_fees.reset_mock()
+    exchange.get_funding_fees("VNTL-SPACEX/USDH:USDH", 1, True, now)
     assert exchange._fetch_and_calculate_funding_fees.call_count == 1
 
 
@@ -349,22 +453,35 @@ def test_hyperliquid_get_max_leverage(default_conf, mocker):
         "ETH/USDC:USDC": {"limits": {"leverage": {"max": 50}}},
         "SOL/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
         "DOGE/USDC:USDC": {"limits": {"leverage": {"max": 20}}},
+        "XYZ-TSLA/USDC:USDC": {"limits": {"leverage": {"max": 10}}},
+        "XYZ-NVDA/USDC:USDC": {"limits": {"leverage": {"max": 10}}},
+        "VNTL-SPACEX/USDH:USDH": {"limits": {"leverage": {"max": 3}}},
+        "VNTL-ANTHROPIC/USDH:USDH": {"limits": {"leverage": {"max": 3}}},
     }
     exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
     assert exchange.get_max_leverage("BTC/USDC:USDC", 1) == 1.0
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
-    exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
-    mocker.patch.multiple(
-        EXMS,
-        markets=PropertyMock(return_value=markets),
-    )
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
 
+    # Mock validate_config to skip validation
+    mocker.patch("freqtrade.exchange.hyperliquid.Hyperliquid.validate_config")
+
+    exchange = get_patched_exchange(mocker, default_conf, exchange="hyperliquid")
+    mocker.patch.multiple(EXMS, markets=PropertyMock(return_value=markets))
+
+    # Normal markets
     assert exchange.get_max_leverage("BTC/USDC:USDC", 1) == 50
     assert exchange.get_max_leverage("ETH/USDC:USDC", 20) == 50
     assert exchange.get_max_leverage("SOL/USDC:USDC", 50) == 20
     assert exchange.get_max_leverage("DOGE/USDC:USDC", 3) == 20
+
+    # HIP-3 markets
+    assert exchange.get_max_leverage("XYZ-TSLA/USDC:USDC", 1) == 10
+    assert exchange.get_max_leverage("XYZ-NVDA/USDC:USDC", 5) == 10
+    assert exchange.get_max_leverage("VNTL-SPACEX/USDH:USDH", 2) == 3
+    assert exchange.get_max_leverage("VNTL-ANTHROPIC/USDH:USDH", 1) == 3
 
 
 def test_hyperliquid__lev_prep(default_conf, mocker):
@@ -382,25 +499,66 @@ def test_hyperliquid__lev_prep(default_conf, mocker):
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+
+    # Mock validate_config to skip validation
+    mocker.patch("freqtrade.exchange.hyperliquid.Hyperliquid.validate_config")
 
     exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange="hyperliquid")
-    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
 
+    # Normal market
+    exchange._lev_prep("BTC/USDC:USDC", 3.2, "buy")
     assert api_mock.set_margin_mode.call_count == 1
     api_mock.set_margin_mode.assert_called_with("isolated", "BTC/USDC:USDC", {"leverage": 3})
 
     api_mock.reset_mock()
-
     exchange._lev_prep("BTC/USDC:USDC", 19.99, "sell")
-
     assert api_mock.set_margin_mode.call_count == 1
     api_mock.set_margin_mode.assert_called_with("isolated", "BTC/USDC:USDC", {"leverage": 19})
+
+    # HIP-3 XYZ market
+    api_mock.reset_mock()
+    exchange._lev_prep("XYZ-TSLA/USDC:USDC", 5.7, "buy")
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with("isolated", "XYZ-TSLA/USDC:USDC", {"leverage": 5})
+
+    api_mock.reset_mock()
+    exchange._lev_prep("XYZ-TSLA/USDC:USDC", 10.0, "sell")
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with("isolated", "XYZ-TSLA/USDC:USDC", {"leverage": 10})
+
+    # HIP-3 VNTL market
+    api_mock.reset_mock()
+    exchange._lev_prep("VNTL-SPACEX/USDH:USDH", 2.5, "buy")
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with(
+        "isolated", "VNTL-SPACEX/USDH:USDH", {"leverage": 2}
+    )
+
+    api_mock.reset_mock()
+    exchange._lev_prep("VNTL-ANTHROPIC/USDH:USDH", 3.0, "sell")
+    assert api_mock.set_margin_mode.call_count == 1
+    api_mock.set_margin_mode.assert_called_with(
+        "isolated", "VNTL-ANTHROPIC/USDH:USDH", {"leverage": 3}
+    )
 
 
 def test_hyperliquid_fetch_order(default_conf_usdt, mocker):
     default_conf_usdt["dry_run"] = False
+    default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
 
     api_mock = MagicMock()
+
+    # Mock markets with HIP-3 info
+    markets = {
+        "ETH/USDC:USDC": {"info": {}},
+        "XYZ-TSLA/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
+        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+    }
+    api_mock.markets = markets
+    api_mock.load_markets = get_mock_coro(return_value=markets)
+
+    # Test with normal market
     api_mock.fetch_order = MagicMock(
         return_value={
             "id": "12345",
@@ -432,9 +590,272 @@ def test_hyperliquid_fetch_order(default_conf_usdt, mocker):
             },
         ],
     )
-    exchange = get_patched_exchange(mocker, default_conf_usdt, api_mock, exchange="hyperliquid")
+    exchange = get_patched_exchange(
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
+    )
     o = exchange.fetch_order("12345", "ETH/USDC:USDC")
     # Uses weighted average
     assert o["average"] == 1500
-
     assert gtfo_mock.call_count == 1
+
+    # Test with HIP-3 XYZ market
+    api_mock.fetch_order = MagicMock(
+        return_value={
+            "id": "67890",
+            "symbol": "XYZ-TSLA/USDC:USDC",
+            "status": "closed",
+            "filled": 2.5,
+            "average": None,
+            "timestamp": 1630000100,
+        }
+    )
+    gtfo_mock.reset_mock()
+    gtfo_mock.return_value = [
+        {
+            "order_id": "67890",
+            "price": 250,
+            "amount": 1.5,
+            "filled": 1.5,
+            "remaining": 0,
+        },
+        {
+            "order_id": "67890",
+            "price": 260,
+            "amount": 1.0,
+            "filled": 1.0,
+            "remaining": 0,
+        },
+    ]
+
+    o = exchange.fetch_order("67890", "XYZ-TSLA/USDC:USDC")
+    # Weighted average: (250*1.5 + 260*1.0) / 2.5 = 254
+    assert o["average"] == 254
+    assert gtfo_mock.call_count == 1
+
+    # Test with HIP-3 VNTL market
+    api_mock.fetch_order = MagicMock(
+        return_value={
+            "id": "11111",
+            "symbol": "VNTL-SPACEX/USDH:USDH",
+            "status": "closed",
+            "filled": 5.0,
+            "average": None,
+            "timestamp": 1630000200,
+        }
+    )
+    gtfo_mock.reset_mock()
+    gtfo_mock.return_value = [
+        {
+            "order_id": "11111",
+            "price": 100,
+            "amount": 3.0,
+            "filled": 3.0,
+            "remaining": 0,
+        },
+        {
+            "order_id": "11111",
+            "price": 105,
+            "amount": 2.0,
+            "filled": 2.0,
+            "remaining": 0,
+        },
+    ]
+
+    o = exchange.fetch_order("11111", "VNTL-SPACEX/USDH:USDH")
+    assert o["average"] == 102
+    assert gtfo_mock.call_count == 1
+
+
+def test_hyperliquid_hip3_config_validation(default_conf, mocker):
+    """Test HIP-3 DEX configuration validation."""
+    from freqtrade.exceptions import OperationalException
+
+    api_mock = MagicMock()
+    markets = {
+        "BTC/USDC:USDC": {"info": {}},
+        "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
+        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+        "FLX-TOKEN/USDC:USDC": {"info": {"hip3": True, "dex": "flx"}},
+    }
+    api_mock.load_markets = get_mock_coro(return_value=markets)
+    api_mock.markets = markets
+
+    # Test 1: Valid single DEX
+    default_conf["exchange"]["hip3_dexes"] = ["xyz"]
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+    assert exchange._get_configured_hip3_dexes() == ["xyz"]
+
+    # Test 2: Valid two DEXes (max allowed)
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+    assert exchange._get_configured_hip3_dexes() == ["xyz", "vntl"]
+
+    # Test 3: Too many DEXes
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl", "flx"]
+    with pytest.raises(OperationalException, match="Maximum 2 HIP-3 DEXes allowed"):
+        exchange = get_patched_exchange(
+            mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        )
+        exchange.validate_config(default_conf)
+
+    # Test 4: Invalid DEX
+    default_conf["exchange"]["hip3_dexes"] = ["invalid_dex"]
+    with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
+        exchange = get_patched_exchange(
+            mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        )
+        exchange.validate_config(default_conf)
+
+    # Test 5: Mix of valid and invalid DEX
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "invalid_dex"]
+    with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
+        exchange = get_patched_exchange(
+            mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        )
+        exchange.validate_config(default_conf)
+
+
+def test_hyperliquid_get_balances_hip3(default_conf, mocker):
+    """Test balance fetching from HIP-3 DEXes."""
+    api_mock = MagicMock()
+    markets = {
+        "BTC/USDC:USDC": {"info": {}},
+        "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
+        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+    }
+    api_mock.load_markets = get_mock_coro()
+    api_mock.markets = markets
+
+    # Mock balance responses
+    default_balance = {"USDC": {"free": 1000, "used": 0, "total": 1000}}
+    xyz_balance = {"USDC": {"free": 0, "used": 600, "total": 600}}
+    vntl_balance = {"USDH": {"free": 0, "used": 300, "total": 300}}
+
+    def fetch_balance_side_effect(params=None):
+        if params and params.get("dex") == "xyz":
+            return xyz_balance
+        elif params and params.get("dex") == "vntl":
+            return vntl_balance
+        return default_balance
+
+    api_mock.fetch_balance = MagicMock(side_effect=fetch_balance_side_effect)
+
+    # Test with two HIP-3 DEXes
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+
+    balances = exchange.get_balances()
+
+    # Should have combined balances
+    assert balances["USDC"]["free"] == 1000
+    assert balances["USDC"]["used"] == 600
+    assert balances["USDC"]["total"] == 1600
+    assert balances["USDH"]["free"] == 0
+    assert balances["USDH"]["used"] == 300
+    assert balances["USDH"]["total"] == 300
+
+    assert api_mock.fetch_balance.call_count == 3
+
+
+def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
+    """Test position fetching from HIP-3 DEXes."""
+    api_mock = MagicMock()
+    markets = {
+        "BTC/USDC:USDC": {"info": {}},
+        "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
+        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+    }
+    api_mock.load_markets = get_mock_coro(return_value=markets)
+    api_mock.markets = markets
+
+    # Mock position responses
+    default_positions = [{"symbol": "BTC/USDC:USDC", "contracts": 0.5}]
+    xyz_positions = [{"symbol": "XYZ-AAPL/USDC:USDC", "contracts": 10}]
+    vntl_positions = [{"symbol": "VNTL-SPACEX/USDH:USDH", "contracts": 5}]
+
+    def fetch_positions_side_effect(symbols=None, params=None):
+        if params and params.get("dex") == "xyz":
+            return xyz_positions
+        elif params and params.get("dex") == "vntl":
+            return vntl_positions
+        return default_positions
+
+    api_mock.fetch_positions = MagicMock(side_effect=fetch_positions_side_effect)
+
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+
+    positions = exchange.fetch_positions()
+
+    # Should have HIP-3 positions (default position not included in test mock)
+    assert len(positions) == 2
+    assert any(p["symbol"] == "XYZ-AAPL/USDC:USDC" for p in positions)
+    assert any(p["symbol"] == "VNTL-SPACEX/USDH:USDH" for p in positions)
+
+    # Verify API calls (only HIP-3 DEXes, super() returns empty list in test)
+    assert api_mock.fetch_positions.call_count == 2  # xyz + vntl
+
+
+def test_hyperliquid_market_is_tradable(default_conf, mocker):
+    """Test market_is_tradable filters HIP-3 markets correctly."""
+    api_mock = MagicMock()
+    markets = {
+        "BTC/USDC:USDC": {"info": {}, "active": True},
+        "ETH/USDC:USDC": {"info": {}, "active": True},
+        "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}, "active": True},
+        "XYZ-TSLA/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}, "active": True},
+        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}, "active": True},
+        "FLX-TOKEN/USDC:USDC": {"info": {"hip3": True, "dex": "flx"}, "active": True},
+    }
+    api_mock.load_markets = get_mock_coro(return_value=markets)
+    api_mock.markets = markets
+
+    # Test 1: No HIP-3 DEXes configured - only default markets tradable
+    default_conf["exchange"]["hip3_dexes"] = []
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+
+    assert exchange.market_is_tradable(markets["BTC/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["ETH/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["XYZ-AAPL/USDC:USDC"]) is False
+    assert exchange.market_is_tradable(markets["XYZ-TSLA/USDC:USDC"]) is False
+    assert exchange.market_is_tradable(markets["VNTL-SPACEX/USDH:USDH"]) is False
+    assert exchange.market_is_tradable(markets["FLX-TOKEN/USDC:USDC"]) is False
+
+    # Test 2: Only 'xyz' configured - default + xyz markets tradable
+    default_conf["exchange"]["hip3_dexes"] = ["xyz"]
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+
+    assert exchange.market_is_tradable(markets["BTC/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["ETH/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["XYZ-AAPL/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["XYZ-TSLA/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["VNTL-SPACEX/USDH:USDH"]) is False
+    assert exchange.market_is_tradable(markets["FLX-TOKEN/USDC:USDC"]) is False
+
+    # Test 3: 'xyz' and 'vntl' configured - default + xyz + vntl markets tradable
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    exchange = get_patched_exchange(
+        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+
+    assert exchange.market_is_tradable(markets["BTC/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["ETH/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["XYZ-AAPL/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["XYZ-TSLA/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets["VNTL-SPACEX/USDH:USDH"]) is True
+    assert exchange.market_is_tradable(markets["FLX-TOKEN/USDC:USDC"]) is False
