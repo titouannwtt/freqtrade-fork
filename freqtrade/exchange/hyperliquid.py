@@ -3,6 +3,7 @@
 import logging
 from copy import deepcopy
 from datetime import datetime
+from typing import Any
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
@@ -56,29 +57,62 @@ class Hyperliquid(Exchange):
         config.update(super()._ccxt_config)
         return config
 
-    def _get_required_hip3_dexes(self) -> set[str]:
-        """
-        Get HIP-3 DEXes that are needed based on tradable pairs.
-        """
-        required_dexes = set()
+    def _get_configured_hip3_dexes(self) -> list[str]:
+        """Get list of configured HIP-3 DEXes."""
+        return self._config.get("exchange", {}).get("hip3_dexes", [])
 
-        for market in self.markets.values():
-            if not super().market_is_tradable(market):
-                continue
+    def validate_config(self, config: dict) -> None:
+        """Validate HIP-3 configuration at bot startup."""
+        super().validate_config(config)
 
-            market_info = market.get("info", {})
-            if market_info.get("hip3") is True:
-                dex = market_info.get("dex")
-                if dex:
-                    required_dexes.add(dex)
+        configured = self._get_configured_hip3_dexes()
+        if not configured:
+            return
 
-        return required_dexes
+        if len(configured) > 2:
+            raise OperationalException(
+                f"Maximum 2 HIP-3 DEXes allowed, but {len(configured)} configured: {configured}. "
+                f"Remove extra DEXes from your 'hip3_dexes' configuration!"
+            )
+
+        if not self.markets:
+            return
+
+        available = {
+            m.get("info", {}).get("dex")
+            for m in self.markets.values()
+            if m.get("info", {}).get("hip3")
+        }
+        available.discard(None)
+
+        invalid = set(configured) - available
+        if invalid:
+            raise OperationalException(
+                f"Invalid HIP-3 DEXes configured: {sorted(invalid)}. "
+                f"Available DEXes: {sorted(available)}. "
+                f"Check your 'hip3_dexes' configuration!"
+            )
+
+    def market_is_tradable(self, market: dict[str, Any]) -> bool:
+        """Check if market is tradable, including HIP-3 markets."""
+        super().market_is_tradable(market)
+
+        market_info = market.get("info", {})
+        if market_info.get("hip3"):
+            configured = self._get_configured_hip3_dexes()
+            if not configured:
+                return False
+
+            market_dex = market_info.get("dex")
+            return market_dex in configured
+
+        return True
 
     def get_balances(self) -> dict:
         """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs."""
         balances = super().get_balances()
 
-        for dex in self._get_required_hip3_dexes():
+        for dex in self._get_configured_hip3_dexes():
             try:
                 dex_balance = self._api.fetch_balance({"dex": dex})
 
@@ -102,7 +136,7 @@ class Hyperliquid(Exchange):
         """Fetch positions from default DEX and HIP-3 DEXes needed by tradable pairs."""
         positions = super().fetch_positions(pair)
 
-        for dex in self._get_required_hip3_dexes():
+        for dex in self._get_configured_hip3_dexes():
             try:
                 positions.extend(self._api.fetch_positions(params={"dex": dex}))
             except Exception as e:
