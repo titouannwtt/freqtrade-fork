@@ -428,6 +428,36 @@ Your balance and trades will now be used from your vault / subaccount - and no l
 
 The Hyperliquid API does not provide historic data beyond the single call to fetch current data, so downloading data is not possible, as the downloaded data would not constitute proper historic data.
 
+### HIP-3 DEXes
+
+Hyperliquid supports HIP-3 decentralized exchanges (DEXes), which are independent exchanges built on the Hyperliquid infrastructure. These DEXes operate similarly to the main Hyperliquid exchange but are community-created and managed.
+
+To trade on HIP-3 DEXes with Freqtrade, you need to add them to your configuration using the `hip3_dexes` parameter:
+
+```json
+"exchange": {
+    "name": "hyperliquid",
+    "walletAddress": "your_master_wallet_address",
+    "privateKey": "your_api_private_key",
+    "hip3_dexes": ["dex_name_1", "dex_name_2"]
+}
+```
+
+Replace `"dex_name_1"` and `"dex_name_2"` with the actual names of the HIP-3 DEXes you want to trade on.
+
+!!! Warning Performance and Rate Limit Impact
+
+**Each HIP-3 DEX you add significantly impacts bot performance and rate limits:**
+
+* **Additional API Calls**: For each HIP-3 DEX configured, Freqtrade makes additional Balance and Position API queries.
+* **Increased Latency**: Each DEX adds approximately 0.7 seconds of delay due to these calls.
+* **Rate Limit Pressure**: Additional API calls contribute to Hyperliquid's strict rate limits. With multiple DEXes, you may hit rate limits faster.
+
+**Recommendation**: Only add HIP-3 DEXes that you actively trade on. Monitor your logs for rate limit warnings.
+
+!!! Note
+    HIP-3 DEXes share the same wallet and free amount of colleteral as your main Hyperliquid account. Trades on different DEXes will affect your overall account balance and margin.
+
 ## Bitvavo
 
 If your account is required to use an operatorId, you can set it in the configuration file as follows:

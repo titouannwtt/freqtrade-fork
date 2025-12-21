@@ -674,8 +674,6 @@ def test_hyperliquid_hip3_config_validation(default_conf, mocker):
     markets = {
         "BTC/USDC:USDC": {"info": {}},
         "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
-        "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
-        "FLX-TOKEN/USDC:USDC": {"info": {"hip3": True, "dex": "flx"}},
     }
     api_mock.load_markets = get_mock_coro(return_value=markets)
     api_mock.markets = markets
@@ -687,22 +685,7 @@ def test_hyperliquid_hip3_config_validation(default_conf, mocker):
     )
     assert exchange._get_configured_hip3_dexes() == ["xyz"]
 
-    # Test 2: Valid two DEXes (max allowed)
-    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
-    exchange = get_patched_exchange(
-        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
-    )
-    assert exchange._get_configured_hip3_dexes() == ["xyz", "vntl"]
-
-    # Test 3: Too many DEXes
-    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl", "flx"]
-    with pytest.raises(OperationalException, match="Maximum 2 HIP-3 DEXes allowed"):
-        exchange = get_patched_exchange(
-            mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
-        )
-        exchange.validate_config(default_conf)
-
-    # Test 4: Invalid DEX
+    # Test 2: Invalid DEX
     default_conf["exchange"]["hip3_dexes"] = ["invalid_dex"]
     with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
         exchange = get_patched_exchange(
@@ -710,7 +693,7 @@ def test_hyperliquid_hip3_config_validation(default_conf, mocker):
         )
         exchange.validate_config(default_conf)
 
-    # Test 5: Mix of valid and invalid DEX
+    # Test 3: Mix of valid and invalid DEX
     default_conf["exchange"]["hip3_dexes"] = ["xyz", "invalid_dex"]
     with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
         exchange = get_patched_exchange(
@@ -796,15 +779,21 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
         mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
     )
 
+    # Mock super().fetch_positions() to return default positions
+    mocker.patch(
+        "freqtrade.exchange.exchange.Exchange.fetch_positions", return_value=default_positions
+    )
+
     positions = exchange.fetch_positions()
 
-    # Should have HIP-3 positions (default position not included in test mock)
-    assert len(positions) == 2
+    # Should have all positions combined (default + HIP-3)
+    assert len(positions) == 3
+    assert any(p["symbol"] == "BTC/USDC:USDC" for p in positions)
     assert any(p["symbol"] == "XYZ-AAPL/USDC:USDC" for p in positions)
     assert any(p["symbol"] == "VNTL-SPACEX/USDH:USDH" for p in positions)
 
-    # Verify API calls (only HIP-3 DEXes, super() returns empty list in test)
-    assert api_mock.fetch_positions.call_count == 2  # xyz + vntl
+    # Verify API calls (xyz + vntl, default is mocked separately)
+    assert api_mock.fetch_positions.call_count == 2
 
 
 def test_hyperliquid_market_is_tradable(default_conf, mocker):

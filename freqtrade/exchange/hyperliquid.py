@@ -66,16 +66,7 @@ class Hyperliquid(Exchange):
         super().validate_config(config)
 
         configured = self._get_configured_hip3_dexes()
-        if not configured:
-            return
-
-        if len(configured) > 2:
-            raise OperationalException(
-                f"Maximum 2 HIP-3 DEXes allowed, but {len(configured)} configured: {configured}. "
-                f"Remove extra DEXes from your 'hip3_dexes' configuration!"
-            )
-
-        if not self.markets:
+        if not configured or not self.markets:
             return
 
         available = {
