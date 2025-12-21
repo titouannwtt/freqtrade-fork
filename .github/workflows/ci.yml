@@ -28,7 +28,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -177,7 +177,7 @@ jobs:
     name: "Mypy Version Check"
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -195,7 +195,7 @@ jobs:
     name: "Pre-commit checks"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -208,7 +208,7 @@ jobs:
     name: "Documentation build"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -240,7 +240,7 @@ jobs:
     name: "Tests and Linting - Online tests"
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -320,7 +320,7 @@ jobs:
       with:
         jobs: ${{ toJSON(needs) }}
 
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -367,7 +367,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
@@ -396,7 +396,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 

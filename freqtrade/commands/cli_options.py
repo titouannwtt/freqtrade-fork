@@ -38,8 +38,14 @@ def check_int_nonzero(value: str) -> int:
 
 class Arg:
     # Optional CLI arguments
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fthelp: dict[str, str] | None = None, **kwargs):
+        """
+        CLI Arguments - used to build subcommand parsers consistently.
+        :param fthelp: dict - fthelp per command - should be "freqtrade <command>": help_text
+            If not provided or not found, 'help' from kwargs is used instead.
+        """
         self.cli = args
+        self.fthelp = fthelp
         self.kwargs = kwargs
 
 
@@ -422,6 +428,14 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "candle_types": Arg(
         "--candle-types",
+        fthelp={
+            "freqtrade download-data": (
+                "Select candle type to download. "
+                "Defaults to the necessary candles for the selected trading mode "
+                "(e.g. 'spot' or ('futures', 'funding_rate' and 'mark') for futures)."
+            ),
+            "_": "Select candle type to convert. Defaults to all available types.",
+        },
         help="Select candle type to convert. Defaults to all available types.",
         choices=[c.value for c in CandleType],
         nargs="+",

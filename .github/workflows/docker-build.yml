@@ -33,9 +33,12 @@ jobs:
     if: github.repository == 'freqtrade/freqtrade'
 
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
+
+    - name: Visualize disk usage before build
+      run: df -h
 
     - name: Set docker tag names
       id: tags
@@ -142,6 +145,9 @@ jobs:
       run: |
         docker images
 
+    - name: Visualize disk usage after build
+      run: df -h
+
   deploy-arm:
     name: "Deploy Docker ARM64"
     permissions:
@@ -152,7 +158,7 @@ jobs:
     if: github.repository == 'freqtrade/freqtrade'
 
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
       with:
         persist-credentials: false
 
