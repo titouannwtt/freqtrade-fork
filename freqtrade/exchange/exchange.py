@@ -880,7 +880,7 @@ class Exchange:
                 raise ConfigurationError(
                     f"This strategy requires {startup_candles} candles to start, "
                     "which is more than 5x "
-                    f"the amount of candles {self.name} provides for {timeframe}"
+                    f"the amount of candles {self.name} provides for {timeframe} "
                     f"at a startup_candle_count limit of {candle_limit * 5 - 1}."
                 )
         elif required_candle_call_count > 1:
@@ -892,7 +892,7 @@ class Exchange:
             logger.warning(
                 f"Using {required_candle_call_count} calls to get OHLCV. "
                 f"This can result in slower operations for the bot. Please check "
-                f"if you really need {startup_candles} candles for your strategy"
+                f"if you really need {startup_candles} candles for your strategy."
             )
         return required_candle_call_count
 
