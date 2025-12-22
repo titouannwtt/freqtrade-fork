@@ -879,13 +879,13 @@ class Exchange:
                 # Only allow 5 calls per pair to somewhat limit the impact
                 raise ConfigurationError(
                     f"This strategy requires {startup_candles} candles to start, "
-                    "which is more than 5x "
-                    f"the amount of candles {self.name} provides for {timeframe} "
-                    f"at a startup_candle_count limit of {candle_limit * 5 - 1}."
+                    f"which is more than 5x ({candle_limit * 5 - 1} candles) "
+                    f"the amount of candles {self.name} provides for {timeframe}."
                 )
         elif required_candle_call_count > 1:
             raise ConfigurationError(
-                f"This strategy requires {startup_candles} candles to start, which is more than "
+                f"This strategy requires {startup_candles} candles to start, "
+                f"which is more than ({candle_limit - 1} candles) "
                 f"the amount of candles {self.name} provides for {timeframe}."
             )
         if required_candle_call_count > 1:
