@@ -335,7 +335,7 @@ jobs:
         python -m build --sdist --wheel
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: freqtrade-build
         path: |
@@ -348,7 +348,7 @@ jobs:
         python -m build --sdist --wheel ft_client
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: freqtrade-client-build
         path: |
