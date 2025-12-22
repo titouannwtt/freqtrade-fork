@@ -32,7 +32,7 @@ repos:
           - types-tabulate==0.9.0.20241207
           - types-python-dateutil==2.9.0.20251115
           - scipy-stubs==1.16.3.2
-          - SQLAlchemy==2.0.44
+          - SQLAlchemy==2.0.45
         # stages: [push]
 
   - repo: https://github.com/pycqa/isort
