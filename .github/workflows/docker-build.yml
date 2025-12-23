@@ -37,6 +37,17 @@ jobs:
       with:
         persist-credentials: false
 
+    - name: Visualize disk usage before build
+      run: df -h
+
+    - name: Cleanup some disk space
+      run: |
+        docker system prune -a --force || true
+        docker builder prune -af || true
+
+    - name: Visualize disk usage after cleanup
+      run: df -h
+
     - name: Set docker tag names
       id: tags
       uses: ./.github/actions/docker-tags
@@ -141,6 +152,9 @@ jobs:
     - name: list Images
       run: |
         docker images
+
+    - name: Visualize disk usage after build
+      run: df -h
 
   deploy-arm:
     name: "Deploy Docker ARM64"

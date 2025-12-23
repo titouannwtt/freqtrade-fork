@@ -17,7 +17,7 @@ from freqtrade.exchange.binance_public_data import (
     download_archive_trades,
 )
 from freqtrade.exchange.common import retrier
-from freqtrade.exchange.exchange_types import CcxtOrder, FtHas, Tickers
+from freqtrade.exchange.exchange_types import FtHas, Tickers
 from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
 from freqtrade.misc import deep_merge_dicts, json_load
 from freqtrade.util import FtTTLCache
@@ -51,6 +51,8 @@ class Binance(Exchange):
         "funding_fee_candle_limit": 1000,
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
         "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
+        "stoploss_query_requires_stop_flag": True,
+        "stoploss_algo_order_info_id": "actualOrderId",
         "tickers_have_price": False,
         "floor_leverage": True,
         "fetch_orders_limit_minutes": 7 * 1440,  # "fetch_orders" is limited to 7 days
@@ -144,20 +146,6 @@ class Binance(Exchange):
 
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
-
-    def fetch_stoploss_order(
-        self, order_id: str, pair: str, params: dict | None = None
-    ) -> CcxtOrder:
-        if self.trading_mode == TradingMode.FUTURES:
-            params = params or {}
-            params.update({"stop": True})
-        return self.fetch_order(order_id, pair, params)
-
-    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        if self.trading_mode == TradingMode.FUTURES:
-            params = params or {}
-            params.update({"stop": True})
-        return self.cancel_order(order_id=order_id, pair=pair, params=params)
 
     def get_historic_ohlcv(
         self,

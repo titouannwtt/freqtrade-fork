@@ -132,6 +132,7 @@ class Exchange:
         "stop_price_prop": "stopLossPrice",  # Used for stoploss_on_exchange response parsing
         "stoploss_order_types": {},
         "stoploss_blocks_assets": True,  # By default stoploss orders block assets
+        "stoploss_query_requires_stop_flag": False,  # Require "stop": True" to fetch stop orders
         "order_time_in_force": ["GTC"],
         "ohlcv_params": {},
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
@@ -1687,7 +1688,24 @@ class Exchange:
     def fetch_stoploss_order(
         self, order_id: str, pair: str, params: dict | None = None
     ) -> CcxtOrder:
-        return self.fetch_order(order_id, pair, params)
+        if self.get_option("stoploss_query_requires_stop_flag"):
+            params = params or {}
+            params["stop"] = True
+        order = self.fetch_order(order_id, pair, params)
+        val = self.get_option("stoploss_algo_order_info_id")
+        if val and order.get("status", "open") == "closed":
+            if new_orderid := order.get("info", {}).get(val):
+                # Fetch real order, which was placed by the algo order.
+                actual_order = self.fetch_order(order_id=new_orderid, pair=pair, params=None)
+                actual_order["id_stop"] = actual_order["id"]
+                actual_order["id"] = order_id
+                actual_order["type"] = "stoploss"
+                actual_order["stopPrice"] = order.get("stopPrice")
+                actual_order["status_stop"] = "triggered"
+
+                return actual_order
+
+        return order
 
     def fetch_order_or_stoploss_order(
         self, order_id: str, pair: str, stoploss_order: bool = False
@@ -1741,6 +1759,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
+        if self.get_option("stoploss_query_requires_stop_flag"):
+            params = params or {}
+            params["stop"] = True
         return self.cancel_order(order_id, pair, params)
 
     def is_cancel_order_result_suitable(self, corder) -> TypeGuard[CcxtOrder]:
