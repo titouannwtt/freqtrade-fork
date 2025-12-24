@@ -60,6 +60,8 @@ jobs:
         uv pip install -e ft_client/
         uv pip install -e .
 
+    - uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266 # v1.1.0
+
     - name: Check for version alignment
       run: |
         python build_helpers/freqtrade_client_version_align.py
@@ -87,12 +89,12 @@ jobs:
         rm -rf codecov codecov.SHA256SUM codecov.SHA256SUM.sig
 
     - name: Run json schema extract
-      # This should be kept before the repository check to ensure that the schema is up-to-date
+      # This must be kept before the repository check to ensure that the schema is up-to-date
       run: |
         python build_helpers/extract_config_json_schema.py
 
     - name: Run command docs partials extract
-      # This should be kept before the repository check to ensure that the docs are up-to-date
+      # This must be kept before the repository check to ensure that the docs are up-to-date
       if: ${{ (matrix.python-version == '3.13') }}
       run: |
         python build_helpers/create_command_partials.py
