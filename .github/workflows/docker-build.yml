@@ -290,6 +290,7 @@ jobs:
         docker buildx imagetools create \
           --tag ${GHCR_IMAGE_NAME}:${TAG} \
           --tag ${GHCR_IMAGE_NAME}:latest \
+          --tag ${IMAGE_NAME}:latest \
           ${IMAGE_NAME}:${TAG}
 
     - name: Docker images
