@@ -87,12 +87,12 @@ jobs:
         rm -rf codecov codecov.SHA256SUM codecov.SHA256SUM.sig
 
     - name: Run json schema extract
-      # This should be kept before the repository check to ensure that the schema is up-to-date
+      # This must be kept before the repository check to ensure that the schema is up-to-date
       run: |
         python build_helpers/extract_config_json_schema.py
 
     - name: Run command docs partials extract
-      # This should be kept before the repository check to ensure that the docs are up-to-date
+      # This must be kept before the repository check to ensure that the docs are up-to-date
       if: ${{ (matrix.python-version == '3.13') }}
       run: |
         python build_helpers/create_command_partials.py
