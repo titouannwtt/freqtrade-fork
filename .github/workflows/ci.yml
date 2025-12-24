@@ -60,7 +60,6 @@ jobs:
         uv pip install -e ft_client/
         uv pip install -e .
 
-
     - name: Check for version alignment
       run: |
         python build_helpers/freqtrade_client_version_align.py

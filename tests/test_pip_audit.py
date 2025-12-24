@@ -1,3 +1,9 @@
+"""
+Run pip audit to check for known security vulnerabilities in installed packages.
+Original Idea and base for this implementation by Michael Kennedy's blog:
+https://mkennedy.codes/posts/python-supply-chain-security-made-easy/
+"""
+
 import subprocess
 import sys
 from pathlib import Path
