@@ -180,7 +180,11 @@ AVAILABLE_CLI_OPTIONS = {
     "position_stacking": Arg(
         "--eps",
         "--enable-position-stacking",
-        help="Allow buying the same pair multiple times (position stacking).",
+        help=(
+            "Allow buying the same pair multiple times (position stacking). "
+            "Only applicable to backtesting and hyperopt. "
+            "Results archived by this cannot be reproduced in dry/live trading."
+        ),
         action="store_true",
         default=False,
     ),
