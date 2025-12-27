@@ -65,10 +65,15 @@ class Hyperliquid(Exchange):
     def validate_config(self, config: dict) -> None:
         """Validate HIP-3 configuration at bot startup."""
         super().validate_config(config)
-        if self.trading_mode != TradingMode.FUTURES:
-            return
         configured = self._get_configured_hip3_dexes()
         if not configured or not self.markets:
+            return
+        if self.trading_mode != TradingMode.FUTURES:
+            if configured:
+                raise OperationalException(
+                    "HIP-3 DEXes are only supported in FUTURES trading mode. "
+                    "Please update your configuration!"
+                )
             return
         if configured and self.margin_mode != MarginMode.ISOLATED:
             raise OperationalException(
