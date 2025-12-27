@@ -7,6 +7,7 @@ from typing import Any
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
+from freqtrade.enums.runmode import NON_UTIL_MODES
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, CcxtPosition, FtHas
@@ -89,7 +90,7 @@ class Hyperliquid(Exchange):
         super().market_is_tradable(market)
 
         market_info = market.get("info", {})
-        if market_info.get("hip3"):
+        if market_info.get("hip3") and self._config["runmode"] in NON_UTIL_MODES:
             configured = self._get_configured_hip3_dexes()
             if not configured:
                 return False
