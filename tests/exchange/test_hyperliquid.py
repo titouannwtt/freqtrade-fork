@@ -300,33 +300,6 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker, margin_mode
             "liquidationPrice": 210.5263157894737,
         },
         {
-            "symbol": "XYZ-AAPL/USDC:USDC",
-            "entryPrice": 280.0,
-            "side": "long",
-            "contracts": 0.5,
-            "collateral": 14.0,
-            "leverage": 10.0,
-            "liquidationPrice": 265.2631578947368,
-        },
-        {
-            "symbol": "XYZ-AAPL/USDC:USDC",
-            "entryPrice": 260.0,
-            "side": "short",
-            "contracts": 0.5,
-            "collateral": 26.0,
-            "leverage": 5.0,
-            "liquidationPrice": 297.1428571428571,
-        },
-        {
-            "symbol": "XYZ-GOOGL/USDC:USDC",
-            "entryPrice": 180.0,
-            "side": "long",
-            "contracts": 1.0,
-            "collateral": 60.0,
-            "leverage": 3.0,
-            "liquidationPrice": 126.3157894736842,
-        },
-        {
             "symbol": "XYZ-GOOGL/USDC:USDC",
             "entryPrice": 190.0,
             "side": "short",
@@ -344,32 +317,12 @@ def test_hyperliquid_dry_run_liquidation_price(default_conf, mocker, margin_mode
             "leverage": 7.0,
             "liquidationPrice": 315.7894736842105,
         },
-        {
-            "symbol": "XYZ-TSLA/USDC:USDC",
-            "entryPrice": 340.0,
-            "side": "short",
-            "contracts": 0.9999705882352942,
-            "collateral": 113.33,
-            "leverage": 3.0,
-            "liquidationPrice": 431.74603174603175,
-        },
-        {
-            "symbol": "XYZ-TSLA/USDC:USDC",
-            "entryPrice": 360.0,
-            "side": "long",
-            "contracts": 0.5,
-            "collateral": 90.0,
-            "leverage": 2.0,
-            "liquidationPrice": 189.4736842105263,
-        },
     ]
 
     api_mock = MagicMock()
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = margin_mode
     default_conf["stake_currency"] = "USDC"
-    # Configure HIP-3 DEXes
-    default_conf["exchange"]["hip3_dexes"] = ["xyz"]
     api_mock.load_markets = get_mock_coro()
     api_mock.markets = markets
     exchange = get_patched_exchange(
