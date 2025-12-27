@@ -69,6 +69,12 @@ class Hyperliquid(Exchange):
         configured = self._get_configured_hip3_dexes()
         if not configured or not self.markets:
             return
+        if configured and self.margin_mode != MarginMode.ISOLATED:
+            raise OperationalException(
+                "HIP-3 DEXes require 'isolated' margin mode. "
+                f"Current margin mode: '{self.margin_mode.value}'. "
+                "Please update your configuration!"
+            )
 
         available = {
             m.get("info", {}).get("dex")
