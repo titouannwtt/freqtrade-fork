@@ -778,7 +778,7 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
             return vntl_positions
         return default_positions
 
-    api_mock.fetch_positions = MagicMock(side_effect=fetch_positions_side_effect)
+    positions_mock = MagicMock(side_effect=fetch_positions_side_effect)
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
@@ -789,9 +789,7 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
     )
 
     # Mock super().fetch_positions() to return default positions
-    mocker.patch(
-        "freqtrade.exchange.exchange.Exchange.fetch_positions", return_value=default_positions
-    )
+    mocker.patch(f"{EXMS}.fetch_positions", positions_mock)
 
     positions = exchange.fetch_positions()
 
@@ -802,7 +800,7 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
     assert any(p["symbol"] == "VNTL-SPACEX/USDH:USDH" for p in positions)
 
     # Verify API calls (xyz + vntl, default is mocked separately)
-    assert api_mock.fetch_positions.call_count == 2
+    assert positions_mock.call_count == 3
 
 
 def test_hyperliquid_market_is_tradable(default_conf, mocker):
