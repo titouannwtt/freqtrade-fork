@@ -1826,16 +1826,16 @@ class Exchange:
         return order
 
     @retrier
-    def get_balances(self) -> CcxtBalances:
+    def get_balances(self, params: dict | None = None) -> CcxtBalances:
         try:
-            balances = self._api.fetch_balance()
+            balances = self._api.fetch_balance(params or {})
             # Remove additional info from ccxt results
             balances.pop("info", None)
             balances.pop("free", None)
             balances.pop("total", None)
             balances.pop("used", None)
 
-            self._log_exchange_response("fetch_balance", balances)
+            self._log_exchange_response("fetch_balance", balances, add_info=params)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
@@ -1847,7 +1847,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
+    def fetch_positions(
+        self, pair: str | None = None, params: dict | None = None
+    ) -> list[CcxtPosition]:
         """
         Fetch positions from the exchange.
         If no pair is given, all positions are returned.
@@ -1859,7 +1861,7 @@ class Exchange:
             symbols = None
             if pair:
                 symbols = [pair]
-            positions: list[CcxtPosition] = self._api.fetch_positions(symbols)
+            positions: list[CcxtPosition] = self._api.fetch_positions(symbols, params=params or {})
             self._log_exchange_response("fetch_positions", positions)
             return positions
         except ccxt.DDoSProtection as e:

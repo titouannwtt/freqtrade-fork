@@ -9,7 +9,7 @@ from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import ExchangeError, OperationalException
 from freqtrade.exchange import Exchange
-from freqtrade.exchange.exchange_types import CcxtOrder, CcxtPosition, FtHas
+from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, CcxtPosition, FtHas
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -99,13 +99,13 @@ class Hyperliquid(Exchange):
 
         return True
 
-    def get_balances(self) -> dict:
+    def get_balances(self, params: dict | None = None) -> CcxtBalances:
         """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs."""
         balances = super().get_balances()
-
-        for dex in self._get_configured_hip3_dexes():
+        dexes = self._get_configured_hip3_dexes()
+        for dex in dexes:
             try:
-                dex_balance = self._api.fetch_balance({"dex": dex})
+                dex_balance = super().get_balances(params={"dex": dex})
 
                 for currency, amount_info in dex_balance.items():
                     if currency in ["info", "free", "used", "total", "datetime", "timestamp"]:
@@ -121,18 +121,23 @@ class Hyperliquid(Exchange):
             except Exception as e:
                 logger.error(f"Could not fetch balance for HIP-3 DEX '{dex}': {e}")
 
+        if dexes:
+            self._log_exchange_response("fetch_balance", balances, add_info="combined")
         return balances
 
-    def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
+    def fetch_positions(
+        self, pair: str | None = None, params: dict | None = None
+    ) -> list[CcxtPosition]:
         """Fetch positions from default DEX and HIP-3 DEXes needed by tradable pairs."""
         positions = super().fetch_positions(pair)
-
-        for dex in self._get_configured_hip3_dexes():
+        dexes = self._get_configured_hip3_dexes()
+        for dex in dexes:
             try:
-                positions.extend(self._api.fetch_positions(params={"dex": dex}))
+                positions.extend(super().fetch_positions(pair, params={"dex": dex}))
             except Exception as e:
                 logger.error(f"Could not fetch positions from HIP-3 DEX '{dex}': {e}")
-
+        if dexes:
+            self._log_exchange_response("fetch_positions", positions, add_info="combined")
         return positions
 
     def get_max_leverage(self, pair: str, stake_amount: float | None) -> float:
