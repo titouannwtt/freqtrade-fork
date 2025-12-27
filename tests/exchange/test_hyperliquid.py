@@ -498,6 +498,8 @@ def test_hyperliquid__lev_prep(default_conf, mocker):
 
 def test_hyperliquid_fetch_order(default_conf_usdt, mocker):
     default_conf_usdt["dry_run"] = False
+    default_conf_usdt["trading_mode"] = "futures"
+    default_conf_usdt["margin_mode"] = "isolated"
     default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
 
     api_mock = MagicMock()
@@ -691,6 +693,8 @@ def test_hyperliquid_get_balances_hip3(default_conf, mocker):
 
     # Test with two HIP-3 DEXes
     default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
     exchange = get_patched_exchange(
         mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
     )
@@ -758,6 +762,8 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
 
 def test_hyperliquid_market_is_tradable(default_conf, mocker):
     """Test market_is_tradable filters HIP-3 markets correctly."""
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
     api_mock = MagicMock()
     markets = {
         "BTC/USDC:USDC": {"info": {}, "active": True},
@@ -769,6 +775,8 @@ def test_hyperliquid_market_is_tradable(default_conf, mocker):
     }
     api_mock.load_markets = get_mock_coro(return_value=markets)
     api_mock.markets = markets
+    # Mock parent call - we only want to test hyperliquid specifics here.
+    mocker.patch(f"{EXMS}.market_is_tradable", return_value=True)
 
     # Test 1: No HIP-3 DEXes configured - only default markets tradable
     default_conf["exchange"]["hip3_dexes"] = []
