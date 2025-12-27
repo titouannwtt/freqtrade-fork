@@ -430,7 +430,8 @@ The Hyperliquid API does not provide historic data beyond the single call to fet
 
 ### HIP-3 DEXes
 
-Hyperliquid supports HIP-3 decentralized exchanges (DEXes), which are independent exchanges built on the Hyperliquid infrastructure. These DEXes operate similarly to the main Hyperliquid exchange but are community-created and managed.
+Hyperliquid supports HIP-3 decentralized exchanges (DEXes), which are independent exchanges built on top of the Hyperliquid infrastructure.
+These DEXes operate similarly to the main Hyperliquid exchange but are community-created and managed.
 
 To trade on HIP-3 DEXes with Freqtrade, you need to add them to your configuration using the `hip3_dexes` parameter:
 
@@ -443,20 +444,19 @@ To trade on HIP-3 DEXes with Freqtrade, you need to add them to your configurati
 }
 ```
 
-Replace `"dex_name_1"` and `"dex_name_2"` with the actual names of the HIP-3 DEXes you want to trade on.
+Replace `"dex_name_1"` and `"dex_name_2"` with the actual names of the HIP-3 DEXes you want to trade on (e.g. `vntl` and `xyz`).
 
-!!! Warning Performance and Rate Limit Impact
+!!! Warning "Performance and Rate Limit Impact"
+    Each HIP-3 DEX you add significantly impacts bot performance and rate limits.
 
-**Each HIP-3 DEX you add significantly impacts bot performance and rate limits:**
+    * **Additional API Calls**: For each HIP-3 DEX configured, Freqtrade needs to make additional API calls.
+    * **Rate Limit Pressure**: Additional API calls contribute to Hyperliquid's strict rate limits. With multiple DEXes, you may hit rate limits faster, or rather, slow down bot operations due to enforced delays.
 
-* **Additional API Calls**: For each HIP-3 DEX configured, Freqtrade makes additional Balance and Position API queries.
-* **Increased Latency**: Each DEX adds approximately 0.7 seconds of delay due to these calls.
-* **Rate Limit Pressure**: Additional API calls contribute to Hyperliquid's strict rate limits. With multiple DEXes, you may hit rate limits faster.
-
-**Recommendation**: Only add HIP-3 DEXes that you actively trade on. Monitor your logs for rate limit warnings.
+    Please only add HIP-3 DEXes that you actively trade on. Monitor your logs for rate limit warnings or signs of slowed operations, and adjust your configuration accordingly.  
+    Different HIP-3 DEXes may also use different quote currencies - so make sure to only add DEXes that are compatible with your stake currency to avoid unnecessary delays.
 
 !!! Note
-    HIP-3 DEXes share the same wallet and free amount of colleteral as your main Hyperliquid account. Trades on different DEXes will affect your overall account balance and margin.
+    HIP-3 DEXes share the same wallet and free amount of collateral as your main Hyperliquid account. Trades on different DEXes will affect your overall account balance and margin.
 
 ## Bitvavo
 
