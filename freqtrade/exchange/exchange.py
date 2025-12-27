@@ -709,7 +709,7 @@ class Exchange:
             self._markets = self._api_async.markets
             self._api.set_markets_from_exchange(self._api_async)
             # Assign options array, as it contains some temporary information from the exchange.
-            # TODO: investigate with ccxt if it's safe to remove `.options`
+            # ccxt does not implicitly copy options over in set_markets_from_exchange
             self._api.options = self._api_async.options
             if self._exchange_ws:
                 # Set markets to avoid reloading on websocket api
