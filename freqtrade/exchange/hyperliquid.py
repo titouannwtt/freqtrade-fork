@@ -108,7 +108,10 @@ class Hyperliquid(Exchange):
         return parent_check
 
     def get_balances(self, params: dict | None = None) -> CcxtBalances:
-        """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs."""
+        """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs.
+        This override is not absolutely necessary and is only there for correct used / total values
+        which are however not used by Freqtrade in futures mode at the moment.
+        """
         balances = super().get_balances()
         dexes = self._get_configured_hip3_dexes()
         for dex in dexes:
