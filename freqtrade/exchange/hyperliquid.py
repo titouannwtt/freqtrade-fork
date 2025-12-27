@@ -94,7 +94,7 @@ class Hyperliquid(Exchange):
 
     def market_is_tradable(self, market: dict[str, Any]) -> bool:
         """Check if market is tradable, including HIP-3 markets."""
-        super().market_is_tradable(market)
+        parent_check = super().market_is_tradable(market)
 
         market_info = market.get("info", {})
         if market_info.get("hip3") and self._config["runmode"] in NON_UTIL_MODES:
@@ -103,9 +103,9 @@ class Hyperliquid(Exchange):
                 return False
 
             market_dex = market_info.get("dex")
-            return market_dex in configured
+            return parent_check and market_dex in configured
 
-        return True
+        return parent_check
 
     def get_balances(self, params: dict | None = None) -> CcxtBalances:
         """Fetch balances from default DEX and HIP-3 DEXes needed by tradable pairs."""
