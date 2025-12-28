@@ -8,7 +8,7 @@ from typing import Any
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.enums.runmode import NON_UTIL_MODES
-from freqtrade.exceptions import ExchangeError, OperationalException
+from freqtrade.exceptions import ConfigurationError, ExchangeError, OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, CcxtPosition, FtHas
 from freqtrade.util.datetime_helpers import dt_from_ts
@@ -70,13 +70,13 @@ class Hyperliquid(Exchange):
             return
         if self.trading_mode != TradingMode.FUTURES:
             if configured:
-                raise OperationalException(
+                raise ConfigurationError(
                     "HIP-3 DEXes are only supported in FUTURES trading mode. "
                     "Please update your configuration!"
                 )
             return
         if configured and self.margin_mode != MarginMode.ISOLATED:
-            raise OperationalException(
+            raise ConfigurationError(
                 "HIP-3 DEXes require 'isolated' margin mode. "
                 f"Current margin mode: '{self.margin_mode.value}'. "
                 "Please update your configuration!"
@@ -91,7 +91,7 @@ class Hyperliquid(Exchange):
 
         invalid = set(configured) - available
         if invalid:
-            raise OperationalException(
+            raise ConfigurationError(
                 f"Invalid HIP-3 DEXes configured: {sorted(invalid)}. "
                 f"Available DEXes: {sorted(available)}. "
                 f"Check your 'hip3_dexes' configuration!"
