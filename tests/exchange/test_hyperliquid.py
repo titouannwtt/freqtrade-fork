@@ -1,8 +1,10 @@
+from copy import deepcopy
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
+from freqtrade.exceptions import ConfigurationError
 from tests.conftest import EXMS, get_mock_coro, get_patched_exchange
 
 
@@ -623,7 +625,6 @@ def test_hyperliquid_fetch_order(default_conf_usdt, mocker):
 
 def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker):
     """Test HIP-3 DEX configuration validation."""
-    from freqtrade.exceptions import OperationalException
 
     api_mock = MagicMock()
     markets = {
@@ -633,7 +634,24 @@ def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker):
     api_mock.load_markets = get_mock_coro(return_value=markets)
     api_mock.markets = markets
 
-    # Test 1: Valid single DEX
+    # Futures mode, no dex configured
+    default_conf_copy = deepcopy(default_conf_usdt)
+    default_conf_copy["trading_mode"] = "futures"
+    default_conf_copy["margin_mode"] = "isolated"
+    exchange = get_patched_exchange(
+        mocker, default_conf_copy, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+    exchange.validate_config(default_conf_copy)
+
+    # Not in futures mode
+    default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz"]
+    with pytest.raises(
+        ConfigurationError, match=r"HIP-3 DEXes are only supported in FUTURES trading mode\."
+    ):
+        get_patched_exchange(
+            mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
+        )
+    # Valid single DEX
     default_conf_usdt["trading_mode"] = "futures"
     default_conf_usdt["margin_mode"] = "isolated"
     default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz"]
@@ -642,24 +660,24 @@ def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker):
     )
     assert exchange._get_configured_hip3_dexes() == ["xyz"]
 
-    # Test 2: Invalid DEX
+    # Invalid DEX
     default_conf_usdt["exchange"]["hip3_dexes"] = ["invalid_dex"]
-    with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
+    with pytest.raises(ConfigurationError, match="Invalid HIP-3 DEXes configured"):
         exchange = get_patched_exchange(
             mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
         )
         exchange.validate_config(default_conf_usdt)
 
-    # Test 3: Mix of valid and invalid DEX
+    # Mix of valid and invalid DEX
     default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz", "invalid_dex"]
-    with pytest.raises(OperationalException, match="Invalid HIP-3 DEXes configured"):
+    with pytest.raises(ConfigurationError, match="Invalid HIP-3 DEXes configured"):
         exchange = get_patched_exchange(
             mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
         )
         exchange.validate_config(default_conf_usdt)
 
     default_conf_usdt["margin_mode"] = "cross"
-    with pytest.raises(OperationalException, match="HIP-3 DEXes require 'isolated' margin mode"):
+    with pytest.raises(ConfigurationError, match="HIP-3 DEXes require 'isolated' margin mode"):
         exchange = get_patched_exchange(
             mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
         )
