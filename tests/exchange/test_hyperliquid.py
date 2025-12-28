@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, PropertyMock
 import pytest
 
 from freqtrade.exceptions import ConfigurationError
-from tests.conftest import EXMS, get_mock_coro, get_patched_exchange
+from tests.conftest import EXMS, get_mock_coro, get_patched_exchange, log_has_re
 
 
 @pytest.mark.parametrize("margin_mode", ["isolated", "cross"])
@@ -684,13 +684,14 @@ def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker):
         exchange.validate_config(default_conf_usdt)
 
 
-def test_hyperliquid_get_balances_hip3(default_conf, mocker):
+def test_hyperliquid_get_balances_hip3(default_conf, mocker, caplog):
     """Test balance fetching from HIP-3 DEXes."""
     api_mock = MagicMock()
     markets = {
         "BTC/USDC:USDC": {"info": {}},
         "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
         "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+        "FLX-TOKEN/USDC:USDC": {"info": {"hip3": True, "dex": "flx"}},
     }
     api_mock.load_markets = get_mock_coro()
     api_mock.markets = markets
@@ -705,12 +706,14 @@ def test_hyperliquid_get_balances_hip3(default_conf, mocker):
             return xyz_balance
         elif params and params.get("dex") == "vntl":
             return vntl_balance
+        elif params and params.get("dex") == "flx":
+            raise Exception("FLX DEX error")
         return default_balance
 
     api_mock.fetch_balance = MagicMock(side_effect=fetch_balance_side_effect)
 
     # Test with two HIP-3 DEXes
-    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl", "flx"]
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
     exchange = get_patched_exchange(
@@ -727,16 +730,18 @@ def test_hyperliquid_get_balances_hip3(default_conf, mocker):
     assert balances["USDH"]["used"] == 300
     assert balances["USDH"]["total"] == 300
 
-    assert api_mock.fetch_balance.call_count == 3
+    assert api_mock.fetch_balance.call_count == 4
+    assert log_has_re("Could not fetch balance for HIP-3 DEX.*", caplog)
 
 
-def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
+def test_hyperliquid_fetch_positions_hip3(default_conf, mocker, caplog):
     """Test position fetching from HIP-3 DEXes."""
     api_mock = MagicMock()
     markets = {
         "BTC/USDC:USDC": {"info": {}},
         "XYZ-AAPL/USDC:USDC": {"info": {"hip3": True, "dex": "xyz"}},
         "VNTL-SPACEX/USDH:USDH": {"info": {"hip3": True, "dex": "vntl"}},
+        "FLX-TOKEN/USDC:USDC": {"info": {"hip3": True, "dex": "flx"}},
     }
     api_mock.load_markets = get_mock_coro(return_value=markets)
     api_mock.markets = markets
@@ -751,13 +756,15 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
             return xyz_positions
         elif params and params.get("dex") == "vntl":
             return vntl_positions
+        elif params and params.get("dex") == "flx":
+            raise Exception("FLX DEX error")
         return default_positions
 
     positions_mock = MagicMock(side_effect=fetch_positions_side_effect)
 
     default_conf["trading_mode"] = "futures"
     default_conf["margin_mode"] = "isolated"
-    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl", "flx"]
 
     exchange = get_patched_exchange(
         mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
@@ -768,6 +775,8 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
 
     positions = exchange.fetch_positions()
 
+    assert log_has_re("Could not fetch positions from HIP-3 .*", caplog)
+
     # Should have all positions combined (default + HIP-3)
     assert len(positions) == 3
     assert any(p["symbol"] == "BTC/USDC:USDC" for p in positions)
@@ -775,7 +784,7 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker):
     assert any(p["symbol"] == "VNTL-SPACEX/USDH:USDH" for p in positions)
 
     # Verify API calls (xyz + vntl, default is mocked separately)
-    assert positions_mock.call_count == 3
+    assert positions_mock.call_count == 4
 
 
 def test_hyperliquid_market_is_tradable(default_conf, mocker):
