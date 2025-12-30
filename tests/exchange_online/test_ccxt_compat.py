@@ -67,12 +67,14 @@ class TestCCXTExchange:
     def test_load_markets_futures(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exchange, exchangename = exchange_futures
         pair = EXCHANGES[exchangename]["pair"]
-        pair = EXCHANGES[exchangename].get("futures_pair", pair)
+        pair1 = EXCHANGES[exchangename].get("futures_pair", pair)
+        alternative_pairs = EXCHANGES[exchangename].get("futures_alt_pairs", [])
         markets = exchange.markets
-        assert pair in markets
-        assert isinstance(markets[pair], dict)
+        for pair in [pair1] + alternative_pairs:
+            assert pair in markets, f"Futures pair {pair} not found in markets"
+            assert isinstance(markets[pair], dict)
 
-        assert exchange.market_is_future(markets[pair])
+            assert exchange.market_is_future(markets[pair])
 
     def test_ccxt_order_parse(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exch, exchange_name = exchange
