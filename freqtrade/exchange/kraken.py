@@ -35,7 +35,6 @@ class Kraken(Exchange):
         "trades_pagination_arg": "since",
         "trades_pagination_overlap": False,
         "trades_has_history": True,
-        "mark_ohlcv_timeframe": "4h",
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [

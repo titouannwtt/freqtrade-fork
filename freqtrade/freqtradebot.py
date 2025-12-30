@@ -1064,7 +1064,16 @@ class FreqtradeBot(LoggingMixin):
 
         return True
 
-    def cancel_stoploss_on_exchange(self, trade: Trade) -> Trade:
+    def cancel_stoploss_on_exchange(self, trade: Trade, allow_nonblocking: bool = False) -> Trade:
+        """
+        Cancels on exchange stoploss orders for the given trade.
+        :param trade: Trade for which to cancel stoploss order
+        :param allow_nonblocking: If True, will skip cancelling stoploss on exchange
+                                   if the exchange supports blocking stoploss orders.
+        """
+        if allow_nonblocking and not self.exchange.get_option("stoploss_blocks_assets", True):
+            logger.info(f"Skipping cancelling stoploss on exchange for {trade}.")
+            return trade
         # First cancelling stoploss on exchange ...
         for oslo in trade.open_sl_orders:
             try:
@@ -2003,14 +2012,14 @@ class FreqtradeBot(LoggingMixin):
 
     def _safe_exit_amount(self, trade: Trade, pair: str, amount: float) -> float:
         """
-        Get sellable amount.
+        Get exitable amount.
         Should be trade.amount - but will fall back to the available amount if necessary.
         This should cover cases where get_real_amount() was not able to update the amount
         for whatever reason.
         :param trade: Trade we're working with
-        :param pair: Pair we're trying to sell
+        :param pair: Pair we're trying to exit
         :param amount: amount we expect to be available
-        :return: amount to sell
+        :return: amount to exit
         :raise: DependencyException: if available balance is not within 2% of the available amount.
         """
         # Update wallets to ensure amounts tied up in a stoploss is now free!
@@ -2046,11 +2055,12 @@ class FreqtradeBot(LoggingMixin):
         exit_tag: str | None = None,
         ordertype: str | None = None,
         sub_trade_amt: float | None = None,
+        skip_custom_exit_price: bool = False,
     ) -> bool:
         """
         Executes a trade exit for the given trade and limit
         :param trade: Trade instance
-        :param limit: limit rate for the sell order
+        :param limit: limit rate for the exit order
         :param exit_check: CheckTuple with signal and reason
         :return: True if it succeeds False
         """
@@ -2072,29 +2082,33 @@ class FreqtradeBot(LoggingMixin):
         ):
             exit_type = "stoploss"
 
+        order_type = (
+            (ordertype or self.strategy.order_types[exit_type])
+            if exit_check.exit_type != ExitType.EMERGENCY_EXIT
+            else self.strategy.order_types.get("emergency_exit", "market")
+        )
+
         # set custom_exit_price if available
         proposed_limit_rate = limit
+        custom_exit_price = limit
+
         current_profit = trade.calc_profit_ratio(limit)
-        custom_exit_price = strategy_safe_wrapper(
-            self.strategy.custom_exit_price, default_retval=proposed_limit_rate
-        )(
-            pair=trade.pair,
-            trade=trade,
-            current_time=datetime.now(UTC),
-            proposed_rate=proposed_limit_rate,
-            current_profit=current_profit,
-            exit_tag=exit_reason,
-        )
+        if order_type == "limit" and not skip_custom_exit_price:
+            custom_exit_price = strategy_safe_wrapper(
+                self.strategy.custom_exit_price, default_retval=proposed_limit_rate
+            )(
+                pair=trade.pair,
+                trade=trade,
+                current_time=datetime.now(UTC),
+                proposed_rate=proposed_limit_rate,
+                current_profit=current_profit,
+                exit_tag=exit_reason,
+            )
 
         limit = self.get_valid_price(custom_exit_price, proposed_limit_rate)
 
         # First cancelling stoploss on exchange ...
-        trade = self.cancel_stoploss_on_exchange(trade)
-
-        order_type = ordertype or self.strategy.order_types[exit_type]
-        if exit_check.exit_type == ExitType.EMERGENCY_EXIT:
-            # Emergency sells (default to market!)
-            order_type = self.strategy.order_types.get("emergency_exit", "market")
+        trade = self.cancel_stoploss_on_exchange(trade, allow_nonblocking=True)
 
         amount = self._safe_exit_amount(trade, trade.pair, sub_trade_amt or trade.amount)
         time_in_force = self.strategy.order_time_in_force["exit"]
@@ -2122,7 +2136,7 @@ class FreqtradeBot(LoggingMixin):
                 return False
 
         try:
-            # Execute sell and update trade record
+            # Execute exit and update trade record
             order = self.exchange.create_order(
                 pair=trade.pair,
                 ordertype=order_type,
@@ -2150,7 +2164,7 @@ class FreqtradeBot(LoggingMixin):
         trade.exit_reason = exit_reason
 
         self._notify_exit(trade, order_type, sub_trade=bool(sub_trade_amt), order=order_obj)
-        # In case of market sell orders the order can be closed immediately
+        # In case of market exit orders the order can be closed immediately
         if order.get("status", "unknown") in ("closed", "expired"):
             self.update_trade_state(trade, order_obj.order_id, order)
         Trade.commit()
@@ -2380,6 +2394,8 @@ class FreqtradeBot(LoggingMixin):
                 self.strategy.ft_stoploss_adjust(
                     current_rate, trade, datetime.now(UTC), profit, 0, after_fill=True
                 )
+            if not trade.is_open:
+                self.cancel_stoploss_on_exchange(trade)
             # Updating wallets when order is closed
             self.wallets.update()
         return trade
