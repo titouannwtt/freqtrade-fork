@@ -643,6 +643,10 @@ def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker):
     )
     exchange.validate_config(default_conf_copy)
 
+    # Not in futures mode - no dex configured - no error
+    get_patched_exchange(
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
+    )
     # Not in futures mode
     default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz"]
     with pytest.raises(
