@@ -84,7 +84,11 @@ class Hyperliquid(Exchange):
 
         available = {
             m.get("info", {}).get("dex")
-            for m in self.markets.values()
+            for m in self.get_markets(
+                quote_currencies=[self._config["stake_currency"]],
+                tradable_only=True,
+                active_only=True,
+            ).values()
             if m.get("info", {}).get("hip3")
         }
         available.discard(None)
@@ -93,7 +97,8 @@ class Hyperliquid(Exchange):
         if invalid:
             raise ConfigurationError(
                 f"Invalid HIP-3 DEXes configured: {sorted(invalid)}. "
-                f"Available DEXes: {sorted(available)}. "
+                f"Available DEXes matching your stake currency ({self._config['stake_currency']}): "
+                f"{sorted(available)}. "
                 f"Check your 'hip3_dexes' configuration!"
             )
 
