@@ -699,6 +699,7 @@ def test_hyperliquid_hip3_config_validation(default_conf_usdt, mocker, markets_h
     """Test HIP-3 DEX configuration validation."""
 
     api_mock = MagicMock()
+    default_conf_usdt["stake_currency"] = "USDC"
 
     # Futures mode, no dex configured
     default_conf_copy = deepcopy(default_conf_usdt)
@@ -845,10 +846,11 @@ def test_hyperliquid_fetch_positions_hip3(default_conf, mocker, caplog, markets_
     assert positions_mock.call_count == 4
 
 
-def test_hyperliquid_market_is_tradable(default_conf, mocker, markets_hip3):
+def test_hyperliquid_market_is_tradable(default_conf_usdt, mocker, markets_hip3):
     """Test market_is_tradable filters HIP-3 markets correctly."""
-    default_conf["trading_mode"] = "futures"
-    default_conf["margin_mode"] = "isolated"
+    default_conf_usdt["stake_currency"] = "USDC"
+    default_conf_usdt["trading_mode"] = "futures"
+    default_conf_usdt["margin_mode"] = "isolated"
     api_mock = MagicMock()
     api_mock.load_markets = get_mock_coro(return_value=markets_hip3)
     api_mock.markets = markets_hip3
@@ -856,9 +858,9 @@ def test_hyperliquid_market_is_tradable(default_conf, mocker, markets_hip3):
     mocker.patch(f"{EXMS}.market_is_tradable", return_value=True)
 
     # Test 1: No HIP-3 DEXes configured - only default markets tradable
-    default_conf["exchange"]["hip3_dexes"] = []
+    default_conf_usdt["exchange"]["hip3_dexes"] = []
     exchange = get_patched_exchange(
-        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
     )
 
     assert exchange.market_is_tradable(markets_hip3["BTC/USDC:USDC"]) is True
@@ -869,9 +871,9 @@ def test_hyperliquid_market_is_tradable(default_conf, mocker, markets_hip3):
     assert exchange.market_is_tradable(markets_hip3["FLX-TOKEN/USDC:USDC"]) is False
 
     # Test 2: Only 'xyz' configured - default + xyz markets tradable
-    default_conf["exchange"]["hip3_dexes"] = ["xyz"]
+    default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz"]
     exchange = get_patched_exchange(
-        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
     )
 
     assert exchange.market_is_tradable(markets_hip3["BTC/USDC:USDC"]) is True
@@ -882,14 +884,27 @@ def test_hyperliquid_market_is_tradable(default_conf, mocker, markets_hip3):
     assert exchange.market_is_tradable(markets_hip3["FLX-TOKEN/USDC:USDC"]) is False
 
     # Test 3: 'xyz' and 'vntl' configured - default + xyz + vntl markets tradable
-    default_conf["exchange"]["hip3_dexes"] = ["xyz", "vntl"]
+    default_conf_usdt["exchange"]["hip3_dexes"] = ["xyz", "flx"]
     exchange = get_patched_exchange(
-        mocker, default_conf, api_mock, exchange="hyperliquid", mock_markets=False
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
     )
 
     assert exchange.market_is_tradable(markets_hip3["BTC/USDC:USDC"]) is True
     assert exchange.market_is_tradable(markets_hip3["ETH/USDC:USDC"]) is True
     assert exchange.market_is_tradable(markets_hip3["XYZ-AAPL/USDC:USDC"]) is True
     assert exchange.market_is_tradable(markets_hip3["XYZ-TSLA/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets_hip3["VNTL-SPACEX/USDH:USDH"]) is False
+    assert exchange.market_is_tradable(markets_hip3["FLX-TOKEN/USDC:USDC"]) is True
+
+    # Use USDH stake currency to enable VNTL markets
+    default_conf_usdt["exchange"]["hip3_dexes"] = ["vntl"]
+    default_conf_usdt["stake_currency"] = "USDH"
+    exchange = get_patched_exchange(
+        mocker, default_conf_usdt, api_mock, exchange="hyperliquid", mock_markets=False
+    )
+    assert exchange.market_is_tradable(markets_hip3["BTC/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets_hip3["ETH/USDC:USDC"]) is True
+    assert exchange.market_is_tradable(markets_hip3["XYZ-AAPL/USDC:USDC"]) is False
+    assert exchange.market_is_tradable(markets_hip3["XYZ-TSLA/USDC:USDC"]) is False
     assert exchange.market_is_tradable(markets_hip3["VNTL-SPACEX/USDH:USDH"]) is True
     assert exchange.market_is_tradable(markets_hip3["FLX-TOKEN/USDC:USDC"]) is False
