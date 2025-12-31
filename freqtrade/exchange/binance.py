@@ -51,6 +51,8 @@ class Binance(Exchange):
         "funding_fee_candle_limit": 1000,
         "stoploss_order_types": {"limit": "stop", "market": "stop_market"},
         "stoploss_blocks_assets": False,  # Stoploss orders do not block assets
+        "stoploss_query_requires_stop_flag": True,
+        "stoploss_algo_order_info_id": "actualOrderId",
         "tickers_have_price": False,
         "floor_leverage": True,
         "fetch_orders_limit_minutes": 7 * 1440,  # "fetch_orders" is limited to 7 days
@@ -544,3 +546,26 @@ class Binance(Exchange):
                 cache[ft_symbol] = delist_dt
 
         return cache.get(pair, None)
+
+
+class Binanceusdm(Binance):
+    """Binacne USDM Exchange
+    Same as Binance - only futures trading is supported (via ccxt).
+
+    Not actually necessary, binance should be preferred.
+    """
+
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.FUTURES, MarginMode.CROSS),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
+    ]
+
+
+class Binanceus(Binance):
+    """Binance US exchange class.
+    Minimal adjustment to disable futures trading for the US subsidiary of Binance
+    """
+
+    _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
+        (TradingMode.SPOT, MarginMode.NONE),
+    ]
