@@ -47,7 +47,7 @@ class VolumePairList(IPairList):
         self._lookback_period = self._pairlistconfig.get("lookback_period", 0)
         self._def_candletype = self._config["candle_type_def"]
 
-        if (self._lookback_days > 0) & (self._lookback_period > 0):
+        if (self._lookback_days > 0) and (self._lookback_period > 0):
             raise OperationalException(
                 "Ambiguous configuration: lookback_days and lookback_period both set in pairlist "
                 "config. Please set lookback_days only or lookback_period and lookback_timeframe "
@@ -64,9 +64,9 @@ class VolumePairList(IPairList):
         _tf_in_sec = self._tf_in_min * 60
 
         # whether to use range lookback or not
-        self._use_range = (self._tf_in_min > 0) & (self._lookback_period > 0)
+        self._use_range = (self._tf_in_min > 0) and (self._lookback_period > 0)
 
-        if self._use_range & (self._refresh_period < _tf_in_sec):
+        if self._use_range and (self._refresh_period < _tf_in_sec):
             raise OperationalException(
                 f"Refresh period of {self._refresh_period} seconds is smaller than one "
                 f"timeframe of {self._lookback_timeframe}. Please adjust refresh_period "
