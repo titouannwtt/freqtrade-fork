@@ -22,6 +22,7 @@ from ccxt import (
 from freqtrade.exchange.common import (
     BAD_EXCHANGES,
     EXCHANGE_HAS_OPTIONAL,
+    EXCHANGE_HAS_OPTIONAL_FUTURES,
     EXCHANGE_HAS_REQUIRED,
     MAP_EXCHANGE_CHILDCLASS,
     SUPPORTED_EXCHANGES,
@@ -68,7 +69,7 @@ def _exchange_has_helper(ex_mod: ccxt.Exchange, required: dict[str, list[str]]) 
     ]
 
 
-def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
+def validate_exchange(exchange: str) -> tuple[bool, str, str, ccxt.Exchange | None]:
     """
     returns: can_use, reason, exchange_object
         with Reason including both missing and missing_opt
@@ -79,16 +80,19 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
         ex_mod = getattr(ccxt.async_support, exchange.lower())()
 
     if not ex_mod or not ex_mod.has:
-        return False, "", None
+        return False, "", "", None
 
     result = True
     reasons = []
+    reasons_fut = ""
     missing = _exchange_has_helper(ex_mod, EXCHANGE_HAS_REQUIRED)
     if missing:
         result = False
         reasons.append(f"missing: {', '.join(missing)}")
 
     missing_opt = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL)
+
+    missing_futures = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL_FUTURES)
 
     if exchange.lower() in BAD_EXCHANGES:
         result = False
@@ -97,14 +101,17 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
     if missing_opt:
         reasons.append(f"missing opt: {', '.join(missing_opt)}")
 
-    return result, "; ".join(reasons), ex_mod
+    if missing_futures:
+        reasons_fut = f"missing futures opt: {', '.join(missing_futures)}"
+
+    return result, "; ".join(reasons), reasons_fut, ex_mod
 
 
 def _build_exchange_list_entry(
     exchange_name: str, exchangeClasses: dict[str, Any]
 ) -> ValidExchangesType:
     exchange_name = exchange_name.lower()
-    valid, comment, ex_mod = validate_exchange(exchange_name)
+    valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name)
     mapped_exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name).lower()
     is_alias = getattr(ex_mod, "alias", False)
     result: ValidExchangesType = {
@@ -113,6 +120,7 @@ def _build_exchange_list_entry(
         "valid": valid,
         "supported": mapped_exchange_name in SUPPORTED_EXCHANGES and not is_alias,
         "comment": comment,
+        "comment_futures": comment_fut,
         "dex": getattr(ex_mod, "dex", False),
         "is_alias": is_alias,
         "alias_for": inspect.getmro(ex_mod.__class__)[1]().id

@@ -47,7 +47,7 @@ def check_exchange(config: Config, check_for_bad: bool = True) -> bool:
             f"{', '.join(available_exchanges())}"
         )
 
-    valid, reason, _ = validate_exchange(exchange)
+    valid, reason, _, _ = validate_exchange(exchange)
     if not valid:
         if check_for_bad:
             raise OperationalException(
