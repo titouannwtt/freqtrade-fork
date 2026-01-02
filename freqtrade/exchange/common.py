@@ -84,9 +84,6 @@ EXCHANGE_HAS_OPTIONAL: dict[str, list[str]] = {
     "fetchMyTrades": [],  # Trades for order - fee detection
     "createLimitOrder": [],
     "createMarketOrder": [],  # Either OR for orders
-    # "setLeverage": [],  # Margin/Futures trading
-    # "setMarginMode": [],  # Margin/Futures trading
-    # "fetchFundingHistory": [], # Futures trading
     # Public
     "fetchOrderBook": [],
     "fetchL2OrderBook": [],
@@ -94,15 +91,22 @@ EXCHANGE_HAS_OPTIONAL: dict[str, list[str]] = {
     "fetchTickers": [],  # For volumepairlist?
     "fetchTrades": [],  # Downloading trades data
     "fetchOrders": ["fetchOpenOrders", "fetchClosedOrders"],  # ,  # Refinding balance...
-    # "fetchFundingRateHistory": [],  # Futures trading
-    # "fetchPositions": [],  # Futures trading
-    # "fetchLeverageTiers": [],  # Futures initialization
-    # "fetchMarketLeverageTiers": [],  # Futures initialization
-    # "fetchPremiumIndexOHLCV": [],  # Futures additional data
-    # "fetchMarkOHLCV": [],  # Futures additional data
-    # "fetchIndexOHLCV": [],  # Futures additional data
     # ccxt.pro
     "watchOHLCV": [],
+}
+
+EXCHANGE_HAS_OPTIONAL_FUTURES: dict[str, list[str]] = {
+    # private
+    "setLeverage": [],  # Margin/Futures trading
+    "setMarginMode": [],  # Margin/Futures trading
+    "fetchFundingHistory": [],  # Futures trading
+    # Public
+    "fetchFundingRateHistory": [],  # Futures trading
+    "fetchPositions": [],  # Futures trading
+    "fetchLeverageTiers": ["fetchMarketLeverageTiers"],  # Futures initialization
+    "fetchMarkOHLCV": [],
+    "fetchIndexOHLCV": [],  # Futures additional data
+    "fetchPremiumIndexOHLCV": [],
 }
 
 
