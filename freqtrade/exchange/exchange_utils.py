@@ -82,22 +82,22 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
         return False, "", None
 
     result = True
-    reason = ""
+    reasons = []
     missing = _exchange_has_helper(ex_mod, EXCHANGE_HAS_REQUIRED)
     if missing:
         result = False
-        reason += f"missing: {', '.join(missing)}"
+        reasons.append(f"missing: {', '.join(missing)}")
 
     missing_opt = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL)
 
     if exchange.lower() in BAD_EXCHANGES:
         result = False
-        reason = BAD_EXCHANGES.get(exchange.lower(), "")
+        reasons.append(BAD_EXCHANGES.get(exchange.lower(), ""))
 
     if missing_opt:
-        reason += f"{'. ' if reason else ''}missing opt: {', '.join(missing_opt)}. "
+        reasons.append(f"missing opt: {', '.join(missing_opt)}")
 
-    return result, reason, ex_mod
+    return result, "; ".join(reasons), ex_mod
 
 
 def _build_exchange_list_entry(
