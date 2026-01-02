@@ -88,7 +88,7 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
         result = False
         reason += f"missing: {', '.join(missing)}"
 
-    missing_opt = [k for k in EXCHANGE_HAS_OPTIONAL if not ex_mod.has.get(k)]
+    missing_opt = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL)
 
     if exchange.lower() in BAD_EXCHANGES:
         result = False

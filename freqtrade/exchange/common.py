@@ -78,31 +78,31 @@ EXCHANGE_HAS_REQUIRED: dict[str, list[str]] = {
     "fetchOHLCV": [],
 }
 
-EXCHANGE_HAS_OPTIONAL = [
+EXCHANGE_HAS_OPTIONAL: dict[str, list[str]] = {
     # Private
-    "fetchMyTrades",  # Trades for order - fee detection
-    "createLimitOrder",
-    "createMarketOrder",  # Either OR for orders
-    # 'setLeverage',  # Margin/Futures trading
-    # 'setMarginMode',  # Margin/Futures trading
-    # 'fetchFundingHistory', # Futures trading
+    "fetchMyTrades": [],  # Trades for order - fee detection
+    "createLimitOrder": [],
+    "createMarketOrder": [],  # Either OR for orders
+    # "setLeverage": [],  # Margin/Futures trading
+    # "setMarginMode": [],  # Margin/Futures trading
+    # "fetchFundingHistory": [], # Futures trading
     # Public
-    "fetchOrderBook",
-    "fetchL2OrderBook",
-    "fetchTicker",  # OR for pricing
-    "fetchTickers",  # For volumepairlist?
-    "fetchTrades",  # Downloading trades data
-    # 'fetchFundingRateHistory',  # Futures trading
-    # 'fetchPositions',  # Futures trading
-    # 'fetchLeverageTiers',  # Futures initialization
-    # 'fetchMarketLeverageTiers',  # Futures initialization
-    # 'fetchOpenOrders', 'fetchClosedOrders',  # 'fetchOrders',  # Refinding balance...
-    # "fetchPremiumIndexOHLCV",  # Futures additional data
-    # "fetchMarkOHLCV",  # Futures additional data
-    # "fetchIndexOHLCV",  # Futures additional data
+    "fetchOrderBook": [],
+    "fetchL2OrderBook": [],
+    "fetchTicker": [],  # OR for pricing
+    "fetchTickers": [],  # For volumepairlist?
+    "fetchTrades": [],  # Downloading trades data
+    # "fetchFundingRateHistory": [],  # Futures trading
+    # "fetchPositions": [],  # Futures trading
+    # "fetchLeverageTiers": [],  # Futures initialization
+    # "fetchMarketLeverageTiers": [],  # Futures initialization
+    # "fetchOrders": ["fetchOpenOrders", "fetchClosedOrders"],  # ,  # Refinding balance...
+    # "fetchPremiumIndexOHLCV": [],  # Futures additional data
+    # "fetchMarkOHLCV": [],  # Futures additional data
+    # "fetchIndexOHLCV": [],  # Futures additional data
     # ccxt.pro
-    "watchOHLCV",
-]
+    "watchOHLCV": [],
+}
 
 
 def calculate_backoff(retrycount, max_retries):
