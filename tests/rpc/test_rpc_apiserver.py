@@ -2521,7 +2521,9 @@ def test_api_strategy(botclient, tmp_path, mocker):
     assert_response(rc)
     assert rc.json()["strategy"] == CURRENT_TEST_STRATEGY
 
-    data = (Path(__file__).parents[1] / "strategy/strats/strategy_test_v3.py").read_text()
+    data = (Path(__file__).parents[1] / "strategy/strats/strategy_test_v3.py").read_text(
+        encoding="utf-8"
+    )
     assert rc.json()["code"] == data
 
     rc = client_get(client, f"{BASE_URI}/strategy/NoStrat")
