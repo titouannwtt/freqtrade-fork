@@ -2392,6 +2392,16 @@ class Exchange:
             raise OperationalException(e) from e
 
     def get_order_id_conditional(self, order: CcxtOrder) -> str:
+        """
+        Return order id or id_stop (for conditional orders) based on exchange settings
+
+        :param order: ccxt order dict
+        :return: correct order id
+        """
+        if self.get_option("stoploss_query_requires_stop_flag") and (
+            order["type"] in ("stoploss", "stop")
+        ):
+            return safe_value_fallback(order, "id_stop", "id")
         return order["id"]
 
     @retrier
