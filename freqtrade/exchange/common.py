@@ -92,11 +92,11 @@ EXCHANGE_HAS_OPTIONAL: dict[str, list[str]] = {
     "fetchTicker": [],  # OR for pricing
     "fetchTickers": [],  # For volumepairlist?
     "fetchTrades": [],  # Downloading trades data
+    "fetchOrders": ["fetchOpenOrders", "fetchClosedOrders"],  # ,  # Refinding balance...
     # "fetchFundingRateHistory": [],  # Futures trading
     # "fetchPositions": [],  # Futures trading
     # "fetchLeverageTiers": [],  # Futures initialization
     # "fetchMarketLeverageTiers": [],  # Futures initialization
-    # "fetchOrders": ["fetchOpenOrders", "fetchClosedOrders"],  # ,  # Refinding balance...
     # "fetchPremiumIndexOHLCV": [],  # Futures additional data
     # "fetchMarkOHLCV": [],  # Futures additional data
     # "fetchIndexOHLCV": [],  # Futures additional data
