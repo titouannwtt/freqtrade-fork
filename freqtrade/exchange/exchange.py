@@ -105,7 +105,6 @@ from freqtrade.misc import (
     file_dump_json,
     file_load_json,
     safe_value_fallback,
-    safe_value_fallback2,
 )
 from freqtrade.util import FtTTLCache, PeriodicCache, dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize_delta, dt_ts, format_ms_time
@@ -2093,7 +2092,7 @@ class Exchange:
                     )
                     ticker = tickers_other.get(pair, None)
                 if ticker:
-                    rate: float | None = safe_value_fallback2(ticker, ticker, "last", "ask", None)
+                    rate: float | None = safe_value_fallback(ticker, "last", "ask", None)
                     if rate and pair.startswith(currency) and not pair.endswith(currency):
                         rate = 1.0 / rate
                     return rate
