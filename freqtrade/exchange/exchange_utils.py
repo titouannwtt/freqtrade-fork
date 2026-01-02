@@ -53,6 +53,21 @@ def available_exchanges(ccxt_module: CcxtModuleType | None = None) -> list[str]:
     return [x for x in exchanges if validate_exchange(x)[0]]
 
 
+def _exchange_has_helper(ex_mod: ccxt.Exchange, required: dict[str, list[str]]) -> list[str]:
+    """
+    Checks availability of methods (or their replacement)s in ex_mod.has
+    :param ex_mod: ccxt Exchange module
+    :param required: dict of required methods, with possible replacement methods as list
+    :return: list of missing required methods
+    """
+    return [
+        k
+        for k, v in required.items()
+        if ex_mod.has.get(k) is not True
+        and (len(v) == 0 or not (all(ex_mod.has.get(x) for x in v)))
+    ]
+
+
 def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
     """
     returns: can_use, reason, exchange_object
@@ -68,12 +83,7 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
 
     result = True
     reason = ""
-    missing = [
-        k
-        for k, v in EXCHANGE_HAS_REQUIRED.items()
-        if ex_mod.has.get(k) is not True
-        and (len(v) == 0 or not (all(ex_mod.has.get(x) for x in v)))
-    ]
+    missing = _exchange_has_helper(ex_mod, EXCHANGE_HAS_REQUIRED)
     if missing:
         result = False
         reason += f"missing: {', '.join(missing)}"
