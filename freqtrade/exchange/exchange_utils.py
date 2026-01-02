@@ -71,7 +71,8 @@ def validate_exchange(exchange: str) -> tuple[bool, str, ccxt.Exchange | None]:
     missing = [
         k
         for k, v in EXCHANGE_HAS_REQUIRED.items()
-        if ex_mod.has.get(k) is not True and not (all(ex_mod.has.get(x) for x in v))
+        if ex_mod.has.get(k) is not True
+        and (len(v) == 0 or not (all(ex_mod.has.get(x) for x in v)))
     ]
     if missing:
         result = False
