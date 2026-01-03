@@ -119,7 +119,7 @@ class DummyCls(Telegram):
         raise Exception("test")
 
 
-def get_telegram_testobject(mocker, default_conf, mock=True, ftbot=None):
+def get_telegram_testobject(mocker, default_conf, mock=True, ftbot=None, mock_fiat=True):
     msg_mock = AsyncMock()
     if mock:
         mocker.patch.multiple(
@@ -131,6 +131,9 @@ def get_telegram_testobject(mocker, default_conf, mock=True, ftbot=None):
     if not ftbot:
         ftbot = get_patched_freqtradebot(mocker, default_conf)
     rpc = RPC(ftbot)
+    if rpc._fiat_converter is not None and mock_fiat:
+        mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=1.1)
+
     telegram = Telegram(rpc, default_conf)
     telegram._loop = MagicMock()
     patch_eventloop_threading(telegram)
@@ -667,7 +670,6 @@ async def test_status_table_handle(default_conf, update, ticker, fee, mocker) ->
 
 
 async def test_daily_handle(default_conf_usdt, update, ticker, fee, mocker, time_machine) -> None:
-    mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(
         EXMS,
         fetch_ticker=ticker,
@@ -750,7 +752,6 @@ async def test_daily_wrong_input(default_conf, update, ticker, mocker) -> None:
 
 async def test_weekly_handle(default_conf_usdt, update, ticker, fee, mocker, time_machine) -> None:
     default_conf_usdt["max_open_trades"] = 1
-    mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(
         EXMS,
         fetch_ticker=ticker,
@@ -821,7 +822,6 @@ async def test_weekly_handle(default_conf_usdt, update, ticker, fee, mocker, tim
 
 async def test_monthly_handle(default_conf_usdt, update, ticker, fee, mocker, time_machine) -> None:
     default_conf_usdt["max_open_trades"] = 1
-    mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(
         EXMS,
         fetch_ticker=ticker,
@@ -903,7 +903,6 @@ async def test_monthly_handle(default_conf_usdt, update, ticker, fee, mocker, ti
 async def test_telegram_profit_handle(
     default_conf_usdt, update, ticker_usdt, ticker_sell_up, fee, limit_sell_order_usdt, mocker
 ) -> None:
-    mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(
         EXMS,
         fetch_ticker=ticker_usdt,
@@ -983,7 +982,6 @@ async def test_telegram_profit_long_short_handle(
     is consistent with /profit, covering both no trades and trades present cases.
     """
 
-    mocker.patch("freqtrade.rpc.rpc.CryptoToFiatConverter._find_price", return_value=1.1)
     mocker.patch.multiple(EXMS, fetch_ticker=ticker_usdt, get_fee=fee)
     telegram, _freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf_usdt)
 
@@ -2222,7 +2220,9 @@ def test_send_msg_enter_notification(
         "analyzed_candle": {"open": 1.1, "high": 2.2, "low": 1.0, "close": 1.5},
         "open_date": dt_now() + timedelta(hours=-1),
     }
-    telegram, freqtradebot, msg_mock = get_telegram_testobject(mocker, default_conf)
+    telegram, freqtradebot, msg_mock = get_telegram_testobject(
+        mocker, default_conf, mock_fiat=False
+    )
 
     telegram.send_msg(msg)
     leverage_text = f" ({leverage:.3g}x)" if leverage and leverage != 1.0 else ""
@@ -2328,7 +2328,7 @@ def test_send_msg_entry_fill_notification(
     default_conf, mocker, message_type, entered, enter_signal, leverage
 ) -> None:
     default_conf["telegram"]["notification_settings"]["entry_fill"] = "on"
-    telegram, _, msg_mock = get_telegram_testobject(mocker, default_conf)
+    telegram, _, msg_mock = get_telegram_testobject(mocker, default_conf, mock_fiat=False)
 
     telegram.send_msg(
         {
