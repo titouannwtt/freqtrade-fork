@@ -132,7 +132,7 @@ def get_telegram_testobject(mocker, default_conf, mock=True, ftbot=None, mock_fi
         ftbot = get_patched_freqtradebot(mocker, default_conf)
     rpc = RPC(ftbot)
     if rpc._fiat_converter is not None and mock_fiat:
-        mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=1.1)
+        mocker.patch.object(rpc._fiat_converter, "get_price", return_value=1.1)
 
     telegram = Telegram(rpc, default_conf)
     telegram._loop = MagicMock()

@@ -275,7 +275,7 @@ def test_rpc_status_table(default_conf, ticker, fee, mocker, time_machine) -> No
     # Test with fiat convert
     rpc._config["fiat_display_currency"] = "USD"
     rpc._fiat_converter = CryptoToFiatConverter({})
-    mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=15000.0)
+    mocker.patch.object(rpc._fiat_converter, "get_price", return_value=15000.0)
 
     result, headers, fiat_profit_sum, total_sum = rpc._rpc_status_table(
         default_conf["stake_currency"], "USD"
@@ -458,7 +458,7 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
 
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
-    mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=1.1)
+    mocker.patch.object(rpc._fiat_converter, "get_price", return_value=1.1)
 
     res = rpc._rpc_trade_statistics(stake_currency, fiat_display_currency)
     assert res["trade_count"] == 0
@@ -529,7 +529,7 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
-    mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=15000.0)
+    mocker.patch.object(rpc._fiat_converter, "get_price", return_value=15000.0)
     res = rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
     assert res["stake"] == "BTC"
 
@@ -618,7 +618,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
-    mocker.patch.object(rpc._fiat_converter, "_find_price", return_value=1.2)
+    mocker.patch.object(rpc._fiat_converter, "get_price", return_value=1.2)
 
     result = rpc._rpc_balance(
         default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
