@@ -16,6 +16,8 @@ from tests.conftest import log_has, log_has_re
 def reset_singleton_instance():
     # Reset the singleton instance before each test
     CryptoToFiatConverter._instances = {}
+    yield
+    CryptoToFiatConverter._instances = {}
 
 
 def test_fiat_convert_is_singleton():
