@@ -5,7 +5,7 @@ numexpr==2.14.1
 # Indicator libraries
 ft-pandas-ta==0.3.16
 ta-lib==0.6.8
-technical==1.5.3
+technical==1.5.4
 
 ccxt==4.5.30
 cryptography==46.0.3
