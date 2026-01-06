@@ -32,8 +32,7 @@ concurrency:
 env:
   PACKAGE_NAME: "freqtrade"
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   deploy-docker:
