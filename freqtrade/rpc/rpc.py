@@ -871,10 +871,10 @@ class RPC:
                 }
             )
         symbol: str
-        position: PositionWallet
-        for symbol, position in self._freqtrade.wallets.get_all_positions().items():
-            total += position.collateral
-            total_bot += position.collateral
+        pos: PositionWallet
+        for symbol, pos in self._freqtrade.wallets.get_all_positions().items():
+            total += pos.collateral
+            total_bot += pos.collateral
 
             currencies.append(
                 {
@@ -882,11 +882,11 @@ class RPC:
                     "free": 0,
                     "balance": 0,
                     "used": 0,
-                    "position": position.position,
-                    "est_stake": position.collateral,
-                    "est_stake_bot": position.collateral,
+                    "position": pos.position,
+                    "est_stake": pos.collateral,
+                    "est_stake_bot": pos.collateral,
                     "stake": stake_currency,
-                    "side": position.side,
+                    "side": pos.side,
                     "is_bot_managed": True,
                     "is_position": True,
                 }
