@@ -28,6 +28,9 @@ on:
 env:
   PACKAGE_NAME: "freqtrade"
 
+permissions:
+  contents: read
+
 jobs:
   deploy-docker:
     name: "Delete Packages"
