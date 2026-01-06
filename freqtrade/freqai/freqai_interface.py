@@ -230,7 +230,7 @@ class IFreqaiModel(ABC):
 
             if not self.train_queue:
                 continue
-                
+
             pair = self.train_queue[0]
 
             # ensure pair is available in dp
