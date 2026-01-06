@@ -17,6 +17,10 @@ on:
         default: 'develop'
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -159,7 +163,7 @@ jobs:
   deploy-arm:
     name: "Deploy Docker ARM64"
     permissions:
-      packages: write
+      packages: write # Needed to push package versions
     needs: [ deploy-docker ]
     # Only run on 64bit machines
     runs-on: [self-hosted, linux, ARM64]

@@ -6,11 +6,16 @@ on:
   # on demand
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   auto-update:
+    name: "Auto Update Binance Leverage Tiers"
     runs-on: ubuntu-latest
     environment:
       name: develop
