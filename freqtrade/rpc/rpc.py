@@ -846,12 +846,9 @@ class RPC:
             if is_stake_currency:
                 trade_amount = self._freqtrade.wallets.get_available_stake_amount()
 
-            try:
-                est_stake, est_stake_bot = self.__balance_get_est_stake(
-                    coin, stake_currency, trade_amount, balance
-                )
-            except ValueError:
-                continue
+            est_stake, est_stake_bot = self.__balance_get_est_stake(
+                coin, stake_currency, trade_amount, balance
+            )
 
             total += est_stake
 
