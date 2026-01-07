@@ -199,7 +199,7 @@ class Exchange:
         # Due to funding fee fetching.
         self._loop_lock = Lock()
         self.loop = self._init_async_loop()
-        self._config: Config = {}
+        self._config: Config = config
 
         # Leverage properties
         self.trading_mode: TradingMode = TradingMode(
@@ -213,7 +213,6 @@ class Exchange:
         config["trading_mode"] = self.trading_mode
         config["margin_mode"] = self.margin_mode
         config["candle_type_def"] = CandleType.get_default(self.trading_mode)
-        self._config.update(config)
         self.liquidation_buffer = config.get("liquidation_buffer", 0.05)
 
         exchange_conf: ExchangeConfig = exchange_config if exchange_config else config["exchange"]
