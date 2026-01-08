@@ -619,7 +619,12 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
     rpc = RPC(freqtradebot)
     rpc._fiat_converter = CryptoToFiatConverter({})
     mocker.patch.object(rpc._fiat_converter, "get_price", return_value=1.2)
-
+    mocker.patch(
+        "freqtrade.persistence.trade_model.Trade.get_open_trades",
+        return_value=[
+            MagicMock(pair="ETH/USDT:USDT", safe_base_currency="ETH"),
+        ],
+    )
     result = rpc._rpc_balance(
         default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
     )
@@ -696,7 +701,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
             "est_stake_bot": 5222.1,
             "stake": "USDT",
             "side": "short",
-            "is_bot_managed": False,
+            "is_bot_managed": True,
             "is_position": True,
         },
     ]
