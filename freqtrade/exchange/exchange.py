@@ -2068,7 +2068,7 @@ class Exchange:
         Can then be used as "rate * amount" to convert between currencies.
         :param coin: Coin to convert
         :param currency: Currency to convert to
-        :param: cached: Allow cached tickers, default True
+        :param cached: Allow cached tickers, default True
         :returns: Conversion rate from coin to currency
         :raises: ExchangeErrors
         """
