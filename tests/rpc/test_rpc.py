@@ -17,6 +17,7 @@ from tests.conftest import (
     create_mock_trades,
     create_mock_trades_usdt,
     get_patched_freqtradebot,
+    log_has_re,
     patch_get_signal,
 )
 
@@ -503,7 +504,7 @@ def test_rpc_trade_statistics(default_conf_usdt, ticker, fee, mocker) -> None:
     assert isnan(stats["profit_all_coin"])
 
 
-def test_rpc_balance_handle_error(default_conf, mocker):
+def test_rpc_balance_handle_error(default_conf, mocker, caplog):
     mock_balance = {
         "BTC": {
             "free": 10.0,
@@ -517,14 +518,42 @@ def test_rpc_balance_handle_error(default_conf, mocker):
         },
     }
     # ETH will be skipped due to mocked Error below
+    mock_pos = [
+        {
+            "symbol": "ADA/USDT:USDT",
+            "timestamp": None,
+            "datetime": None,
+            "initialMargin": 20,
+            "initialMarginPercentage": None,
+            "maintenanceMargin": 0.0,
+            "maintenanceMarginPercentage": 0.005,
+            "entryPrice": 0.0,
+            "notional": 10.0,
+            "leverage": 5.0,
+            "unrealizedPnl": 0.0,
+            "contracts": 1.0,
+            "contractSize": 1,
+            "marginRatio": None,
+            "liquidationPrice": 0.0,
+            "markPrice": 2896.41,
+            # Collateral is in USDT - and can be higher than position size in cross mode
+            "collateral": 50,
+            "marginType": "cross",
+            "side": "short",
+            "percentage": None,
+        }
+    ]
 
     mocker.patch("freqtrade.rpc.telegram.Telegram", MagicMock())
     mocker.patch.multiple(
         EXMS,
         get_balances=MagicMock(return_value=mock_balance),
+        fetch_positions=MagicMock(return_value=mock_pos),
         get_tickers=MagicMock(side_effect=TemporaryError("Could not load ticker due to xxx")),
     )
-
+    default_conf["trading_mode"] = "futures"
+    default_conf["margin_mode"] = "isolated"
+    default_conf["dry_run"] = False
     freqtradebot = get_patched_freqtradebot(mocker, default_conf)
     patch_get_signal(freqtradebot)
     rpc = RPC(freqtradebot)
@@ -533,10 +562,23 @@ def test_rpc_balance_handle_error(default_conf, mocker):
     res = rpc._rpc_balance(default_conf["stake_currency"], default_conf["fiat_display_currency"])
     assert res["stake"] == "BTC"
 
-    assert len(res["currencies"]) == 1
+    assert len(res["currencies"]) == 3
     assert res["currencies"][0]["currency"] == "BTC"
-    # ETH has not been converted.
-    assert all(currency["currency"] != "ETH" for currency in res["currencies"])
+    curr_ETH = next(currency for currency in res["currencies"] if currency["currency"] == "ETH")
+    # coins are part of the result, but were not converted
+    assert curr_ETH is not None
+    assert curr_ETH["currency"] == "ETH"
+    assert curr_ETH["est_stake"] == 0
+    curr_ADA = next(
+        currency for currency in res["currencies"] if currency["currency"] == "ADA/USDT:USDT"
+    )
+    assert curr_ADA is not None
+    assert curr_ADA["currency"] == "ADA/USDT:USDT"
+    # Fall back to collateral value when rate not available
+    assert curr_ADA["est_stake"] == 20
+
+    assert log_has_re(r"Error .* getting rate for futures ADA.*", caplog)
+    assert log_has_re(r"Error .* getting rate for ETH.*", caplog)
 
 
 @pytest.mark.parametrize("proxy_coin", [None, "BNFCR"])
