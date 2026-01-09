@@ -873,8 +873,27 @@ class RPC:
         symbol: str
         pos: PositionWallet
         for symbol, pos in self._freqtrade.wallets.get_all_positions().items():
-            total += pos.collateral
-            total_bot += pos.collateral
+            est_stake = pos.collateral
+            pos_base = self._freqtrade.exchange.get_pair_base_currency(symbol)
+            if pos.leverage:
+                try:
+                    rate = self._freqtrade.exchange.get_conversion_rate(pos_base, stake_currency)
+                    if rate:
+                        # For a leveraged position, equity (what we want as est_stake) is:
+                        #   equity = collateral + PnL
+                        #   notional = rate * pos.position
+                        #   borrowed = pos.collateral * (pos.leverage - 1)
+                        # Equity is notional minus borrowed:
+                        #   equity = notional - borrowed
+                        #          = rate * pos.position - pos.collateral * (pos.leverage - 1)
+                        est_stake = rate * pos.position - pos.collateral * (pos.leverage - 1)
+                except (ExchangeError, PricingError) as e:
+                    logger.warning(f"Error {e} getting rate for futures {symbol} / {pos_base}")
+                    pass
+
+            # Add the estimated stake (collateral + unlevered PnL) to totals
+            total += est_stake
+            total_bot += est_stake
 
             currencies.append(
                 {
@@ -883,11 +902,11 @@ class RPC:
                     "balance": 0,
                     "used": 0,
                     "position": pos.position,
-                    "est_stake": pos.collateral,
-                    "est_stake_bot": pos.collateral,
+                    "est_stake": est_stake,
+                    "est_stake_bot": est_stake,
                     "stake": stake_currency,
                     "side": pos.side,
-                    "is_bot_managed": True,
+                    "is_bot_managed": pos_base in open_assets,
                     "is_position": True,
                 }
             )
