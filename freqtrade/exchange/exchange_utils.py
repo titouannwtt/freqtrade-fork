@@ -54,13 +54,21 @@ def available_exchanges(ccxt_module: CcxtModuleType | None = None) -> list[str]:
     return [x for x in exchanges if validate_exchange(x)[0]]
 
 
-def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]]) -> list[str]:
+def _exchange_has_helper(
+    ex_has_or_exchange: dict[str, Any] | ccxt.Exchange,
+    required: dict[str, list[str]],
+) -> list[str]:
     """
     Checks availability of methods (or their replacement)s in a merged has-dict.
     :param ex_has: merged "has" dict (ccxt + freqtrade overrides)
     :param required: dict of required methods, with possible replacement methods as list
     :return: list of missing required methods
     """
+    if isinstance(ex_has_or_exchange, dict):
+        ex_has = ex_has_or_exchange
+    else:
+        ex_has = getattr(ex_has_or_exchange, "has", {}) or {}
+        
     return [
         k
         for k, v in required.items()
