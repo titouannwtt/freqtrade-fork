@@ -54,22 +54,25 @@ def available_exchanges(ccxt_module: CcxtModuleType | None = None) -> list[str]:
     return [x for x in exchanges if validate_exchange(x)[0]]
 
 
-def _exchange_has_helper(ex_mod: ccxt.Exchange, required: dict[str, list[str]]) -> list[str]:
+def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]]) -> list[str]:
     """
-    Checks availability of methods (or their replacement)s in ex_mod.has
-    :param ex_mod: ccxt Exchange module
+    Checks availability of methods (or their replacement)s in a merged has-dict.
+    :param ex_has: merged "has" dict (ccxt + freqtrade overrides)
     :param required: dict of required methods, with possible replacement methods as list
     :return: list of missing required methods
     """
     return [
         k
         for k, v in required.items()
-        if ex_mod.has.get(k) is not True
-        and (len(v) == 0 or not (all(ex_mod.has.get(x) for x in v)))
+        if ex_has.get(k) is not True and (len(v) == 0 or not (all(ex_has.get(x) for x in v)))
     ]
 
 
-def validate_exchange(exchange: str) -> tuple[bool, str, str, ccxt.Exchange | None]:
+def validate_exchange(
+    exchange: str,
+    ft_has_overrides: dict[str, Any] | None = None,
+) -> tuple[bool, str, str, ccxt.Exchange | None]:
+
     """
     returns: can_use, reason, exchange_object
         with Reason including both missing and missing_opt
@@ -82,17 +85,22 @@ def validate_exchange(exchange: str) -> tuple[bool, str, str, ccxt.Exchange | No
     if not ex_mod or not ex_mod.has:
         return False, "", "", None
 
+    ex_has = dict(ex_mod.has or {})
+    if ft_has_overrides:
+        ex_has.update(ft_has_overrides)
+
+
     result = True
     reasons = []
     reasons_fut = ""
-    missing = _exchange_has_helper(ex_mod, EXCHANGE_HAS_REQUIRED)
+    missing = _exchange_has_helper(ex_has, EXCHANGE_HAS_REQUIRED)
     if missing:
         result = False
         reasons.append(f"missing: {', '.join(missing)}")
 
-    missing_opt = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL)
+    missing_opt = _exchange_has_helper(ex_has, EXCHANGE_HAS_OPTIONAL)
 
-    missing_futures = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL_FUTURES)
+    missing_futures = _exchange_has_helper(ex_has, EXCHANGE_HAS_OPTIONAL_FUTURES)
 
     if exchange.lower() in BAD_EXCHANGES:
         result = False
@@ -111,8 +119,17 @@ def _build_exchange_list_entry(
     exchange_name: str, exchangeClasses: dict[str, Any]
 ) -> ValidExchangesType:
     exchange_name = exchange_name.lower()
-    valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name)
     mapped_exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name).lower()
+
+    resolved = exchangeClasses.get(mapped_exchange_name)
+    ft_has_overrides = None
+    if resolved:
+        get_ft_has = getattr(resolved["class"], "get_ft_has", None)
+        if callable(get_ft_has):
+            ft_has_overrides = get_ft_has() or None
+
+    valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name, ft_has_overrides)
+
     is_alias = getattr(ex_mod, "alias", False)
     result: ValidExchangesType = {
         "name": getattr(ex_mod, "name", exchange_name),
@@ -128,7 +145,7 @@ def _build_exchange_list_entry(
         else None,
         "trade_modes": [{"trading_mode": "spot", "margin_mode": ""}],
     }
-    if resolved := exchangeClasses.get(mapped_exchange_name):
+    if resolved:
         supported_modes: list[TradeModeType] = [
             {"trading_mode": tm.value, "margin_mode": mm.value}
             for tm, mm in resolved["class"]._supported_trading_mode_margin_pairs
