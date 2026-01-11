@@ -217,6 +217,44 @@ freqtrade download-data --exchange kraken --dl-trades -p BTC/EUR BCH/EUR
     Please pay attention that rateLimit configuration entry holds delay in milliseconds between requests, NOT requests/sec rate.
     So, in order to mitigate Kraken API "Rate limit exceeded" exception, this configuration should be increased, NOT decreased.
 
+## Kraken Futures
+
+Kraken Futures uses the exchange id `krakenfutures` and supports isolated futures mode.
+
+```jsonc
+"exchange": {
+    "name": "krakenfutures",
+    "key": "your_exchange_key",
+    "secret": "your_exchange_secret",
+    "ccxt_config": {"enableRateLimit": true},
+    "ccxt_async_config": {"enableRateLimit": true},
+    "triggerSignal": "mark" // "mark" (default), "last", or "index"
+},
+"trading_mode": "futures",
+"margin_mode": "isolated",
+"stake_currency": "USD"
+```
+
+!!! Tip "Stoploss on Exchange"
+    Kraken Futures supports `stoploss_on_exchange` with both `limit` and `market` stop orders.
+    Use `exchange.triggerSignal` to select the trigger price source (`mark`, `last`, or `index`).
+
+!!! Note "Collateral"
+    Kraken Futures is USD-settled. Kraken allows EUR collateral, but USD is the recommended stake currency.
+
+!!! Note "Pair format"
+    Futures pairs use CCXT symbols, for example `BTC/USD:USD`.
+
+### Data download
+
+Kraken Futures uses normal OHLCV downloads.
+
+```bash
+freqtrade download-data --exchange krakenfutures --trading-mode futures --pairs BTC/USD:USD --timeframes 1m 5m
+```
+
+Note: OHLCV requests are capped at 2000 candles per call, so large downloads may take longer.
+
 ## Kucoin
 
 Kucoin requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
