@@ -880,13 +880,17 @@ class RPC:
                     rate = self._freqtrade.exchange.get_conversion_rate(pos_base, stake_currency)
                     if rate:
                         # For a leveraged position, equity (what we want as est_stake) is:
-                        #   equity = collateral + PnL
-                        #   notional = rate * pos.position
-                        #   borrowed = pos.collateral * (pos.leverage - 1)
-                        # Equity is notional minus borrowed:
-                        #   equity = notional - borrowed
-                        #          = rate * pos.position - pos.collateral * (pos.leverage - 1)
-                        est_stake = rate * pos.position - pos.collateral * (pos.leverage - 1)
+                        #   equity = collateral + unlevered PnL
+                        # For longs: unlevered PnL = current_value - open_value
+                        #   est_stake = rate * pos.position - pos.collateral * (pos.leverage - 1)
+                        # For shorts: unlevered PnL = open_value - current_value
+                        #   est_stake = collateral + (open_value - current_value)
+                        #            = collateral + (pos.collateral * pos.leverage)
+                        #              - rate * pos.position
+                        if pos.side == "long":
+                            est_stake = rate * pos.position - pos.collateral * (pos.leverage - 1)
+                        else:
+                            est_stake = pos.collateral * (1 + pos.leverage) - rate * pos.position
                 except (ExchangeError, PricingError) as e:
                     logger.warning(f"Error {e} getting rate for futures {symbol} / {pos_base}")
                     pass
