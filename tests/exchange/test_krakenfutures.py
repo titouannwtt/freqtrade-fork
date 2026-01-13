@@ -23,10 +23,10 @@ def test_krakenfutures_get_ft_has():
 
 def test_krakenfutures_ohlcv_candle_limit_caps_at_2000(mocker, default_conf):
     """Test that OHLCV candle limit is capped at 2000."""
-    mocker.patch.object(Exchange, "ohlcv_candle_limit", return_value=5000)
-
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
     assert isinstance(ex, KrakenFutures)
+
+    mocker.patch.object(ex, "features", return_value=5000)
 
     assert ex.ohlcv_candle_limit("1m", candle_type=CandleType.FUTURES) == 2000
 
