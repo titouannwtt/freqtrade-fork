@@ -65,9 +65,7 @@ class TestCCXTExchange:
             pytest.skip("No expected candle count for exchange")
 
         candle_type = (
-            CandleType.FUTURES
-            if exchange_params.get("futures_only")
-            else CandleType.SPOT
+            CandleType.FUTURES if exchange_params.get("futures_only") else CandleType.SPOT
         )
         assert exch.ohlcv_candle_limit("1m", candle_type) == expected_count
 
