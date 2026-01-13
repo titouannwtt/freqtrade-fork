@@ -44,7 +44,7 @@ from freqtrade.exchange.htx import Htx
 from freqtrade.exchange.hyperliquid import Hyperliquid
 from freqtrade.exchange.idex import Idex
 from freqtrade.exchange.kraken import Kraken
-from freqtrade.exchange.krakenfutures import KrakenFutures, Krakenfutures
+from freqtrade.exchange.krakenfutures import Krakenfutures
 from freqtrade.exchange.kucoin import Kucoin
 from freqtrade.exchange.lbank import Lbank
 from freqtrade.exchange.luno import Luno
