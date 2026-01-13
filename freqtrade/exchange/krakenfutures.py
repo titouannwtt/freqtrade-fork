@@ -53,6 +53,7 @@ class KrakenFutures(Exchange):
             PriceType.MARK: "mark",
             PriceType.INDEX: "index",
         },
+        "ohlcv_candle_limit": 2000,
         # override ccxt has-gaps
         "exchange_has_overrides": {
             "fetchOrder": True,
@@ -592,20 +593,6 @@ class KrakenFutures(Exchange):
             if isinstance(v, str) and v.strip():
                 return v.strip()
         return "mark"
-
-    def ohlcv_candle_limit(
-        self,
-        timeframe: str,
-        candle_type: CandleType,
-        since_ms: int | None = None,
-    ) -> int:
-        limit = super().ohlcv_candle_limit(
-            timeframe,
-            candle_type=candle_type,
-            since_ms=since_ms,
-        )
-        return min(limit, 2000)
-
 
 class Krakenfutures(KrakenFutures):
     pass
