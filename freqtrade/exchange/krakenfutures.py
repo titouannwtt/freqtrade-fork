@@ -9,7 +9,7 @@ from typing import Any
 from ccxt.base.errors import NotSupported, OrderNotFound
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import CandleType, MarginMode, PriceType, TradingMode
+from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import Exchange
@@ -19,7 +19,7 @@ from freqtrade.exchange.exchange_types import FtHas
 logger = logging.getLogger(__name__)
 
 
-class KrakenFutures(Exchange):
+class Krakenfutures(Exchange):
     """Kraken Futures exchange class.
 
     Contains adjustments needed for Freqtrade to work with this exchange.
@@ -391,9 +391,9 @@ class KrakenFutures(Exchange):
     @staticmethod
     def _contains_value(obj: Any, needle: str) -> bool:
         if isinstance(obj, dict):
-            return any(KrakenFutures._contains_value(v, needle) for v in obj.values())
+            return any(Krakenfutures._contains_value(v, needle) for v in obj.values())
         if isinstance(obj, list):
-            return any(KrakenFutures._contains_value(v, needle) for v in obj)
+            return any(Krakenfutures._contains_value(v, needle) for v in obj)
         return str(obj) == str(needle)
 
     def _build_ccxt_like_order_from_history(
@@ -511,13 +511,13 @@ class KrakenFutures(Exchange):
             for k, v in obj.items():
                 if k in keys and v not in (None, ""):
                     return v
-                found = KrakenFutures._find_first_value(v, keys)
+                found = Krakenfutures._find_first_value(v, keys)
                 if found is not None:
                     return found
             return None
         if isinstance(obj, list):
             for v in obj:
-                found = KrakenFutures._find_first_value(v, keys)
+                found = Krakenfutures._find_first_value(v, keys)
                 if found is not None:
                     return found
             return None
@@ -593,6 +593,3 @@ class KrakenFutures(Exchange):
             if isinstance(v, str) and v.strip():
                 return v.strip()
         return "mark"
-
-class Krakenfutures(KrakenFutures):
-    pass

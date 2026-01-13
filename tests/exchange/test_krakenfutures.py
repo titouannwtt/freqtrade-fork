@@ -8,13 +8,13 @@ from ccxt.base.errors import NotSupported
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exchange.exchange import Exchange
-from freqtrade.exchange.krakenfutures import KrakenFutures
+from freqtrade.exchange.krakenfutures import Krakenfutures
 from tests.conftest import get_patched_exchange
 
 
 def test_krakenfutures_get_ft_has():
     """Test that get_ft_has returns correct capability flags."""
-    ft_has = KrakenFutures.get_ft_has()
+    ft_has = Krakenfutures.get_ft_has()
     assert ft_has["fetchOrder"] is True
     assert ft_has["createMarketOrder"] is True
     assert ft_has["stoploss_on_exchange"] is True
@@ -24,7 +24,7 @@ def test_krakenfutures_get_ft_has():
 def test_krakenfutures_ohlcv_candle_limit_caps_at_2000(mocker, default_conf):
     """Test that OHLCV candle limit is capped at 2000."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-    assert isinstance(ex, KrakenFutures)
+    assert isinstance(ex, Krakenfutures)
 
     mocker.patch.object(ex, "features", return_value=5000)
 
@@ -103,7 +103,7 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
 
 
 def test_krakenfutures_fetch_order_returns_pseudo_order_when_not_found(mocker, default_conf):
-    """When order is not found anywhere, KrakenFutures returns a pseudo order to avoid crashes."""
+    """When order is not found anywhere, Krakenfutures returns a pseudo order to avoid crashes."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     mocker.patch.object(
