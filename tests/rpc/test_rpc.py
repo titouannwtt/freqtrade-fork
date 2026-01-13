@@ -583,7 +583,8 @@ def test_rpc_balance_handle_error(default_conf, mocker, caplog):
 
 @pytest.mark.parametrize("proxy_coin", [None, "BNFCR"])
 @pytest.mark.parametrize("margin_mode", ["isolated", "cross"])
-def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, margin_mode):
+@pytest.mark.parametrize("is_short", [True, False])
+def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, margin_mode, is_short):
     mock_balance = {
         "BTC": {
             "free": 0.01,
@@ -637,7 +638,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
             # Collateral is in USDT - and can be higher than position size in cross mode
             "collateral": 50,
             "marginType": "cross",
-            "side": "short",
+            "side": "short" if is_short else "long",
             "percentage": None,
         }
     ]
@@ -742,7 +743,7 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
             "est_stake": 5222.1,
             "est_stake_bot": 5222.1,
             "stake": "USDT",
-            "side": "short",
+            "side": "short" if is_short else "long",
             "is_bot_managed": True,
             "is_position": True,
         },
