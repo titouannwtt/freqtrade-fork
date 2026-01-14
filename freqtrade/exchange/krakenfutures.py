@@ -246,8 +246,7 @@ class Krakenfutures(Exchange):
         except (NotSupported, AttributeError, OrderNotFound):
             return None
 
-    @staticmethod
-    def _filter_params_for_open_closed(params: dict[str, Any]) -> dict[str, Any]:
+    def _filter_params_for_open_closed(self, params: dict[str, Any]) -> dict[str, Any]:
         if not params:
             return {}
         blacklist = {"since", "before", "from", "to"}
