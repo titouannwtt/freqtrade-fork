@@ -548,7 +548,6 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "hasQuoteVolume": False,
         "timeframe": "30m",
         "futures": True,
-        "futures_only": True,
         "candle_count": 5000,
         "orderbook_max_entries": 20,
         "futures_pair": "BTC/USDC:USDC",
