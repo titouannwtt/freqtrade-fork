@@ -61,19 +61,6 @@ class Krakenfutures(Exchange):
         },
     }
 
-    @staticmethod
-    def get_ft_has() -> dict[str, Any]:
-        # Kept for compatibility with older tests and helper code.
-        return {
-            "fetchOrder": True,
-            "createMarketOrder": True,
-            "stoploss_on_exchange": True,
-            "stoploss_order_types": {
-                "limit": "limit",
-                "market": "market",
-            },
-        }
-
     def get_balances(self, params: dict | None = None) -> dict[str, Any]:
         balances = super().get_balances(params=params)
 
