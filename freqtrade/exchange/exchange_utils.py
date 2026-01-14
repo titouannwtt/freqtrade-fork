@@ -72,7 +72,6 @@ def validate_exchange(
     exchange: str,
     ft_has_overrides: dict[str, Any] | None = None,
 ) -> tuple[bool, str, str, ccxt.Exchange | None]:
-
     """
     returns: can_use, reason, exchange_object
         with Reason including both missing and missing_opt
@@ -88,7 +87,6 @@ def validate_exchange(
     ex_has = dict(ex_mod.has or {})
     if ft_has_overrides:
         ex_has.update(ft_has_overrides)
-
 
     result = True
     reasons = []

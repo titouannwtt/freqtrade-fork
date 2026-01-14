@@ -88,4 +88,3 @@ def check_exchange(config: Config, check_for_bad: bool = True) -> bool:
         )
 
     return True
-
