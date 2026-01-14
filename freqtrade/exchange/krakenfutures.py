@@ -10,7 +10,7 @@ from ccxt.base.errors import NotSupported, OrderNotFound
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, PriceType, TradingMode
-from freqtrade.exceptions import OperationalException
+from freqtrade.exceptions import InvalidOrderException, OperationalException
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
@@ -188,33 +188,7 @@ class Krakenfutures(Exchange):
         if order is not None:
             return self._normalize_fetched_order(order)
 
-        # Do not crash the bot during startup if the exchange cannot find the order.
-        now_ms = int(getattr(self._api, "milliseconds", lambda: int(time.time() * 1000))())
-        try:
-            iso = self._api.iso8601(now_ms)
-        except Exception:
-            iso = None
-
-        logger.warning(
-            "Order not found on exchange, returning pseudo order to avoid crash. id=%s pair=%s",
-            order_id,
-            pair,
-        )
-
-        return {
-            "id": order_id,
-            "symbol": pair,
-            "status": "open",
-            "side": None,
-            "type": None,
-            "price": 0.0,
-            "amount": 0.0,
-            "filled": 0.0,
-            "remaining": 0.0,
-            "timestamp": now_ms,
-            "datetime": iso,
-            "info": {"_ft_note": "Order not found via API, pseudo order returned"},
-        }
+        raise InvalidOrderException(f"Order {order_id} not found on exchange for pair {pair}.")
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date):
         try:
