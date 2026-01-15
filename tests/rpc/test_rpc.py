@@ -863,7 +863,7 @@ def test_rpc_balance_futures(default_conf_usdt, mocker):
 
     freqtradebot = get_patched_freqtradebot(mocker, default_conf_usdt)
 
-    # Create a short and a long position wallet directly to avoid depending on fetch_positions parsing
+    # Create a short and a long position wallet directly to avoid depending on position parsing
     short_pos = PositionWallet(
         symbol="FOO/USDT:USDT",
         position=2.0,
