@@ -62,6 +62,16 @@ class Krakenfutures(Exchange):
     }
 
     def get_balances(self, params: dict | None = None) -> dict[str, Any]:
+        """
+        Fetch account balances with special handling for Kraken Futures flex accounts.
+        Kraken Futures supports "flex" (multi-collateral) accounts where users can hold
+        multiple currencies as margin. CCXT returns these balances per-currency (EUR, etc.)
+        but does not synthesize a USD balance, which Freqtrade expects as stake_currency.
+        The flex account fields used:
+        - availableMargin: USD value available for new positions (-> free)
+        - balanceValue/portfolioValue: total USD value of account (-> total)
+        - currencies[*].value: fallback sum if above fields missing
+        """
         balances = super().get_balances(params=params)
 
         stake = str(self._config.get("stake_currency", "")).upper()
@@ -88,7 +98,7 @@ class Krakenfutures(Exchange):
     def _get_flex_account(
         self, balances: dict[str, Any], params: dict | None
     ) -> dict[str, Any] | None:
-        """Extract flex account from balances or fetch directly."""
+        """Try to get flex account data from cached balances or fetch fresh."""
         flex = self._extract_flex_from_raw(balances)
         if flex is not None:
             return flex
@@ -101,7 +111,7 @@ class Krakenfutures(Exchange):
 
     @staticmethod
     def _extract_flex_from_raw(raw: dict[str, Any] | None) -> dict[str, Any] | None:
-        """Navigate raw -> info -> accounts -> flex."""
+        """Navigate raw -> info -> accounts -> flex (Kraken Futures multi-collateral account)."""
         if not isinstance(raw, dict):
             return None
         info = raw.get("info")
@@ -114,7 +124,6 @@ class Krakenfutures(Exchange):
         return flex if isinstance(flex, dict) else None
 
     def _extract_usd_from_flex(self, flex: dict[str, Any]) -> tuple[float | None, float | None]:
-        """Extract USD free and total from flex account."""
         usd_free = self._safe_float(flex.get("availableMargin") or flex.get("available_margin"))
         usd_total = self._safe_float(
             flex.get("balanceValue") or flex.get("collateralValue") or flex.get("portfolioValue")
