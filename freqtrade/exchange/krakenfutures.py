@@ -10,7 +10,7 @@ from ccxt.base.errors import NotSupported, OrderNotFound
 
 from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, PriceType, TradingMode
-from freqtrade.exceptions import InvalidOrderException, OperationalException
+from freqtrade.exceptions import ExchangeError, InvalidOrderException
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
@@ -190,14 +190,14 @@ class Krakenfutures(Exchange):
 
         raise InvalidOrderException(f"Order {order_id} not found on exchange for pair {pair}.")
 
-    def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date):
-        try:
-            return super().get_funding_fees(pair, amount, is_short, open_date)
-        except OperationalException as e:
-            if "fetch_funding_history" in str(e):
-                logger.debug("Kraken Futures: fetch_funding_history unsupported, returning 0.")
-                return 0.0
-            raise
+    def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
+        """CCXT currently does not support Kraken Futures fetchFundingHistory."""
+        if self.trading_mode == TradingMode.FUTURES:
+            try:
+                return self._fetch_and_calculate_funding_fees(pair, amount, is_short, open_date)
+            except ExchangeError:
+                logger.warning(f"Could not update funding fees for {pair}.")
+        return 0.0
 
     def _fetch_order_default(
         self, order_id: str, pair: str, params: dict[str, Any]
