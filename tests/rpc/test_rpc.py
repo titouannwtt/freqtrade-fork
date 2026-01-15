@@ -823,6 +823,89 @@ def test_rpc_balance_handle(default_conf_usdt, mocker, tickers, proxy_coin, marg
     assert pytest.approx(result["value"]) == result["total"] * 1.2
 
 
+def test_rpc_balance_futures(default_conf_usdt, mocker):
+    """Validate est_stake (equity) calculation for both short and long positions.
+
+    Short scenario:
+    - collateral = 100, leverage = 2, position = 2, rate = 50
+    - open_value = 200, current_value = 100 -> unlevered PnL = 100
+    - equity = collateral + PnL = 200
+
+    Long scenario:
+    - collateral = 150, leverage = 3, position = 3, rate = 200
+    - open_value = 450, current_value = 600 -> unlevered PnL = 150
+    - equity = collateral + PnL = 300
+    """
+    from freqtrade.wallets import PositionWallet, Wallet
+
+    mock_balance = {"USDT": {"free": 1000.0, "total": 1000.0, "used": 0.0}}
+
+    # Patch exchange and wallets with different rates per base currency
+    def _rate(base, stake):
+        if base == "FOO":
+            return 50.0
+        if base == "BAR":
+            return 200.0
+        return None
+
+    mocker.patch.multiple(
+        EXMS,
+        validate_trading_mode_and_margin_mode=MagicMock(),
+        get_balances=MagicMock(return_value=mock_balance),
+        get_tickers=MagicMock(return_value={}),
+        get_conversion_rate=MagicMock(side_effect=_rate),
+        get_pair_base_currency=MagicMock(side_effect=lambda pair: pair.split("/")[0]),
+    )
+
+    default_conf_usdt["dry_run"] = False
+    default_conf_usdt["trading_mode"] = "futures"
+    default_conf_usdt["margin_mode"] = "isolated"
+
+    freqtradebot = get_patched_freqtradebot(mocker, default_conf_usdt)
+
+    # Create a short and a long position wallet directly to avoid depending on fetch_positions parsing
+    short_pos = PositionWallet(
+        symbol="FOO/USDT:USDT",
+        position=2.0,
+        leverage=2.0,
+        collateral=100.0,
+        side="short",
+    )
+    long_pos = PositionWallet(
+        symbol="BAR/USDT:USDT",
+        position=3.0,
+        leverage=3.0,
+        collateral=150.0,
+        side="long",
+    )
+
+    mocker.patch.multiple(
+        freqtradebot.wallets,
+        get_all_positions=MagicMock(
+            return_value={short_pos.symbol: short_pos, long_pos.symbol: long_pos}
+        ),
+        get_all_balances=MagicMock(return_value={"USDT": Wallet("USDT", 1000.0, 1000.0, 0.0)}),
+    )
+
+    rpc = RPC(freqtradebot)
+    result = rpc._rpc_balance(
+        default_conf_usdt["stake_currency"], default_conf_usdt["fiat_display_currency"]
+    )
+
+    pos_short = next(c for c in result["currencies"] if c["currency"] == short_pos.symbol)
+    pos_long = next(c for c in result["currencies"] if c["currency"] == long_pos.symbol)
+
+    assert pos_short["est_stake"] == 200.0
+    assert pos_long["est_stake"] == 300.0
+    assert result["total"] == 1500.0
+    assert result["total_bot"] == 1490.0
+    assert result["value_bot"] == 0  # No fiat conversion
+    stake_pos = result["currencies"][0]
+    assert stake_pos["currency"] == "USDT"
+    assert stake_pos["est_stake_bot"] == 990.0
+    assert stake_pos["bot_owned"] == 990.0
+
+
 def test_rpc_start(mocker, default_conf) -> None:
     mocker.patch("freqtrade.rpc.telegram.Telegram", MagicMock())
     mocker.patch.multiple(EXMS, fetch_ticker=MagicMock())
