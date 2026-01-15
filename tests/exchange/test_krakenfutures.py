@@ -4,21 +4,23 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
 from ccxt.base.errors import NotSupported
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
+from freqtrade.exceptions import InvalidOrderException
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.krakenfutures import Krakenfutures
 from tests.conftest import get_patched_exchange
 
 
-def test_krakenfutures_get_ft_has():
-    """Test that get_ft_has returns correct capability flags."""
-    ft_has = Krakenfutures.get_ft_has()
-    assert ft_has["fetchOrder"] is True
-    assert ft_has["createMarketOrder"] is True
+def test_krakenfutures_ft_has_overrides():
+    """Test that _ft_has contains correct capability overrides."""
+    ft_has = Krakenfutures._ft_has
     assert ft_has["stoploss_on_exchange"] is True
     assert ft_has["stoploss_order_types"] == {"limit": "limit", "market": "market"}
+    assert ft_has["exchange_has_overrides"]["fetchOrder"] is True
+    assert ft_has["exchange_has_overrides"]["createMarketOrder"] is True
 
 
 def test_krakenfutures_ohlcv_candle_limit_caps_at_2000(mocker, default_conf):
@@ -102,8 +104,8 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
     assert res["status"] == "closed"
 
 
-def test_krakenfutures_fetch_order_returns_pseudo_order_when_not_found(mocker, default_conf):
-    """When order is not found anywhere, Krakenfutures returns a pseudo order to avoid crashes."""
+def test_krakenfutures_fetch_order_raises_when_not_found(mocker, default_conf):
+    """When order is not found anywhere, Krakenfutures raises InvalidOrderException."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     mocker.patch.object(
@@ -117,11 +119,8 @@ def test_krakenfutures_fetch_order_returns_pseudo_order_when_not_found(mocker, d
     mocker.patch.object(ex._api, "historyGetOrders", return_value={"elements": []}, create=True)
     mocker.patch.object(ex._api, "historyGetTriggers", return_value={"elements": []}, create=True)
 
-    res = ex.fetch_order("nope", "BTC/USD:USD")
-    # Returns a pseudo order with status open and the requested id
-    assert res["id"] == "nope"
-    assert res["status"] == "open"
-    assert res["symbol"] == "BTC/USD:USD"
+    with pytest.raises(InvalidOrderException, match="not found on exchange"):
+        ex.fetch_order("nope", "BTC/USD:USD")
 
 
 def test_krakenfutures_fetch_order_falls_back_to_history_orders(mocker, default_conf):
