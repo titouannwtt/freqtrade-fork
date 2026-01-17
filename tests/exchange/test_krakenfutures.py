@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from unittest.mock import MagicMock
 
 import pytest
 from ccxt.base.errors import NotSupported
@@ -11,7 +12,7 @@ from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import InvalidOrderException
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.krakenfutures import Krakenfutures
-from tests.conftest import get_patched_exchange
+from tests.conftest import EXMS, get_patched_exchange
 
 
 def test_krakenfutures_ft_has_overrides():
@@ -169,20 +170,32 @@ def test_krakenfutures_fetch_order_falls_back_to_history_orders(mocker, default_
     assert res["filled"] == 0.0
 
 
-def test_krakenfutures_get_stop_params_adds_triggerprice_signal_and_reduceonly(
-    mocker, default_conf
-):
-    """Test _get_stop_params adds triggerPrice, triggerSignal, and reduceOnly."""
+def test_krakenfutures_create_stoploss_uses_trigger_price_type(mocker, default_conf):
+    """Test create_stoploss uses triggerPrice, triggerSignal, and reduceOnly."""
+    api_mock = MagicMock()
+    api_mock.create_order = MagicMock(return_value={"id": "order-id", "info": {"foo": "bar"}})
+
     conf = deepcopy(default_conf)
+    conf["dry_run"] = False
     conf["trading_mode"] = TradingMode.FUTURES
     conf["margin_mode"] = MarginMode.ISOLATED
 
-    if isinstance(conf.get("exchange"), dict):
-        conf["exchange"]["triggerSignal"] = "mark"
+    mocker.patch(f"{EXMS}.amount_to_precision", lambda s, x, y: y)
+    mocker.patch(f"{EXMS}.price_to_precision", lambda s, x, y, **kwargs: y)
 
-    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+    ex = get_patched_exchange(mocker, conf, api_mock, exchange="krakenfutures")
 
-    params = ex._get_stop_params(side="sell", ordertype="market", stop_price=90000.0)
+    ex.create_stoploss(
+        pair="ETH/BTC",
+        amount=1,
+        stop_price=90000.0,
+        side="sell",
+        order_types={"stoploss": "market", "stoploss_price_type": "mark"},
+        leverage=1.0,
+    )
+
+    call_args = api_mock.create_order.call_args
+    params = call_args[1].get("params") if call_args[1] else call_args[0][5]
 
     assert params["triggerPrice"] == 90000.0
     assert params["triggerSignal"] == "mark"

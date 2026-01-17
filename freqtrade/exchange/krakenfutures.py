@@ -8,7 +8,6 @@ from typing import Any
 
 from ccxt.base.errors import NotSupported, OrderNotFound
 
-from freqtrade.constants import BuySell
 from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import ExchangeError, InvalidOrderException
 from freqtrade.exchange.common import retrier
@@ -537,28 +536,3 @@ class Krakenfutures(Exchange):
     ) -> list[dict[str, Any]]:
         params = self._filter_params_for_open_closed(params or {})
         return self._api.fetch_closed_orders(pair, since, limit, params)
-
-    def _get_stop_params(self, side: BuySell, ordertype: str, stop_price: float) -> dict[str, Any]:
-        params: dict[str, Any] = super()._get_stop_params(
-            side=side, ordertype=ordertype, stop_price=stop_price
-        )
-
-        # Force Kraken Futures naming
-        params.setdefault("triggerPrice", stop_price)
-
-        trigger_signal = self._get_trigger_signal()
-        if trigger_signal is not None:
-            params.setdefault("triggerSignal", trigger_signal)
-
-        if getattr(self, "trading_mode", None) == TradingMode.FUTURES:
-            params.setdefault("reduceOnly", True)
-
-        return params
-
-    def _get_trigger_signal(self) -> str | None:
-        ex_conf = self._config.get("exchange")
-        if isinstance(ex_conf, dict):
-            v = ex_conf.get("triggerSignal") or ex_conf.get("trigger_signal")
-            if isinstance(v, str) and v.strip():
-                return v.strip()
-        return "mark"

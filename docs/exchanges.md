@@ -227,8 +227,11 @@ Kraken Futures uses the exchange id `krakenfutures` and supports isolated future
     "key": "your_exchange_key",
     "secret": "your_exchange_secret",
     "ccxt_config": {"enableRateLimit": true},
-    "ccxt_async_config": {"enableRateLimit": true},
-    "triggerSignal": "mark" // "mark" (default), "last", or "index"
+    "ccxt_async_config": {"enableRateLimit": true}
+},
+"order_types": {
+    "stoploss": "market",
+    "stoploss_price_type": "mark" // "mark" (default), "last", or "index"
 },
 "trading_mode": "futures",
 "margin_mode": "isolated",
@@ -237,23 +240,13 @@ Kraken Futures uses the exchange id `krakenfutures` and supports isolated future
 
 !!! Tip "Stoploss on Exchange"
     Kraken Futures supports `stoploss_on_exchange` with both `limit` and `market` stop orders.
-    Use `exchange.triggerSignal` to select the trigger price source (`mark`, `last`, or `index`).
+    Use `order_types.stoploss_price_type` to select the trigger price source (`mark`, `last`, or `index`).
 
 !!! Note "Collateral"
     Kraken Futures is USD-settled. Kraken allows EUR collateral, but USD is the recommended stake currency.
 
 !!! Note "Pair format"
     Futures pairs use CCXT symbols, for example `BTC/USD:USD`.
-
-### Data download
-
-Kraken Futures uses normal OHLCV downloads.
-
-```bash
-freqtrade download-data --exchange krakenfutures --trading-mode futures --pairs BTC/USD:USD --timeframes 1m 5m
-```
-
-Note: OHLCV requests are capped at 2000 candles per call, so large downloads may take longer.
 
 ## Kucoin
 
