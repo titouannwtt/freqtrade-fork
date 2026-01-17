@@ -9,7 +9,7 @@ import pytest
 from ccxt.base.errors import NotSupported
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
-from freqtrade.exceptions import InvalidOrderException
+from freqtrade.exceptions import RetryableOrderError
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.krakenfutures import Krakenfutures
 from tests.conftest import EXMS, get_patched_exchange
@@ -106,7 +106,7 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
 
 
 def test_krakenfutures_fetch_order_raises_when_not_found(mocker, default_conf):
-    """When order is not found anywhere, Krakenfutures raises InvalidOrderException."""
+    """When order is not found anywhere, Krakenfutures raises RetryableOrderError."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     mocker.patch.object(
@@ -120,7 +120,7 @@ def test_krakenfutures_fetch_order_raises_when_not_found(mocker, default_conf):
     mocker.patch.object(ex._api, "historyGetOrders", return_value={"elements": []}, create=True)
     mocker.patch.object(ex._api, "historyGetTriggers", return_value={"elements": []}, create=True)
 
-    with pytest.raises(InvalidOrderException, match="not found on exchange"):
+    with pytest.raises(RetryableOrderError, match="not found on exchange"):
         ex.fetch_order("nope", "BTC/USD:USD")
 
 

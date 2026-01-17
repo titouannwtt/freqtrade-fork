@@ -6,10 +6,8 @@ import logging
 import time
 from typing import Any
 
-from ccxt.base.errors import NotSupported, OrderNotFound
-
 from freqtrade.enums import MarginMode, PriceType, TradingMode
-from freqtrade.exceptions import ExchangeError, InvalidOrderException
+from freqtrade.exceptions import ExchangeError, RetryableOrderError
 from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
@@ -184,19 +182,17 @@ class Krakenfutures(Exchange):
     ) -> dict[str, Any]:
         params = params or {}
 
-        order = self._fetch_order_default(order_id, pair, params)
-        if order is not None:
+        try:
+            order = self.fetch_order_emulated(order_id, pair, params)
             return self._normalize_fetched_order(order)
-
-        order = self._fetch_order_scan_open_closed(order_id, pair, params)
-        if order is not None:
-            return self._normalize_fetched_order(order)
+        except RetryableOrderError:
+            pass
 
         order = self._fetch_order_from_history(order_id, pair, params)
         if order is not None:
             return self._normalize_fetched_order(order)
 
-        raise InvalidOrderException(f"Order {order_id} not found on exchange for pair {pair}.")
+        raise RetryableOrderError(f"Order {order_id} not found on exchange for pair {pair}.")
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
         """CCXT currently does not support Kraken Futures fetchFundingHistory."""
@@ -207,23 +203,15 @@ class Krakenfutures(Exchange):
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
 
-    def _fetch_order_default(
-        self, order_id: str, pair: str, params: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        try:
-            return self._api.fetch_order(order_id, pair, params)
-        except (NotSupported, AttributeError, OrderNotFound):
-            return None
-
     def _filter_params_for_open_closed(self, params: dict[str, Any]) -> dict[str, Any]:
         if not params:
             return {}
         blacklist = {"since", "before", "from", "to"}
         return {k: v for k, v in params.items() if k not in blacklist}
 
-    def _fetch_order_scan_open_closed(
+    def fetch_order_emulated(
         self, order_id: str, pair: str, params: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    ) -> dict[str, Any]:
         list_params = self._filter_params_for_open_closed(params)
 
         try:
@@ -233,7 +221,7 @@ class Krakenfutures(Exchange):
 
         for o in open_orders:
             if self._contains_value(o, order_id):
-                return o
+                return self._order_contracts_to_amount(o)
 
         try:
             closed_orders = self.fetch_closed_orders(pair, params=list_params)
@@ -242,9 +230,9 @@ class Krakenfutures(Exchange):
 
         for o in closed_orders:
             if self._contains_value(o, order_id):
-                return o
+                return self._order_contracts_to_amount(o)
 
-        return None
+        raise RetryableOrderError(f"Order not found (pair: {pair} id: {order_id}).")
 
     def _fetch_order_from_history(
         self, order_id: str, pair: str, params: dict[str, Any]
