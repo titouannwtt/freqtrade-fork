@@ -245,9 +245,6 @@ Kraken Futures uses the exchange id `krakenfutures` and supports isolated future
 !!! Note "Collateral"
     Kraken Futures is USD-settled. Kraken allows EUR collateral, but USD is the recommended stake currency.
 
-!!! Note "Pair format"
-    Futures pairs use CCXT symbols, for example `BTC/USD:USD`.
-
 ## Kucoin
 
 Kucoin requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
