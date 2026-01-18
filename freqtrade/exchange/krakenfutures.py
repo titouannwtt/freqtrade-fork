@@ -58,6 +58,10 @@ class Krakenfutures(Exchange):
         },
     }
 
+    @classmethod
+    def get_ft_has(cls) -> dict[str, Any]:
+        return cls._ft_has.get("exchange_has_overrides", {})
+
     def get_balances(self, params: dict | None = None) -> dict[str, Any]:
         """
         Fetch account balances with special handling for Kraken Futures flex accounts.
