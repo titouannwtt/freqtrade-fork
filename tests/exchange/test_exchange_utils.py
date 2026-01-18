@@ -404,7 +404,7 @@ def test_exchange__exchange_has_helper():
         "fetchMyTrades": ["fetchTrades"],
         "fetchOrder": ["fetchOpenOrder", "fetchClosedOrder"],
     }
-    missing = _exchange_has_helper(e_mod, required)
+    missing = _exchange_has_helper(e_mod.has, required)
     assert set(missing) == {"fetchOHLCV"}
 
     e_mod.has = {
@@ -414,7 +414,7 @@ def test_exchange__exchange_has_helper():
         "fetchMyTrades": False,
         "fetchOrder": True,
     }
-    missing = _exchange_has_helper(e_mod, required)
+    missing = _exchange_has_helper(e_mod.has, required)
     assert set(missing) == {"fetchOHLCV", "fetchMyTrades"}
 
     e_mod.has = {
@@ -424,5 +424,5 @@ def test_exchange__exchange_has_helper():
         "fetchMyTrades": False,
         "fetchOrder": False,
     }
-    missing = _exchange_has_helper(e_mod, required)
+    missing = _exchange_has_helper(e_mod.has, required)
     assert set(missing) == {"fetchOHLCV", "fetchMyTrades", "fetchOrder"}
