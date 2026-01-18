@@ -187,8 +187,8 @@ class Krakenfutures(Exchange):
         params = params or {}
 
         try:
-            order = self.fetch_order_emulated(order_id, pair, params)
-            return self._normalize_fetched_order(order)
+            emulated = self.fetch_order_emulated(order_id, pair, params)
+            return self._normalize_fetched_order(emulated)
         except RetryableOrderError:
             pass
 
