@@ -207,16 +207,17 @@ class Krakenfutures(Exchange):
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
 
-    def _filter_params_for_open_closed(self, params: dict[str, Any]) -> dict[str, Any]:
+    def _strip_history_params(self, params: dict[str, Any]) -> dict[str, Any]:
         if not params:
             return {}
-        blacklist = {"since", "before", "from", "to"}
-        return {k: v for k, v in params.items() if k not in blacklist}
+        # These time-range params are only valid for history endpoints.
+        history_keys = {"since", "before", "from", "to"}
+        return {k: v for k, v in params.items() if k not in history_keys}
 
     def fetch_order_emulated(
         self, order_id: str, pair: str, params: dict[str, Any]
     ) -> dict[str, Any]:
-        list_params = self._filter_params_for_open_closed(params)
+        list_params = self._strip_history_params(params)
 
         try:
             open_orders = self.fetch_open_orders(pair, params=list_params)
@@ -516,7 +517,7 @@ class Krakenfutures(Exchange):
         limit: int | None = None,
         params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        params = self._filter_params_for_open_closed(params or {})
+        params = self._strip_history_params(params or {})
         return self._api.fetch_open_orders(pair, since, limit, params)
 
     def fetch_closed_orders(
@@ -526,5 +527,5 @@ class Krakenfutures(Exchange):
         limit: int | None = None,
         params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        params = self._filter_params_for_open_closed(params or {})
+        params = self._strip_history_params(params or {})
         return self._api.fetch_closed_orders(pair, since, limit, params)
