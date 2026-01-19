@@ -24,12 +24,12 @@ def test_krakenfutures_ft_has_overrides():
     assert ft_has["exchange_has_overrides"]["createMarketOrder"] is True
 
 
-def test_krakenfutures_ohlcv_candle_limit_caps_at_2000(mocker, default_conf):
-    """Test that OHLCV candle limit is capped at 2000."""
+def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
+    """Test that OHLCV candle limit follows CCXT feature limit."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
     assert isinstance(ex, Krakenfutures)
 
-    mocker.patch.object(ex, "features", return_value=5000)
+    mocker.patch.object(ex, "features", return_value=2000)
 
     assert ex.ohlcv_candle_limit("1m", candle_type=CandleType.FUTURES) == 2000
 
