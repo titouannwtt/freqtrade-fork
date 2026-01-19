@@ -50,7 +50,6 @@ class Krakenfutures(Exchange):
             PriceType.MARK: "mark",
             PriceType.INDEX: "index",
         },
-        "ohlcv_candle_limit": 2000,
         # override ccxt has-gaps
         "exchange_has_overrides": {
             "fetchOrder": True,
