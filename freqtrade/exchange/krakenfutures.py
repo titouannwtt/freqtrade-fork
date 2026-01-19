@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from freqtrade.enums import MarginMode, PriceType, TradingMode
-from freqtrade.exceptions import ExchangeError, RetryableOrderError
+from freqtrade.exceptions import ExchangeError, RetryableOrderError, TemporaryError
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
 
@@ -169,19 +169,33 @@ class Krakenfutures(Exchange):
         """
         Kraken Futures fetchOrder is backed by /orders/status which only returns
         open orders or orders closed within the last 5 seconds.
-        Fall back to fetchClosedOrders for older orders.
+        Fall back to closed/canceled order endpoints for older orders.
         """
         params = params or {}
         try:
             return super().fetch_order(order_id, pair, params=params)
-        except RetryableOrderError as err:
-            if not self.exchange_has("fetchClosedOrders"):
-                raise
+        except (RetryableOrderError, TemporaryError) as err:
+            order = self._fetch_order_from_closed_or_canceled(order_id, pair, params)
+            if order is not None:
+                return order
+            raise err
+
+    def _fetch_order_from_closed_or_canceled(
+        self, order_id: str, pair: str, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        if self.exchange_has("fetchClosedOrders"):
             orders = self._api.fetch_closed_orders(pair, params=params)
             for order in orders or []:
                 if str(order.get("id")) == str(order_id):
                     return self._order_contracts_to_amount(order)
-            raise err
+
+        if self.exchange_has("fetchCanceledOrders"):
+            orders = self._api.fetch_canceled_orders(pair, params=params)
+            for order in orders or []:
+                if str(order.get("id")) == str(order_id):
+                    return self._order_contracts_to_amount(order)
+
+        return None
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
         """CCXT currently does not support Kraken Futures fetchFundingHistory."""

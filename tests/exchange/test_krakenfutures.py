@@ -6,7 +6,7 @@ from copy import deepcopy
 from unittest.mock import MagicMock
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
-from freqtrade.exceptions import RetryableOrderError
+from freqtrade.exceptions import RetryableOrderError, TemporaryError
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.krakenfutures import Krakenfutures
 from tests.conftest import EXMS, get_patched_exchange
@@ -35,10 +35,12 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
     """Fallback to fetch_closed_orders when fetch_order can't find the order."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
+    mocker.patch.object(Exchange, "fetch_order", side_effect=RetryableOrderError("not found"))
     mocker.patch.object(
-        Exchange, "fetch_order", side_effect=RetryableOrderError("not found")
+        ex,
+        "exchange_has",
+        side_effect=lambda endpoint: endpoint == "fetchClosedOrders",
     )
-    mocker.patch.object(ex, "exchange_has", return_value=True)
     mocker.patch.object(
         ex._api,
         "fetch_closed_orders",
@@ -48,6 +50,29 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
 
     res = ex.fetch_order("abc", "BTC/USD:USD")
     assert res["id"] == "abc"
+
+
+def test_krakenfutures_fetch_order_falls_back_to_canceled_orders(mocker, default_conf):
+    """Fallback to fetch_canceled_orders when closed orders don't contain the order."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    mocker.patch.object(
+        Exchange, "fetch_order", side_effect=TemporaryError("UUID string too large")
+    )
+    mocker.patch.object(
+        ex,
+        "exchange_has",
+        side_effect=lambda endpoint: endpoint == "fetchCanceledOrders",
+    )
+    mocker.patch.object(
+        ex._api,
+        "fetch_canceled_orders",
+        return_value=[{"id": "def", "symbol": "BTC/USD:USD", "status": "canceled"}],
+        create=True,
+    )
+
+    res = ex.fetch_order("def", "BTC/USD:USD")
+    assert res["id"] == "def"
 
 
 def test_krakenfutures_create_stoploss_uses_trigger_price_type(mocker, default_conf):
