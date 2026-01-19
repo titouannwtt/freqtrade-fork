@@ -5,9 +5,6 @@ from __future__ import annotations
 from copy import deepcopy
 from unittest.mock import MagicMock
 
-import pytest
-from ccxt.base.errors import NotSupported
-
 from freqtrade.enums import CandleType, MarginMode, TradingMode
 from freqtrade.exceptions import RetryableOrderError
 from freqtrade.exchange.exchange import Exchange
@@ -16,12 +13,12 @@ from tests.conftest import EXMS, get_patched_exchange
 
 
 def test_krakenfutures_ft_has_overrides():
-    """Test that _ft_has contains correct capability overrides."""
+    """Test that _ft_has contains Kraken Futures stoploss settings."""
     ft_has = Krakenfutures._ft_has
     assert ft_has["stoploss_on_exchange"] is True
     assert ft_has["stoploss_order_types"] == {"limit": "limit", "market": "market"}
-    assert ft_has["exchange_has_overrides"]["fetchOrder"] is True
-    assert ft_has["exchange_has_overrides"]["createMarketOrder"] is True
+    assert ft_has["stop_price_param"] == "triggerPrice"
+    assert ft_has["stop_price_type_field"] == "triggerSignal"
 
 
 def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
@@ -34,140 +31,23 @@ def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
     assert ex.ohlcv_candle_limit("1m", candle_type=CandleType.FUTURES) == 2000
 
 
-def test_krakenfutures_fetch_order_falls_back_to_open_orders(mocker, default_conf):
-    """Test fetch_order falls back to open orders when fetchOrder not supported."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
-    )
-    mocker.patch.object(
-        ex._api,
-        "fetch_open_orders",
-        return_value=[{"id": "abc", "status": "open"}],
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-
-    res = ex.fetch_order("abc", "BTC/USD:USD")
-    assert res["id"] == "abc"
-    assert res["status"] == "open"
-
-
-def test_krakenfutures_fetch_order_falls_back_when_super_raises_attributeerror(
-    mocker, default_conf
-):
-    """Test fetch_order handles AttributeError from missing fetch_open_order."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=AttributeError("fetch_open_order missing"),
-        create=True,
-    )
-    mocker.patch.object(
-        ex._api,
-        "fetch_open_orders",
-        return_value=[{"id": "abc", "status": "open"}],
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-
-    res = ex.fetch_order("abc", "BTC/USD:USD")
-    assert res["id"] == "abc"
-    assert res["status"] == "open"
-
-
 def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_conf):
-    """Test fetch_order falls back to closed orders when not found in open."""
+    """Fallback to fetch_closed_orders when fetch_order can't find the order."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
+        Exchange, "fetch_order", side_effect=RetryableOrderError("not found")
     )
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    mocker.patch.object(ex, "exchange_has", return_value=True)
     mocker.patch.object(
         ex._api,
         "fetch_closed_orders",
-        return_value=[{"id": "def", "status": "closed"}],
-        create=True,
-    )
-
-    res = ex.fetch_order("def", "BTC/USD:USD")
-    assert res["id"] == "def"
-    assert res["status"] == "closed"
-
-
-def test_krakenfutures_fetch_order_raises_when_not_found(mocker, default_conf):
-    """When order is not found anywhere, Krakenfutures raises RetryableOrderError."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "historyGetOrders", return_value={"elements": []}, create=True)
-    mocker.patch.object(ex._api, "historyGetTriggers", return_value={"elements": []}, create=True)
-
-    with pytest.raises(RetryableOrderError, match="not found on exchange"):
-        ex.fetch_order("nope", "BTC/USD:USD")
-
-
-def test_krakenfutures_fetch_order_falls_back_to_history_orders(mocker, default_conf):
-    """Test fetch_order falls back to historyGetOrders endpoint."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-
-    mocker.patch.object(
-        ex._api,
-        "historyGetOrders",
-        return_value={
-            "elements": [
-                {
-                    "event": {
-                        "OrderCancelled": {
-                            "order": {
-                                "uid": "abc",
-                                "direction": "Buy",
-                                "quantity": "0.0002",
-                                "filled": "0",
-                                "timestamp": 1767962185989,
-                                "limitPrice": "90338",
-                            }
-                        }
-                    }
-                }
-            ]
-        },
+        return_value=[{"id": "abc", "symbol": "BTC/USD:USD", "status": "closed"}],
         create=True,
     )
 
     res = ex.fetch_order("abc", "BTC/USD:USD")
     assert res["id"] == "abc"
-    assert res["status"] == "canceled"
-    assert res["side"] == "buy"
-    assert res["type"] == "limit"
-    assert res["amount"] == 0.0002
-    assert res["filled"] == 0.0
 
 
 def test_krakenfutures_create_stoploss_uses_trigger_price_type(mocker, default_conf):
@@ -200,110 +80,6 @@ def test_krakenfutures_create_stoploss_uses_trigger_price_type(mocker, default_c
     assert params["triggerPrice"] == 90000.0
     assert params["triggerSignal"] == "mark"
     assert params["reduceOnly"] is True
-
-
-def test_krakenfutures_fetch_order_falls_back_to_history_triggers(mocker, default_conf):
-    """Test fetch_order falls back to historyGetTriggers for stop orders."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-
-    mocker.patch.object(ex._api, "historyGetOrders", return_value={"elements": []}, create=True)
-    mocker.patch.object(
-        ex._api,
-        "historyGetTriggers",
-        return_value={
-            "elements": [
-                {
-                    "event": {
-                        "TriggerCancelled": {
-                            "trigger": {
-                                "uid": "abc",
-                                "direction": "Buy",
-                                "quantity": "0.0002",
-                                "timestamp": 1767962185989,
-                                "triggerPrice": "136238",
-                                "orderType": "stp",
-                                "reduceOnly": False,
-                            }
-                        }
-                    }
-                }
-            ]
-        },
-        create=True,
-    )
-
-    res = ex.fetch_order("abc", "BTC/USD:USD")
-    assert res["id"] == "abc"
-    assert res["status"] == "canceled"
-    assert res["side"] == "buy"
-    assert res["type"] == "market"
-    assert res["stopPrice"] == 136238.0
-
-
-def test_krakenfutures_fetch_order_normalizes_stopprice_and_type_from_trigger_info(
-    mocker, default_conf
-):
-    """Test fetch_order normalizes stopPrice from trigger info and fixes order type."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    mocker.patch.object(
-        ex._api,
-        "fetch_order",
-        side_effect=NotSupported("fetchOrder not supported"),
-        create=True,
-    )
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-
-    mocker.patch.object(ex._api, "historyGetOrders", return_value={"elements": []}, create=True)
-
-    # stopPrice exists in the payload, but NOT inside the trigger dict that becomes "orderish"
-    # This forces stopPrice to be picked up via _normalize_fetched_order scanning order["info"].
-    mocker.patch.object(
-        ex._api,
-        "historyGetTriggers",
-        return_value={
-            "elements": [
-                {
-                    "event": {
-                        "TriggerCancelled": {
-                            "trigger": {
-                                "uid": "abc",
-                                "direction": "Buy",
-                                "quantity": "0.0002",
-                                "orderType": "lmt",
-                            },
-                            "stopPrice": "136983.0",
-                        }
-                    }
-                }
-            ]
-        },
-        create=True,
-    )
-
-    res = ex.fetch_order("abc", "BTC/USD:USD")
-    assert res["id"] == "abc"
-    assert res["status"] == "canceled"
-    assert res["side"] == "buy"
-    assert res["stopPrice"] == 136983.0
-    assert res["type"] == "market"
-
-
-def test_krakenfutures_exchange_has_create_market_order_override(mocker, default_conf):
-    """Test exchange_has override returns True for createMarketOrder."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-    ex._api.has = {"createMarketOrder": False}
-    assert ex.exchange_has("createMarketOrder") is True
 
 
 def test_krakenfutures_validate_stakecurrency_allows_eur(mocker, default_conf):

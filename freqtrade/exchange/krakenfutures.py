@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any
 
 from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import ExchangeError, RetryableOrderError
-from freqtrade.exchange.common import retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
 
@@ -22,10 +20,8 @@ class Krakenfutures(Exchange):
     Contains adjustments needed for Freqtrade to work with this exchange.
 
     Key differences from spot Kraken:
-    - CCXT does not implement fetchOrder; we emulate via open/closed/history endpoints
     - Stop orders use triggerPrice/triggerSignal instead of stopPrice
     - Multi-collateral accounts require synthetic USD balance from flex account
-    - OHLCV limit capped at 2000 candles
     """
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
@@ -50,16 +46,7 @@ class Krakenfutures(Exchange):
             PriceType.MARK: "mark",
             PriceType.INDEX: "index",
         },
-        # override ccxt has-gaps
-        "exchange_has_overrides": {
-            "fetchOrder": True,
-            "createMarketOrder": True,
-        },
     }
-
-    @classmethod
-    def get_ft_has(cls) -> dict[str, Any]:
-        return cls._ft_has.get("exchange_has_overrides", {})
 
     def get_balances(self, params: dict | None = None) -> dict[str, Any]:
         """
@@ -176,26 +163,25 @@ class Krakenfutures(Exchange):
             return
         super().validate_stakecurrency(stake_currency)
 
-    @retrier
     def fetch_order(
-        self,
-        order_id: str,
-        pair: str,
-        params: dict[str, Any] | None = None,
+        self, order_id: str, pair: str, params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
+        """
+        Kraken Futures fetchOrder is backed by /orders/status which only returns
+        open orders or orders closed within the last 5 seconds.
+        Fall back to fetchClosedOrders for older orders.
+        """
         params = params or {}
-
         try:
-            emulated = self.fetch_order_emulated(order_id, pair, params)
-            return self._normalize_fetched_order(emulated)
-        except RetryableOrderError:
-            pass
-
-        order = self._fetch_order_from_history(order_id, pair, params)
-        if order is not None:
-            return self._normalize_fetched_order(order)
-
-        raise RetryableOrderError(f"Order {order_id} not found on exchange for pair {pair}.")
+            return super().fetch_order(order_id, pair, params=params)
+        except RetryableOrderError as err:
+            if not self.exchange_has("fetchClosedOrders"):
+                raise
+            orders = self._api.fetch_closed_orders(pair, params=params)
+            for order in orders or []:
+                if str(order.get("id")) == str(order_id):
+                    return self._order_contracts_to_amount(order)
+            raise err
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
         """CCXT currently does not support Kraken Futures fetchFundingHistory."""
@@ -206,254 +192,6 @@ class Krakenfutures(Exchange):
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
 
-    def _strip_history_params(self, params: dict[str, Any]) -> dict[str, Any]:
-        if not params:
-            return {}
-        # These time-range params are only valid for history endpoints.
-        history_keys = {"since", "before", "from", "to"}
-        return {k: v for k, v in params.items() if k not in history_keys}
-
-    def fetch_order_emulated(
-        self, order_id: str, pair: str, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        list_params = self._strip_history_params(params)
-
-        try:
-            open_orders = self.fetch_open_orders(pair, params=list_params)
-        except Exception:
-            open_orders = []
-
-        for o in open_orders:
-            if self._contains_value(o, order_id):
-                return self._order_contracts_to_amount(o)
-
-        try:
-            closed_orders = self.fetch_closed_orders(pair, params=list_params)
-        except Exception:
-            closed_orders = []
-
-        for o in closed_orders:
-            if self._contains_value(o, order_id):
-                return self._order_contracts_to_amount(o)
-
-        raise RetryableOrderError(f"Order not found (pair: {pair} id: {order_id}).")
-
-    def _fetch_order_from_history(
-        self, order_id: str, pair: str, params: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        # Kraken Futures has separate history feeds for orders and triggers.
-        for method_name in ("historyGetOrders", "historyGetTriggers"):
-            order = self._fetch_order_from_history_method(method_name, order_id, pair, params)
-            if order is not None:
-                return order
-        return None
-
-    def _fetch_order_from_history_method(
-        self,
-        method_name: str,
-        order_id: str,
-        pair: str,
-        params: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        if not hasattr(self._api, method_name):
-            return None
-
-        hist_params = dict(params)
-        if not any(k in hist_params for k in ("since", "before", "from", "to")):
-            now_ms = int(getattr(self._api, "milliseconds", lambda: int(time.time() * 1000))())
-            hist_params["since"] = now_ms - 48 * 60 * 60 * 1000  # 48 hours lookback
-
-        try:
-            hist = getattr(self._api, method_name)(hist_params)
-        except Exception:
-            return None
-
-        elements = self._extract_history_elements(hist)
-        return self._parse_order_from_history_elements(elements, order_id, pair)
-
-    @staticmethod
-    def _extract_history_elements(hist: Any) -> list[dict[str, Any]]:
-        if isinstance(hist, list):
-            return [x for x in hist if isinstance(x, dict)]
-
-        if not isinstance(hist, dict):
-            return []
-
-        if isinstance(hist.get("elements"), list):
-            return [x for x in hist["elements"] if isinstance(x, dict)]
-
-        result = hist.get("result")
-        if isinstance(result, dict) and isinstance(result.get("elements"), list):
-            return [x for x in result["elements"] if isinstance(x, dict)]
-
-        events = hist.get("events")
-        if isinstance(events, list):
-            return [x for x in events if isinstance(x, dict)]
-
-        return []
-
-    def _parse_order_from_history_elements(
-        self, elements: list[dict[str, Any]], order_id: str, pair: str
-    ) -> dict[str, Any] | None:
-        for el in elements:
-            event = el.get("event") or el.get("events") or {}
-            if not isinstance(event, dict):
-                continue
-
-            for event_name, payload in event.items():
-                if not isinstance(payload, dict):
-                    continue
-
-                orderish = self._extract_orderish(payload)
-                uid = self._extract_uid(orderish, payload)
-
-                if uid is None and self._contains_value(payload, order_id):
-                    uid = order_id
-
-                if str(uid) != str(order_id):
-                    continue
-
-                return self._build_ccxt_like_order_from_history(
-                    el, str(event_name), orderish, order_id, pair
-                )
-
-        return None
-
-    @staticmethod
-    def _extract_orderish(payload: dict[str, Any]) -> dict[str, Any]:
-        for key in ("order", "trigger", "triggerOrder"):
-            v = payload.get(key)
-            if isinstance(v, dict):
-                return v
-        return payload
-
-    @staticmethod
-    def _extract_uid(orderish: dict[str, Any], payload: dict[str, Any]) -> Any:
-        keys = (
-            "uid",
-            "id",
-            "orderId",
-            "order_id",
-            "orderUid",
-            "triggerId",
-            "trigger_id",
-            "triggerUid",
-            "triggerOrderUid",
-        )
-        for k in keys:
-            if k in orderish:
-                return orderish.get(k)
-        for k in keys:
-            if k in payload:
-                return payload.get(k)
-        return None
-
-    @staticmethod
-    def _contains_value(obj: Any, needle: str) -> bool:
-        if isinstance(obj, dict):
-            return any(Krakenfutures._contains_value(v, needle) for v in obj.values())
-        if isinstance(obj, list):
-            return any(Krakenfutures._contains_value(v, needle) for v in obj)
-        return str(obj) == str(needle)
-
-    def _build_ccxt_like_order_from_history(
-        self,
-        el: dict[str, Any],
-        event_name: str,
-        order: dict[str, Any],
-        order_id: str,
-        pair: str,
-    ) -> dict[str, Any]:
-        status = self._map_history_event_to_status(event_name)
-
-        amount = self._safe_float(order.get("quantity") or order.get("qty"))
-        filled = self._safe_float(
-            order.get("filled") or order.get("filledQty") or order.get("filled_qty")
-        )
-        price = self._safe_float(order.get("limitPrice") or order.get("price"))
-        stop_price = self._safe_float(
-            order.get("stopPrice")
-            or order.get("triggerPrice")
-            or order.get("trigger_price")
-            or order.get("stop_price")
-        )
-
-        side_raw = str(order.get("direction") or order.get("side") or "").lower()
-        if not side_raw and isinstance(order.get("buy"), bool):
-            side_raw = "buy" if order["buy"] else "sell"
-        side = "buy" if side_raw == "buy" else "sell" if side_raw == "sell" else None
-
-        order_type = self._infer_order_type_from_history(order, price)
-
-        remaining = None
-        if amount is not None and filled is not None:
-            remaining = max(amount - filled, 0.0)
-
-        ts = order.get("timestamp") or order.get("time") or el.get("timestamp") or el.get("time")
-        ts_int = int(ts) if ts is not None else None
-
-        reduce_only = order.get("reduceOnly")
-        if isinstance(reduce_only, str):
-            reduce_only = reduce_only.lower() == "true"
-
-        result: dict[str, Any] = {
-            "id": order_id,
-            "symbol": pair,
-            "status": status,
-            "side": side,
-            "type": order_type,
-            "price": price,
-            "amount": amount,
-            "filled": filled,
-            "remaining": remaining,
-            "timestamp": ts_int,
-            "datetime": self._api.iso8601(ts_int) if ts_int is not None else None,
-            "info": el,
-        }
-
-        if stop_price is not None:
-            result["stopPrice"] = stop_price
-
-        if isinstance(reduce_only, bool):
-            result["reduceOnly"] = reduce_only
-
-        return result
-
-    @staticmethod
-    def _infer_order_type_from_history(order: dict[str, Any], price: float | None) -> str | None:
-        raw = str(order.get("orderType") or order.get("type") or "").lower()
-
-        if raw in ("lmt", "limit", "post", "ioc"):
-            return "limit"
-        if raw in ("mkt", "market"):
-            return "market"
-
-        if raw in (
-            "stp",
-            "stop",
-            "take_profit",
-            "takeprofit",
-            "take-profit",
-            "trailing_stop",
-            "trailingstop",
-        ):
-            return "limit" if price is not None else "market"
-
-        if price is not None:
-            return "limit"
-        return None
-
-    @staticmethod
-    def _map_history_event_to_status(event_name: str) -> str:
-        name = (event_name or "").lower()
-        if "cancel" in name:
-            return "canceled"
-        if "reject" in name:
-            return "rejected"
-        if "place" in name:
-            return "open"
-        return "unknown"
-
     @staticmethod
     def _safe_float(v: Any) -> float | None:
         try:
@@ -462,69 +200,3 @@ class Krakenfutures(Exchange):
             return float(v)
         except (TypeError, ValueError):
             return None
-
-    @staticmethod
-    def _find_first_value(obj: Any, keys: set[str]) -> Any | None:
-        if obj is None:
-            return None
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if k in keys and v not in (None, ""):
-                    return v
-                found = Krakenfutures._find_first_value(v, keys)
-                if found is not None:
-                    return found
-            return None
-        if isinstance(obj, list):
-            for v in obj:
-                found = Krakenfutures._find_first_value(v, keys)
-                if found is not None:
-                    return found
-            return None
-        return None
-
-    def _normalize_fetched_order(self, order: dict[str, Any]) -> dict[str, Any]:
-        # 1) Ensure stopPrice exists for trigger orders
-        if order.get("stopPrice") is None:
-            raw = (
-                order.get("triggerPrice")
-                or order.get("trigger_price")
-                or order.get("stop_price")
-                or self._find_first_value(
-                    order.get("info"),
-                    {"stopPrice", "triggerPrice", "stop_price", "trigger_price"},
-                )
-            )
-            sp = self._safe_float(raw)
-            if sp is not None:
-                order["stopPrice"] = sp
-
-        # 2) Fix type when we clearly have a market trigger (no limit price, but has stopPrice)
-        if (
-            order.get("type") in (None, "limit")
-            and order.get("price") is None
-            and order.get("stopPrice") is not None
-        ):
-            order["type"] = "market"
-
-        return order
-
-    def fetch_open_orders(
-        self,
-        pair: str | None = None,
-        since: int | None = None,
-        limit: int | None = None,
-        params: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
-        params = self._strip_history_params(params or {})
-        return self._api.fetch_open_orders(pair, since, limit, params)
-
-    def fetch_closed_orders(
-        self,
-        pair: str | None = None,
-        since: int | None = None,
-        limit: int | None = None,
-        params: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
-        params = self._strip_history_params(params or {})
-        return self._api.fetch_closed_orders(pair, since, limit, params)
