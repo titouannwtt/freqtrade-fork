@@ -52,7 +52,7 @@ By default, `backtesting-analysis` processes the most recent backtest results in
 If you want to analyze results from an earlier backtest, use the `--backtest-filename` option to specify the desired file. This lets you revisit and re-analyze historical backtest outputs at any time by providing the filename of the relevant backtest result:
 
 ``` bash
-freqtrade backtesting-analysis -c <config.json> --timeframe <tf> --strategy <strategy_name> --timerange <timerange> --export signals --backtest-filename backtest-result-2025-03-05_20-38-34.zip
+freqtrade backtesting -c <config.json> --timeframe <tf> --strategy <strategy_name> --timerange <timerange> --export signals --backtest-filename backtest-result-2025-03-05_20-38-34.zip
 ```
 
 You should see some output similar to below in the logs with the name of the timestamped
