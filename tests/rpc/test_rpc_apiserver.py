@@ -2826,6 +2826,7 @@ def test_api_pairlists_evaluate(botclient, tmp_path, mocker):
 
 def test_list_available_pairs(botclient):
     ftbot, client = botclient
+    ftbot.config["runmode"] = RunMode.WEBSERVER
 
     rc = client_get(client, f"{BASE_URI}/available_pairs")
 
