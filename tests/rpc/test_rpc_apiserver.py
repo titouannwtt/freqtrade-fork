@@ -2526,6 +2526,7 @@ def test_api_plot_config(botclient, mocker, tmp_path):
 def test_api_strategies(botclient, tmp_path):
     ftbot, client = botclient
     ftbot.config["user_data_dir"] = tmp_path
+    ftbot.config["runmode"] = RunMode.WEBSERVER
 
     rc = client_get(client, f"{BASE_URI}/strategies")
 
@@ -2551,8 +2552,9 @@ def test_api_strategies(botclient, tmp_path):
 
 
 def test_api_strategy(botclient, tmp_path, mocker):
-    _ftbot, client = botclient
-    _ftbot.config["user_data_dir"] = tmp_path
+    ftbot, client = botclient
+    ftbot.config["user_data_dir"] = tmp_path
+    ftbot.config["runmode"] = RunMode.WEBSERVER
 
     rc = client_get(client, f"{BASE_URI}/strategy/{CURRENT_TEST_STRATEGY}")
 
@@ -2581,6 +2583,7 @@ def test_api_strategy(botclient, tmp_path, mocker):
 
 def test_api_exchanges(botclient):
     _ftbot, client = botclient
+    _ftbot.config["runmode"] = RunMode.WEBSERVER
 
     rc = client_get(client, f"{BASE_URI}/exchanges")
     assert_response(rc)
@@ -2635,6 +2638,7 @@ def test_api_exchanges(botclient):
 def test_list_hyperoptloss(botclient, tmp_path):
     ftbot, client = botclient
     ftbot.config["user_data_dir"] = tmp_path
+    ftbot.config["runmode"] = RunMode.WEBSERVER
 
     rc = client_get(client, f"{BASE_URI}/hyperoptloss")
     assert_response(rc)
