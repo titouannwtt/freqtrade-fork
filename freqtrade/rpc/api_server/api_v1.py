@@ -429,16 +429,6 @@ def plot_config(
         raise HTTPException(status_code=502, detail=str(e))
 
 
-@router.get("/freqaimodels", response_model=FreqAIModelListResponse, tags=["freqai"])
-def list_freqaimodels(config=Depends(get_config)):
-    from freqtrade.resolvers.freqaimodel_resolver import FreqaiModelResolver
-
-    models = FreqaiModelResolver.search_all_objects(config, False)
-    models = sorted(models, key=lambda x: x["name"])
-
-    return {"freqaimodels": [x["name"] for x in models]}
-
-
 @router.get("/markets", response_model=MarketResponse, tags=["candle data", "webserver"])
 def markets(
     query: Annotated[MarketRequest, Query()],

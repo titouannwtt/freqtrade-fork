@@ -10,6 +10,7 @@ from freqtrade.exceptions import OperationalException
 from freqtrade.rpc.api_server.api_schemas import (
     AvailablePairs,
     ExchangeListResponse,
+    FreqAIModelListResponse,
     HyperoptLossListResponse,
     StrategyListResponse,
     StrategyResponse,
@@ -90,6 +91,16 @@ def list_hyperoptloss(
             for x in loss_functions
         ]
     }
+
+
+@router.get("/freqaimodels", response_model=FreqAIModelListResponse, tags=["freqai"])
+def list_freqaimodels(config=Depends(get_config)):
+    from freqtrade.resolvers.freqaimodel_resolver import FreqaiModelResolver
+
+    models = FreqaiModelResolver.search_all_objects(config, False)
+    models = sorted(models, key=lambda x: x["name"])
+
+    return {"freqaimodels": [x["name"] for x in models]}
 
 
 @router.get(
