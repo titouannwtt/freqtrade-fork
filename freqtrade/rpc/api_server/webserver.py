@@ -62,12 +62,38 @@ class ApiServer(RPCHandler):
         ApiServer.__initialized = True
 
         api_config = self._config["api_server"]
+        trade_mode_only = "*only available in trading mode*"
 
         self.app = FastAPI(
             title="Freqtrade API",
             docs_url="/docs" if api_config.get("enable_openapi", False) else None,
             redoc_url=None,
             default_response_class=FTJSONResponse,
+            openapi_tags=[
+                {"name": "auth", "description": "Authentication endpoints."},
+                {
+                    "name": "info",
+                    "description": (
+                        "Information endpoints providing general information about the bot."
+                    ),
+                },
+                {
+                    "name": "trading",
+                    "description": f"Trading related endpoints - {trade_mode_only}.",
+                },
+                {
+                    "name": "webserver",
+                    "description": (
+                        "Webserver related endpoints - *only available in webserver mode*."
+                    ),
+                },
+                {
+                    "name": "botcontrol",
+                    "description": (
+                        f"Bot control endpoints to start/stop trading - {trade_mode_only}."
+                    ),
+                },
+            ],
         )
         self.configure_app(self.app, self._config)
         self.start_api()

@@ -147,7 +147,7 @@ def status(rpc: RPC = Depends(get_rpc)):
 
 # Using the responsemodel here will cause a ~100% increase in response time (from 1s to 2s)
 # on big databases. Correct response model: response_model=TradeResponse,
-@router.get("/trades", tags=["trading-info", "trading"])
+@router.get("/trades", tags=["trading-info", "trades"])
 def trades(
     limit: int = Query(500, ge=1, description="Maximum number of different trades to return data"),
     offset: int = Query(0, ge=0, description="Number of trades to skip for pagination"),
@@ -159,7 +159,7 @@ def trades(
     return rpc._rpc_trade_history(limit, offset=offset, order_by_id=order_by_id)
 
 
-@router.get("/trade/{tradeid}", response_model=OpenTradeSchema, tags=["trading"])
+@router.get("/trade/{tradeid}", response_model=OpenTradeSchema, tags=["trades"])
 def trade(tradeid: int = 0, rpc: RPC = Depends(get_rpc)):
     try:
         return rpc._rpc_trade_status([tradeid])[0]
@@ -167,24 +167,24 @@ def trade(tradeid: int = 0, rpc: RPC = Depends(get_rpc)):
         raise HTTPException(status_code=404, detail="Trade not found.")
 
 
-@router.delete("/trades/{tradeid}", response_model=DeleteTrade, tags=["trading"])
+@router.delete("/trades/{tradeid}", response_model=DeleteTrade, tags=["trades"])
 def trades_delete(tradeid: int, rpc: RPC = Depends(get_rpc)):
     return rpc._rpc_delete(tradeid)
 
 
-@router.delete("/trades/{tradeid}/open-order", response_model=OpenTradeSchema, tags=["trading"])
+@router.delete("/trades/{tradeid}/open-order", response_model=OpenTradeSchema, tags=["trades"])
 def trade_cancel_open_order(tradeid: int, rpc: RPC = Depends(get_rpc)):
     rpc._rpc_cancel_open_order(tradeid)
     return rpc._rpc_trade_status([tradeid])[0]
 
 
-@router.post("/trades/{tradeid}/reload", response_model=OpenTradeSchema, tags=["trading"])
+@router.post("/trades/{tradeid}/reload", response_model=OpenTradeSchema, tags=["trades"])
 def trade_reload(tradeid: int, rpc: RPC = Depends(get_rpc)):
     rpc._rpc_reload_trade_from_exchange(tradeid)
     return rpc._rpc_trade_status([tradeid])[0]
 
 
-@router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trading"])
+@router.get("/trades/open/custom-data", response_model=list[ListCustomData], tags=["trades"])
 def list_open_trades_custom_data(
     key: str | None = Query(None, description="Optional key to filter data"),
     limit: int = Query(100, ge=1, description="Maximum number of different trades to return data"),
@@ -202,7 +202,7 @@ def list_open_trades_custom_data(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trading"])
+@router.get("/trades/{trade_id}/custom-data", response_model=list[ListCustomData], tags=["trades"])
 def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = Depends(get_rpc)):
     """
     Fetch custom data for a specific trade.
@@ -215,11 +215,11 @@ def list_custom_data(trade_id: int, key: str | None = Query(None), rpc: RPC = De
 
 
 # /forcebuy is deprecated with short addition. use /forceentry instead
-@router.post("/forceenter", response_model=ForceEnterResponse, tags=["trading"])
+@router.post("/forceenter", response_model=ForceEnterResponse, tags=["trades"])
 @router.post(
     "/forcebuy",
     response_model=ForceEnterResponse,
-    tags=["trading"],
+    tags=["trades"],
     summary="(deprecated) Please use /forceenter instead",
 )
 def force_entry(payload: ForceEnterPayload, rpc: RPC = Depends(get_rpc)):
@@ -244,11 +244,11 @@ def force_entry(payload: ForceEnterPayload, rpc: RPC = Depends(get_rpc)):
 
 
 # /forcesell is deprecated with short addition. use /forceexit instead
-@router.post("/forceexit", response_model=ResultMsg, tags=["trading"])
+@router.post("/forceexit", response_model=ResultMsg, tags=["trades"])
 @router.post(
     "/forcesell",
     response_model=ResultMsg,
-    tags=["trading"],
+    tags=["trades"],
     summary="(deprecated) Please use /forceexit instead",
 )
 def forceexit(payload: ForceExitPayload, rpc: RPC = Depends(get_rpc)):
