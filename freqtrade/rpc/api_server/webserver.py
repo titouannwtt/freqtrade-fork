@@ -21,6 +21,41 @@ from freqtrade.rpc.rpc_types import RPCSendMsg
 logger = logging.getLogger(__name__)
 
 
+_TRADE_MODE_ONLY = "*only available in trading mode*"
+
+_OPENAPI_TAGS = (
+    {"name": "Auth", "description": "Authentication endpoints."},
+    {
+        "name": "info",
+        "description": ("Information endpoints providing general information about the bot."),
+    },
+    {
+        "name": "trading",
+        "description": f"Trading related endpoints - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "webserver",
+        "description": ("Webserver related endpoints - *only available in webserver mode*."),
+    },
+    {
+        "name": "botcontrol",
+        "description": (f"Bot control endpoints to start/stop trading - {_TRADE_MODE_ONLY}."),
+    },
+    {
+        "name": "pairlist",
+        "description": f"Pairlist management - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "locks",
+        "description": f"Pair lock management - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "candle data",
+        "description": "Candle / OHLCV data.",
+    },
+)
+
+
 class FTJSONResponse(JSONResponse):
     media_type = "application/json"
 
@@ -62,38 +97,13 @@ class ApiServer(RPCHandler):
         ApiServer.__initialized = True
 
         api_config = self._config["api_server"]
-        trade_mode_only = "*only available in trading mode*"
 
         self.app = FastAPI(
             title="Freqtrade API",
             docs_url="/docs" if api_config.get("enable_openapi", False) else None,
             redoc_url=None,
             default_response_class=FTJSONResponse,
-            openapi_tags=[
-                {"name": "auth", "description": "Authentication endpoints."},
-                {
-                    "name": "info",
-                    "description": (
-                        "Information endpoints providing general information about the bot."
-                    ),
-                },
-                {
-                    "name": "trading",
-                    "description": f"Trading related endpoints - {trade_mode_only}.",
-                },
-                {
-                    "name": "webserver",
-                    "description": (
-                        "Webserver related endpoints - *only available in webserver mode*."
-                    ),
-                },
-                {
-                    "name": "botcontrol",
-                    "description": (
-                        f"Bot control endpoints to start/stop trading - {trade_mode_only}."
-                    ),
-                },
-            ],
+            openapi_tags=_OPENAPI_TAGS,
         )
         self.configure_app(self.app, self._config)
         self.start_api()
@@ -158,7 +168,7 @@ class ApiServer(RPCHandler):
 
         app.include_router(api_v1_public, prefix="/api/v1")
 
-        app.include_router(router_login, prefix="/api/v1", tags=["auth"])
+        app.include_router(router_login, prefix="/api/v1", tags=["Auth"])
         app.include_router(
             api_v1,
             prefix="/api/v1",
