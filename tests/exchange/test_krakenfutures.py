@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from freqtrade.enums import CandleType, MarginMode, TradingMode
@@ -166,3 +167,45 @@ def test_krakenfutures_get_balances_falls_back_to_ccxt_fetch_balance(mocker, def
     res = ex.get_balances()
     assert res["free"]["USD"] == 11.0
     assert res["total"]["USD"] == 12.0
+
+
+def test_krakenfutures_sum_currencies_value_sums_valid_values(mocker, default_conf):
+    """Sum currencies values, skipping invalid entries."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    currencies = {
+        "USD": {"value": "10"},
+        "EUR": {"value": 2.5},
+        "BAD": {"value": ""},
+        "NODICT": 3,
+    }
+
+    assert ex._sum_currencies_value(currencies) == 12.5
+
+
+def test_krakenfutures_sum_currencies_value_returns_none_when_empty(mocker, default_conf):
+    """Return None when no valid values are found."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    assert ex._sum_currencies_value(["not", "dict"]) is None
+    assert ex._sum_currencies_value({"USD": {"value": ""}}) is None
+
+
+def test_krakenfutures_get_funding_fees_futures_success(mocker, default_conf):
+    """Use funding fee helper in futures mode."""
+    conf = dict(default_conf)
+    conf["trading_mode"] = TradingMode.FUTURES
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+
+    helper = mocker.patch.object(ex, "_fetch_and_calculate_funding_fees", return_value=1.23)
+    open_date = datetime.now(UTC)
+
+    assert ex.get_funding_fees("BTC/USD:USD", 0.1, False, open_date) == 1.23
+    helper.assert_called_once_with("BTC/USD:USD", 0.1, False, open_date)
+
+
+def test_krakenfutures_get_funding_fees_spot_returns_zero(mocker, default_conf):
+    """Return 0.0 outside futures mode without calling the helper."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    helper = mocker.patch.object(ex, "_fetch_and_calculate_funding_fees")
+
+    assert ex.get_funding_fees("BTC/USD:USD", 0.1, False, None) == 0.0
+    helper.assert_not_called()
