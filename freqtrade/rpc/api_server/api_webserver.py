@@ -92,7 +92,9 @@ def list_hyperoptloss(
     }
 
 
-@router.get("/available_pairs", response_model=AvailablePairs, tags=["candle data"])
+@router.get(
+    "/available_pairs", response_model=AvailablePairs, tags=["candle data", "download-data"]
+)
 def list_available_pairs(
     timeframe: str | None = None,
     stake_currency: str | None = None,

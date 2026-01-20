@@ -140,6 +140,7 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_webserver,
             prefix="/api/v1",
+            tags=["webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
