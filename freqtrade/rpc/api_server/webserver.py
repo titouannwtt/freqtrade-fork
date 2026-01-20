@@ -26,7 +26,7 @@ _TRADE_MODE_ONLY = "*only available in trading mode*"
 _OPENAPI_TAGS = (
     {"name": "Auth", "description": "Authentication endpoints."},
     {
-        "name": "info",
+        "name": "Info",
         "description": ("Information endpoints providing general information about the bot."),
     },
     {

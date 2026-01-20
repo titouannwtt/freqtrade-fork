@@ -67,19 +67,19 @@ router_public = APIRouter()
 router = APIRouter()
 
 
-@router_public.get("/ping", response_model=Ping, tags=["info"])
+@router_public.get("/ping", response_model=Ping, tags=["Info"])
 def ping():
     """simple ping"""
     return {"status": "pong"}
 
 
-@router.get("/version", response_model=Version, tags=["info"])
+@router.get("/version", response_model=Version, tags=["Info"])
 def version():
     """Bot Version info"""
     return {"version": __version__}
 
 
-@router.get("/show_config", response_model=ShowConfig, tags=["info"])
+@router.get("/show_config", response_model=ShowConfig, tags=["Info"])
 def show_config(rpc: RPC | None = Depends(get_rpc_optional), config=Depends(get_config)):
     state: State | str = ""
     strategy_version = None
@@ -91,7 +91,7 @@ def show_config(rpc: RPC | None = Depends(get_rpc_optional), config=Depends(get_
     return resp
 
 
-@router.get("/logs", response_model=Logs, tags=["info"])
+@router.get("/logs", response_model=Logs, tags=["Info"])
 def logs(limit: int | None = None):
     return RPC._rpc_get_logs(limit)
 
@@ -138,11 +138,11 @@ def markets(
     }
 
 
-@router.get("/sysinfo", response_model=SysInfo, tags=["info"])
+@router.get("/sysinfo", response_model=SysInfo, tags=["Info"])
 def sysinfo():
     return RPC._rpc_sysinfo()
 
 
-@router.get("/health", response_model=Health, tags=["info"])
+@router.get("/health", response_model=Health, tags=["Info"])
 def health(rpc: RPC = Depends(get_rpc)):
     return rpc.health()
