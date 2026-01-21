@@ -2563,7 +2563,13 @@ class Exchange:
                 )
             )
         logger.debug(f"Downloaded data for {pair} from ccxt with length {len(data)}.")
-        return ohlcv_to_dataframe(data, timeframe, pair, fill_missing=False, drop_incomplete=True)
+        # funding_rates are always complete, so never need to be dropped.
+        drop_incomplete = (
+            self._ohlcv_partial_candle if candle_type != CandleType.FUNDING_RATE else False
+        )
+        return ohlcv_to_dataframe(
+            data, timeframe, pair, fill_missing=False, drop_incomplete=drop_incomplete
+        )
 
     async def _async_get_historic_ohlcv(
         self,
