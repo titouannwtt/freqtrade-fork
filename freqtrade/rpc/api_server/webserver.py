@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 _TRADE_MODE_ONLY = "*only available in trading mode*"
 _WEBSERVER_MODE_ONLY = "*only available in webserver mode*"
 
-_OPENAPI_TAGS = (
+_OPENAPI_TAGS = [
     {"name": "Auth", "description": "Authentication endpoints."},
     {
         "name": "Info",
@@ -86,7 +86,7 @@ _OPENAPI_TAGS = (
         "name": "Webserver",
         "description": (f"Webserver related endpoints - {_WEBSERVER_MODE_ONLY}."),
     },
-)
+]
 
 
 class FTJSONResponse(JSONResponse):
