@@ -15,6 +15,7 @@ from ccxt import (
     TRUNCATE,
 )
 
+import freqtrade.exchange.exchange_utils as exchange_utils_mod
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import (
@@ -29,7 +30,6 @@ from freqtrade.exchange import (
     timeframe_to_resample_freq,
     timeframe_to_seconds,
 )
-from freqtrade.exchange import exchange_utils as exchange_utils_mod
 from freqtrade.exchange.check_exchange import _get_ft_has_overrides, check_exchange
 from freqtrade.exchange.exchange_utils import (
     _build_exchange_list_entry,
