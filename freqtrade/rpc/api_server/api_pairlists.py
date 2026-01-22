@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get(
-    "/pairlists/available", response_model=PairListsResponse, tags=["pairlists", "webserver"]
-)
+@router.get("/pairlists/available", response_model=PairListsResponse, tags=["pairlists"])
 def list_pairlists(config=Depends(get_config)):
     from freqtrade.resolvers import PairListResolver
 
@@ -72,7 +70,7 @@ def __run_pairlist(job_id: str, config_loc: Config):
         ApiBG.pairlist_running = False
 
 
-@router.post("/pairlists/evaluate", response_model=BgJobStarted, tags=["pairlists", "webserver"])
+@router.post("/pairlists/evaluate", response_model=BgJobStarted, tags=["pairlists"])
 def pairlists_evaluate(
     payload: PairListsPayload, background_tasks: BackgroundTasks, config=Depends(get_config)
 ):
@@ -129,7 +127,7 @@ def handleExchangePayload(payload: ExchangeModePayloadMixin, config_loc: Config)
 @router.get(
     "/pairlists/evaluate/{jobid}",
     response_model=WhitelistEvaluateResponse,
-    tags=["pairlists", "webserver"],
+    tags=["pairlists"],
 )
 def pairlists_evaluate_get(jobid: str):
     if not (job := ApiBG.jobs.get(jobid)):

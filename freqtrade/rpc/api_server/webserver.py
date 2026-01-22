@@ -30,15 +30,15 @@ _OPENAPI_TAGS = (
         "description": ("Information endpoints providing general information about the bot."),
     },
     {
-        "name": "trading",
+        "name": "Trading",
         "description": f"Trading related endpoints - {_TRADE_MODE_ONLY}.",
     },
     {
-        "name": "webserver",
+        "name": "Webserver",
         "description": ("Webserver related endpoints - *only available in webserver mode*."),
     },
     {
-        "name": "botcontrol",
+        "name": "Bot-control",
         "description": (f"Bot control endpoints to start/stop trading - {_TRADE_MODE_ONLY}."),
     },
     {
@@ -177,13 +177,13 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_trading,
             prefix="/api/v1",
-            tags=["trading"],
+            tags=["Trading"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_trading_mode)],
         )
         app.include_router(
             api_webserver,
             prefix="/api/v1",
-            tags=["webserver"],
+            tags=["Webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
@@ -194,6 +194,7 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_bg_tasks,
             prefix="/api/v1",
+            tags=["Webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
@@ -204,11 +205,13 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_pairlists,
             prefix="/api/v1",
+            tags=["Webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
             api_download_data,
             prefix="/api/v1",
+            tags=["download-data", "Webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(ws_router, prefix="/api/v1")
