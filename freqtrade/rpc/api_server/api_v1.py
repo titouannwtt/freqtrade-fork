@@ -96,7 +96,7 @@ def logs(limit: int | None = None):
     return RPC._rpc_get_logs(limit)
 
 
-@router.get("/plot_config", response_model=PlotConfig, tags=["candle data"])
+@router.get("/plot_config", response_model=PlotConfig, tags=["Candle data"])
 def plot_config(
     strategy: str | None = None,
     config=Depends(get_config),
@@ -115,7 +115,7 @@ def plot_config(
         raise HTTPException(status_code=502, detail=str(e))
 
 
-@router.get("/markets", response_model=MarketResponse, tags=["candle data", "webserver"])
+@router.get("/markets", response_model=MarketResponse, tags=["Candle data"])
 def markets(
     query: Annotated[MarketRequest, Query()],
     config=Depends(get_config),

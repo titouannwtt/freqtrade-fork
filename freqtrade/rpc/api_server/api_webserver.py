@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/strategies", response_model=StrategyListResponse, tags=["strategy"])
+@router.get("/strategies", response_model=StrategyListResponse, tags=["Strategy"])
 def list_strategies(config=Depends(get_config)):
     from freqtrade.resolvers.strategy_resolver import StrategyResolver
 
@@ -36,7 +36,7 @@ def list_strategies(config=Depends(get_config)):
     return {"strategies": [x["name"] for x in strategies]}
 
 
-@router.get("/strategy/{strategy}", response_model=StrategyResponse, tags=["strategy"])
+@router.get("/strategy/{strategy}", response_model=StrategyResponse, tags=["Strategy"])
 def get_strategy(strategy: str, config=Depends(get_config)):
     if ":" in strategy:
         raise HTTPException(status_code=500, detail="base64 encoded strategies are not allowed.")
@@ -69,9 +69,7 @@ def list_exchanges(config=Depends(get_config)):
     }
 
 
-@router.get(
-    "/hyperoptloss", response_model=HyperoptLossListResponse, tags=["hyperopt", "webserver"]
-)
+@router.get("/hyperoptloss", response_model=HyperoptLossListResponse, tags=["Hyperopt"])
 def list_hyperoptloss(
     config=Depends(get_config),
 ):
@@ -93,7 +91,7 @@ def list_hyperoptloss(
     }
 
 
-@router.get("/freqaimodels", response_model=FreqAIModelListResponse, tags=["freqai"])
+@router.get("/freqaimodels", response_model=FreqAIModelListResponse, tags=["FreqAI"])
 def list_freqaimodels(config=Depends(get_config)):
     from freqtrade.resolvers.freqaimodel_resolver import FreqaiModelResolver
 
@@ -104,7 +102,7 @@ def list_freqaimodels(config=Depends(get_config)):
 
 
 @router.get(
-    "/available_pairs", response_model=AvailablePairs, tags=["candle data", "download-data"]
+    "/available_pairs", response_model=AvailablePairs, tags=["Candle data", "Download-data"]
 )
 def list_available_pairs(
     timeframe: str | None = None,

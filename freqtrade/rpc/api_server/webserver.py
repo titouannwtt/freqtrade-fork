@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 _TRADE_MODE_ONLY = "*only available in trading mode*"
+_WEBSERVER_MODE_ONLY = "*only available in webserver mode*"
 
 _OPENAPI_TAGS = (
     {"name": "Auth", "description": "Authentication endpoints."},
@@ -30,28 +31,60 @@ _OPENAPI_TAGS = (
         "description": ("Information endpoints providing general information about the bot."),
     },
     {
+        "name": "Bot-control",
+        "description": (f"Bot control endpoints to start/stop trading - {_TRADE_MODE_ONLY}."),
+    },
+    {
+        "name": "Pairlist",
+        "description": f"Pairlist management - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "Locks",
+        "description": f"Pair lock management - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "Candle data",
+        "description": "Candle / OHLCV data.",
+    },
+    {
+        "name": "Trading-info",
+        "description": f"Trading related information - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "Trades",
+        "description": f"Trade management - {_TRADE_MODE_ONLY}.",
+    },
+    {
+        "name": "Strategy",
+        "description": f"List and retrieve strategies - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
+        "name": "Hyperopt",
+        "description": f"Retrieve hyperopt loss functions - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
+        "name": "FreqAI",
+        "description": f"FreqAI related endpoints - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
+        "name": "Download-data",
+        "description": f"Download data endpoints - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
+        "name": "Backtest",
+        "description": f"Backtest endpoints - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
+        "name": "Pairlists",
+        "description": f"Pairlist endpoints - {_WEBSERVER_MODE_ONLY}.",
+    },
+    {
         "name": "Trading",
         "description": f"Trading related endpoints - {_TRADE_MODE_ONLY}.",
     },
     {
         "name": "Webserver",
-        "description": ("Webserver related endpoints - *only available in webserver mode*."),
-    },
-    {
-        "name": "Bot-control",
-        "description": (f"Bot control endpoints to start/stop trading - {_TRADE_MODE_ONLY}."),
-    },
-    {
-        "name": "pairlist",
-        "description": f"Pairlist management - {_TRADE_MODE_ONLY}.",
-    },
-    {
-        "name": "locks",
-        "description": f"Pair lock management - {_TRADE_MODE_ONLY}.",
-    },
-    {
-        "name": "candle data",
-        "description": "Candle / OHLCV data.",
+        "description": (f"Webserver related endpoints - {_WEBSERVER_MODE_ONLY}."),
     },
 )
 
@@ -189,6 +222,7 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_backtest,
             prefix="/api/v1",
+            tags=["Backtest"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
@@ -205,13 +239,13 @@ class ApiServer(RPCHandler):
         app.include_router(
             api_pairlists,
             prefix="/api/v1",
-            tags=["Webserver"],
+            tags=["Webserver", "Pairlists"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(
             api_download_data,
             prefix="/api/v1",
-            tags=["download-data", "Webserver"],
+            tags=["Download-data", "Webserver"],
             dependencies=[Depends(http_basic_or_jwt_token), Depends(is_webserver_mode)],
         )
         app.include_router(ws_router, prefix="/api/v1")

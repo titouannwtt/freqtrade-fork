@@ -5,8 +5,7 @@ from uuid import uuid4
 from fastapi import Depends, HTTPException
 
 from freqtrade.constants import Config
-from freqtrade.enums import RunMode
-from freqtrade.enums.runmode import TRADE_MODES
+from freqtrade.enums import TRADE_MODES, RunMode
 from freqtrade.persistence import Trade
 from freqtrade.persistence.models import _request_id_ctx_var
 from freqtrade.rpc.api_server.webserver_bgwork import ApiBG
