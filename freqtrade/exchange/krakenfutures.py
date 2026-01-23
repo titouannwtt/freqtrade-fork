@@ -225,18 +225,25 @@ class Krakenfutures(Exchange):
     def _fill_leverage_tier_notionals(self, pair: str, pair_tiers: list[dict]) -> None:
         if not pair_tiers:
             return
-        self._fill_missing_min_notional(pair_tiers)
-        self._fill_missing_max_notional(pair, pair_tiers)
+        contract_based = self._fill_missing_min_notional(pair_tiers)
+        self._fill_missing_max_notional(pair, pair_tiers, contract_based)
 
-    def _fill_missing_min_notional(self, pair_tiers: list[dict]) -> None:
+    def _fill_missing_min_notional(self, pair_tiers: list[dict]) -> bool:
+        contract_based = False
         for tier in pair_tiers:
             if tier.get("minNotional") is None:
                 info = tier.get("info") or {}
                 contracts = self._safe_float(info.get("contracts"))
                 if contracts is not None:
                     tier["minNotional"] = contracts
+                    contract_based = True
+            elif (tier.get("info") or {}).get("contracts") is not None:
+                contract_based = True
+        return contract_based
 
-    def _fill_missing_max_notional(self, pair: str, pair_tiers: list[dict]) -> None:
+    def _fill_missing_max_notional(
+        self, pair: str, pair_tiers: list[dict], contract_based: bool
+    ) -> None:
         for i in range(len(pair_tiers) - 1):
             if pair_tiers[i].get("maxNotional") is None:
                 next_min = pair_tiers[i + 1].get("minNotional")
@@ -245,12 +252,19 @@ class Krakenfutures(Exchange):
 
         last = pair_tiers[-1]
         if last.get("maxNotional") is None:
-            max_notional = self._max_notional_from_market(pair)
+            max_notional = self._max_notional_from_market(pair) if contract_based else None
+            min_notional = last.get("minNotional")
+            if (
+                max_notional is not None
+                and min_notional is not None
+                and max_notional <= min_notional
+            ):
+                max_notional = None
             if max_notional is not None:
                 last["maxNotional"] = max_notional
-            elif last.get("minNotional") is not None:
+            elif min_notional is not None:
                 # Avoid None values, even if we cannot infer the real max.
-                last["maxNotional"] = last["minNotional"]
+                last["maxNotional"] = min_notional + 1.0
 
     def _max_notional_from_market(self, pair: str) -> float | None:
         market = self.markets.get(pair)
