@@ -570,7 +570,6 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "futures_pair": "BTC/USD:USD",
         "hasQuoteVolumeFutures": False,
         "leverage_tiers_public": True,
-        "leverage_in_spot_market": False,
     },
 }
 
