@@ -70,7 +70,6 @@ def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]])
 
 def validate_exchange(
     exchange: str,
-    ft_has_overrides: dict[str, Any] | None = None,
 ) -> tuple[bool, str, str, ccxt.Exchange | None]:
     """
     returns: can_use, reason, exchange_object
@@ -85,8 +84,6 @@ def validate_exchange(
         return False, "", "", None
 
     ex_has = dict(ex_mod.has or {})
-    if ft_has_overrides:
-        ex_has.update(ft_has_overrides)
 
     result = True
     reasons = []
@@ -120,13 +117,8 @@ def _build_exchange_list_entry(
     mapped_exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name).lower()
 
     resolved = exchangeClasses.get(mapped_exchange_name)
-    ft_has_overrides = None
-    if resolved:
-        get_ft_has = getattr(resolved["class"], "get_ft_has", None)
-        if callable(get_ft_has):
-            ft_has_overrides = get_ft_has() or None
 
-    valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name, ft_has_overrides)
+    valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name)
 
     is_alias = getattr(ex_mod, "alias", False)
     result: ValidExchangesType = {
