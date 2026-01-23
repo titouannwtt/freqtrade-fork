@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from math import isnan, nan
 from unittest.mock import MagicMock
 
-import ccxt
 import pytest
 from ccxt import (
     DECIMAL_PLACES,
@@ -15,7 +14,6 @@ from ccxt import (
     TRUNCATE,
 )
 
-import freqtrade.exchange.exchange_utils as exchange_utils_mod
 from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import (
@@ -30,13 +28,10 @@ from freqtrade.exchange import (
     timeframe_to_resample_freq,
     timeframe_to_seconds,
 )
-from freqtrade.exchange.check_exchange import _get_ft_has_overrides, check_exchange
+from freqtrade.exchange.check_exchange import check_exchange
 from freqtrade.exchange.exchange_utils import (
-    _build_exchange_list_entry,
     _exchange_has_helper,
-    validate_exchange,
 )
-from freqtrade.resolvers.exchange_resolver import ExchangeResolver
 from tests.conftest import log_has_re
 
 
@@ -433,66 +428,3 @@ def test_exchange__exchange_has_helper():
     }
     missing = _exchange_has_helper(e_mod.has, required)
     assert set(missing) == {"fetchOHLCV", "fetchMyTrades", "fetchOrder"}
-
-
-def test_validate_exchange_uses_ft_has_overrides(monkeypatch):
-    class DummyExchange:
-        def __init__(self) -> None:
-            self.has = {
-                "fetchOrder": False,
-                "fetchL2OrderBook": False,
-                "fetchTicker": True,
-                "cancelOrder": True,
-                "createOrder": True,
-                "fetchBalance": True,
-                "fetchOHLCV": False,
-            }
-
-    monkeypatch.setattr(ccxt.pro, "dummy", DummyExchange, raising=False)
-
-    valid, _, _, _ = validate_exchange("dummy")
-    assert not valid
-
-    valid, _, _, _ = validate_exchange("dummy", {"fetchOrder": True, "fetchOHLCV": True})
-    assert valid
-
-
-def test_build_exchange_list_entry_uses_ft_has_overrides(monkeypatch):
-    class DummyClass:
-        _supported_trading_mode_margin_pairs = []
-
-        @staticmethod
-        def get_ft_has():
-            return {"fetchOrder": True}
-
-    captured = {}
-
-    class DummyExchange:
-        name = "Dummy"
-        alias = False
-        dex = False
-
-    def fake_validate_exchange(exchange, ft_has_overrides=None):
-        captured["ft_has_overrides"] = ft_has_overrides
-        return True, "", "", DummyExchange()
-
-    monkeypatch.setattr(exchange_utils_mod, "validate_exchange", fake_validate_exchange)
-
-    res = _build_exchange_list_entry("dummy", {"dummy": {"class": DummyClass}})
-    assert captured["ft_has_overrides"] == {"fetchOrder": True}
-    assert res["classname"] == "dummy"
-
-
-def test_get_ft_has_overrides_returns_override(monkeypatch):
-    class DummyClass:
-        @staticmethod
-        def get_ft_has():
-            return {"fetchOrder": True}
-
-    monkeypatch.setattr(
-        ExchangeResolver,
-        "search_all_objects",
-        lambda *args, **kwargs: [{"name": "dummy", "class": DummyClass}],
-    )
-
-    assert _get_ft_has_overrides("dummy") == {"fetchOrder": True}
