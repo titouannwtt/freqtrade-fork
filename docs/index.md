@@ -62,6 +62,7 @@ Please read the [exchange specific notes](exchanges.md) to learn about eventual,
 - [X] [Gate.io](https://www.gate.io/ref/6266643)
 - [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
 - [X] [OKX](https://okx.com/)
+- [X] [Kraken](https://eu.kraken.com/features/derivatives)
 
 Please make sure to read the [exchange specific notes](exchanges.md), as well as the [trading with leverage](leverage.md) documentation before diving in.
 
