@@ -24,6 +24,47 @@ def test_krakenfutures_ft_has_overrides():
     assert ft_has["stop_price_type_field"] == "triggerSignal"
 
 
+def test_krakenfutures_get_leverage_tiers_fills_contracts(mocker, default_conf):
+    """Fill missing min/maxNotional from contracts/maxPositionSize in leverage tiers."""
+    mock_markets = {
+        "BTC/USD:USD": {
+            "info": {"maxPositionSize": 1000000},
+            "contractSize": 1.0,
+        }
+    }
+    ex = get_patched_exchange(
+        mocker, default_conf, exchange="krakenfutures", mock_markets=mock_markets
+    )
+    assert isinstance(ex, Krakenfutures)
+
+    sample_tiers = {
+        "BTC/USD:USD": [
+            {
+                "minNotional": None,
+                "maxNotional": None,
+                "maintenanceMarginRate": 0.01,
+                "maxLeverage": 50.0,
+                "info": {"contracts": 0},
+            },
+            {
+                "minNotional": None,
+                "maxNotional": None,
+                "maintenanceMarginRate": 0.02,
+                "maxLeverage": 25.0,
+                "info": {"contracts": 500000},
+            },
+        ]
+    }
+
+    mocker.patch.object(Exchange, "get_leverage_tiers", return_value=sample_tiers)
+    tiers = ex.get_leverage_tiers()
+    pair_tiers = tiers["BTC/USD:USD"]
+    assert pair_tiers[0]["minNotional"] == 0.0
+    assert pair_tiers[0]["maxNotional"] == 500000.0
+    assert pair_tiers[1]["minNotional"] == 500000.0
+    assert pair_tiers[1]["maxNotional"] == 1000000.0
+
+
 def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
     """Test that OHLCV candle limit follows CCXT feature limit."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")

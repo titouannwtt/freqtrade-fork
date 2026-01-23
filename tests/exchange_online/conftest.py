@@ -569,7 +569,7 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "candle_count": 2000,
         "futures_pair": "BTC/USD:USD",
         "hasQuoteVolumeFutures": False,
-        "leverage_tiers_public": False,
+        "leverage_tiers_public": True,
         "leverage_in_spot_market": False,
     },
 }
