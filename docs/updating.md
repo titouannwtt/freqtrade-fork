@@ -6,6 +6,12 @@ To update your freqtrade installation, please use one of the below methods, corr
     Breaking changes / changed behavior will be documented in the changelog that is posted alongside every release.
     For the develop branch, please follow PR's to avoid being surprised by changes.
 
+## Why update?
+
+Keeping your bot updated not only ensures that you have the latest features and improvements, but is a requirement to keep your bot running smoothly.
+Freqtrade is heavily dependent on the underlying exchange API's, which change pretty frequently if considered across exchanges.
+To ensure ongoing compatibility, please make sure to update your bot regularly.
+
 ## Docker
 
 !!! Note "Legacy installations using the `master` image"
