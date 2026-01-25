@@ -9,19 +9,25 @@ The freqtrade documentation describes various ways to install freqtrade
 * [Manual Installation](#manual-installation)
 * [Installation with Conda](#installation-with-conda)
 
-Please consider using the prebuilt [docker images](docker_quickstart.md) to get started quickly while evaluating how freqtrade works.
+Please consider using the prebuilt [docker images](docker_quickstart.md) to get started quickly.
 
 !!! Note "Updating"
     Keeping freqtrade updated is important to [ensure ongoing compatibility](updating.md#why-update) with exchange API's.
     Please refer to the [updating guide](updating.md) for details on how to update your installation.
 
+!!! Note "Windows users"
+    We **strongly** recommend that Windows users use [Docker](docker_quickstart.md) as this will work much easier and smoother (also more secure).
+
+    If that is not possible, try using the Windows Linux subsystem (WSL) - for which the Ubuntu/Linux instructions will work.
+    If you really want to install freqtrade natively on Windows, best use the [`./setup.ps1` installation script](#use-setupps1-windows).
+
+    Please also make sure to use the 64bit version of Python, as 32bit versions have severe memory limitations, which can negatively impact your experience with backtesting/hyperopt.
+
 ------
 
 ## Information
 
-For Windows installation, please use the [windows installation guide](windows_installation.md).
-
-The easiest way to install and run Freqtrade is to clone the bot Github repository and then run the `./setup.sh` script, if it's available for your platform.
+The easiest way to install and run Freqtrade is to clone the bot Github repository and then run the `./setup.sh` (`./setup.ps1` for Windows) script, if it's available for your platform.
 
 !!! Note "Version considerations"
     When cloning the repository the default working branch has the name `develop`. This branch contains all last features (can be considered as relatively stable, thanks to automated tests).
@@ -154,6 +160,16 @@ If you are on Debian, Ubuntu or MacOS, freqtrade provides the script to install 
 ```bash
 # --install, Install freqtrade from scratch
 ./setup.sh -i
+```
+
+### Use ./setup.ps1 (Windows)
+
+The script will ask you a few questions to determine which parts should be installed.
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass
+cd freqtrade
+. .\setup.ps1
 ```
 
 ### Activate your virtual environment
@@ -341,7 +357,7 @@ conda deactivate
 
 Happy trading!
 
------
+------
 
 ## You are ready
 
@@ -398,3 +414,15 @@ open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10
 ```
 
 If this file is inexistent, then you're probably on a different version of MacOS, so you may need to consult the internet for specific resolution details.
+
+### Windows Installation error
+
+``` bash
+error: Microsoft Visual C++ 14.0 is required. Get it with "Microsoft Visual C++ Build Tools": http://landinghub.visualstudio.com/visual-cpp-build-tools
+```
+
+Unfortunately, many packages requiring compilation don't provide a pre-built wheel. It is therefore mandatory to have a C/C++ compiler installed and available for your python environment to use.
+
+You can download the Visual C++ build tools from [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and install "Desktop development with C++" in it's default configuration. Unfortunately, this is a heavy download / dependency so you might want to consider WSL2 or [docker compose](docker_quickstart.md) first.
+
+![Windows installation](assets/windows_install.png)

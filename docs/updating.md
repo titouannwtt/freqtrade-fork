@@ -52,4 +52,4 @@ We try to make sure that heavy dependencies have wheels available for major plat
 Please refer to the corresponding installation sections (common problem sections linked below).
 
 [Common installation problems](installation.md#troubleshooting)
-[Common installation problems - windows](windows_installation.md#error-during-installation-on-windows)
+[Common installation problems - windows](installation.md#windows-installation-error)
