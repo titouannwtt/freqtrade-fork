@@ -2,10 +2,14 @@
 
 We **strongly** recommend that Windows users use [Docker](docker_quickstart.md) as this will work much easier and smoother (also more secure).
 
-If that is not possible, try using the Windows Linux subsystem (WSL) - for which the Ubuntu instructions should work.
-Otherwise, please follow the instructions below.
+If that is not possible, try using the Windows Linux subsystem (WSL) - for which the Ubuntu instructions will work.
+If you really want to install freqtrade natively on Windows, please follow the instructions below.
 
-All instructions assume that python 3.11+ is installed and available.
+All instructions assume that python 3.11+ is installed and available in your system PATH.
+
+!!! Note "Updating"
+    Keeping freqtrade updated is important to [ensure ongoing compatibility](updating.md#why-update) with exchange API's.
+    Please refer to the [updating guide](updating.md) for details on how to update your installation.
 
 ## Clone the git repository
 
@@ -37,7 +41,6 @@ cd freqtrade
 
 !!! Hint
     Using the [Anaconda Distribution](https://www.anaconda.com/distribution/) under Windows can greatly help with installation problems. Check out the [Anaconda installation section](installation.md#installation-with-conda) in the documentation for more information.
-
 
 ### Error during installation on Windows
 

@@ -11,6 +11,10 @@ The freqtrade documentation describes various ways to install freqtrade
 
 Please consider using the prebuilt [docker images](docker_quickstart.md) to get started quickly while evaluating how freqtrade works.
 
+!!! Note "Updating"
+    Keeping freqtrade updated is important to [ensure ongoing compatibility](updating.md#why-update) with exchange API's.
+    Please refer to the [updating guide](updating.md) for details on how to update your installation.
+
 ------
 
 ## Information
