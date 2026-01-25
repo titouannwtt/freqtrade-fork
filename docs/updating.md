@@ -38,7 +38,12 @@ pip install -e .
 freqtrade install-ui 
 ```
 
-### Problems updating
+## Problems updating
 
-Update-problems usually come missing dependencies (you didn't follow the above instructions) - or from updated dependencies, which fail to install (for example TA-lib).
-Please refer to the corresponding installation sections (common problems linked below)
+Update-problems usually come missing dependencies (you didn't follow the above instructions) - or from dependencies which fail to install.
+We try to make sure that heavy dependencies have wheels available for major platforms, but sometimes this is not possible.
+
+Please refer to the corresponding installation sections (common problem sections linked below).
+
+[Common installation problems](installation.md#troubleshooting)
+[Common installation problems - windows](windows_installation.md#error-during-installation-on-windows)
