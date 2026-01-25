@@ -164,7 +164,7 @@ If you are on Debian, Ubuntu or MacOS, freqtrade provides the script to install 
 
 #### Other options of /setup.sh script
 
-You can as well update, configure and reset the codebase of your bot with `./script.sh`
+You can also update, configure and reset the codebase of your bot with `./setup.sh`
 
 ```bash
 # --update, Command git pull to update.
@@ -193,7 +193,7 @@ This option will pull the last version of your current branch and update your vi
 This option will hard reset your branch (only if you are on either `stable` or `develop`) and recreate your virtualenv.
 ```
 
-### Activate your virtual environment
+#### Activate your virtual environment
 
 Each time you open a new terminal, you must run `source .venv/bin/activate` to activate your virtual environment.
 
@@ -212,7 +212,7 @@ cd freqtrade
 . .\setup.ps1
 ```
 
-### Activate your virtual environment (Windows)
+#### Activate your virtual environment (Windows)
 
 ```powershell
 # activate virtual environment
@@ -220,7 +220,6 @@ cd freqtrade
 ```
 
 [You are now ready](#you-are-ready) to run the bot.
-
 
 -----
 
