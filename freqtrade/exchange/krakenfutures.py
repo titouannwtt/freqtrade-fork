@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import ccxt
+
 from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import ExchangeError, RetryableOrderError, TemporaryError
 from freqtrade.exchange.exchange import Exchange
-from freqtrade.exchange.exchange_types import FtHas
+from freqtrade.exchange.exchange_types import CcxtOrder, FtHas
 
 
 logger = logging.getLogger(__name__)
@@ -165,36 +167,73 @@ class Krakenfutures(Exchange):
 
     def fetch_order(
         self, order_id: str, pair: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
-        """
-        Kraken Futures fetchOrder is backed by /orders/status which only returns
-        open orders or orders closed within the last 5 seconds.
-        Fall back to closed/canceled order endpoints for older orders.
-        """
+    ) -> CcxtOrder:
+        """Fetch order with fallback to open/closed/canceled endpoints."""
+        if self._config.get("dry_run"):
+            return self.fetch_dry_run_order(order_id)
+
         params = params or {}
         try:
-            return super().fetch_order(order_id, pair, params=params)
-        except (RetryableOrderError, TemporaryError) as err:
-            order = self._fetch_order_from_closed_or_canceled(order_id, pair, params)
+            # Bypass retrier; OrderNotFound is expected for older orders.
+            wrapped = Exchange.fetch_order.__wrapped__  # type: ignore[attr-defined]
+            return wrapped(self, order_id, pair, params=params)
+        except (RetryableOrderError, TemporaryError):
+            pass
+
+        order = self._fetch_order_fallback(order_id, pair, params)
+        if order is not None:
+            return order
+
+        raise RetryableOrderError(f"Order not found in any endpoint (pair: {pair} id: {order_id})")
+
+    def _fetch_order_fallback(
+        self, order_id: str, pair: str, params: dict[str, Any]
+    ) -> CcxtOrder | None:
+        """Search open, closed, and canceled order endpoints for order_id."""
+        order_id_str = str(order_id)
+
+        # Open orders: Kraken returns all symbols and includes triggers by default.
+        if self.exchange_has("fetchOpenOrders"):
+            order = self._find_order_in_list(
+                self._api.fetch_open_orders, None, params, order_id_str
+            )
             if order is not None:
                 return order
-            raise err
 
-    def _fetch_order_from_closed_or_canceled(
-        self, order_id: str, pair: str, params: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        if self.exchange_has("fetchClosedOrders"):
-            orders = self._api.fetch_closed_orders(pair, params=params)
-            for order in orders or []:
-                if str(order.get("id")) == str(order_id):
+        # Closed/canceled: use pair and optional trigger=True for stoplosses.
+        for has_key, fetch_fn in [
+            ("fetchClosedOrders", self._api.fetch_closed_orders),
+            ("fetchCanceledOrders", self._api.fetch_canceled_orders),
+        ]:
+            if not self.exchange_has(has_key):
+                continue
+            order = self._find_order_in_list(fetch_fn, pair, params, order_id_str)
+            if order is not None:
+                return order
+            # Trigger orders (stoplosses) only supported on history endpoints
+            if not params.get("trigger"):
+                order = self._find_order_in_list(
+                    fetch_fn, pair, {**params, "trigger": True}, order_id_str
+                )
+                if order is not None:
+                    return order
+
+        return None
+
+    def _find_order_in_list(
+        self,
+        fetch_fn,
+        symbol: str | None,
+        params: dict[str, Any],
+        order_id_str: str,
+    ) -> CcxtOrder | None:
+        """Fetch orders and return matching order_id, or None."""
+        try:
+            for order in fetch_fn(symbol, params=params) or []:
+                if str(order.get("id")) == order_id_str:
                     return self._order_contracts_to_amount(order)
-
-        if self.exchange_has("fetchCanceledOrders"):
-            orders = self._api.fetch_canceled_orders(pair, params=params)
-            for order in orders or []:
-                if str(order.get("id")) == str(order_id):
-                    return self._order_contracts_to_amount(order)
-
+        except ccxt.BaseError as e:
+            logger.debug(f"{fetch_fn.__name__} failed: {e}")
         return None
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
