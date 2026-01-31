@@ -2794,8 +2794,10 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
         ("LTC/BTC", "1h", CandleType.SPOT),
     ]
 
-    ohlcv_data = {p: ohlcv for p in pairs}
-    ohlcv_mock = mocker.patch(f"{EXMS}.refresh_latest_ohlcv", return_value=ohlcv_data)
+    def ohlcv_side_effect(requested_pairs, *args, **kwargs):
+        return {p: ohlcv for p in requested_pairs}
+
+    ohlcv_mock = mocker.patch(f"{EXMS}.refresh_latest_ohlcv", side_effect=ohlcv_side_effect)
     mocker.patch(f"{EXMS}.ohlcv_candle_limit", return_value=100)
     exchange = get_patched_exchange(mocker, default_conf)
 
@@ -2814,6 +2816,13 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     res = exchange.refresh_ohlcv_with_cache(pairs, start.timestamp())
     assert ohlcv_mock.call_count == 0
     assert len(res) == 5
+
+    # # re-run with one additional pair
+    res = exchange.refresh_ohlcv_with_cache(
+        pairs + [("NEW/PAIR", "1d", CandleType.SPOT)], start.timestamp()
+    )
+    assert ohlcv_mock.call_count == 1
+    assert len(res) == 6
 
     # Expire 5m cache
     time_machine.move_to(start + timedelta(minutes=6), tick=False)
