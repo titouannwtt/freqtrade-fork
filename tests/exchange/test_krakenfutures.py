@@ -36,9 +36,14 @@ def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
 
 def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_conf):
     """Fallback to fetch_closed_orders when fetch_order can't find the order."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
-    mocker.patch.object(Exchange, "fetch_order", side_effect=RetryableOrderError("not found"))
+    # Mock the unwrapped fetch_order to raise RetryableOrderError
+    mocker.patch.object(
+        Exchange.fetch_order, "__wrapped__", side_effect=RetryableOrderError("not found")
+    )
     mocker.patch.object(
         ex,
         "exchange_has",
@@ -57,10 +62,12 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
 
 def test_krakenfutures_fetch_order_falls_back_to_canceled_orders(mocker, default_conf):
     """Fallback to fetch_canceled_orders when closed orders don't contain the order."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(
-        Exchange, "fetch_order", side_effect=TemporaryError("UUID string too large")
+        Exchange.fetch_order, "__wrapped__", side_effect=TemporaryError("UUID string too large")
     )
     mocker.patch.object(
         ex,
@@ -80,22 +87,70 @@ def test_krakenfutures_fetch_order_falls_back_to_canceled_orders(mocker, default
 
 def test_krakenfutures_fetch_order_reraises_when_no_fallback(mocker, default_conf):
     """Re-raise when fallback cannot locate the order."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
-    mocker.patch.object(Exchange, "fetch_order", side_effect=RetryableOrderError("not found"))
-    mocker.patch.object(ex, "_fetch_order_from_closed_or_canceled", return_value=None)
+    mocker.patch.object(
+        Exchange.fetch_order, "__wrapped__", side_effect=RetryableOrderError("not found")
+    )
+    mocker.patch.object(ex, "_fetch_order_fallback", return_value=None)
 
     with pytest.raises(RetryableOrderError):
         ex.fetch_order("abc", "BTC/USD:USD")
 
 
-def test_krakenfutures_fetch_order_from_closed_or_canceled_returns_none(mocker, default_conf):
+def test_krakenfutures_fetch_order_fallback_returns_none(mocker, default_conf):
     """Return None when the exchange does not support order history endpoints."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
     mocker.patch.object(ex, "exchange_has", return_value=False)
 
-    res = ex._fetch_order_from_closed_or_canceled("abc", "BTC/USD:USD", {})
+    res = ex._fetch_order_fallback("abc", "BTC/USD:USD", {})
     assert res is None
+
+
+def test_krakenfutures_fetch_order_dry_run(mocker, default_conf):
+    """Test fetch_order uses dry_run order in dry_run mode."""
+    conf = dict(default_conf)
+    conf["dry_run"] = True
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+
+    dry_order = {"id": "dry-123", "status": "open"}
+    mocker.patch.object(ex, "fetch_dry_run_order", return_value=dry_order)
+
+    res = ex.fetch_order("dry-123", "BTC/USD:USD")
+    assert res["id"] == "dry-123"
+
+
+def test_krakenfutures_fetch_order_finds_trigger_order(mocker, default_conf):
+    """Test fetch_order finds trigger orders (stoplosses) via closed orders fallback."""
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+
+    mocker.patch.object(
+        Exchange.fetch_order, "__wrapped__", side_effect=RetryableOrderError("not found")
+    )
+    mocker.patch.object(
+        ex,
+        "exchange_has",
+        side_effect=lambda endpoint: endpoint in ("fetchOpenOrders", "fetchClosedOrders"),
+    )
+    # Open orders returns empty, closed orders returns empty for regular,
+    # but returns the trigger order when trigger=True
+    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    mocker.patch.object(
+        ex._api,
+        "fetch_closed_orders",
+        side_effect=[
+            [],  # Regular closed orders
+            [{"id": "trigger-123", "symbol": "BTC/USD:USD", "status": "closed"}],  # Trigger orders
+        ],
+        create=True,
+    )
+
+    res = ex.fetch_order("trigger-123", "BTC/USD:USD")
+    assert res["id"] == "trigger-123"
 
 
 def test_krakenfutures_create_stoploss_uses_trigger_price_type(mocker, default_conf):
