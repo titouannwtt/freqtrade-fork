@@ -29,9 +29,7 @@ from freqtrade.exchange import (
     timeframe_to_seconds,
 )
 from freqtrade.exchange.check_exchange import check_exchange
-from freqtrade.exchange.exchange_utils import (
-    _exchange_has_helper,
-)
+from freqtrade.exchange.exchange_utils import _exchange_has_helper
 from tests.conftest import log_has_re
 
 
