@@ -5,7 +5,10 @@ Definition of cli arguments used in arguments.py
 from argparse import SUPPRESS, ArgumentTypeError
 
 from freqtrade import constants
-from freqtrade.constants import HYPEROPT_LOSS_BUILTIN
+from freqtrade.constants import (
+    HYPEROPT_BUILTIN_SPACE_OPTIONS,
+    HYPEROPT_LOSS_BUILTIN,
+)
 from freqtrade.enums import CandleType
 
 
@@ -35,8 +38,14 @@ def check_int_nonzero(value: str) -> int:
 
 class Arg:
     # Optional CLI arguments
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fthelp: dict[str, str] | None = None, **kwargs):
+        """
+        CLI Arguments - used to build subcommand parsers consistently.
+        :param fthelp: dict - fthelp per command - should be "freqtrade <command>": help_text
+            If not provided or not found, 'help' from kwargs is used instead.
+        """
         self.cli = args
+        self.fthelp = fthelp
         self.kwargs = kwargs
 
 
@@ -171,7 +180,11 @@ AVAILABLE_CLI_OPTIONS = {
     "position_stacking": Arg(
         "--eps",
         "--enable-position-stacking",
-        help="Allow buying the same pair multiple times (position stacking).",
+        help=(
+            "Allow buying the same pair multiple times (position stacking). "
+            "Only applicable to backtesting and hyperopt. "
+            "Results archived by this cannot be reproduced in dry/live trading."
+        ),
         action="store_true",
         default=False,
     ),
@@ -245,7 +258,7 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "backtest_breakdown": Arg(
         "--breakdown",
-        help="Show backtesting breakdown per [day, week, month, year].",
+        help="Show backtesting breakdown per [day, week, month, year, weekday].",
         nargs="+",
         choices=constants.BACKTEST_BREAKDOWNS,
     ),
@@ -256,12 +269,6 @@ AVAILABLE_CLI_OPTIONS = {
         choices=constants.BACKTEST_CACHE_AGE,
     ),
     # Hyperopt
-    "hyperopt": Arg(
-        "--hyperopt",
-        help=SUPPRESS,
-        metavar="NAME",
-        required=False,
-    ),
     "hyperopt_path": Arg(
         "--hyperopt-path",
         help="Specify additional lookup path for Hyperopt Loss functions.",
@@ -284,26 +291,18 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "spaces": Arg(
         "--spaces",
-        help="Specify which parameters to hyperopt. Space-separated list.",
-        choices=[
-            "all",
-            "buy",
-            "sell",
-            "roi",
-            "stoploss",
-            "trailing",
-            "protection",
-            "trades",
-            "default",
-        ],
+        help=(
+            "Specify which parameters to hyperopt. Space-separated list. "
+            "Available builtin options (custom spaces will not be listed here): "
+            f"{', '.join(HYPEROPT_BUILTIN_SPACE_OPTIONS)}. Default: `default` - "
+            "which includes all spaces except for 'trailing', 'protection', and 'trades'."
+        ),
         nargs="+",
-        default="default",
     ),
     "analyze_per_epoch": Arg(
         "--analyze-per-epoch",
         help="Run populate_indicators once per epoch.",
         action="store_true",
-        default=False,
     ),
     "print_all": Arg(
         "--print-all",
@@ -389,6 +388,13 @@ AVAILABLE_CLI_OPTIONS = {
         help="Print only DEX exchanges.",
         action="store_true",
     ),
+    "list_exchanges_futures_options": Arg(
+        "--ccxt-show-futures-options-exchanges",
+        help=SUPPRESS,
+        # Show compatibility with ccxt for futures functionality
+        # Doesn't show in help as it's an internal/debug option.
+        action="store_true",
+    ),
     # List pairs / markets
     "list_pairs_all": Arg(
         "-a",
@@ -433,6 +439,14 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "candle_types": Arg(
         "--candle-types",
+        fthelp={
+            "freqtrade download-data": (
+                "Select candle type to download. "
+                "Defaults to the necessary candles for the selected trading mode "
+                "(e.g. 'spot' or ('futures', 'funding_rate' and 'mark') for futures)."
+            ),
+            "_": "Select candle type to convert. Defaults to all available types.",
+        },
         help="Select candle type to convert. Defaults to all available types.",
         choices=[c.value for c in CandleType],
         nargs="+",

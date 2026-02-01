@@ -82,7 +82,7 @@ def test_dt_humanize() -> None:
     assert dt_humanize_delta(dt_now() - timedelta(minutes=50)) == "50 minutes ago"
     assert dt_humanize_delta(dt_now() - timedelta(hours=16)) == "16 hours ago"
     assert dt_humanize_delta(dt_now() - timedelta(hours=16, minutes=30)) == "16 hours ago"
-    assert dt_humanize_delta(dt_now() - timedelta(days=16, hours=10, minutes=25)) == "16 days ago"
+    assert dt_humanize_delta(dt_now() - timedelta(days=16, hours=10, minutes=25)) == "a month ago"
     assert dt_humanize_delta(dt_now() - timedelta(minutes=50)) == "50 minutes ago"
 
 
@@ -108,6 +108,7 @@ def test_format_date() -> None:
     date = datetime(2021, 9, 30, 22, 59, 3, 455555, tzinfo=UTC)
     assert format_date(date) == "2021-09-30 22:59:03"
     assert format_date(None) == ""
+    assert format_date(None, "closed") == "closed"
 
 
 def test_format_ms_time_detailed() -> None:

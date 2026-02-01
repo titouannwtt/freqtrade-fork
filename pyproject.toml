@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: MacOS",
     "Operating System :: Unix",
     "Topic :: Office/Business :: Financial :: Investment",
@@ -85,17 +86,16 @@ hyperopt = [
 freqai = [
   "scikit-learn",
   "joblib",
-  'catboost; platform_machine != "aarch64"',
   "lightgbm",
   "xgboost",
   "tensorboard",
   "datasieve>=0.1.5",
 ]
 freqai_rl = [
-  "torch",
+  "torch; sys_platform != 'darwin' or platform_machine != 'x86_64'",
   "gymnasium",
-  "stable-baselines3",
-  "sb3-contrib",
+  "stable-baselines3; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+  "sb3-contrib; sys_platform != 'darwin' or platform_machine != 'x86_64'",
   "tqdm",
 ]
 develop = [
@@ -183,6 +183,7 @@ skip_glob = ["**/.env*", "**/env/*", "**/.venv/*", "**/docs/*", "**/user_data/*"
 known_first_party = ["freqtrade_client"]
 
 [tool.pytest.ini_options]
+# TODO: should be migrated to [tool.pytest] as support for this was added in 9.0
 log_format = "%(asctime)s %(levelname)s %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 

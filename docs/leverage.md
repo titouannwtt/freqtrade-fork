@@ -1,8 +1,5 @@
 # Trading with Leverage
 
-!!! Warning "Beta feature"
-    This feature is still in it's testing phase. Should you notice something you think is wrong please let us know via Discord or via Github Issue.
-
 !!! Note "Multiple bots on one account"
     You can't run 2 bots on the same account with leverage. For leveraged / margin trading, freqtrade assumes it's the only user of the account, and all liquidation levels are calculated based on this assumption.
 
@@ -17,7 +14,7 @@ If you already have an existing strategy, please read the [strategy migration gu
 
 ## Shorting
 
-Shorting is not possible when trading with [`trading_mode`](#leverage-trading-modes) set to `spot`. To short trade, `trading_mode` must be set to `margin`(currently unavailable) or [`futures`](#futures), with [`margin_mode`](#margin-mode) set to `cross`(currently unavailable) or [`isolated`](#isolated-margin-mode)
+Shorting is not possible when trading with [`trading_mode`](#leverage-trading-modes) set to `spot`. To short trade, `trading_mode` must be set to `margin`(currently unavailable) or [`futures`](#futures), with [`margin_mode`](#margin-mode) set to [`cross`](#cross-margin-mode) or [`isolated`](#isolated-margin-mode)
 
 For a strategy to short, the strategy class must set the class variable `can_short = True`
 
@@ -55,7 +52,7 @@ Perpetual swaps (also known as Perpetual Futures) are contracts traded at a pric
 In addition to the gains/losses from the change in price of the futures contract, traders also exchange _funding fees_, which are gains/losses worth an amount that is derived from the difference in price between the futures contract and the underlying asset. The difference in price between a futures contract and the underlying asset varies between exchanges.
 
 To trade in futures markets, you'll have to set `trading_mode` to "futures".
-You will also have to pick a "margin mode" (explanation below) - with freqtrade currently only supporting isolated margin.
+You will also have to pick a "margin mode" (explanation below).
 
 ``` json
 "trading_mode": "futures",
@@ -72,7 +69,7 @@ A futures pair will therefore have the naming of `base/quote:settle` (e.g. `ETH/
 On top of `trading_mode` - you will also have to configure your `margin_mode`.
 While freqtrade currently only supports one margin mode, this will change, and by configuring it now you're all set for future updates.
 
-The possible values are: `isolated`, or `cross`(*currently unavailable*).
+The possible values are: `isolated`, or `cross`.
 
 #### Isolated margin mode
 
@@ -91,6 +88,11 @@ One account is used to share collateral between markets (trading pairs). Margin 
 ```
 
 Please read the [exchange specific notes](exchanges.md) for exchanges that support this mode and how they differ.
+
+!!! Warning "Increased risk of liquidation"
+    Cross margin mode increases the risk of full account liquidation, as all trades share the same collateral.
+    A loss on one trade can affect the liquidation price of other trades.  
+    Also, cross-position influence may not be fully simulated in dry-run or backtesting mode.
 
 ## Set leverage to use
 

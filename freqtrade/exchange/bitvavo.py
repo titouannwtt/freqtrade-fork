@@ -2,8 +2,6 @@
 
 import logging
 
-from ccxt import DECIMAL_PLACES
-
 from freqtrade.exchange import Exchange
 from freqtrade.exchange.exchange_types import FtHas
 
@@ -24,11 +22,3 @@ class Bitvavo(Exchange):
     _ft_has: FtHas = {
         "ohlcv_candle_limit": 1440,
     }
-
-    @property
-    def precisionMode(self) -> int:
-        """
-        Exchange ccxt precisionMode
-        Override due to https://github.com/ccxt/ccxt/issues/20408
-        """
-        return DECIMAL_PLACES

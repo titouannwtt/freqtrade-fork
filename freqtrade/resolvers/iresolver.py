@@ -86,13 +86,13 @@ class IResolver:
              Tuple format: [Object, source]
         """
 
-        # Generate spec based on absolute path
-        # Pass object_name as first argument to have logging print a reasonable name.
         with PathModifier(module_path.parent):
             module_name = module_path.stem or ""
+            # Generate spec based on absolute path
+            # Pass object_name as first argument to have logging print a reasonable name.
             spec = importlib.util.spec_from_file_location(module_name, str(module_path))
             if not spec:
-                return iter([None])
+                return iter([])
 
             module = importlib.util.module_from_spec(spec)
             try:
@@ -139,7 +139,7 @@ class IResolver:
         :return: object class
         """
         logger.debug(f"Searching for {cls.object_type.__name__} {object_name} in '{directory}'")
-        for entry in directory.iterdir():
+        for entry in sorted(directory.iterdir()):
             # Only consider python files
             if entry.suffix != ".py":
                 logger.debug("Ignoring %s", entry)
@@ -148,10 +148,11 @@ class IResolver:
                 logger.debug("Ignoring broken symlink %s", entry)
                 continue
             module_path = entry.resolve()
+            if entry.read_text(encoding="utf-8").find(f"class {object_name}(") == -1:
+                logger.debug(f"Skipping {module_path} as it does not contain class {object_name}.")
+                continue
 
-            obj = next(cls._get_valid_object(module_path, object_name), None)
-
-            if obj:
+            if obj := next(cls._get_valid_object(module_path, object_name), None):
                 obj[0].__file__ = str(entry)
                 if add_source:
                     obj[0].__source__ = obj[1]
@@ -164,6 +165,10 @@ class IResolver:
     ) -> Any | None:
         """
         Try to load object from path list.
+        :param paths: list of absolute paths to search
+        :param object_name: name of the module to import
+        :param add_source: add the source code as __source__ attribute to theloaded object.
+        :param kwargs: keyword arguments to pass to the object constructor
         """
 
         for _path in paths:

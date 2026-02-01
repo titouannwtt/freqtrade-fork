@@ -298,7 +298,14 @@ Without these permissions, the bot will not start correctly and show errors like
 
 Bybit supports [time_in_force](configuration.md#understand-order_time_in_force) with settings "GTC" (good till cancelled), "FOK" (full-or-cancel), "IOC" (immediate-or-cancel) and "PO" (Post only) settings.
 
-Futures trading on bybit is currently supported for isolated futures mode.
+!!! Warning "Unified accounts"
+    Freqtrade assumes accounts to be dedicated to the bot.
+    We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
+    Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
+
+### Bybit Futures
+
+Futures trading on bybit is supported for isolated futures mode.
 
 On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
 
@@ -312,10 +319,6 @@ API Keys for live futures trading must have the following permissions:
 
 We do strongly recommend to limit all API keys to the IP you're going to use it from.
 
-!!! Warning "Unified accounts"
-    Freqtrade assumes accounts to be dedicated to the bot.
-    We therefore recommend the usage of one subaccount per bot. This is especially important when using unified accounts.  
-    Other configurations (multiple bots on one account, manual non-bot trades on the bot account) are not supported and may lead to unexpected behavior.
 
 ## Bitmart
 
@@ -354,6 +357,12 @@ Bitget supports [time_in_force](configuration.md#understand-order_time_in_force)
 !!! Tip "Stoploss on Exchange"
     Bitget supports `stoploss_on_exchange` and can use both stop-loss-market and stop-loss-limit orders. It provides great advantages, so we recommend to benefit from it.
     You can use either `"limit"` or `"market"` in the `order_types.stoploss` configuration setting to decide which type of stoploss shall be used.
+
+### Bitget Futures
+
+Futures trading on bitget is supported for isolated futures mode.
+
+On startup, freqtrade will set the position mode to "One-way Mode" for the whole (sub)account. This avoids making this call over and over again (slowing down bot operations), but means that manual changes to this setting may result in exceptions and errors.
 
 ## Hyperliquid
 
@@ -398,11 +407,12 @@ To use these with Freqtrade, you will need to use the following configuration pa
 ``` json
 "exchange": {
     "name": "hyperliquid",
-    "walletAddress": "your_vault_address",  // Vault or subaccount address
-    "privateKey": "your_api_private_key",
+    "walletAddress": "your_master_wallet_address", // Your master wallet address (not the API wallet address and not the vault/subaccount address).
+    "privateKey": "your_api_private_key", // API wallet private key (see https://app.hyperliquid.xyz/API). You'll only need the private key.
     "ccxt_config": {
         "options": {
-            "vaultAddress": "your_vault_address" // Optional, only if you want to use a vault or subaccount
+            "vaultAddress": "your_vault_address", // Optional, only if you want to use a vault ...
+            "subAccountAddress": "your_subaccount_address" // OR optional, only if you want to use a subaccount
         }
     },
     // ...
@@ -411,9 +421,42 @@ To use these with Freqtrade, you will need to use the following configuration pa
 
 Your balance and trades will now be used from your vault / subaccount - and no longer from your main account.
 
+!!! Note
+    You can only use either a vault or a subaccount - not both at the same time.
+
 ### Historic Hyperliquid data
 
 The Hyperliquid API does not provide historic data beyond the single call to fetch current data, so downloading data is not possible, as the downloaded data would not constitute proper historic data.
+
+### HIP-3 DEXes
+
+Hyperliquid supports HIP-3 decentralized exchanges (DEXes), which are independent exchanges built on top of the Hyperliquid infrastructure.
+These DEXes operate similarly to the main Hyperliquid exchange but are community-created and managed.
+
+To trade on HIP-3 DEXes with Freqtrade, you need to add them to your configuration using the `hip3_dexes` parameter:
+
+```json
+"exchange": {
+    "name": "hyperliquid",
+    "walletAddress": "your_master_wallet_address",
+    "privateKey": "your_api_private_key",
+    "hip3_dexes": ["dex_name_1", "dex_name_2"]
+}
+```
+
+Replace `"dex_name_1"` and `"dex_name_2"` with the actual names of the HIP-3 DEXes you want to trade on (e.g. `vntl` and `xyz`).
+
+!!! Warning "Performance and Rate Limit Impact"
+    Each HIP-3 DEX you add significantly impacts bot performance and rate limits.
+
+    * **Additional API Calls**: For each HIP-3 DEX configured, Freqtrade needs to make additional API calls.
+    * **Rate Limit Pressure**: Additional API calls contribute to Hyperliquid's strict rate limits. With multiple DEXes, you may hit rate limits faster, or rather, slow down bot operations due to enforced delays.
+
+    Please only add HIP-3 DEXes that you actively trade on. Monitor your logs for rate limit warnings or signs of slowed operations, and adjust your configuration accordingly.  
+    Different HIP-3 DEXes may also use different quote currencies - so make sure to only add DEXes that are compatible with your stake currency to avoid unnecessary delays.
+
+!!! Note
+    HIP-3 DEXes share the same wallet and free amount of collateral as your main Hyperliquid account. Trades on different DEXes will affect your overall account balance and margin.
 
 ## Bitvavo
 
@@ -478,3 +521,5 @@ For example, to test the order type `FOK` with Kraken, and modify candle limit t
 
 !!! Warning
     Please make sure to fully understand the impacts of these settings before modifying them.
+    Using `_ft_has_params` overrides may lead to unexpected behavior, and may even break your bot. 
+    We will not be able to provide support for issues caused by custom settings in `_ft_has_params`.

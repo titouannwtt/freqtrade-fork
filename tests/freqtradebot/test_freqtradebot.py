@@ -2267,6 +2267,18 @@ def test_manage_open_orders_exit_usercustom(
     freqtrade.manage_open_orders()
     assert log_has_re("Emergency exiting trade.*", caplog)
     assert et_mock.call_count == 1
+    # Full exit
+    assert et_mock.call_args_list[0][1]["sub_trade_amt"] == 30
+
+    et_mock.reset_mock()
+
+    # Full partially filled order
+    # Only places the order for the remaining amount
+    limit_sell_order_old["remaining"] = open_trade_usdt.amount - 10
+    freqtrade.manage_open_orders()
+    assert log_has_re("Emergency exiting trade.*", caplog)
+    assert et_mock.call_count == 1
+    assert et_mock.call_args_list[0][1]["sub_trade_amt"] == 20.0
 
 
 @pytest.mark.parametrize("is_short", [False, True])
@@ -2536,9 +2548,9 @@ def test_manage_open_orders_exception(
     caplog.clear()
     freqtrade.manage_open_orders()
     assert log_has_re(
-        r"Cannot query order for Trade\(id=1, pair=ADA/USDT, amount=30.00000000, "
-        r"is_short=False, leverage=1.0, "
-        r"open_rate=2.00000000, open_since="
+        r"Cannot query order for Trade\(id=1, pair=ADA/USDT, amount=30, "
+        r"is_short=False, leverage=1, "
+        r"open_rate=2, open_since="
         f"{open_trade_usdt.open_date.strftime('%Y-%m-%d %H:%M:%S')}"
         r"\) due to Traceback \(most recent call last\):\n*",
         caplog,
@@ -3080,7 +3092,7 @@ def test_execute_trade_exit_custom_exit_price(
         "exit_reason": "foo",
         "open_date": ANY,
         "close_date": ANY,
-        "close_rate": ANY,
+        "close_rate": 2.25,  # the custom exit price
         "sub_trade": False,
         "cumulative_profit": 0.0,
         "stake_amount": pytest.approx(60),
@@ -3739,8 +3751,8 @@ def test_get_real_amount_quote(
     # Amount is reduced by "fee"
     assert freqtrade.get_real_amount(trade, buy_order_fee, order_obj) == (amount * 0.001)
     assert log_has(
-        "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8.00000000, is_short=False,"
-        " leverage=1.0, open_rate=0.24544100, open_since=closed), fee=0.008.",
+        "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8, is_short=False,"
+        " leverage=1, open_rate=0.245441, open_since=closed), fee=0.008.",
         caplog,
     )
 
@@ -3793,8 +3805,8 @@ def test_get_real_amount_no_trade(default_conf_usdt, buy_order_fee, caplog, mock
     # Amount is reduced by "fee"
     assert freqtrade.get_real_amount(trade, buy_order_fee, order_obj) is None
     assert log_has(
-        "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8.00000000, "
-        "is_short=False, leverage=1.0, open_rate=0.24544100, open_since=closed) failed: "
+        "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8, "
+        "is_short=False, leverage=1, open_rate=0.245441, open_since=closed) failed: "
         "myTrade-dict empty found",
         caplog,
     )
@@ -3813,8 +3825,8 @@ def test_get_real_amount_no_trade(default_conf_usdt, buy_order_fee, caplog, mock
             0,
             True,
             (
-                "Fee for Trade Trade(id=None, pair=LTC/ETH, amount=8.00000000, is_short=False, "
-                "leverage=1.0, open_rate=0.24544100, open_since=closed) [buy]: 0.00094518 BNB -"
+                "Fee for Trade Trade(id=None, pair=LTC/ETH, amount=8, is_short=False, "
+                "leverage=1, open_rate=0.245441, open_since=closed) [buy]: 0.00094518 BNB -"
                 " rate: None"
             ),
         ),
@@ -3824,8 +3836,8 @@ def test_get_real_amount_no_trade(default_conf_usdt, buy_order_fee, caplog, mock
             0.004,
             False,
             (
-                "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8.00000000, "
-                "is_short=False, leverage=1.0, open_rate=0.24544100, open_since=closed), fee=0.004."
+                "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8, "
+                "is_short=False, leverage=1, open_rate=0.245441, open_since=closed), fee=0.004."
             ),
         ),
         # invalid, no currency in from fee dict
@@ -3929,8 +3941,8 @@ def test_get_real_amount_multi(
     assert freqtrade.get_real_amount(trade, buy_order_fee, order_obj) == expected_amount
     assert log_has(
         (
-            "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8.00000000, "
-            "is_short=False, leverage=1.0, open_rate=0.24544100, open_since=closed), "
+            "Applying fee on amount for Trade(id=None, pair=LTC/ETH, amount=8, "
+            "is_short=False, leverage=1, open_rate=0.245441, open_since=closed), "
             f"fee={expected_amount}."
         ),
         caplog,
@@ -4513,6 +4525,7 @@ def test_check_for_open_trades(mocker, default_conf_usdt, fee, is_short):
 def test_startup_update_open_orders(mocker, default_conf_usdt, fee, caplog, is_short):
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
     create_mock_trades(fee, is_short=is_short)
+    mocker.patch(f"{EXMS}._dry_is_price_crossed", return_value=False)
 
     freqtrade.startup_update_open_orders()
     assert not log_has_re(r"Error updating Order .*", caplog)

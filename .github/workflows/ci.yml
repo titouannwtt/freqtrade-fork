@@ -16,8 +16,8 @@ on:
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}"
   cancel-in-progress: true
-permissions:
-  repository-projects: read
+permissions: {}
+
 jobs:
   tests:
     name: "Tests and Linting"
@@ -25,20 +25,20 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-22.04", "ubuntu-24.04", "macos-14", "macos-15" , "windows-2022", "windows-2025" ]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
       with:
         activate-environment: true
         enable-cache: true
@@ -74,29 +74,31 @@ jobs:
       run: |
         pytest --random-order --cov=freqtrade --cov=freqtrade_client --cov-config=.coveragerc
 
-    - name: Coveralls
+    - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
-      env:
-        # Coveralls token. Not used as secret due to github not providing secrets to forked repositories
-        COVERALLS_REPO_TOKEN: 6D1m0xupS3FgutfuGao8keFf9Hc0FpIXu
+      with:
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Cleanup codecov dirty state files
+      if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
       run: |
-        # Allow failure for coveralls
-        uv pip install coveralls
-        coveralls || true
+        # See https://github.com/codecov/codecov-action/issues/1851
+        rm -rf codecov codecov.SHA256SUM codecov.SHA256SUM.sig
 
     - name: Run json schema extract
-      # This should be kept before the repository check to ensure that the schema is up-to-date
+      # This must be kept before the repository check to ensure that the schema is up-to-date
       run: |
         python build_helpers/extract_config_json_schema.py
 
     - name: Run command docs partials extract
-      # This should be kept before the repository check to ensure that the docs are up-to-date
+      # This must be kept before the repository check to ensure that the docs are up-to-date
+      if: ${{ (matrix.python-version == '3.13') }}
       run: |
         python build_helpers/create_command_partials.py
 
     - name: Check for repository changes - *nix
-      # TODO: python 3.13 slightly changed the output of argparse.
-      if: ${{ (matrix.python-version != '3.13') && (runner.os != 'Windows') }}
+      if: ${{ (runner.os != 'Windows') }}
       run: |
         if [ -n "$(git status --porcelain)" ]; then
           echo "Repository is dirty, changes detected:"
@@ -108,7 +110,7 @@ jobs:
         fi
 
     - name: Check for repository changes - Windows
-      if: ${{ runner.os == 'Windows' && (matrix.python-version != '3.13') }}
+      if: ${{ runner.os == 'Windows' }}
       run: |
         if (git status --porcelain) {
           Write-Host "Repository is dirty, changes detected:"
@@ -157,6 +159,7 @@ jobs:
       shell: powershell
       run: |
         $PSVersionTable
+        Get-PSRepository | Format-List *
         Set-PSRepository psgallery -InstallationPolicy trusted
         Install-Module -Name Pester -RequiredVersion 5.3.1 -Confirm:$false -Force -SkipPublisherCheck
         $Error.clear()
@@ -175,12 +178,12 @@ jobs:
     name: "Mypy Version Check"
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 #v6.1.0
       with:
         python-version: "3.12"
 
@@ -193,11 +196,11 @@ jobs:
     name: "Pre-commit checks"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.12"
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
@@ -206,7 +209,7 @@ jobs:
     name: "Documentation build"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
@@ -215,7 +218,7 @@ jobs:
         ./tests/test_docs.sh
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.12"
 
@@ -238,17 +241,17 @@ jobs:
     name: "Tests and Linting - Online tests"
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
       with:
         activate-environment: true
         enable-cache: true
@@ -265,25 +268,21 @@ jobs:
 
     - name: Tests incl. ccxt compatibility tests
       env:
-        CI_WEB_PROXY: http://152.67.78.211:13128
+        CI_WEB_PROXY: http://152.67.66.8:13128
       run: |
         pytest --random-order --longrun --durations 20 -n auto
 
 
   # Notify only once - when CI completes (and after deploy) in case it's successful
   notify-complete:
+    name: "Notify CI Completion"
     needs: [
-      tests,
-      docs-check,
-      mypy-version-check,
-      pre-commit,
+      build,
       build-linux-online
     ]
     runs-on: ubuntu-22.04
     # Discord notification can't handle schedule events
     if: github.event_name != 'schedule' && github.repository == 'freqtrade/freqtrade'
-    permissions:
-      repository-projects: read
     steps:
 
     - name: Check user permission
@@ -304,17 +303,29 @@ jobs:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   build:
+    if: always()
     name: "Build"
-    needs: [ tests, docs-check, mypy-version-check, pre-commit ]
+    needs: [
+      tests,
+      docs-check,
+      mypy-version-check,
+      pre-commit,
+    ]
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v5
+
+    - name: Decide whether the needed jobs succeeded or failed
+      uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe  # v1.2.2
+      with:
+        jobs: ${{ toJSON(needs) }}
+
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.12"
 
@@ -324,7 +335,7 @@ jobs:
         python -m build --sdist --wheel
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.1.0
       with:
         name: freqtrade-build
         path: |
@@ -337,7 +348,7 @@ jobs:
         python -m build --sdist --wheel ft_client
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.1.0
       with:
         name: freqtrade-client-build
         path: |
@@ -353,15 +364,15 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/freqtrade
     permissions:
-      id-token: write
+      id-token: write # Needed for pypa/gh-action-pypi-publish
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         pattern: freqtrade*-build
         path: dist
@@ -382,15 +393,15 @@ jobs:
       name: pypi
       url: https://pypi.org/p/freqtrade
     permissions:
-      id-token: write
+      id-token: write # Needed for pypa/gh-action-pypi-publish
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         pattern: freqtrade*-build
         path: dist
@@ -403,15 +414,12 @@ jobs:
   docker-build:
     name: "Docker Build and Deploy"
     needs: [
-      tests,
-      docs-check,
-      mypy-version-check,
-      pre-commit
+     build,
     ]
     if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release') && github.repository == 'freqtrade/freqtrade'
     uses: ./.github/workflows/docker-build.yml
     permissions:
-      packages: write
+      packages: write # Needed to push package versions
       contents: read
     secrets:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -425,6 +433,6 @@ jobs:
     # Only run on push, schedule, or release events
     if: (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'freqtrade/freqtrade'
     permissions:
-      packages: write
+      packages: write # Needed to delete package versions
     with:
       package_name: 'freqtrade'

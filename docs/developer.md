@@ -26,10 +26,19 @@ Alternatively (e.g. if your system is not supported by the setup.sh script), fol
 
 This will install all required tools for development, including `pytest`, `ruff`, `mypy`, and `coveralls`.
 
-Then install the git hook scripts by running `pre-commit install`, so your changes will be verified locally before committing.
-This avoids a lot of waiting for CI already, as some basic formatting checks are done locally on your machine.
+Run the following command to install the git hook scripts:
 
-Before opening a pull request, please familiarize yourself with our [Contributing Guidelines](https://github.com/freqtrade/freqtrade/blob/develop/CONTRIBUTING.md).
+``` bash
+pre-commit install
+```
+
+These pre-commit scripts check your changes automatically before each commit.  
+If any formatting issues are found, the commit will fail and will prompt for fixes.
+This reduces unnecessary CI failures, reduces maintenance burden, and improves code quality.
+
+You can run the checks manually when necessary with `pre-commit run -a`.  
+
+Before opening a pull request, please also familiarize yourself with our [Contributing Guidelines](https://github.com/freqtrade/freqtrade/blob/develop/CONTRIBUTING.md).
 
 ### Devcontainer setup
 
@@ -423,7 +432,6 @@ freqtrade download-data --timerange 20250625-20250801 --config tests/testdata/co
 freqtrade backtesting --config tests/testdata/config.tests.usdt.json -s SampleStrategy --userdir user_data_bttest/ --cache none --timerange 20250701-20250801
 ```
 
-
 ## Continuous integration
 
 This documents some decisions taken for the CI Pipeline.
@@ -455,10 +463,10 @@ git checkout -b new_release <commitid>
 Determine if crucial bugfixes have been made between this commit and the current state, and eventually cherry-pick these.
 
 * Merge the release branch (stable) into this branch.
-* Edit `freqtrade/__init__.py` and add the version matching the current date (for example `2019.7` for July 2019). Minor versions can be `2019.7.1` should we need to do a second release that month. Version numbers must follow allowed versions from PEP0440 to avoid failures pushing to pypi.
+* Edit `freqtrade/__init__.py` and add the version matching the current date (for example `2025.7` for July 2025). Minor versions can be `2025.7.1` should we need to do a second release that month. Version numbers must follow allowed versions from PEP0440 to avoid failures pushing to pypi.
 * Commit this part.
 * Push that branch to the remote and create a PR against the **stable branch**.
-* Update develop version to next version following the pattern `2019.8-dev`.
+* Update develop version to next version following the pattern `2025.8-dev`.
 
 ### Create changelog from git commits
 

@@ -8,6 +8,7 @@ from typing import Any
 
 from pandas import DataFrame
 
+from freqtrade.exceptions import ConfigurationError
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.loggers.set_log_levels import (
     reduce_verbosity_for_bias_tester,
@@ -38,6 +39,7 @@ class RecursiveAnalysis(BaseAnalysis):
         self.dict_recursive: dict[str, Any] = dict()
 
         self.pair_to_used: str | None = None
+        self._strat_scc: int | None = None
 
     # For recursive bias check
     # analyzes two data frames with processed indicators and shows differences between them.
@@ -150,7 +152,15 @@ class RecursiveAnalysis(BaseAnalysis):
         backtesting._set_strategy(backtesting.strategylist[0])
 
         strat = backtesting.strategy
-        self._strat_scc = strat.startup_candle_count
+        if self._strat_scc is None:
+            self._strat_scc = strat.startup_candle_count
+
+        if self._strat_scc < 1:
+            raise ConfigurationError(
+                f"The strategy defines invalid startup candle count of {self._strat_scc}. "
+                f"This will lead to recursive issues on some indicators. "
+                f"Please define a proper startup_candle_count in the strategy."
+            )
 
         if self._strat_scc not in self._startup_candle:
             self._startup_candle.append(self._strat_scc)

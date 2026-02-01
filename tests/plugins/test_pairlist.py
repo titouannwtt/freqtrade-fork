@@ -1396,7 +1396,7 @@ def test_gen_pair_whitelist_not_supported(mocker, default_conf, tickers) -> None
     )
 
     with pytest.raises(
-        OperationalException, match=r"Exchange does not support dynamic whitelist.*"
+        OperationalException, match=r"Exchange .* does not support dynamic whitelist.*"
     ):
         get_patched_freqtradebot(mocker, default_conf)
 
@@ -1410,7 +1410,9 @@ def test_pair_whitelist_not_supported_Spread(mocker, default_conf, tickers) -> N
         exchange_has=MagicMock(return_value=False),
     )
 
-    with pytest.raises(OperationalException, match=r"Exchange does not support fetchTickers, .*"):
+    with pytest.raises(
+        OperationalException, match=r"Exchange .* does not support fetchTickers, .*"
+    ):
         get_patched_freqtradebot(mocker, default_conf)
 
     mocker.patch(f"{EXMS}.exchange_has", MagicMock(return_value=True))
@@ -2333,6 +2335,36 @@ def test_FullTradesFilter(mocker, default_conf_usdt, fee, caplog) -> None:
             "futures",
             ["ETH/USDT:USDT", "ADA/USDT:USDT"],
             ["layer-1", "protocol"],
+        ),
+        (
+            [
+                # Blacklist high MC pairs
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "MarketCapPairList", "mode": "blacklist"},
+            ],
+            "spot",
+            ["LTC/USDT", "NEO/USDT", "TKN/USDT", "ETC/USDT"],
+            1,
+        ),
+        (
+            [
+                # Blacklist high MC pairs
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "MarketCapPairList", "mode": "blacklist", "max_rank": 2},
+            ],
+            "spot",
+            ["LTC/USDT", "XRP/USDT", "NEO/USDT", "TKN/USDT", "ETC/USDT", "ADA/USDT"],
+            1,
+        ),
+        (
+            [
+                # Blacklist top 6 MarketCap pairs - removes XRP which is at spot 6.
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "MarketCapPairList", "mode": "blacklist", "max_rank": 6},
+            ],
+            "spot",
+            ["LTC/USDT", "NEO/USDT", "TKN/USDT", "ETC/USDT", "ADA/USDT"],
+            1,
         ),
     ],
 )

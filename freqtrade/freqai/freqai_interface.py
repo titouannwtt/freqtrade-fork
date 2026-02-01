@@ -227,6 +227,10 @@ class IFreqaiModel(ABC):
         """
         while not self._stop_event.is_set():
             time.sleep(1)
+
+            if not self.train_queue:
+                continue
+
             pair = self.train_queue[0]
 
             # ensure pair is available in dp
@@ -948,7 +952,7 @@ class IFreqaiModel(ABC):
         return dk
 
     # Following methods which are overridden by user made prediction models.
-    # See freqai/prediction_models/CatboostPredictionModel.py for an example.
+    # See freqai/prediction_models/XGBoostRegressor.py for an example.
 
     @abstractmethod
     def train(self, unfiltered_df: DataFrame, pair: str, dk: FreqaiDataKitchen, **kwargs) -> Any:
@@ -964,7 +968,7 @@ class IFreqaiModel(ABC):
     def fit(self, data_dictionary: dict[str, Any], dk: FreqaiDataKitchen, **kwargs) -> Any:
         """
         Most regressors use the same function names and arguments e.g. user
-        can drop in LGBMRegressor in place of CatBoostRegressor and all data
+        can drop in LGBMRegressor in place of XGBoostRegressor and all data
         management will be properly handled by Freqai.
         :param data_dictionary: Dict = the dictionary constructed by DataHandler to hold
                                 all the training and test data/labels.

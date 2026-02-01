@@ -157,6 +157,11 @@ class Profit(BaseModel):
     winrate: float
     expectancy: float
     expectancy_ratio: float
+    sharpe: float
+    sortino: float
+    sqn: float
+    calmar: float
+    cagr: float
     max_drawdown: float
     max_drawdown_abs: float
     max_drawdown_start: str
@@ -340,6 +345,8 @@ class TradeSchema(BaseModel):
 
     min_rate: float | None = None
     max_rate: float | None = None
+    nr_of_successful_entries: int
+    nr_of_successful_exits: int
     has_open_orders: bool
     orders: list[OrderSchema]
 
@@ -424,6 +431,7 @@ class ForceExitPayload(BaseModel):
     tradeid: str | int
     ordertype: OrderTypeValues | None = None
     amount: float | None = None
+    price: float | None = None
 
 
 class BlacklistPayload(BaseModel):
@@ -504,6 +512,7 @@ class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
     timerange: str | None = None
     erase: bool = False
     download_trades: bool = False
+    candle_types: list[str] | None = None
 
     @model_validator(mode="before")
     def check_mutually_exclusive(cls, values):

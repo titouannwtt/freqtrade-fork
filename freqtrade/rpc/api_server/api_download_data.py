@@ -17,7 +17,7 @@ from freqtrade.util.progress_tracker import get_progress_tracker
 logger = logging.getLogger(__name__)
 
 # Private API, protected by authentication and webserver_mode dependency
-router = APIRouter(tags=["download-data", "webserver"])
+router = APIRouter()
 
 
 def __run_download(job_id: str, config_loc: Config):
@@ -63,6 +63,8 @@ def pairlists_evaluate(
     config_loc["timeframes"] = payload.timeframes
     config_loc["erase"] = payload.erase
     config_loc["download_trades"] = payload.download_trades
+    if payload.candle_types is not None:
+        config_loc["candle_types"] = payload.candle_types
 
     handleExchangePayload(payload, config_loc)
 
