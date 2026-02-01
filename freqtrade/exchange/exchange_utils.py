@@ -57,7 +57,7 @@ def available_exchanges(ccxt_module: CcxtModuleType | None = None) -> list[str]:
 def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]]) -> list[str]:
     """
     Checks availability of methods (or their replacement)s in a merged has-dict.
-    :param ex_has: merged "has" dict (ccxt + freqtrade overrides)
+    :param ex_has: merged "has" dict (ccxt.has)
     :param required: dict of required methods, with possible replacement methods as list
     :return: list of missing required methods
     """
@@ -68,9 +68,7 @@ def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]])
     ]
 
 
-def validate_exchange(
-    exchange: str,
-) -> tuple[bool, str, str, ccxt.Exchange | None]:
+def validate_exchange(exchange: str) -> tuple[bool, str, str, ccxt.Exchange | None]:
     """
     returns: can_use, reason, exchange_object
         with Reason including both missing and missing_opt
@@ -114,12 +112,8 @@ def _build_exchange_list_entry(
     exchange_name: str, exchangeClasses: dict[str, Any]
 ) -> ValidExchangesType:
     exchange_name = exchange_name.lower()
-    mapped_exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name).lower()
-
-    resolved = exchangeClasses.get(mapped_exchange_name)
-
     valid, comment, comment_fut, ex_mod = validate_exchange(exchange_name)
-
+    mapped_exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name).lower()
     is_alias = getattr(ex_mod, "alias", False)
     result: ValidExchangesType = {
         "name": getattr(ex_mod, "name", exchange_name),
@@ -135,7 +129,7 @@ def _build_exchange_list_entry(
         else None,
         "trade_modes": [{"trading_mode": "spot", "margin_mode": ""}],
     }
-    if resolved:
+    if resolved := exchangeClasses.get(mapped_exchange_name):
         supported_modes: list[TradeModeType] = [
             {"trading_mode": tm.value, "margin_mode": mm.value}
             for tm, mm in resolved["class"]._supported_trading_mode_margin_pairs
