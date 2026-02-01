@@ -2910,7 +2910,7 @@ def test_close_rate_for_roi(fee, is_short, lev, trading_mode):
     """
     Ensure calc_close_rate_for_roi is consistent with calc_profit_ratio.
     """
-    open_dt = datetime.fromisoformat("1970-01-01 00:00:00")
+    open_dt = datetime.fromisoformat("2022-01-01 00:00:00")
     trade_duration = timedelta(days=10)
     trade = Trade(
         id=2,
@@ -2928,8 +2928,10 @@ def test_close_rate_for_roi(fee, is_short, lev, trading_mode):
         leverage=lev,
         trading_mode=trading_mode,
         interest_rate=0.0005,
+        funding_fees=0.1234,
     )
-    trade.funding_fee_running = 0.1234
-    roi = 0.1337
-    close_rate = trade.calc_close_rate_for_roi(roi)
-    assert roi == trade.calc_profit_ratio(close_rate)
+    for roi in [0.1337, 0.5, -0.1, 0.25]:
+        close_rate = trade.calc_close_rate_for_roi(roi)
+        assert roi == trade.calc_profit_ratio(close_rate), (
+            f"Failed for ROI {roi}, close_rate {close_rate}"
+        )
