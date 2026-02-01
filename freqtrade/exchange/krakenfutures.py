@@ -30,18 +30,14 @@ class Krakenfutures(Exchange):
         (TradingMode.FUTURES, MarginMode.ISOLATED),
     ]
 
-    # Freqtrade uses _ft_has (exchange_has_overrides) for config validation.
     _ft_has: FtHas = {
         "stoploss_on_exchange": True,
         "stoploss_order_types": {
             "limit": "limit",
             "market": "market",
         },
-        # request param used by Exchange._get_stop_params
         "stop_price_param": "triggerPrice",
-        # response key used by stoploss_adjust and general stop parsing
         "stop_price_prop": "stopPrice",
-        # optional futures price type mapping (only used if stoploss_price_type is configured)
         "stop_price_type_field": "triggerSignal",
         "stop_price_type_value_mapping": {
             PriceType.LAST: "last",
