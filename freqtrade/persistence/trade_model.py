@@ -1208,7 +1208,7 @@ class LocalTrade:
     def calc_close_rate_for_roi(self, target_roi: float) -> float:
         """
         Calculate the required close price to reach a target ROI.
-        Matches the logic used in `calc_profit_ratio()`.
+        Must match the logic used in `calc_profit_ratio()`.
 
         :param target_roi: The desired return on investment (as a decimal, e.g., 0.05 for 5%)
         :return: Close price (rate) required to achieve the target ROI
