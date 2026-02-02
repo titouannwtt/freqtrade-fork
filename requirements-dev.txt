@@ -21,7 +21,7 @@ isort==7.0.0
 time-machine==3.2.0
 
 # Convert jupyter notebooks to markdown documents
-nbconvert==7.16.6
+nbconvert==7.17.0
 
 # mypy types
 scipy-stubs==1.17.0.2  # keep in sync with `scipy` in `requirements-hyperopt.txt`
