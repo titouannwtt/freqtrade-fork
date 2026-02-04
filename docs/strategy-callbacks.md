@@ -1303,7 +1303,7 @@ Currently two types of annotations are supported, `area` and `line`.
     "z_level": 5, // z-level, higher values are drawn on top of lower values. Positions relative to the Chart elements need to be set in freqUI.
     "label": "some label",
     "size": 2, // Optional, line width in pixels. Defaults to 10
-    "symbol": "circle", // Optional, can be "circle", "rect", "roundRect", "triangle", "pin", "arrow", "none".
+    "shape": "circle", // Optional, can be "circle", "rect", "roundRect", "triangle", "pin", "arrow", "none".
 
 }
 ```
