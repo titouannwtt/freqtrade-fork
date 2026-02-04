@@ -1385,7 +1385,7 @@ Entries will be validated, and won't be passed to the UI if they don't correspon
                         }
                     )
                 elif (start_dt.hour % 2) == 0:
-                price = dataframe.loc[dataframe["date"] == start_dt, ["close"]].mean()
+                price = dataframe.loc[dataframe["date"] == start_dt, "close"].mean()
                     annotations.append(
                         {
                             "type": "area",
