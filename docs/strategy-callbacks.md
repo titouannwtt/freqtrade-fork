@@ -1304,6 +1304,7 @@ Currently two types of annotations are supported, `area` and `line`.
     "label": "some label",
     "size": 2, // Optional, line width in pixels. Defaults to 10
     "shape": "circle", // Optional, can be "circle", "rect", "roundRect", "triangle", "pin", "arrow", "none".
+    "rotate": 0, // Optional, rotation of the shape/symbol in degrees. Defaults to 0
 
 }
 ```
