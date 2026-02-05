@@ -534,6 +534,8 @@ EXCHANGES = {
     },
 }
 
+EXCHANGES_FUTURES = [exch for exch, params in EXCHANGES.items() if params.get("futures")]
+
 
 @pytest.fixture(scope="class")
 def exchange_conf():
@@ -603,7 +605,7 @@ def exchange(request, exchange_conf, class_mocker):
     exchange.close()
 
 
-@pytest.fixture(params=EXCHANGES, scope="class")
+@pytest.fixture(params=EXCHANGES_FUTURES, scope="class")
 def exchange_futures(request, exchange_conf, class_mocker):
     exchange, name = get_futures_exchange(request.param, exchange_conf, class_mocker)
     yield exchange, name
