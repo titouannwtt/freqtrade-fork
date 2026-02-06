@@ -54,17 +54,18 @@ def available_exchanges(ccxt_module: CcxtModuleType | None = None) -> list[str]:
     return [x for x in exchanges if validate_exchange(x)[0]]
 
 
-def _exchange_has_helper(ex_has: dict[str, Any], required: dict[str, list[str]]) -> list[str]:
+def _exchange_has_helper(ex_mod: ccxt.Exchange, required: dict[str, list[str]]) -> list[str]:
     """
-    Checks availability of methods (or their replacement)s in a merged has-dict.
-    :param ex_has: merged "has" dict (ccxt.has)
+    Checks availability of methods (or their replacement)s in ex_mod.has
+    :param ex_mod: ccxt Exchange module
     :param required: dict of required methods, with possible replacement methods as list
     :return: list of missing required methods
     """
     return [
         k
         for k, v in required.items()
-        if ex_has.get(k) is not True and (len(v) == 0 or not (all(ex_has.get(x) for x in v)))
+        if ex_mod.has.get(k) is not True
+        and (len(v) == 0 or not (all(ex_mod.has.get(x) for x in v)))
     ]
 
 
@@ -81,19 +82,17 @@ def validate_exchange(exchange: str) -> tuple[bool, str, str, ccxt.Exchange | No
     if not ex_mod or not ex_mod.has:
         return False, "", "", None
 
-    ex_has = dict(ex_mod.has or {})
-
     result = True
     reasons = []
     reasons_fut = ""
-    missing = _exchange_has_helper(ex_has, EXCHANGE_HAS_REQUIRED)
+    missing = _exchange_has_helper(ex_mod, EXCHANGE_HAS_REQUIRED)
     if missing:
         result = False
         reasons.append(f"missing: {', '.join(missing)}")
 
-    missing_opt = _exchange_has_helper(ex_has, EXCHANGE_HAS_OPTIONAL)
+    missing_opt = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL)
 
-    missing_futures = _exchange_has_helper(ex_has, EXCHANGE_HAS_OPTIONAL_FUTURES)
+    missing_futures = _exchange_has_helper(ex_mod, EXCHANGE_HAS_OPTIONAL_FUTURES)
 
     if exchange.lower() in BAD_EXCHANGES:
         result = False
