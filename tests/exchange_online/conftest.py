@@ -1,6 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import pytest
 
@@ -10,12 +10,31 @@ from freqtrade.resolvers.exchange_resolver import ExchangeResolver
 from tests.conftest import EXMS, get_default_conf_usdt
 
 
-EXCHANGE_FIXTURE_TYPE = tuple[Exchange, str, dict[str, Any]]
+class TestExchangeOnlineSetup(TypedDict):
+    pair: str
+    stake_currency: str
+    use_ci_proxy: bool
+    hasQuoteVolume: bool
+    timeframe: str
+    candle_count: int
+    futures: bool
+    futures_pair: str | None
+    candle_count_futures: int | None
+    hasQuoteVolumeFutures: bool | None
+    leverage_tiers_public: bool
+    leverage_in_spot_market: bool
+    trades_lookback_hours: int
+    private_methods: list[str] | None
+    sample_order: list[dict[str, Any]] | None
+    sample_my_trades: list[dict[str, Any]] | None
+    skip_ws_tests: bool | None
+
+
+EXCHANGE_FIXTURE_TYPE = tuple[Exchange, str, TestExchangeOnlineSetup]
 EXCHANGE_WS_FIXTURE_TYPE = tuple[Exchange, str, str]
 
-
 # Exchanges that should be tested online
-EXCHANGES = {
+EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
     "binance": {
         "pair": "BTC/USDT",
         "stake_currency": "USDT",
