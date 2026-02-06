@@ -99,13 +99,15 @@ class Krakenfutures(Exchange):
                 usd_total = self._safe_float(raw_total)
                 if usd_free is not None or usd_total is not None:
                     # Use available value for both if only one is present
-                    usd_free = usd_free if usd_free is not None else usd_total
-                    usd_total = usd_total if usd_total is not None else usd_free
-                    # Type narrowing for mypy: both values are set after fallback.
-                    assert usd_free is not None and usd_total is not None
-                    # Both values are guaranteed to be present after fallback.
-                    usd_used = max(0.0, usd_total - usd_free)
-                    balances["USD"] = {"free": usd_free, "used": usd_used, "total": usd_total}
+                    usd_free_value = usd_free if usd_free is not None else usd_total
+                    usd_total_value = usd_total if usd_total is not None else usd_free
+                    if usd_free_value is not None and usd_total_value is not None:
+                        usd_used = max(0.0, usd_total_value - usd_free_value)
+                        balances["USD"] = {
+                            "free": usd_free_value,
+                            "used": usd_used,
+                            "total": usd_total_value,
+                        }
 
             # Remove additional info from ccxt results (same as base class)
             balances.pop("info", None)
