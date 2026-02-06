@@ -70,6 +70,10 @@ class BaseParameter(ABC):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.value})"
 
+    @property
+    def param_type(self) -> str:
+        return self.__class__.__name__
+
     @abstractmethod
     def get_space(self, name: str) -> Union["Integer", "Real", "SKDecimal", "Categorical"]:
         """
