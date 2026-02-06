@@ -225,13 +225,7 @@ Kraken Futures uses the exchange id `krakenfutures` and supports isolated future
 "exchange": {
     "name": "krakenfutures",
     "key": "your_exchange_key",
-    "secret": "your_exchange_secret",
-    "ccxt_config": {"enableRateLimit": true},
-    "ccxt_async_config": {"enableRateLimit": true}
-},
-"order_types": {
-    "stoploss": "market",
-    "stoploss_price_type": "mark" // "mark" (default), "last", or "index"
+    "secret": "your_exchange_secret"
 },
 "trading_mode": "futures",
 "margin_mode": "isolated",
@@ -243,7 +237,11 @@ Kraken Futures uses the exchange id `krakenfutures` and supports isolated future
     Use `order_types.stoploss_price_type` to select the trigger price source (`mark`, `last`, or `index`).
 
 !!! Note "Collateral"
-    Kraken Futures is USD-settled. Kraken allows EUR collateral, but USD is the recommended stake currency.
+    Kraken Futures is USD-settled. Use USD as your stake currency.
+
+!!! Note "Flex (Multi-collateral) Accounts"
+    Kraken Futures flex accounts allow collateral in multiple currencies, while trading remains USD-settled.
+    Freqtrade derives the `USD` balance from Kraken margin fields, so keep `stake_currency` set to `USD`.
 
 ## Kucoin
 
