@@ -101,6 +101,8 @@ class Krakenfutures(Exchange):
                     # Use available value for both if only one is present
                     usd_free = usd_free if usd_free is not None else usd_total
                     usd_total = usd_total if usd_total is not None else usd_free
+                    # Type narrowing for mypy: both values are set after fallback.
+                    assert usd_free is not None and usd_total is not None
                     # Both values are guaranteed to be present after fallback.
                     usd_used = max(0.0, usd_total - usd_free)
                     balances["USD"] = {"free": usd_free, "used": usd_used, "total": usd_total}
