@@ -48,14 +48,16 @@ def get_strategy(strategy: str, config=Depends(get_config)):
         strategy_obj = StrategyResolver._load_strategy(
             strategy, config_, extra_dir=config_.get("strategy_path")
         )
+        strategy_obj.ft_load_hyper_params()
     except OperationalException:
         raise HTTPException(status_code=404, detail="Strategy not found")
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
     return {
         "strategy": strategy_obj.get_strategy_name(),
-        "code": strategy_obj.__source__,
         "timeframe": getattr(strategy_obj, "timeframe", None),
+        "code": strategy_obj.__source__,
+        "params": [p for _, p in strategy_obj.enumerate_parameters()],
     }
 
 

@@ -1,7 +1,7 @@
 from datetime import date, datetime
-from typing import Any
+from typing import Annotated, Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, RootModel, SerializeAsAny, model_validator
+from pydantic import AwareDatetime, BaseModel, Field, RootModel, SerializeAsAny, model_validator
 
 from freqtrade.constants import DL_DATA_TIMEFRAMES, IntOrInf
 from freqtrade.enums import MarginMode, OrderTypeValues, SignalDirection, TradingMode
@@ -527,10 +527,60 @@ class FreqAIModelListResponse(BaseModel):
     freqaimodels: list[str]
 
 
+class __StrategyParameter(BaseModel):
+    param_type: str
+    name: str
+    space: str
+    load: bool
+    optimize: bool
+
+
+class __IntParameter(__StrategyParameter):
+    param_type: Literal["IntParameter"]
+    value: int
+    low: int
+    high: int
+
+
+class __RealParameter(__StrategyParameter):
+    param_type: Literal["RealParameter"]
+    value: float
+    low: float
+    high: float
+
+
+class __DecimalParameter(__RealParameter):
+    param_type: Literal["DecimalParameter"]
+    decimals: int
+
+
+class __BooleanParameter(__StrategyParameter):
+    param_type: Literal["BooleanParameter"]
+    value: Any
+    opt_range: list[Any]
+
+
+class __CategoricalParameter(__StrategyParameter):
+    param_type: Literal["CategoricalParameter"]
+    value: Any
+    opt_range: list[Any]
+
+
+AllParameters = Annotated[
+    __BooleanParameter
+    | __CategoricalParameter
+    | __DecimalParameter
+    | __IntParameter
+    | __RealParameter,
+    Field(discriminator="param_type"),
+]
+
+
 class StrategyResponse(BaseModel):
     strategy: str
-    code: str
     timeframe: str | None
+    params: list[AllParameters] | None
+    code: str
 
 
 class AvailablePairs(BaseModel):
