@@ -2568,7 +2568,7 @@ def test_api_strategy(botclient, tmp_path, mocker):
     assert response["code"] == data
     assert "params" in response
     assert isinstance(response["params"], list)
-    assert len(response["params"]) == 6
+    assert len(response["params"]) >= 6
     buy_rsi = next(p for p in response["params"] if p["name"] == "buy_rsi")
     assert buy_rsi == {
         "param_type": "IntParameter",
@@ -2580,6 +2580,24 @@ def test_api_strategy(botclient, tmp_path, mocker):
         "low": 0,
         "high": 50,
     }
+
+    rc = client_get(client, f"{BASE_URI}/strategy/HyperoptableStrategy")
+    assert_response(rc)
+    response2 = rc.json()
+    assert len(response2["params"]) >= 8
+    buy_rsi = next(p for p in response2["params"] if p["name"] == "buy_rsi")
+    param_exitaaa = next(p for p in response2["params"] if p["name"] == "exitaaa")
+    assert param_exitaaa == {
+        "param_type": "IntParameter",
+        "name": "exitaaa",
+        "space": "exitaspace",
+        "load": True,
+        "optimize": True,
+        "value": 5,
+        "low": 0,
+        "high": 10,
+    }
+
     rc = client_get(client, f"{BASE_URI}/strategy/NoStrat")
     assert_response(rc, 404)
 
