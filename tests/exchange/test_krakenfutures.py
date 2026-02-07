@@ -15,7 +15,6 @@ from freqtrade.exceptions import (
     ExchangeError,
     InvalidOrderException,
     OperationalException,
-    RetryableOrderError,
     TemporaryError,
 )
 from freqtrade.exchange.krakenfutures import Krakenfutures
@@ -105,8 +104,23 @@ def test_krakenfutures_fetch_order_returns_direct_ccxt_result(mocker, default_co
     fallback.assert_not_called()
 
 
-def test_krakenfutures_fetch_order_reraises_when_no_fallback(mocker, default_conf):
-    """Re-raise when fallback cannot locate the order."""
+def test_krakenfutures_fetch_stoploss_order_strips_trigger_from_status_query(mocker, default_conf):
+    """Direct fetch_order status lookup should not receive trigger params."""
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+
+    ccxt_order = {"id": "trigger-raw-1", "symbol": "BTC/USD:USD", "status": "open"}
+    fetch_order = mocker.patch.object(ex._api, "fetch_order", return_value=ccxt_order)
+
+    res = ex.fetch_stoploss_order("trigger-raw-1", "BTC/USD:USD")
+
+    assert res["id"] == "trigger-raw-1"
+    fetch_order.assert_called_once_with("trigger-raw-1", "BTC/USD:USD", params={})
+
+
+def test_krakenfutures_fetch_order_raises_invalid_when_not_found(mocker, default_conf):
+    """Raise InvalidOrderException (non-retrying) when order is not in any endpoint."""
     conf = dict(default_conf)
     conf["dry_run"] = False
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
@@ -114,7 +128,7 @@ def test_krakenfutures_fetch_order_reraises_when_no_fallback(mocker, default_con
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
     mocker.patch.object(ex, "_fetch_order_fallback", return_value=None)
 
-    with pytest.raises(RetryableOrderError):
+    with pytest.raises(InvalidOrderException, match="Order not found in any endpoint"):
         ex.fetch_order("abc", "BTC/USD:USD", count=0)
 
 
@@ -220,6 +234,47 @@ def test_krakenfutures_fetch_order_finds_trigger_order(mocker, default_conf):
 
     res = ex.fetch_order("trigger-123", "BTC/USD:USD")
     assert res["id"] == "trigger-123"
+
+
+def test_krakenfutures_fetch_stoploss_order_prefers_open_orders_without_trigger_param(
+    mocker, default_conf
+):
+    """Stoploss lookup should query open orders without trigger flags and match nested orderId."""
+    conf = dict(default_conf)
+    conf["dry_run"] = False
+    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+
+    trigger_id = "trigger-open-123"
+
+    mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
+
+    def fetch_open(symbol, params=None):
+        assert symbol is None
+        assert params == {}
+        return [
+            {
+                "id": None,
+                "symbol": "BTC/USD:USD",
+                "status": "open",
+                "info": {"order": {"orderId": trigger_id}},
+            }
+        ]
+
+    open_fetch = mocker.patch.object(
+        ex._api, "fetch_open_orders", side_effect=fetch_open, create=True
+    )
+    closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    canceled_fetch = mocker.patch.object(
+        ex._api, "fetch_canceled_orders", return_value=[], create=True
+    )
+
+    res = ex.fetch_stoploss_order(trigger_id, "BTC/USD:USD")
+
+    assert res["id"] == trigger_id
+    assert res["status"] == "open"
+    open_fetch.assert_called_once()
+    closed_fetch.assert_not_called()
+    canceled_fetch.assert_not_called()
 
 
 def test_krakenfutures_fetch_order_propagates_exchange_errors_from_fallback(mocker, default_conf):
