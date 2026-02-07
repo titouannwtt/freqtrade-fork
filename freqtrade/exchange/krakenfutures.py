@@ -11,7 +11,6 @@ from freqtrade.exceptions import (
     ExchangeError,
     InvalidOrderException,
     OperationalException,
-    RetryableOrderError,
     TemporaryError,
 )
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
@@ -145,8 +144,9 @@ class Krakenfutures(Exchange):
             return self.fetch_dry_run_order(order_id)
 
         params = params or {}
+        status_params = {k: v for k, v in params.items() if k not in ("trigger", "stop")}
         try:
-            order = self._api.fetch_order(order_id, pair, params=params)
+            order = self._api.fetch_order(order_id, pair, params=status_params)
             self._log_exchange_response("fetch_order", order)
             return self._order_contracts_to_amount(order)
         except ccxt.OrderNotFound:
@@ -167,7 +167,11 @@ class Krakenfutures(Exchange):
         if order is not None:
             return order
 
-        raise RetryableOrderError(f"Order not found in any endpoint (pair: {pair} id: {order_id})")
+        # Order not in status, open, closed, or canceled endpoints - genuinely gone.
+        # Raise non-retrying InvalidOrderException (Kraken has limited history retention).
+        raise InvalidOrderException(
+            f"Order not found in any endpoint (pair: {pair} id: {order_id})"
+        )
 
     def _fetch_order_fallback(
         self, order_id: str, pair: str, params: dict[str, Any]
@@ -175,8 +179,12 @@ class Krakenfutures(Exchange):
         """Search open, closed, and canceled order endpoints for order_id."""
         order_id_str = str(order_id)
 
-        # Open orders: Kraken returns all symbols and includes triggers by default.
-        order = self._find_order_in_list(self._api.fetch_open_orders, None, params, order_id_str)
+        # Open orders include triggers by default. Avoid passing trigger flags here
+        # to prevent endpoint/filter mismatches.
+        open_params = {k: v for k, v in params.items() if k not in ("trigger", "stop")}
+        order = self._find_order_in_list(
+            self._api.fetch_open_orders, None, open_params, order_id_str
+        )
         if order is not None:
             return order
 
@@ -205,8 +213,9 @@ class Krakenfutures(Exchange):
         """Fetch orders and return matching order_id, or None."""
         try:
             for order in fetch_fn(symbol, params=params) or []:
-                if str(order.get("id")) == order_id_str:
-                    return self._order_contracts_to_amount(order)
+                fixed_order = self._fix_trigger_order_id(order)
+                if str(fixed_order.get("id")) == order_id_str:
+                    return self._order_contracts_to_amount(fixed_order)
         except (ccxt.OrderNotFound, ccxt.InvalidOrder) as e:
             logger.debug(f"{fetch_fn.__name__} failed: {e}")
             return None
