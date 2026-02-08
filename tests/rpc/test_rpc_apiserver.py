@@ -2613,6 +2613,40 @@ def test_api_strategy(botclient, tmp_path, mocker):
     assert_response(rc, 502)
 
 
+def test_api_strategy_trade_mode(botclient, tmp_path, mocker):
+    ftbot, client = botclient
+    ftbot.config["user_data_dir"] = tmp_path
+
+    rc = client_get(client, f"{BASE_URI}/strategy/{CURRENT_TEST_STRATEGY}")
+
+    assert_response(rc)
+    response = rc.json()
+    assert response["strategy"] == CURRENT_TEST_STRATEGY
+
+    data = (Path(__file__).parents[1] / "strategy/strats/strategy_test_v3.py").read_text(
+        encoding="utf-8"
+    )
+    assert response["code"] == data
+    assert "params" in response
+    assert isinstance(response["params"], list)
+    assert len(response["params"]) >= 6
+    buy_rsi = next(p for p in response["params"] if p["name"] == "buy_rsi")
+    assert buy_rsi == {
+        "param_type": "IntParameter",
+        "name": "buy_rsi",
+        "space": "buy",
+        "load": True,
+        "optimize": True,
+        "value": 35,  # Parameter from buy_params
+        "low": 0,
+        "high": 50,
+    }
+
+    rc = client_get(client, f"{BASE_URI}/strategy/HyperoptableStrategy")
+    assert_response(rc, 404)
+    assert rc.json()["detail"] == "Only the currently active strategy is available in trade mode"
+
+
 def test_api_exchanges(botclient):
     _ftbot, client = botclient
     _ftbot.config["runmode"] = RunMode.WEBSERVER
