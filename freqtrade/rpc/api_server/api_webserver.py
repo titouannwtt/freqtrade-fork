@@ -36,31 +36,6 @@ def list_strategies(config=Depends(get_config)):
     return {"strategies": [x["name"] for x in strategies]}
 
 
-@router.get("/strategy/{strategy}", response_model=StrategyResponse, tags=["Strategy"])
-def get_strategy(strategy: str, config=Depends(get_config)):
-    if ":" in strategy:
-        raise HTTPException(status_code=500, detail="base64 encoded strategies are not allowed.")
-
-    config_ = deepcopy(config)
-    from freqtrade.resolvers.strategy_resolver import StrategyResolver
-
-    try:
-        strategy_obj = StrategyResolver._load_strategy(
-            strategy, config_, extra_dir=config_.get("strategy_path")
-        )
-        strategy_obj.ft_load_hyper_params()
-    except OperationalException:
-        raise HTTPException(status_code=404, detail="Strategy not found")
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
-    return {
-        "strategy": strategy_obj.get_strategy_name(),
-        "timeframe": getattr(strategy_obj, "timeframe", None),
-        "code": strategy_obj.__source__,
-        "params": [p for _, p in strategy_obj.enumerate_parameters()],
-    }
-
-
 @router.get("/exchanges", response_model=ExchangeListResponse, tags=[])
 def list_exchanges(config=Depends(get_config)):
     from freqtrade.exchange import list_available_exchanges
