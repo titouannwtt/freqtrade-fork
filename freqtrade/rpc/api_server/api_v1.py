@@ -62,7 +62,8 @@ logger = logging.getLogger(__name__)
 # 2.44: Add candle_types parameter to download-data endpoint
 # 2.45: Add price to forceexit endpoint
 # 2.46: Add prepend_data to download-data endpoint
-API_VERSION = 2.46
+# 2.47: Add Strategy parameters
+API_VERSION = 2.47
 
 # Public API, requires no auth.
 router_public = APIRouter()
