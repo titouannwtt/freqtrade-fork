@@ -557,7 +557,7 @@ class __DecimalParameter(__RealParameter):
 class __BooleanParameter(__StrategyParameter):
     param_type: Literal["BooleanParameter"]
     value: Any
-    opt_range: list[Any]
+    opt_range: list[bool]
 
 
 class __CategoricalParameter(__StrategyParameter):
