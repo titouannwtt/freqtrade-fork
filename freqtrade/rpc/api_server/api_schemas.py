@@ -535,43 +535,39 @@ class __StrategyParameter(BaseModel):
     optimize: bool
 
 
-class __IntParameter(__StrategyParameter):
+class IntParameter(__StrategyParameter):
     param_type: Literal["IntParameter"]
     value: int
     low: int
     high: int
 
 
-class __RealParameter(__StrategyParameter):
+class RealParameter(__StrategyParameter):
     param_type: Literal["RealParameter"]
     value: float
     low: float
     high: float
 
 
-class __DecimalParameter(__RealParameter):
+class DecimalParameter(RealParameter):
     param_type: Literal["DecimalParameter"]
     decimals: int
 
 
-class __BooleanParameter(__StrategyParameter):
+class BooleanParameter(__StrategyParameter):
     param_type: Literal["BooleanParameter"]
-    value: Any
+    value: bool | None
     opt_range: list[bool]
 
 
-class __CategoricalParameter(__StrategyParameter):
+class CategoricalParameter(__StrategyParameter):
     param_type: Literal["CategoricalParameter"]
     value: Any
     opt_range: list[Any]
 
 
 AllParameters = Annotated[
-    __BooleanParameter
-    | __CategoricalParameter
-    | __DecimalParameter
-    | __IntParameter
-    | __RealParameter,
+    BooleanParameter | CategoricalParameter | DecimalParameter | IntParameter | RealParameter,
     Field(discriminator="param_type"),
 ]
 
@@ -579,7 +575,7 @@ AllParameters = Annotated[
 class StrategyResponse(BaseModel):
     strategy: str
     timeframe: str | None
-    params: list[AllParameters] | None
+    params: list[AllParameters] = Field(default_factory=list)
     code: str
 
 
