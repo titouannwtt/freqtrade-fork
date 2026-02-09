@@ -147,7 +147,7 @@ def get_strategy(
     strategy: str, config=Depends(get_config), rpc: RPC | None = Depends(get_rpc_optional)
 ):
     if ":" in strategy:
-        raise HTTPException(status_code=500, detail="base64 encoded strategies are not allowed.")
+        raise HTTPException(status_code=422, detail="base64 encoded strategies are not allowed.")
 
     if not rpc or config["runmode"] == RunMode.WEBSERVER:
         # webserver mode
@@ -162,7 +162,11 @@ def get_strategy(
         except OperationalException:
             raise HTTPException(status_code=404, detail="Strategy not found")
         except Exception as e:
-            raise HTTPException(status_code=502, detail=str(e))
+            logger.exception("Unexpected error while loading strategy '%s'.", strategy)
+            raise HTTPException(
+                status_code=502,
+                detail="Unexpected error while loading strategy.",
+            )
     else:
         # trade mode
         strategy_obj = rpc._freqtrade.strategy
