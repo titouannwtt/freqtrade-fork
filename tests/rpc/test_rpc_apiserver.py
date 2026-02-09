@@ -2602,7 +2602,7 @@ def test_api_strategy(botclient, tmp_path, mocker):
 
     # Disallow base64 strategies
     rc = client_get(client, f"{BASE_URI}/strategy/xx:cHJpbnQoImhlbGxvIHdvcmxkIik=")
-    assert_response(rc, 500)
+    assert_response(rc, 422)
     mocker.patch(
         "freqtrade.resolvers.strategy_resolver.StrategyResolver._load_strategy",
         side_effect=Exception("Test"),
