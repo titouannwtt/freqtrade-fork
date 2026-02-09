@@ -2585,7 +2585,6 @@ def test_api_strategy(botclient, tmp_path, mocker):
     assert_response(rc)
     response2 = rc.json()
     assert len(response2["params"]) >= 8
-    buy_rsi = next(p for p in response2["params"] if p["name"] == "buy_rsi")
     param_exitaaa = next(p for p in response2["params"] if p["name"] == "exitaaa")
     assert param_exitaaa == {
         "param_type": "IntParameter",
