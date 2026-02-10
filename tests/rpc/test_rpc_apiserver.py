@@ -50,6 +50,7 @@ BASE_URI = "/api/v1"
 _TEST_USER = "FreqTrader"
 _TEST_PASS = "SuperSecurePassword1!"
 _TEST_WS_TOKEN = "secret_Ws_t0ken"
+_JWT_SECRET_KEY = "99980ff8fcf77f21ef610adb46b788c505b8483897bc26203b5591eefe0d15"
 
 
 @pytest.fixture
@@ -64,6 +65,7 @@ def botclient(default_conf, mocker):
                 "listen_ip_address": "127.0.0.1",
                 "listen_port": 8080,
                 "CORS_origins": ["http://example.com"],
+                "jwt_secret_key": _JWT_SECRET_KEY,
                 "username": _TEST_USER,
                 "password": _TEST_PASS,
                 "ws_token": _TEST_WS_TOKEN,
@@ -196,22 +198,22 @@ def test_api_ui_version(botclient, mocker):
 
 def test_api_auth():
     with pytest.raises(ValueError):
-        create_token({"identity": {"u": "Freqtrade"}}, "secret1234", token_type="NotATokenType")
+        create_token({"identity": {"u": "Freqtrade"}}, _JWT_SECRET_KEY, token_type="NotATokenType")
 
-    token = create_token({"identity": {"u": "Freqtrade"}}, "secret1234")
+    token = create_token({"identity": {"u": "Freqtrade"}}, _JWT_SECRET_KEY)
     assert isinstance(token, str)
 
-    u = get_user_from_token(token, "secret1234")
+    u = get_user_from_token(token, _JWT_SECRET_KEY)
     assert u == "Freqtrade"
     with pytest.raises(HTTPException):
-        get_user_from_token(token, "secret1234", token_type="refresh")
+        get_user_from_token(token, _JWT_SECRET_KEY, token_type="refresh")
     # Create invalid token
-    token = create_token({"identity": {"u1": "Freqrade"}}, "secret1234")
+    token = create_token({"identity": {"u1": "Freqrade"}}, _JWT_SECRET_KEY)
     with pytest.raises(HTTPException):
-        get_user_from_token(token, "secret1234")
+        get_user_from_token(token, _JWT_SECRET_KEY)
 
     with pytest.raises(HTTPException):
-        get_user_from_token(b"not_a_token", "secret1234")
+        get_user_from_token(b"not_a_token", _JWT_SECRET_KEY)
 
 
 def test_api_ws_auth(botclient):
@@ -229,7 +231,7 @@ def test_api_ws_auth(botclient):
     with client.websocket_connect(url(good_token)):
         pass
 
-    jwt_secret = ftbot.config["api_server"].get("jwt_secret_key", "super-secret")
+    jwt_secret = ftbot.config["api_server"]["jwt_secret_key"]
     jwt_token = create_token({"identity": {"u": "Freqtrade"}}, jwt_secret)
     with client.websocket_connect(url(jwt_token)):
         pass
@@ -450,6 +452,7 @@ def test_api_run(default_conf, mocker, caplog):
                 "listen_ip_address": "0.0.0.0",
                 "listen_port": 8089,
                 "password": "",
+                "jwt_secret_key": "super-secret",
             }
         }
     )
