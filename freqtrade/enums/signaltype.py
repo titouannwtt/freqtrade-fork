@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class SignalType(Enum):
@@ -27,9 +27,6 @@ class SignalTagType(Enum):
         return f"{self.name.lower()}"
 
 
-class SignalDirection(str, Enum):
+class SignalDirection(StrEnum):
     LONG = "long"
     SHORT = "short"
-
-    def __str__(self):
-        return f"{self.name.lower()}"
