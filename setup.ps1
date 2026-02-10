@@ -1,7 +1,8 @@
 Clear-Host
 
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$Global:LogFilePath = Join-Path $env:TEMP "script_log_$Timestamp.txt"
+
+$Global:LogFilePath = Join-Path ([System.IO.Path]::GetTempPath()) "script_log_$Timestamp.txt"
 
 $RequirementFiles = @("requirements.txt", "requirements-dev.txt", "requirements-hyperopt.txt", "requirements-freqai.txt", "requirements-freqai-rl.txt", "requirements-plot.txt")
 $VenvName = ".venv"
