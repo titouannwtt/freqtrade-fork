@@ -549,8 +549,11 @@ class RealParameter(__StrategyParameter):
     high: float
 
 
-class DecimalParameter(RealParameter):
+class DecimalParameter(__StrategyParameter):
     param_type: Literal["DecimalParameter"]
+    value: float
+    low: float
+    high: float
     decimals: int
 
 
