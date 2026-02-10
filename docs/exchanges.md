@@ -239,7 +239,7 @@ Kucoin supports [time_in_force](configuration.md#understand-order_time_in_force)
 
 ### Kucoin Blacklists
 
-For Kucoin, it is suggested to add `"KCS/<STAKE>"` to your blacklist to avoid issues, unless you are willing to maintain enough extra `KCS` on the account or unless you're willing to disable using `KCS` for fees. 
+For Kucoin, it is suggested to add `"KCS/<STAKE>"` to your blacklist to avoid issues, unless you are willing to maintain enough extra `KCS` on the account or unless you're willing to disable using `KCS` for fees.
 Kucoin accounts may use `KCS` for fees, and if a trade happens to be on `KCS`, further trades may consume this position and make the initial `KCS` trade unsellable as the expected amount is not there anymore.
 
 ## HTX
@@ -319,7 +319,6 @@ API Keys for live futures trading must have the following permissions:
 
 We do strongly recommend to limit all API keys to the IP you're going to use it from.
 
-
 ## Bitmart
 
 Bitmart requires the API key Memo (the name you give the API key) to go along with the exchange key and secret.
@@ -391,11 +390,11 @@ Hyperliquid handles deposits and withdrawals on the Arbitrum One chain, a Layer 
     Unfortunately, hyperliquid only offers 5000 historic candles, so backtesting will either need to build candles historically (by waiting and downloading the data incrementally over time) - or will be limited to the last 5000 candles.
 
 !!! Info "Some general best practices (non exhaustive)"
-    * Beware of supply chain attacks, like pip package poisoning etcetera. Whenever you use your private key, make sure your environment is safe.
+    *Beware of supply chain attacks, like pip package poisoning etcetera. Whenever you use your private key, make sure your environment is safe.
     * Don't use your actual wallet private key for trading. Use the Hyperliquid [API generator](https://app.hyperliquid.xyz/API) to create a separate API wallet.
-    * Don't store your actual wallet private key on the server you use for freqtrade. Use the API wallet private key instead. This key won't allow withdrawals, only trading.
+    *Don't store your actual wallet private key on the server you use for freqtrade. Use the API wallet private key instead. This key won't allow withdrawals, only trading.
     * Always keep your mnemonic phrase and private key private.
-    * Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
+    *Don't use the same mnemonic as the one you had to backup when initializing a hardware wallet, using the same mnemonic basically deletes the security of your hardware wallet.
     * Create a different software wallet, only transfer the funds you want to trade with to that wallet, and use that wallet to trade on Hyperliquid.
     * If you have funds you don't want to use for trading (after making a profit for example), transfer them back to your hardware wallet.
 
@@ -457,6 +456,8 @@ Replace `"dex_name_1"` and `"dex_name_2"` with the actual names of the HIP-3 DEX
 
 !!! Note
     HIP-3 DEXes share the same wallet and free amount of collateral as your main Hyperliquid account. Trades on different DEXes will affect your overall account balance and margin.
+
+    The pair name for HIP-3 pairs will be slightly different than non HIP-3 pairs. Please use `list-pairs` subcommand to get the correct pair naming for all pairs for the specified dexes.
 
 ## Bitvavo
 
@@ -521,5 +522,5 @@ For example, to test the order type `FOK` with Kraken, and modify candle limit t
 
 !!! Warning
     Please make sure to fully understand the impacts of these settings before modifying them.
-    Using `_ft_has_params` overrides may lead to unexpected behavior, and may even break your bot. 
+    Using `_ft_has_params` overrides may lead to unexpected behavior, and may even break your bot.
     We will not be able to provide support for issues caused by custom settings in `_ft_has_params`.
