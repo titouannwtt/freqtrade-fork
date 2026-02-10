@@ -161,7 +161,7 @@ def get_strategy(
             strategy_obj.ft_load_hyper_params()
         except OperationalException:
             raise HTTPException(status_code=404, detail="Strategy not found")
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected error while loading strategy '%s'.", strategy)
             raise HTTPException(
                 status_code=502,

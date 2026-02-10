@@ -1,19 +1,15 @@
 import logging
-from copy import deepcopy
 
 from fastapi import APIRouter, Depends
-from fastapi.exceptions import HTTPException
 
 from freqtrade.data.history.datahandlers import get_datahandler
 from freqtrade.enums import CandleType, TradingMode
-from freqtrade.exceptions import OperationalException
 from freqtrade.rpc.api_server.api_schemas import (
     AvailablePairs,
     ExchangeListResponse,
     FreqAIModelListResponse,
     HyperoptLossListResponse,
     StrategyListResponse,
-    StrategyResponse,
 )
 from freqtrade.rpc.api_server.deps import get_config
 
