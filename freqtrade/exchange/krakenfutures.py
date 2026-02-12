@@ -73,40 +73,33 @@ class Krakenfutures(Exchange):
 
             # Only synthesize USD if stake_currency is USD
             stake = str(self._config.get("stake_currency", "")).upper()
-            if stake != "USD":
-                # Skip USD synthesis for non-USD stake currencies
-                balances.pop("info", None)
-                balances.pop("free", None)
-                balances.pop("total", None)
-                balances.pop("used", None)
-                self._log_exchange_response("fetch_balance", balances, add_info=params)
-                return balances
+            if stake == "USD":
+                # Only synthesize if USD stake - flex only applies for these currencies.
+                # For flex accounts, synthesize USD balance from margin values
+                info = balances.get("info", {})
+                accounts = info.get("accounts", {}) if isinstance(info, dict) else {}
+                flex = accounts.get("flex", {}) if isinstance(accounts, dict) else {}
 
-            # For flex accounts, synthesize USD balance from margin values
-            info = balances.get("info", {})
-            accounts = info.get("accounts", {}) if isinstance(info, dict) else {}
-            flex = accounts.get("flex", {}) if isinstance(accounts, dict) else {}
-
-            if flex:
-                usd_free = self._safe_float(flex.get("availableMargin"))
-                # Prefer marginEquity for consistency (same basis as availableMargin)
-                raw_total = (
-                    flex.get("marginEquity")
-                    or flex.get("portfolioValue")
-                    or flex.get("balanceValue")
-                )
-                usd_total = self._safe_float(raw_total)
-                if usd_free is not None or usd_total is not None:
-                    # Use available value for both if only one is present
-                    usd_free_value = usd_free if usd_free is not None else usd_total
-                    usd_total_value = usd_total if usd_total is not None else usd_free
-                    if usd_free_value is not None and usd_total_value is not None:
-                        usd_used = max(0.0, usd_total_value - usd_free_value)
-                        balances["USD"] = {
-                            "free": usd_free_value,
-                            "used": usd_used,
-                            "total": usd_total_value,
-                        }
+                if flex:
+                    usd_free = self._safe_float(flex.get("availableMargin"))
+                    # Prefer marginEquity for consistency (same basis as availableMargin)
+                    raw_total = (
+                        flex.get("marginEquity")
+                        or flex.get("portfolioValue")
+                        or flex.get("balanceValue")
+                    )
+                    usd_total = self._safe_float(raw_total)
+                    if usd_free is not None or usd_total is not None:
+                        # Use available value for both if only one is present
+                        usd_free_value = usd_free if usd_free is not None else usd_total
+                        usd_total_value = usd_total if usd_total is not None else usd_free
+                        if usd_free_value is not None and usd_total_value is not None:
+                            usd_used = max(0.0, usd_total_value - usd_free_value)
+                            balances["USD"] = {
+                                "free": usd_free_value,
+                                "used": usd_used,
+                                "total": usd_total_value,
+                            }
 
             # Remove additional info from ccxt results (same as base class)
             balances.pop("info", None)
