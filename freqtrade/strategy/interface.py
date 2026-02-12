@@ -367,7 +367,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         Timing for this function is critical, so avoid doing heavy computations or
         network requests in this method.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns True (always confirming).
 
@@ -403,7 +403,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         Timing for this function is critical, so avoid doing heavy computations or
         network requests in this method.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns True (always confirming).
 
@@ -453,7 +453,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         e.g. returning -0.05 would create a stoploss 5% below current_rate.
         The custom stoploss can never be below self.stoploss, which serves as a hard maximum loss.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns the initial stoploss value.
         Only called when use_custom_stoploss is set to True.
@@ -511,7 +511,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         Custom entry price logic, returning the new entry price.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns None, orderbook is used to set entry price
 
@@ -539,7 +539,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         Custom exit price logic, returning the new exit price.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns None, orderbook is used to set exit price
 
@@ -666,7 +666,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         This means extra entry or exit orders with additional fees.
         Only called when `position_adjustment_enable` is set to True.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-advanced/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-advanced/
 
         When not implemented by a strategy, returns None
 
@@ -706,7 +706,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         This only executes when a order was already placed, still open (unfilled fully or partially)
         and not timed out on subsequent candles after entry trigger.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-callbacks/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-callbacks/
 
         When not implemented by a strategy, returns current_order_rate as default.
         If current_order_rate is returned then the existing order is maintained.
@@ -743,7 +743,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         This only executes when a order was already placed, still open (unfilled fully or partially)
         and not timed out on subsequent candles after entry trigger.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-callbacks/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-callbacks/
 
         When not implemented by a strategy, returns current_order_rate as default.
         If current_order_rate is returned then the existing order is maintained.
@@ -781,7 +781,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         This only executes when a order was already placed, still open (unfilled fully or partially)
         and not timed out on subsequent candles after entry trigger.
 
-        For full documentation please go to https://www.freqtrade.io/en/latest/strategy-callbacks/
+        For full documentation please go to https://www.freqtrade.io/en/stable/strategy-callbacks/
 
         When not implemented by a strategy, returns current_order_rate as default.
         If current_order_rate is returned then the existing order is maintained.
@@ -925,9 +925,9 @@ class IStrategy(ABC, HyperStrategyMixin):
         More details on how these config defined parameters accelerate feature engineering
         in the documentation at:
 
-        https://www.freqtrade.io/en/latest/freqai-parameter-table/#feature-parameters
+        https://www.freqtrade.io/en/stable/freqai-parameter-table/#feature-parameters
 
-        https://www.freqtrade.io/en/latest/freqai-feature-engineering/#defining-the-features
+        https://www.freqtrade.io/en/stable/freqai-feature-engineering/#defining-the-features
 
         :param dataframe: strategy dataframe which will receive the features
         :param period: period of the indicator - usage example:
@@ -956,9 +956,9 @@ class IStrategy(ABC, HyperStrategyMixin):
         More details on how these config defined parameters accelerate feature engineering
         in the documentation at:
 
-        https://www.freqtrade.io/en/latest/freqai-parameter-table/#feature-parameters
+        https://www.freqtrade.io/en/stable/freqai-parameter-table/#feature-parameters
 
-        https://www.freqtrade.io/en/latest/freqai-feature-engineering/#defining-the-features
+        https://www.freqtrade.io/en/stable/freqai-feature-engineering/#defining-the-features
 
         :param dataframe: strategy dataframe which will receive the features
         :param metadata: metadata of current pair
@@ -985,7 +985,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
         More details about feature engineering available:
 
-        https://www.freqtrade.io/en/latest/freqai-feature-engineering
+        https://www.freqtrade.io/en/stable/freqai-feature-engineering
 
         :param dataframe: strategy dataframe which will receive the features
         :param metadata: metadata of current pair
@@ -1001,7 +1001,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
         More details about feature engineering available:
 
-        https://www.freqtrade.io/en/latest/freqai-feature-engineering
+        https://www.freqtrade.io/en/stable/freqai-feature-engineering
 
         :param dataframe: strategy dataframe which will receive the targets
         :param metadata: metadata of current pair
