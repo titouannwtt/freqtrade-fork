@@ -36,6 +36,7 @@ class Krakenfutures(Exchange):
     ]
 
     _ft_has: FtHas = {
+        "tickers_have_quoteVolume": False,
         "stoploss_on_exchange": True,
         "stoploss_order_types": {
             "limit": "limit",
