@@ -18,6 +18,7 @@ class TestExchangeOnlineSetup(TypedDict):
     timeframe: str
     candle_count: int
     futures: bool
+    futures_only: bool | None
     futures_pair: str | None
     candle_count_futures: int | None
     hasQuoteVolumeFutures: bool | None
@@ -574,6 +575,7 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
 }
 
 EXCHANGES_FUTURES = [exch for exch, params in EXCHANGES.items() if params.get("futures")]
+EXCHANGES_SPOT = [exch for exch, params in EXCHANGES.items() if not params.get("futures_only")]
 
 
 @pytest.fixture(scope="class")
@@ -643,7 +645,7 @@ def get_futures_exchange(exchange_name, exchange_conf, class_mocker):
     return exchange, exchange_name
 
 
-@pytest.fixture(params=EXCHANGES, scope="class")
+@pytest.fixture(params=EXCHANGES_SPOT, scope="class")
 def exchange(request, exchange_conf, class_mocker):
     exchange, name, exchange_params = get_exchange(
         request.param, exchange_conf, class_mocker
