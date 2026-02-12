@@ -564,6 +564,7 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "pair": "BTC/USD:USD",
         "stake_currency": "USD",
         "hasQuoteVolume": False,
+        "skip_ws_tests": True,
         "timeframe": "1h",
         "futures": True,
         "futures_only": True,
