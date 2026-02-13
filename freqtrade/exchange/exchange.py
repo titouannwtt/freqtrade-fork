@@ -106,6 +106,7 @@ from freqtrade.misc import (
     file_dump_json,
     file_load_json,
     safe_value_fallback,
+    safe_value_nested,
 )
 from freqtrade.util import FtTTLCache, PeriodicCache, dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize_delta, dt_ts, format_ms_time
@@ -982,12 +983,12 @@ class Exchange:
              swap.linear.fetchOHLCV.limit
         """
         feat = (
-            self._api_async.features.get("spot", {})
+            safe_value_nested(self._api_async.features, "spot", {})
             if market_type == "spot"
-            else self._api_async.features.get("swap", {}).get("linear", {})
+            else safe_value_nested(self._api_async.features, "swap.linear", {})
         )
 
-        return feat.get(endpoint, {}).get(attribute, default)
+        return safe_value_nested(feat, f"{endpoint}.{attribute}", default)
 
     def get_precision_amount(self, pair: str) -> float | None:
         """
