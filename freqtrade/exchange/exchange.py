@@ -314,10 +314,12 @@ class Exchange:
         if self._exchange_ws:
             self._exchange_ws.cleanup()
         logger.debug("Exchange object destroyed, closing async loop")
+        loop_running = self.loop.is_running() or asyncio.get_event_loop().is_running()
         if (
             getattr(self, "_api_async", None)
             and inspect.iscoroutinefunction(self._api_async.close)
             and self._api_async.session
+            and not loop_running
         ):
             logger.debug("Closing async ccxt session.")
             self.loop.run_until_complete(self._api_async.close())
@@ -325,6 +327,7 @@ class Exchange:
             self._ws_async
             and inspect.iscoroutinefunction(self._ws_async.close)
             and self._ws_async.session
+            and not loop_running
         ):
             logger.debug("Closing ws ccxt session.")
             self.loop.run_until_complete(self._ws_async.close())
