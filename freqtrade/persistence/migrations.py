@@ -48,7 +48,7 @@ def get_last_sequence_ids(engine, trade_back_name: str, order_back_name: str):
     return order_id, trade_id
 
 
-def set_sequence_ids(engine, order_id, trade_id, pairlock_id=None):
+def set_sequence_ids(engine, order_id, trade_id, pairlock_id=None, kv_id=None, custom_data_id=None):
     if engine.name == "postgresql":
         with engine.begin() as connection:
             if order_id:
@@ -58,6 +58,14 @@ def set_sequence_ids(engine, order_id, trade_id, pairlock_id=None):
             if pairlock_id:
                 connection.execute(
                     text(f"ALTER SEQUENCE pairlocks_id_seq RESTART WITH {pairlock_id}")
+                )
+            if kv_id:
+                connection.execute(
+                    text(f'ALTER SEQUENCE "KeyValueStore_id_seq" RESTART WITH {kv_id}')
+                )
+            if custom_data_id:
+                connection.execute(
+                    text(f"ALTER SEQUENCE trade_custom_data_id_seq RESTART WITH {custom_data_id}")
                 )
 
 
