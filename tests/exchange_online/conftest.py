@@ -643,14 +643,12 @@ def get_futures_exchange(exchange_name, exchange_conf, class_mocker):
     exchange = ExchangeResolver.load_exchange(
         exchange_conf, validate=True, load_leverage_tiers=True
     )
-    return exchange, exchange_name
+    return exchange, exchange_name, exchange_params
 
 
 @pytest.fixture(params=EXCHANGES_SPOT, scope="class")
 def exchange(request, exchange_conf, class_mocker):
-    exchange, name, exchange_params = get_exchange(
-        request.param, exchange_conf, class_mocker
-    )
+    exchange, name, exchange_params = get_exchange(request.param, exchange_conf, class_mocker)
     yield exchange, name, exchange_params
     exchange.close()
 
