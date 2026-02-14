@@ -42,6 +42,7 @@ class Krakenfutures(Exchange):
             "limit": "limit",
             "market": "market",
         },
+        "stoploss_query_requires_stop_flag": True,
         "stop_price_param": "triggerPrice",
         "stop_price_prop": "stopPrice",
         "stop_price_type_field": "triggerSignal",
@@ -170,10 +171,17 @@ class Krakenfutures(Exchange):
     def _fetch_order_fallback(
         self, order_id: str, pair: str, params: dict[str, Any]
     ) -> CcxtOrder | None:
-        """Search open, closed, and canceled order endpoints for order_id."""
+        """Search open, closed, and canceled order endpoints for order_id.
+
+        Kraken Futures' orders/status endpoint only returns currently open orders.
+        Older orders require querying history endpoints (closed/canceled).
+        For stoploss (trigger) orders, the caller should pass stop=True in params
+        (handled automatically via stoploss_query_requires_stop_flag in _ft_has)
+        so that closed/canceled queries hit the trigger history endpoint.
+        """
         order_id_str = str(order_id)
 
-        # Open orders include triggers by default. Avoid passing trigger flags here
+        # Open orders include triggers by default. Avoid passing trigger/stop flags
         # to prevent endpoint/filter mismatches.
         open_params = {k: v for k, v in params.items() if k not in ("trigger", "stop")}
         order = self._find_order_in_list(
@@ -182,18 +190,12 @@ class Krakenfutures(Exchange):
         if order is not None:
             return order
 
-        # Closed/canceled: use pair and optional trigger=True for stoplosses.
+        # Closed/canceled: pass params through (including stop=True for stoploss orders,
+        # which CCXT maps to the trigger history endpoint).
         for fetch_fn in (self._api.fetch_closed_orders, self._api.fetch_canceled_orders):
             order = self._find_order_in_list(fetch_fn, pair, params, order_id_str)
             if order is not None:
                 return order
-            # Trigger orders (stoplosses) only supported on history endpoints
-            if not params.get("trigger"):
-                order = self._find_order_in_list(
-                    fetch_fn, pair, {**params, "trigger": True}, order_id_str
-                )
-                if order is not None:
-                    return order
 
         return None
 
@@ -207,9 +209,8 @@ class Krakenfutures(Exchange):
         """Fetch orders and return matching order_id, or None."""
         try:
             for order in fetch_fn(symbol, params=params) or []:
-                fixed_order = self._fix_trigger_order_id(order)
-                if str(fixed_order.get("id")) == order_id_str:
-                    return self._order_contracts_to_amount(fixed_order)
+                if str(order.get("id")) == order_id_str:
+                    return self._order_contracts_to_amount(order)
         except (ccxt.OrderNotFound, ccxt.InvalidOrder) as e:
             logger.debug(f"{fetch_fn.__name__} failed: {e}")
             return None
@@ -222,37 +223,6 @@ class Krakenfutures(Exchange):
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
         return None
-
-    @staticmethod
-    def _fix_trigger_order_id(order: dict) -> dict:
-        """
-        Fix CCXT trigger order response where top-level 'id' is None.
-
-        Kraken Futures trigger orders return 'id': None in CCXT responses,
-        but the actual order ID is in info.order.orderId. Extract and set it.
-        """
-        if order.get("id") is None:
-            info = order.get("info", {})
-            inner_order = info.get("order", {}) if isinstance(info, dict) else {}
-            if isinstance(inner_order, dict) and inner_order.get("orderId"):
-                order["id"] = inner_order["orderId"]
-        return order
-
-    def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
-        """Cancel stoploss order and fix CCXT response for trigger orders."""
-        params = params or {}
-        params["trigger"] = True
-        order = self.cancel_order(order_id, pair, params)
-        return self._fix_trigger_order_id(order)
-
-    def fetch_stoploss_order(
-        self, order_id: str, pair: str, params: dict | None = None
-    ) -> CcxtOrder:
-        """Fetch stoploss order and fix CCXT response for trigger orders."""
-        params = params or {}
-        params["trigger"] = True
-        order = self.fetch_order(order_id, pair, params)
-        return self._fix_trigger_order_id(order)
 
     def get_funding_fees(self, pair: str, amount: float, is_short: bool, open_date) -> float:
         """Fetch funding fees, returning 0.0 if retrieval fails."""
