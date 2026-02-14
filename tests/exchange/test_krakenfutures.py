@@ -29,6 +29,7 @@ def test_krakenfutures_ft_has_overrides():
     ft_has = Krakenfutures._ft_has
     assert ft_has["stoploss_on_exchange"] is True
     assert ft_has["stoploss_order_types"] == {"limit": "limit", "market": "market"}
+    assert ft_has["stoploss_query_requires_stop_flag"] is True
     assert ft_has["stop_price_param"] == "triggerPrice"
     assert ft_has["stop_price_type_field"] == "triggerSignal"
 
@@ -104,19 +105,20 @@ def test_krakenfutures_fetch_order_returns_direct_ccxt_result(mocker, default_co
     fallback.assert_not_called()
 
 
-def test_krakenfutures_fetch_stoploss_order_strips_trigger_from_status_query(mocker, default_conf):
-    """Direct fetch_order status lookup should not receive trigger params."""
+def test_krakenfutures_fetch_order_strips_stop_from_status_query(mocker, default_conf):
+    """Direct CCXT fetch_order status lookup should not receive stop/trigger params."""
     conf = dict(default_conf)
     conf["dry_run"] = False
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
-    ccxt_order = {"id": "trigger-raw-1", "symbol": "BTC/USD:USD", "status": "open"}
+    ccxt_order = {"id": "order-1", "symbol": "BTC/USD:USD", "status": "open"}
     fetch_order = mocker.patch.object(ex._api, "fetch_order", return_value=ccxt_order)
 
-    res = ex.fetch_stoploss_order("trigger-raw-1", "BTC/USD:USD")
+    # Simulate call from base fetch_stoploss_order which adds stop=True
+    ex.fetch_order("order-1", "BTC/USD:USD", params={"stop": True})
 
-    assert res["id"] == "trigger-raw-1"
-    fetch_order.assert_called_once_with("trigger-raw-1", "BTC/USD:USD", params={})
+    # stop should be stripped from the direct CCXT status call
+    fetch_order.assert_called_once_with("order-1", "BTC/USD:USD", params={})
 
 
 def test_krakenfutures_fetch_order_raises_invalid_when_not_found(mocker, default_conf):
@@ -212,69 +214,63 @@ def test_krakenfutures_fetch_order_dry_run(mocker, default_conf):
     assert res["id"] == "dry-123"
 
 
-def test_krakenfutures_fetch_order_finds_trigger_order(mocker, default_conf):
-    """Test fetch_order finds trigger orders (stoplosses) via closed orders fallback."""
+def test_krakenfutures_fetch_order_finds_stoploss_via_stop_param(mocker, default_conf):
+    """Test fetch_order finds stoploss orders via closed orders fallback with stop=True."""
     conf = dict(default_conf)
     conf["dry_run"] = False
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
-    # Open orders returns empty, closed orders returns empty for regular,
-    # but returns the trigger order when trigger=True
     mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    # With stop=True, CCXT queries trigger history endpoint
     mocker.patch.object(
         ex._api,
         "fetch_closed_orders",
-        side_effect=[
-            [],  # Regular closed orders
-            [{"id": "trigger-123", "symbol": "BTC/USD:USD", "status": "closed"}],  # Trigger orders
+        return_value=[
+            {"id": "trigger-123", "symbol": "BTC/USD:USD", "status": "closed"},
         ],
         create=True,
     )
 
-    res = ex.fetch_order("trigger-123", "BTC/USD:USD")
+    # Simulate what base class fetch_stoploss_order does (adds stop=True)
+    res = ex.fetch_order("trigger-123", "BTC/USD:USD", params={"stop": True})
     assert res["id"] == "trigger-123"
 
 
-def test_krakenfutures_fetch_stoploss_order_prefers_open_orders_without_trigger_param(
-    mocker, default_conf
-):
-    """Stoploss lookup should query open orders without trigger flags and match nested orderId."""
-    conf = dict(default_conf)
-    conf["dry_run"] = False
-    ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
+def test_krakenfutures_fetch_order_fallback_passes_stop_to_history(mocker, default_conf):
+    """Stoploss query (stop=True) should pass through to closed/canceled endpoints."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
-    trigger_id = "trigger-open-123"
+    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
 
-    mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
-
-    def fetch_open(symbol, params=None):
-        assert symbol is None
-        assert params == {}
-        return [
-            {
-                "id": None,
-                "symbol": "BTC/USD:USD",
-                "status": "open",
-                "info": {"order": {"orderId": trigger_id}},
-            }
-        ]
-
-    open_fetch = mocker.patch.object(
-        ex._api, "fetch_open_orders", side_effect=fetch_open, create=True
-    )
-    closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-    canceled_fetch = mocker.patch.object(
-        ex._api, "fetch_canceled_orders", return_value=[], create=True
+    closed_order = {"id": "sl-123", "symbol": "BTC/USD:USD", "status": "closed"}
+    closed_fetch = mocker.patch.object(
+        ex._api,
+        "fetch_closed_orders",
+        return_value=[closed_order],
+        create=True,
     )
 
-    res = ex.fetch_stoploss_order(trigger_id, "BTC/USD:USD")
+    res = ex._fetch_order_fallback("sl-123", "BTC/USD:USD", {"stop": True})
 
-    assert res["id"] == trigger_id
-    assert res["status"] == "open"
-    open_fetch.assert_called_once()
-    closed_fetch.assert_not_called()
-    canceled_fetch.assert_not_called()
+    assert res is not None
+    assert res["id"] == "sl-123"
+    # Verify stop=True was passed to closed orders (CCXT maps stop→trigger)
+    closed_fetch.assert_called_once_with("BTC/USD:USD", params={"stop": True})
+
+
+def test_krakenfutures_fetch_order_fallback_strips_stop_from_open_orders(mocker, default_conf):
+    """Open orders query should not receive stop/trigger flags."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    mocker.patch.object(ex._api, "fetch_canceled_orders", return_value=[], create=True)
+
+    ex._fetch_order_fallback("abc", "BTC/USD:USD", {"stop": True})
+
+    # stop should be stripped from open orders call
+    open_fetch.assert_called_once_with(None, params={})
 
 
 def test_krakenfutures_fetch_order_propagates_exchange_errors_from_fallback(mocker, default_conf):
@@ -635,94 +631,40 @@ def test_krakenfutures_safe_float():
     assert Krakenfutures._safe_float({}) is None
 
 
-# --- Stoploss cancel tests ---
+# --- Stoploss via base class (stoploss_query_requires_stop_flag) ---
 
 
-def test_krakenfutures_cancel_stoploss_order_fixes_id(mocker, default_conf):
-    """Test cancel_stoploss_order extracts order ID from info when top-level id is None."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    # CCXT returns 'id': None for trigger orders, but orderId is in info.order
-    ccxt_response = {
-        "id": None,
-        "status": "canceled",
-        "info": {
-            "order": {
-                "orderId": "a10258a9-01ea-44c4-a38f-66165678926e",
-                "type": "TRIGGER_ORDER",
-                "symbol": "PF_XBTUSD",
-            },
-            "status": "CANCELLED",
-        },
-    }
-    mocker.patch.object(ex, "cancel_order", return_value=ccxt_response)
-
-    result = ex.cancel_stoploss_order("a10258a9-01ea-44c4-a38f-66165678926e", "BTC/USD:USD")
-
-    # ID should be extracted from info.order.orderId
-    assert result["id"] == "a10258a9-01ea-44c4-a38f-66165678926e"
-    assert result["status"] == "canceled"
-
-
-def test_krakenfutures_cancel_stoploss_order_preserves_existing_id(mocker, default_conf):
-    """Test cancel_stoploss_order doesn't overwrite existing id."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-
-    # Normal response with id already set
-    ccxt_response = {
-        "id": "existing-order-id",
-        "status": "canceled",
-        "info": {},
-    }
-    mocker.patch.object(ex, "cancel_order", return_value=ccxt_response)
-
-    result = ex.cancel_stoploss_order("existing-order-id", "BTC/USD:USD")
-
-    assert result["id"] == "existing-order-id"
-
-
-# --- Stoploss fetch tests ---
-
-
-def test_krakenfutures_fetch_stoploss_order_fixes_id(mocker, default_conf):
-    """Test fetch_stoploss_order extracts order ID from info when top-level id is None."""
+def test_krakenfutures_fetch_stoploss_order_uses_base_class(mocker, default_conf):
+    """Base class fetch_stoploss_order should add stop=True and delegate to fetch_order."""
     conf = dict(default_conf)
     conf["dry_run"] = False
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
-    # CCXT returns 'id': None for trigger orders, but orderId is in info.order
-    ccxt_response = {
-        "id": None,
-        "status": "open",
-        "info": {
-            "order": {
-                "orderId": "trigger-order-123",
-                "type": "TRIGGER_ORDER",
-                "symbol": "PF_XBTUSD",
-            },
-        },
-    }
-    mocker.patch.object(ex, "fetch_order", return_value=ccxt_response)
+    expected_order = {"id": "sl-order-1", "status": "open", "info": {}}
+    fetch_order = mocker.patch.object(ex, "fetch_order", return_value=expected_order)
 
-    result = ex.fetch_stoploss_order("trigger-order-123", "BTC/USD:USD")
+    result = ex.fetch_stoploss_order("sl-order-1", "BTC/USD:USD")
 
-    # ID should be extracted from info.order.orderId
-    assert result["id"] == "trigger-order-123"
+    assert result["id"] == "sl-order-1"
+    # Base class should pass stop=True
+    fetch_order.assert_called_once()
+    call_params = fetch_order.call_args[0][2] if len(fetch_order.call_args[0]) > 2 else {}
+    assert call_params.get("stop") is True
 
 
-def test_krakenfutures_fetch_stoploss_order_passes_trigger_param(mocker, default_conf):
-    """Test fetch_stoploss_order passes trigger=True to fetch_order."""
+def test_krakenfutures_cancel_stoploss_order_uses_base_class(mocker, default_conf):
+    """Base class cancel_stoploss_order should add stop=True and delegate to cancel_order."""
     conf = dict(default_conf)
     conf["dry_run"] = False
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
-    mock_fetch = mocker.patch.object(
-        ex, "fetch_order", return_value={"id": "order-123", "status": "open", "info": {}}
-    )
+    expected_order = {"id": "sl-cancel-1", "status": "canceled"}
+    cancel_order = mocker.patch.object(ex, "cancel_order", return_value=expected_order)
 
-    ex.fetch_stoploss_order("order-123", "BTC/USD:USD")
+    result = ex.cancel_stoploss_order("sl-cancel-1", "BTC/USD:USD")
 
-    # Verify trigger=True was passed
-    mock_fetch.assert_called_once()
-    call_params = mock_fetch.call_args[0][2]  # third positional arg is params
-    assert call_params.get("trigger") is True
+    assert result["id"] == "sl-cancel-1"
+    # Base class should pass stop=True
+    cancel_order.assert_called_once()
+    call_params = cancel_order.call_args[0][2] if len(cancel_order.call_args[0]) > 2 else {}
+    assert call_params.get("stop") is True
