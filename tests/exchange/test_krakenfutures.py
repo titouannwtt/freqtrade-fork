@@ -32,6 +32,8 @@ def test_krakenfutures_ft_has_overrides():
     assert ft_has["stoploss_query_requires_stop_flag"] is True
     assert ft_has["stop_price_param"] == "triggerPrice"
     assert ft_has["stop_price_type_field"] == "triggerSignal"
+    # Kraken retains only ~29 days of hourly funding rate history
+    assert ft_has["funding_fee_candle_limit"] == 700
 
 
 def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
@@ -42,6 +44,15 @@ def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
     mocker.patch.object(ex, "features", return_value=2000)
 
     assert ex.ohlcv_candle_limit("1m", candle_type=CandleType.FUTURES) == 2000
+
+
+def test_krakenfutures_ohlcv_candle_limit_funding_rate(mocker, default_conf):
+    """Funding rate candle limit is capped to reflect Kraken's limited history retention."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    mocker.patch.object(ex, "features", return_value=2000)
+
+    assert ex.ohlcv_candle_limit("1h", candle_type=CandleType.FUNDING_RATE) == 700
 
 
 # --- fetch_order fallback tests ---
