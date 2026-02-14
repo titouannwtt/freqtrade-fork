@@ -314,7 +314,10 @@ class Exchange:
         if self._exchange_ws:
             self._exchange_ws.cleanup()
         logger.debug("Exchange object destroyed, closing async loop")
-        loop_running = self.loop.is_running() or asyncio.get_event_loop().is_running()
+        loop_running = (
+            hasattr(self, "loop") and self.loop.is_running()
+        ) or asyncio.get_event_loop().is_running()
+
         if (
             getattr(self, "_api_async", None)
             and inspect.iscoroutinefunction(self._api_async.close)
