@@ -51,6 +51,8 @@ class Krakenfutures(Exchange):
             PriceType.MARK: "mark",
             PriceType.INDEX: "index",
         },
+        # Kraken Futures retains only 29 days of hourly funding rate history.
+        "funding_fee_candle_limit": 700,
     }
 
     @retrier
