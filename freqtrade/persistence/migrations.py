@@ -292,6 +292,7 @@ def migrate_pairlocks_table(decl_base, inspector, engine, pairlock_back_name: st
         connection.execute(text(f"alter table pairlocks rename to {pairlock_back_name}"))
 
     drop_index_on_table(engine, inspector, pairlock_back_name)
+    pairlock_id = get_last_sequence_ids(engine, "pairlocks_id_seq", pairlock_back_name)
 
     side = get_column_def(cols, "side", "'*'")
 
@@ -310,6 +311,8 @@ def migrate_pairlocks_table(decl_base, inspector, engine, pairlock_back_name: st
         """
             )
         )
+
+    set_sequence_ids(engine, pairlock_id=pairlock_id)
 
 
 def set_sqlite_to_wal(engine):
