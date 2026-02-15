@@ -30,7 +30,9 @@ def get_backup_name(tabs: list[str], backup_prefix: str):
     return table_back_name
 
 
-def get_last_sequence_ids(engine, trade_back_name: str, order_back_name: str):
+def get_last_sequence_ids(
+    engine, trade_back_name: str, order_back_name: str
+) -> tuple[int | None, int | None]:
     order_id: int | None = None
     trade_id: int | None = None
 
@@ -48,14 +50,21 @@ def get_last_sequence_ids(engine, trade_back_name: str, order_back_name: str):
     return order_id, trade_id
 
 
-def set_sequence_ids(engine, order_id, trade_id, pairlock_id=None, kv_id=None, custom_data_id=None):
+def set_sequence_ids(
+    engine,
+    order_id: int | None = None,
+    trade_id: int | None = None,
+    pairlock_id: int | None = None,
+    kv_id: int | None = None,
+    custom_data_id: int | None = None,
+):
     """
     Set sequence ids to the given values.
     The id's given should be the next id to use, so the current max id + 1 - or current id
     if using nextval before migration.
     :param engine: SQLAlchemy engine
-    :param order_id: value to set for orders_id_seq
-    :param trade_id: value to set for trades_id_seq
+    :param order_id: value to set for orders_id_seq (optional)
+    :param trade_id: value to set for trades_id_seq (optional)
     :param pairlock_id: value to set for pairlocks_id_seq (optional)
     :param kv_id: value to set for KeyValueStore_id_seq (optional)
     :param custom_data_id: value to set for trade_custom_data_id_seq (optional)
