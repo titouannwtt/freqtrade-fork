@@ -49,6 +49,17 @@ def get_last_sequence_ids(engine, trade_back_name: str, order_back_name: str):
 
 
 def set_sequence_ids(engine, order_id, trade_id, pairlock_id=None, kv_id=None, custom_data_id=None):
+    """
+    Set sequence ids to the given values.
+    The id's given should be the next id to use, so the current max id + 1 - or current id
+    if using nextval before migration.
+    :param engine: SQLAlchemy engine
+    :param order_id: value to set for orders_id_seq
+    :param trade_id: value to set for trades_id_seq
+    :param pairlock_id: value to set for pairlocks_id_seq (optional)
+    :param kv_id: value to set for KeyValueStore_id_seq (optional)
+    :param custom_data_id: value to set for trade_custom_data_id_seq (optional)
+    """
     if engine.name == "postgresql":
         with engine.begin() as connection:
             if order_id:
