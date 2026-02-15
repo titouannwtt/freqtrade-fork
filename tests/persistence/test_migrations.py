@@ -360,14 +360,14 @@ def test_migrate_get_last_sequence_ids():
     engine = MagicMock()
     engine.begin = MagicMock()
     engine.name = "postgresql"
-    get_last_sequence_ids(engine, "trades_bak", "orders_bak")
+    get_last_sequence_ids(engine, "trades_id_seq", "trades_bak")
 
     assert engine.begin.call_count == 2
     engine.reset_mock()
     engine.begin.reset_mock()
 
     engine.name = "somethingelse"
-    get_last_sequence_ids(engine, "trades_bak", "orders_bak")
+    get_last_sequence_ids(engine, "trades_id_seq", "trades_bak")
 
     assert engine.begin.call_count == 0
 
