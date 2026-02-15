@@ -1272,6 +1272,10 @@ def test_check_dry_limit_order_filled_stoploss(
         "ft_order_type": "stoploss",
         "stopLossPrice": 24.5,
     }
+    if immediate and crossed:
+        with pytest.raises(InvalidOrderException, match=r".*Stoploss would trigger immediately.*"):
+            exchange.check_dry_limit_order_filled(order, immediate=immediate)
+        return
 
     result = exchange.check_dry_limit_order_filled(order, immediate=immediate)
 
