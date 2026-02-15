@@ -66,11 +66,11 @@ def start_convert_db(args: dict[str, Any]) -> None:
 
     set_sequence_ids(
         session_target.get_bind(),
-        trade_id=max_trade_id,
-        order_id=max_order_id,
-        pairlock_id=max_pairlock_id,
-        kv_id=max_kv_id,
-        custom_data_id=max_custom_data_id,
+        trade_id=(max_trade_id or 0) + 1,
+        order_id=(max_order_id or 0) + 1,
+        pairlock_id=(max_pairlock_id or 0) + 1,
+        kv_id=(max_kv_id or 0) + 1,
+        custom_data_id=(max_custom_data_id or 0) + 1,
     )
 
     logger.info(
