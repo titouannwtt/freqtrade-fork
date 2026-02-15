@@ -1301,6 +1301,7 @@ class Exchange:
         Check dry-run limit order fill and update fee (if it filled).
         """
         if order["status"] != "closed" and order.get("ft_order_type") == "stoploss":
+            # Stoploss branch
             pair = order["symbol"]
             if not orderbook and self.exchange_has("fetchL2OrderBook"):
                 orderbook = self.fetch_l2_order_book(pair, 20)
@@ -1308,6 +1309,11 @@ class Exchange:
             crossed = self._dry_is_price_crossed(
                 pair, order["side"], price, orderbook, is_stop=True
             )
+            if crossed and immediate:
+                raise InvalidOrderException(
+                    "Could not create dry stoploss order. Stoploss would trigger immediately."
+                )
+
             if crossed:
                 average = self.get_dry_market_fill_price(
                     pair,
