@@ -69,7 +69,8 @@ def protections(self):
 
 #### MaxDrawdown
 
-`MaxDrawdown` uses all trades within `lookback_period` in minutes (or in candles when using `lookback_period_candles`) to determine the maximum drawdown. If the drawdown is below `max_allowed_drawdown`, trading will stop for `stop_duration` in minutes (or in candles when using `stop_duration_candles`) after the last trade - assuming that the bot needs some time to let markets recover.
+`MaxDrawdown` calculates the maximum relative drawdown using the account's equity curve within the `lookback_period` in minutes (or in candles when using `lookback_period_candles`).
+It evaluates the portfolio's peak-to-trough declines by considering the starting balance and the cumulative profit of all trades within the window. If the observed drawdown exceeds `max_allowed_drawdown`, trading will stop for `stop_duration` after the last trade - assuming that the bot needs some time to let markets recover.
 
 The below sample stops trading for 12 candles if max-drawdown is > 20% considering all pairs - with a minimum of `trade_limit` trades - within the last 48 candles. If desired, `lookback_period` and/or `stop_duration` can be used.
 
