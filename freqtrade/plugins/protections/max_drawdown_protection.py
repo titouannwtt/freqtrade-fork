@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -42,25 +42,47 @@ class MaxDrawdown(IProtection):
             f"locking {self.unlock_reason_time_element}."
         )
 
-    def _max_drawdown(self, date_now: datetime) -> ProtectionReturn | None:
+    def _max_drawdown(self, date_now: datetime, starting_balance: float) -> ProtectionReturn | None:
         """
         Evaluate recent trades for drawdown ...
         """
         look_back_until = date_now - timedelta(minutes=self._lookback_period)
 
-        trades = Trade.get_trades_proxy(is_open=False, close_date=look_back_until)
+        # Get all closed trades to calculate balance at the start of the window
+        all_closed_trades = Trade.get_trades_proxy(is_open=False)
 
-        trades_df = pd.DataFrame([trade.to_json() for trade in trades])
+        trades_in_window = []
+        profit_before_window = 0.0
+        for trade in all_closed_trades:
+            if trade.close_date:
+                # Ensure close_date is aware for comparison
+                close_date = (trade.close_date.replace(tzinfo=UTC)
+                              if trade.close_date.tzinfo is None else trade.close_date)
+                if close_date > look_back_until:
+                    trades_in_window.append(trade)
+                else:
+                    profit_before_window += (trade.close_profit_abs or 0.0)
 
-        if len(trades) < self._trade_limit:
+        if len(trades_in_window) < self._trade_limit:
             # Not enough trades in the relevant period
             return None
 
+        # Calculate actual balance at the start of the lookback window
+        actual_starting_balance = starting_balance + profit_before_window
+
+        trades_df = pd.DataFrame([trade.to_json() for trade in trades_in_window])
+
         # Drawdown is always positive
         try:
-            # TODO: This should use absolute profit calculation, considering account balance.
-            drawdown_obj = calculate_max_drawdown(trades_df, value_col="close_profit")
-            drawdown = drawdown_obj.drawdown_abs
+            # Use absolute profit calculation with the actual balance at window start.
+            drawdown_obj = calculate_max_drawdown(
+                trades_df,
+                value_col="profit_abs",
+                starting_balance=actual_starting_balance,
+                relative=True
+            )
+            # Use relative drawdown to compare against max_allowed_drawdown percentage
+            drawdown = drawdown_obj.relative_account_drawdown
         except ValueError:
             return None
 
@@ -71,7 +93,7 @@ class MaxDrawdown(IProtection):
                 logger.info,
             )
 
-            until = self.calculate_lock_end(trades)
+            until = self.calculate_lock_end(trades_in_window)
 
             return ProtectionReturn(
                 lock=True,
@@ -81,17 +103,19 @@ class MaxDrawdown(IProtection):
 
         return None
 
-    def global_stop(self, date_now: datetime, side: LongShort) -> ProtectionReturn | None:
+    def global_stop(
+        self, date_now: datetime, side: LongShort, starting_balance: float = 0.0
+    ) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for all pairs
         This must evaluate to true for the whole period of the "cooldown period".
         :return: Tuple of [bool, until, reason].
             If true, all pairs will be locked with <reason> until <until>
         """
-        return self._max_drawdown(date_now)
+        return self._max_drawdown(date_now, starting_balance)
 
     def stop_per_pair(
-        self, pair: str, date_now: datetime, side: LongShort
+        self, pair: str, date_now: datetime, side: LongShort, starting_balance: float = 0.0
     ) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for this pair
