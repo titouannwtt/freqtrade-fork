@@ -670,9 +670,10 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
     ]
     freqtrade = get_patched_freqtradebot(mocker, default_conf)
     message = r"Trading stopped due to Max.*"
+    starting_balance = 0.05
 
-    assert not freqtrade.protections.global_stop()
-    assert not freqtrade.protections.stop_per_pair("XRP/BTC")
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert not freqtrade.protections.stop_per_pair("XRP/BTC", starting_balance=starting_balance)
     caplog.clear()
 
     generate_mock_trade(
@@ -704,8 +705,8 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
     )
     Trade.commit()
     # No losing trade yet ... so max_drawdown will raise exception
-    assert not freqtrade.protections.global_stop()
-    assert not freqtrade.protections.stop_per_pair("XRP/BTC")
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert not freqtrade.protections.stop_per_pair("XRP/BTC", starting_balance=starting_balance)
 
     generate_mock_trade(
         "XRP/BTC",
@@ -717,8 +718,8 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
         profit_rate=0.9,
     )
     # Not locked with one trade
-    assert not freqtrade.protections.global_stop()
-    assert not freqtrade.protections.stop_per_pair("XRP/BTC")
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert not freqtrade.protections.stop_per_pair("XRP/BTC", starting_balance=starting_balance)
     assert not PairLocks.is_pair_locked("XRP/BTC")
     assert not PairLocks.is_global_lock()
 
@@ -734,8 +735,8 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
     Trade.commit()
 
     # Not locked with 1 trade (2nd trade is outside of lookback_period)
-    assert not freqtrade.protections.global_stop()
-    assert not freqtrade.protections.stop_per_pair("XRP/BTC")
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert not freqtrade.protections.stop_per_pair("XRP/BTC", starting_balance=starting_balance)
     assert not PairLocks.is_pair_locked("XRP/BTC")
     assert not PairLocks.is_global_lock()
     assert not log_has_re(message, caplog)
@@ -751,7 +752,7 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
         profit_rate=1.5,
     )
     Trade.commit()
-    assert not freqtrade.protections.global_stop()
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
     assert not PairLocks.is_global_lock()
 
     caplog.clear()
@@ -764,13 +765,13 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
         exit_reason=ExitType.ROI.value,
         min_ago_open=20,
         min_ago_close=10,
-        profit_rate=0.8,
+        profit_rate=0.2,
     )
     Trade.commit()
-    assert not freqtrade.protections.stop_per_pair("XRP/BTC")
+    assert not freqtrade.protections.stop_per_pair("XRP/BTC", starting_balance=starting_balance)
     # local lock not supported
     assert not PairLocks.is_pair_locked("XRP/BTC")
-    assert freqtrade.protections.global_stop()
+    assert freqtrade.protections.global_stop(starting_balance=starting_balance)
     assert PairLocks.is_global_lock()
     assert log_has_re(message, caplog)
 
