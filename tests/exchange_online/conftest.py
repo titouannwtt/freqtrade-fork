@@ -606,15 +606,12 @@ def set_test_proxy(config: Config, use_proxy: bool) -> Config:
     return config
 
 
-def get_exchange(exchange_name, exchange_conf, class_mocker=None):
+def get_exchange(exchange_name, exchange_conf, class_mocker):
     exchange_params = EXCHANGES[exchange_name]
-    if exchange_params.get("futures_only"):
-        pytest.skip(f"Exchange {exchange_name} is futures-only, skipping spot tests.")
     exchange_conf = set_test_proxy(exchange_conf, exchange_params.get("use_ci_proxy", False))
     exchange_conf["exchange"]["name"] = exchange_name
     exchange_conf["stake_currency"] = exchange_params["stake_currency"]
-    if class_mocker:
-        class_mocker.patch(f"{EXMS}.ft_additional_exchange_init")
+    class_mocker.patch(f"{EXMS}.ft_additional_exchange_init")
     exchange = ExchangeResolver.load_exchange(
         exchange_conf, validate=True, load_leverage_tiers=True
     )
@@ -669,7 +666,6 @@ def exchange_mode(request):
 
 @pytest.fixture(params=EXCHANGES, scope="class")
 def exchange_ws(request, exchange_conf, exchange_mode, class_mocker):
-    class_mocker.patch("freqtrade.exchange.bybit.Bybit.additional_exchange_init")
     exchange_conf["exchange"]["enable_ws"] = True
     exchange_param = EXCHANGES[request.param]
     if exchange_param.get("skip_ws_tests"):
