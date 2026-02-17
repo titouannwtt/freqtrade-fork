@@ -1,6 +1,7 @@
 """Kraken Futures exchange subclass"""
 
 import logging
+from datetime import datetime
 from typing import Any
 
 import ccxt
@@ -16,6 +17,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
+from freqtrade.util.datetime_helpers import dt_from_ts
 
 
 logger = logging.getLogger(__name__)
@@ -151,6 +153,53 @@ class Krakenfutures(Exchange):
                 order["stopPrice"] = trigger
         return order
 
+    def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
+        """Fix missing average price on filled orders by fetching trades.
+
+        Kraken Futures' /orders/status endpoint does not include execution data,
+        so CCXT sets price/average to the limitPrice (the order's limit, not the
+        actual fill price). For closed/filled orders we fetch trades from /fills
+        and compute the VWAP average.
+        """
+        if (
+            order.get("average") is None
+            and order.get("status") in ("canceled", "closed")
+            and order.get("filled", 0) > 0
+        ):
+            trades = self.get_trades_for_order(
+                order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
+            )
+            if trades:
+                total_amount = sum(t["amount"] for t in trades)
+                if total_amount:
+                    order["average"] = sum(t["price"] * t["amount"] for t in trades) / total_amount
+        return order
+
+    def get_trades_for_order(
+        self, order_id: str, pair: str, since: datetime, params: dict | None = None
+    ) -> list:
+        """Fetch trades and enrich with calculated fees.
+
+        Kraken Futures' /fills endpoint does not include fee amounts — only
+        fillType (maker/taker). This enriches each trade with a calculated fee
+        using the market's fee schedule so Freqtrade's fee detection works.
+        """
+        trades = super().get_trades_for_order(order_id, pair, since, params)
+        for trade in trades:
+            if trade.get("fee") is None or trade["fee"].get("cost") is None:
+                taker_or_maker = trade.get("takerOrMaker", "taker")
+                symbol = trade.get("symbol", pair)
+                market = self.markets.get(symbol, {})
+                fee_rate = market.get(taker_or_maker, market.get("taker", 0.0005))
+                cost = trade.get("cost")
+                if cost is not None and fee_rate is not None:
+                    trade["fee"] = {
+                        "cost": cost * fee_rate,
+                        "currency": market.get("quote", "USD"),
+                        "rate": fee_rate,
+                    }
+        return trades
+
     @retrier(retries=API_FETCH_ORDER_RETRY_COUNT)
     def fetch_order(
         self, order_id: str, pair: str, params: dict[str, Any] | None = None
@@ -164,7 +213,8 @@ class Krakenfutures(Exchange):
         try:
             order = self._api.fetch_order(order_id, pair, params=status_params)
             self._log_exchange_response("fetch_order", order)
-            return self._order_contracts_to_amount(order)
+            order = self._order_contracts_to_amount(order)
+            return self._adjust_krakenfutures_order(order)
         except ccxt.OrderNotFound:
             # Expected for older Kraken Futures orders not visible in orders/status.
             pass
@@ -181,7 +231,7 @@ class Krakenfutures(Exchange):
 
         order = self._fetch_order_fallback(order_id, pair, params)
         if order is not None:
-            return order
+            return self._adjust_krakenfutures_order(order)
 
         # Order not in status, open, closed, or canceled endpoints - genuinely gone.
         # Raise non-retrying InvalidOrderException (Kraken has limited history retention).
