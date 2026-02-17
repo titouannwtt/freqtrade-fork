@@ -66,8 +66,11 @@ class ProtectionManager:
         return result
 
     def stop_per_pair(
-        self, pair, now: datetime | None = None, side: LongShort = "long",
-        starting_balance: float = 0.0
+        self,
+        pair,
+        now: datetime | None = None,
+        side: LongShort = "long",
+        starting_balance: float = 0.0,
     ) -> PairLock | None:
         if not now:
             now = datetime.now(UTC)

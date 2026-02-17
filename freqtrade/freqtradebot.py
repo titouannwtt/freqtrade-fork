@@ -2423,7 +2423,8 @@ class FreqtradeBot(LoggingMixin):
         self.strategy.lock_pair(pair, datetime.now(UTC), reason="Auto lock", side=side)
         starting_balance = self.wallets.get_starting_balance()
         prot_trig = self.protections.stop_per_pair(
-            pair, side=side, starting_balance=starting_balance)
+            pair, side=side, starting_balance=starting_balance
+        )
         if prot_trig:
             msg: RPCProtectionMsg = {
                 "type": RPCMessageType.PROTECTION_TRIGGER,

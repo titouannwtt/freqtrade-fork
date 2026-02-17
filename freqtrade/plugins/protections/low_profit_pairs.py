@@ -82,7 +82,7 @@ class LowProfitPairs(IProtection):
         return None
 
     def global_stop(
-        self, date_now: datetime, side: LongShort, starting_balance: float = 0.0
+        self, date_now: datetime, side: LongShort, starting_balance: float
     ) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for all pairs
@@ -93,7 +93,7 @@ class LowProfitPairs(IProtection):
         return None
 
     def stop_per_pair(
-        self, pair: str, date_now: datetime, side: LongShort, starting_balance: float = 0.0
+        self, pair: str, date_now: datetime, side: LongShort, starting_balance: float
     ) -> ProtectionReturn | None:
         """
         Stops trading (position entering) for this pair
