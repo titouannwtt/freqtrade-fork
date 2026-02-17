@@ -99,9 +99,9 @@ def test_protectionmanager(mocker, default_conf):
     for handler in freqtrade.protections._protection_handlers:
         assert handler.name in AVAILABLE_PROTECTIONS
         if not handler.has_global_stop:
-            assert handler.global_stop(datetime.now(UTC), "*") is None
+            assert handler.global_stop(datetime.now(UTC), "*", 1000.0) is None
         if not handler.has_local_stop:
-            assert handler.stop_per_pair("XRP/BTC", datetime.now(UTC), "*") is None
+            assert handler.stop_per_pair("XRP/BTC", datetime.now(UTC), "*", 1000.0) is None
 
 
 @pytest.mark.parametrize(
