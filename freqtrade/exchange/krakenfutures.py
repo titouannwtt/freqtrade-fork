@@ -210,8 +210,12 @@ class Krakenfutures(Exchange):
     ) -> CcxtOrder | None:
         """Fetch orders and return matching order_id, or None."""
         try:
-            for order in fetch_fn(symbol, params=params) or []:
+            orders = fetch_fn(symbol, params=params) or []
+            self._log_exchange_response(fetch_fn.__name__, orders)
+            for order in orders:
                 if str(order.get("id")) == order_id_str:
+                    self._log_exchange_response("fetch_order_fallback", order)
+
                     return self._order_contracts_to_amount(order)
         except (ccxt.OrderNotFound, ccxt.InvalidOrder) as e:
             logger.debug(f"{fetch_fn.__name__} failed: {e}")
