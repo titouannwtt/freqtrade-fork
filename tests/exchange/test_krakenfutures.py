@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import ccxt
 import pytest
@@ -19,6 +19,9 @@ from freqtrade.exceptions import (
 )
 from freqtrade.exchange.krakenfutures import Krakenfutures
 from tests.conftest import EXMS, get_patched_exchange
+
+
+ExchangeBase = Krakenfutures.__mro__[1]  # freqtrade.exchange.exchange.Exchange
 
 
 # --- _ft_has and OHLCV tests ---
@@ -122,6 +125,192 @@ def test_krakenfutures_order_contracts_no_trigger_options(mocker, default_conf):
     result = ex._order_contracts_to_amount(order)
     assert result["triggerPrice"] is None
     assert result["stopPrice"] is None
+
+
+# --- _adjust_krakenfutures_order average price tests ---
+
+
+def test_krakenfutures_adjust_order_computes_average_from_trades(mocker, default_conf):
+    """Compute VWAP average price from trades when CCXT returns None."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "status": "closed",
+        "filled": 0.0004,
+        "average": None,
+        "timestamp": 1771354195241,
+    }
+    trades = [
+        {
+            "amount": 0.0002,
+            "price": 67800.0,
+            "cost": 13.56,
+            "takerOrMaker": "taker",
+            "symbol": "BTC/USD:USD",
+            "fee": None,
+        },
+        {
+            "amount": 0.0002,
+            "price": 67900.0,
+            "cost": 13.58,
+            "takerOrMaker": "taker",
+            "symbol": "BTC/USD:USD",
+            "fee": None,
+        },
+    ]
+    mocker.patch.object(ex, "get_trades_for_order", return_value=trades)
+
+    result = ex._adjust_krakenfutures_order(order)
+    assert result["average"] == pytest.approx(67850.0)
+
+
+def test_krakenfutures_adjust_order_skips_open_orders(mocker, default_conf):
+    """Don't fetch trades for open orders."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "status": "open",
+        "filled": 0,
+        "average": None,
+        "timestamp": 1771354195241,
+    }
+    trades_mock = mocker.patch.object(ex, "get_trades_for_order")
+
+    result = ex._adjust_krakenfutures_order(order)
+    assert result["average"] is None
+    trades_mock.assert_not_called()
+
+
+def test_krakenfutures_adjust_order_preserves_existing_average(mocker, default_conf):
+    """Don't overwrite average when already present."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "status": "closed",
+        "filled": 0.0004,
+        "average": 67843.0,
+        "timestamp": 1771354195241,
+    }
+    trades_mock = mocker.patch.object(ex, "get_trades_for_order")
+
+    result = ex._adjust_krakenfutures_order(order)
+    assert result["average"] == 67843.0
+    trades_mock.assert_not_called()
+
+
+def test_krakenfutures_adjust_order_no_trades_found(mocker, default_conf):
+    """Leave average as None when no trades are found."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "status": "closed",
+        "filled": 0.0004,
+        "average": None,
+        "timestamp": 1771354195241,
+    }
+    mocker.patch.object(ex, "get_trades_for_order", return_value=[])
+
+    result = ex._adjust_krakenfutures_order(order)
+    assert result["average"] is None
+
+
+# --- get_trades_for_order fee enrichment tests ---
+
+
+def test_krakenfutures_get_trades_enriches_fees(mocker, default_conf):
+    """Calculate fees from market fee schedule when CCXT returns fee: None."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    raw_trades = [
+        {
+            "amount": 0.0004,
+            "price": 67843.0,
+            "cost": 27.14,
+            "order": "abc",
+            "symbol": "BTC/USD:USD",
+            "takerOrMaker": "taker",
+            "fee": {"cost": None, "currency": None},
+        },
+    ]
+    mocker.patch.object(
+        ExchangeBase,
+        "get_trades_for_order",
+        return_value=raw_trades,
+    )
+    # Re-patch markets property with fee rates for BTC/USD:USD
+    kf_markets = {"BTC/USD:USD": {"taker": 0.0005, "maker": 0.0002, "quote": "USD"}}
+    mocker.patch.object(type(ex), "markets", PropertyMock(return_value=kf_markets))
+
+    result = ex.get_trades_for_order("abc", "BTC/USD:USD", since=MagicMock())
+    assert len(result) == 1
+    assert result[0]["fee"]["cost"] == pytest.approx(27.14 * 0.0005)
+    assert result[0]["fee"]["currency"] == "USD"
+    assert result[0]["fee"]["rate"] == 0.0005
+
+
+def test_krakenfutures_get_trades_uses_maker_rate(mocker, default_conf):
+    """Use maker fee rate when fillType is maker."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    raw_trades = [
+        {
+            "amount": 0.0004,
+            "price": 67843.0,
+            "cost": 27.14,
+            "order": "abc",
+            "symbol": "BTC/USD:USD",
+            "takerOrMaker": "maker",
+            "fee": None,
+        },
+    ]
+    mocker.patch.object(
+        ExchangeBase,
+        "get_trades_for_order",
+        return_value=raw_trades,
+    )
+    kf_markets = {"BTC/USD:USD": {"taker": 0.0005, "maker": 0.0002, "quote": "USD"}}
+    mocker.patch.object(type(ex), "markets", PropertyMock(return_value=kf_markets))
+
+    result = ex.get_trades_for_order("abc", "BTC/USD:USD", since=MagicMock())
+    assert result[0]["fee"]["cost"] == pytest.approx(27.14 * 0.0002)
+    assert result[0]["fee"]["rate"] == 0.0002
+
+
+def test_krakenfutures_get_trades_preserves_existing_fees(mocker, default_conf):
+    """Don't overwrite fees if CCXT already provided them."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    existing_fee = {"cost": 0.01, "currency": "USD", "rate": 0.0005}
+    raw_trades = [
+        {
+            "amount": 0.0004,
+            "price": 67843.0,
+            "cost": 27.14,
+            "order": "abc",
+            "symbol": "BTC/USD:USD",
+            "takerOrMaker": "taker",
+            "fee": existing_fee,
+        },
+    ]
+    mocker.patch.object(
+        ExchangeBase,
+        "get_trades_for_order",
+        return_value=raw_trades,
+    )
+    kf_markets = {"BTC/USD:USD": {"taker": 0.0005, "maker": 0.0002, "quote": "USD"}}
+    mocker.patch.object(type(ex), "markets", PropertyMock(return_value=kf_markets))
+
+    result = ex.get_trades_for_order("abc", "BTC/USD:USD", since=MagicMock())
+    # Should keep existing fee, not recalculate
+    assert result[0]["fee"] == existing_fee
 
 
 # --- fetch_order fallback tests ---
