@@ -65,13 +65,15 @@ def test_krakenfutures_fetch_order_falls_back_to_closed_orders(mocker, default_c
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
+    closed_fetch = mocker.patch.object(
         ex._api,
         "fetch_closed_orders",
         return_value=[{"id": "abc", "symbol": "BTC/USD:USD", "status": "closed"}],
         create=True,
     )
+    closed_fetch.__name__ = "fetch_closed_orders"
 
     res = ex.fetch_order("abc", "BTC/USD:USD")
     assert res["id"] == "abc"
@@ -84,14 +86,17 @@ def test_krakenfutures_fetch_order_falls_back_to_canceled_orders(mocker, default
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.ExchangeError("UUID too large"))
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-    mocker.patch.object(
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
+    closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    closed_fetch.__name__ = "fetch_closed_orders"
+    canceled_fetch = mocker.patch.object(
         ex._api,
         "fetch_canceled_orders",
         return_value=[{"id": "def", "symbol": "BTC/USD:USD", "status": "canceled"}],
         create=True,
     )
+    canceled_fetch.__name__ = "fetch_canceled_orders"
 
     res = ex.fetch_order("def", "BTC/USD:USD")
     assert res["id"] == "def"
@@ -181,9 +186,14 @@ def test_krakenfutures_fetch_order_baseerror_maps_exception(mocker, default_conf
 def test_krakenfutures_fetch_order_fallback_returns_none(mocker, default_conf):
     """Return None when order is not found in any endpoint."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_canceled_orders", return_value=[], create=True)
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
+    closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    closed_fetch.__name__ = "fetch_closed_orders"
+    canceled_fetch = mocker.patch.object(
+        ex._api, "fetch_canceled_orders", return_value=[], create=True
+    )
+    canceled_fetch.__name__ = "fetch_canceled_orders"
 
     res = ex._fetch_order_fallback("abc", "BTC/USD:USD", {})
     assert res is None
@@ -198,10 +208,13 @@ def test_krakenfutures_fetch_order_fallback_returns_open_order_first(mocker, def
         return_value=[{"id": "abc", "symbol": "BTC/USD:USD", "status": "open"}],
         create=True,
     )
+    open_fetch.__name__ = "fetch_open_orders"
     closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    closed_fetch.__name__ = "fetch_closed_orders"
     canceled_fetch = mocker.patch.object(
         ex._api, "fetch_canceled_orders", return_value=[], create=True
     )
+    canceled_fetch.__name__ = "fetch_canceled_orders"
 
     res = ex._fetch_order_fallback("abc", "BTC/USD:USD", {})
 
@@ -232,9 +245,10 @@ def test_krakenfutures_fetch_order_finds_stoploss_via_stop_param(mocker, default
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
     # With stop=True, CCXT queries trigger history endpoint
-    mocker.patch.object(
+    closed_fetch = mocker.patch.object(
         ex._api,
         "fetch_closed_orders",
         return_value=[
@@ -242,6 +256,7 @@ def test_krakenfutures_fetch_order_finds_stoploss_via_stop_param(mocker, default
         ],
         create=True,
     )
+    closed_fetch.__name__ = "fetch_closed_orders"
 
     # Simulate what base class fetch_stoploss_order does (adds stop=True)
     res = ex.fetch_order("trigger-123", "BTC/USD:USD", params={"stop": True})
@@ -252,7 +267,8 @@ def test_krakenfutures_fetch_order_fallback_passes_stop_to_history(mocker, defau
     """Stoploss query (stop=True) should pass through to closed/canceled endpoints."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
-    mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
 
     closed_order = {"id": "sl-123", "symbol": "BTC/USD:USD", "status": "closed"}
     closed_fetch = mocker.patch.object(
@@ -261,6 +277,7 @@ def test_krakenfutures_fetch_order_fallback_passes_stop_to_history(mocker, defau
         return_value=[closed_order],
         create=True,
     )
+    closed_fetch.__name__ = "fetch_closed_orders"
 
     res = ex._fetch_order_fallback("sl-123", "BTC/USD:USD", {"stop": True})
 
@@ -275,8 +292,13 @@ def test_krakenfutures_fetch_order_fallback_strips_stop_from_open_orders(mocker,
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     open_fetch = mocker.patch.object(ex._api, "fetch_open_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
-    mocker.patch.object(ex._api, "fetch_canceled_orders", return_value=[], create=True)
+    open_fetch.__name__ = "fetch_open_orders"
+    closed_fetch = mocker.patch.object(ex._api, "fetch_closed_orders", return_value=[], create=True)
+    closed_fetch.__name__ = "fetch_closed_orders"
+    canceled_fetch = mocker.patch.object(
+        ex._api, "fetch_canceled_orders", return_value=[], create=True
+    )
+    canceled_fetch.__name__ = "fetch_canceled_orders"
 
     ex._fetch_order_fallback("abc", "BTC/USD:USD", {"stop": True})
 
@@ -291,9 +313,10 @@ def test_krakenfutures_fetch_order_propagates_exchange_errors_from_fallback(mock
     ex = get_patched_exchange(mocker, conf, exchange="krakenfutures")
 
     mocker.patch.object(ex._api, "fetch_order", side_effect=ccxt.OrderNotFound("not found"))
-    mocker.patch.object(
+    open_fetch = mocker.patch.object(
         ex._api, "fetch_open_orders", side_effect=ccxt.ExchangeError("service unavailable")
     )
+    open_fetch.__name__ = "fetch_open_orders"
 
     with pytest.raises(TemporaryError):
         ex.fetch_order("abc", "BTC/USD:USD", count=0)
