@@ -132,6 +132,25 @@ class Krakenfutures(Exchange):
         except (ValueError, TypeError):
             return None
 
+    def _order_contracts_to_amount(self, order: CcxtOrder) -> CcxtOrder:
+        """Normalize order and fix missing trigger price from CCXT parsing.
+
+        CCXT's krakenfutures parse_order reads triggerPrice from the top level of
+        the order details, but the /orders/status endpoint nests it inside
+        priceTriggerOptions.triggerPrice. This extracts it so stopPrice/triggerPrice
+        are populated correctly for stoploss order handling.
+        """
+        order = super()._order_contracts_to_amount(order)
+        if order.get("triggerPrice") is None and order.get("stopPrice") is None:
+            info = order.get("info", {})
+            inner = info.get("order", {}) if isinstance(info, dict) else {}
+            opts = inner.get("priceTriggerOptions", {}) if isinstance(inner, dict) else {}
+            trigger = self._safe_float(opts.get("triggerPrice")) if isinstance(opts, dict) else None
+            if trigger is not None:
+                order["triggerPrice"] = trigger
+                order["stopPrice"] = trigger
+        return order
+
     @retrier(retries=API_FETCH_ORDER_RETRY_COUNT)
     def fetch_order(
         self, order_id: str, pair: str, params: dict[str, Any] | None = None

@@ -55,6 +55,75 @@ def test_krakenfutures_ohlcv_candle_limit_funding_rate(mocker, default_conf):
     assert ex.ohlcv_candle_limit("1h", candle_type=CandleType.FUNDING_RATE) == 700
 
 
+# --- _order_contracts_to_amount trigger price fix tests ---
+
+
+def test_krakenfutures_order_contracts_fixes_missing_trigger_price(mocker, default_conf):
+    """Extract triggerPrice from info.order.priceTriggerOptions when CCXT misses it."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "triggerPrice": None,
+        "stopPrice": None,
+        "info": {
+            "order": {
+                "type": "TRIGGER_ORDER",
+                "priceTriggerOptions": {
+                    "triggerPrice": 71641,
+                    "triggerSignal": "LAST_PRICE",
+                },
+            },
+            "status": "TRIGGER_PLACED",
+        },
+    }
+    result = ex._order_contracts_to_amount(order)
+    assert result["triggerPrice"] == 71641.0
+    assert result["stopPrice"] == 71641.0
+
+
+def test_krakenfutures_order_contracts_preserves_existing_trigger_price(mocker, default_conf):
+    """Don't overwrite triggerPrice when CCXT already parsed it correctly."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "triggerPrice": 70000.0,
+        "stopPrice": 70000.0,
+        "info": {
+            "order": {
+                "priceTriggerOptions": {
+                    "triggerPrice": 71641,
+                },
+            },
+        },
+    }
+    result = ex._order_contracts_to_amount(order)
+    assert result["triggerPrice"] == 70000.0
+    assert result["stopPrice"] == 70000.0
+
+
+def test_krakenfutures_order_contracts_no_trigger_options(mocker, default_conf):
+    """Regular (non-trigger) orders should pass through unchanged."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "triggerPrice": None,
+        "stopPrice": None,
+        "info": {
+            "order": {
+                "type": "lmt",
+                "orderId": "abc",
+            },
+            "status": "placed",
+        },
+    }
+    result = ex._order_contracts_to_amount(order)
+    assert result["triggerPrice"] is None
+    assert result["stopPrice"] is None
+
+
 # --- fetch_order fallback tests ---
 
 
