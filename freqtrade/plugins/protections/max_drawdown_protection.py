@@ -22,6 +22,7 @@ class MaxDrawdown(IProtection):
 
         self._trade_limit = protection_config.get("trade_limit", 1)
         self._max_allowed_drawdown = protection_config.get("max_allowed_drawdown", 0.0)
+        self._calculation_mode = protection_config.get("calculation_mode", "ratios")
         # TODO: Implement checks to limit max_drawdown to sensible values
 
     def short_desc(self) -> str:
@@ -61,11 +62,8 @@ class MaxDrawdown(IProtection):
             if trade.close_date_utc <= look_back_until
         )
 
-        # Get calculation mode
-        method = self._protection_config.get("method", "ratios")
-
         try:
-            if method == "equity":
+            if self._calculation_mode == "equity":
                 # Standard equity-based drawdown
                 trades_df = pd.DataFrame(
                     [
