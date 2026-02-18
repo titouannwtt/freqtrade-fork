@@ -71,7 +71,7 @@ router_public = APIRouter()
 router = APIRouter()
 
 
-@router_public.get("/ping", response_model=Ping, tags=["Info"])
+@router_public.api_route("/ping", methods=["GET", "HEAD"], response_model=Ping, tags=["Info"])
 def ping():
     """simple ping"""
     return {"status": "pong"}
