@@ -1,5 +1,6 @@
 import random
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -658,7 +659,7 @@ def test_LowProfitPairs(mocker, default_conf, fee, caplog, only_per_side):
 
 
 @pytest.mark.usefixtures("init_persistence")
-def test_MaxDrawdown(mocker, default_conf, fee, caplog):
+def test_MaxDrawdown_ratio_mode(mocker, default_conf, fee, caplog):
     default_conf["_strategy_protections"] = [
         {
             "method": "MaxDrawdown",
@@ -774,6 +775,204 @@ def test_MaxDrawdown(mocker, default_conf, fee, caplog):
     assert freqtrade.protections.global_stop(starting_balance=starting_balance)
     assert PairLocks.is_global_lock()
     assert log_has_re(message, caplog)
+
+
+@pytest.mark.usefixtures("init_persistence")
+def test_MaxDrawdown_equity_mode(mocker, default_conf, fee):
+    default_conf["_strategy_protections"] = [
+        {
+            "method": "MaxDrawdown",
+            "lookback_period": 1000,
+            "stop_duration": 60,
+            "trade_limit": 1,
+            "max_allowed_drawdown": 0.01,
+            "calculation_mode": "equity",
+        }
+    ]
+    freqtrade = get_patched_freqtradebot(mocker, default_conf)
+    starting_balance = 0.01
+
+    assert not freqtrade.protections.global_stop(starting_balance=starting_balance)
+
+    generate_mock_trade(
+        "XRP/BTC",
+        fee.return_value,
+        False,
+        exit_reason=ExitType.STOP_LOSS.value,
+        min_ago_open=30,
+        min_ago_close=10,
+        profit_rate=0.5,
+    )
+    Trade.commit()
+
+    assert freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert PairLocks.is_global_lock()
+
+
+@pytest.mark.parametrize(
+    "calculation_mode,expected_locked",
+    [("ratios", True), ("equity", False)],
+)
+@pytest.mark.usefixtures("init_persistence")
+def test_MaxDrawdown_mode_comparison(mocker, default_conf, fee, calculation_mode, expected_locked):
+    default_conf["_strategy_protections"] = [
+        {
+            "method": "MaxDrawdown",
+            "lookback_period": 1000,
+            "stop_duration": 60,
+            "trade_limit": 3,
+            "max_allowed_drawdown": 0.15,
+            "calculation_mode": calculation_mode,
+        }
+    ]
+    freqtrade = get_patched_freqtradebot(mocker, default_conf)
+    starting_balance = 1000.0
+
+    # Same trade sequence for both modes: ratios mode lock expected,equity mode no lock expected.
+    generate_mock_trade(
+        "XRP/BTC",
+        fee.return_value,
+        False,
+        exit_reason=ExitType.ROI.value,
+        min_ago_open=120,
+        min_ago_close=50,
+        profit_rate=1.2,
+    )
+    generate_mock_trade(
+        "ETH/BTC",
+        fee.return_value,
+        False,
+        exit_reason=ExitType.STOP_LOSS.value,
+        min_ago_open=80,
+        min_ago_close=20,
+        profit_rate=0.9,
+    )
+    generate_mock_trade(
+        "NEO/BTC",
+        fee.return_value,
+        False,
+        exit_reason=ExitType.STOP_LOSS.value,
+        min_ago_open=40,
+        min_ago_close=10,
+        profit_rate=0.9,
+    )
+    Trade.commit()
+
+    lock = freqtrade.protections.global_stop(starting_balance=starting_balance)
+    assert bool(lock) is expected_locked
+    assert PairLocks.is_global_lock(side="long") is expected_locked
+
+
+@pytest.mark.parametrize("calculation_mode", ["ratios", "equity"])
+@pytest.mark.usefixtures("init_persistence")
+def test_MaxDrawdown_threshold_boundary(mocker, default_conf, calculation_mode):
+    threshold = 0.15
+    default_conf["_strategy_protections"] = [
+        {
+            "method": "MaxDrawdown",
+            "lookback_period": 1000,
+            "stop_duration": 60,
+            "trade_limit": 1,
+            "max_allowed_drawdown": threshold,
+            "calculation_mode": calculation_mode,
+        }
+    ]
+    freqtrade = get_patched_freqtradebot(mocker, default_conf)
+    handler = next(p for p in freqtrade.protections._protection_handlers if p.name == "MaxDrawdown")
+    md_globals = handler._max_drawdown.__globals__
+
+    now = datetime.now(UTC)
+    trades_in_window = [
+        SimpleNamespace(
+            close_date_utc=now - timedelta(minutes=10), close_profit_abs=-1.0, close_profit=-0.1
+        )
+    ]
+    all_closed_trades = [
+        SimpleNamespace(
+            close_date_utc=now - timedelta(minutes=1500), close_profit_abs=5.0, close_profit=0.2
+        ),
+        trades_in_window[0],
+    ]
+
+    proxy_side_effect = [trades_in_window]
+    if calculation_mode == "equity":
+        proxy_side_effect.append(all_closed_trades)
+
+    mocker.patch.object(
+        md_globals["Trade"],
+        "get_trades_proxy",
+        side_effect=proxy_side_effect,
+    )
+    calc_mock = mocker.Mock(
+        return_value=SimpleNamespace(relative_account_drawdown=threshold, drawdown_abs=threshold)
+    )
+    mocker.patch.dict(md_globals, {"calculate_max_drawdown": calc_mock})
+
+    assert not handler.global_stop(datetime.now(UTC), "long", starting_balance=1000.0)
+    assert not PairLocks.is_global_lock()
+
+
+@pytest.mark.parametrize(
+    "calculation_mode,expected_value_col,expected_proxy_calls",
+    [("ratios", "close_profit", 1), ("equity", "profit_abs", 2)],
+)
+@pytest.mark.usefixtures("init_persistence")
+def test_MaxDrawdown_calculation_mode_dispatch(
+    mocker, default_conf, calculation_mode, expected_value_col, expected_proxy_calls
+):
+    default_conf["_strategy_protections"] = [
+        {
+            "method": "MaxDrawdown",
+            "lookback_period": 1000,
+            "stop_duration": 60,
+            "trade_limit": 1,
+            "max_allowed_drawdown": 0.15,
+            "calculation_mode": calculation_mode,
+        }
+    ]
+    freqtrade = get_patched_freqtradebot(mocker, default_conf)
+    handler = next(p for p in freqtrade.protections._protection_handlers if p.name == "MaxDrawdown")
+    md_globals = handler._max_drawdown.__globals__
+
+    now = datetime.now(UTC)
+    trades_in_window = [
+        SimpleNamespace(
+            close_date_utc=now - timedelta(minutes=10), close_profit_abs=-1.0, close_profit=-0.1
+        )
+    ]
+    all_closed_trades = [
+        SimpleNamespace(
+            close_date_utc=now - timedelta(minutes=1500), close_profit_abs=5.0, close_profit=0.2
+        ),
+        trades_in_window[0],
+    ]
+
+    proxy_side_effect = [trades_in_window]
+    if calculation_mode == "equity":
+        proxy_side_effect.append(all_closed_trades)
+
+    proxy_mock = mocker.patch.object(
+        md_globals["Trade"],
+        "get_trades_proxy",
+        side_effect=proxy_side_effect,
+    )
+    calc_mock = mocker.Mock(
+        return_value=SimpleNamespace(relative_account_drawdown=0.0, drawdown_abs=0.0)
+    )
+    mocker.patch.dict(md_globals, {"calculate_max_drawdown": calc_mock})
+
+    assert not handler.global_stop(datetime.now(UTC), "long", starting_balance=1000.0)
+
+    assert proxy_mock.call_count == expected_proxy_calls
+    kwargs = calc_mock.call_args.kwargs
+    assert kwargs["value_col"] == expected_value_col
+
+    if calculation_mode == "equity":
+        assert kwargs["starting_balance"] == 1005.0
+        assert kwargs["relative"] is True
+    else:
+        assert "starting_balance" not in kwargs
+        assert "relative" not in kwargs
 
 
 @pytest.mark.parametrize(
