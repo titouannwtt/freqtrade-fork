@@ -84,7 +84,12 @@ def file_load_json(file: Path):
 
 def is_file_in_dir(file: Path, directory: Path) -> bool:
     """
-    Helper function to check if file is in directory.
+    Helper function to check if file is directly within a directory.
+    :param file: File to check
+    :param directory: Directory to check against
+        When used in the API, this parameter cannot be user controlled (outside of the config)
+        to avoid security issues.
+    :return: True if file is directly within directory, False otherwise
     """
     return file.is_file() and file.parent.samefile(directory)
 
