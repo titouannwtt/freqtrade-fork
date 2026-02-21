@@ -240,6 +240,14 @@ AVAILABLE_CLI_OPTIONS = {
     "exportfilename": Arg(
         "--backtest-filename",
         "--export-filename",
+        fthelp={
+            "freqtrade backtesting": (
+                "DEPRECATED: This option is deprecated for backtesting and will be removed "
+                "in a future release. "
+                "Using a custom filename for backtest results is no longer supported. "
+                "Use `--backtest-directory` to specify the directory."
+            ),
+        },
         help="Use this filename for backtest results."
         "Example: `--backtest-filename=backtest_results_2020-09-27_16-20-48.json`. "
         "Assumes either `user_data/backtest_results/` or `--export-directory` as base directory.",
