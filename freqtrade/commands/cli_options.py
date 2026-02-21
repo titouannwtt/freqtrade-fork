@@ -215,9 +215,7 @@ AVAILABLE_CLI_OPTIONS = {
         "--strategy-list",
         help="Provide a space-separated list of strategies to backtest. "
         "Please note that timeframe needs to be set either in config "
-        "or via command line. When using this together with `--export trades`, "
-        "the strategy-name is injected into the filename "
-        "(so `backtest-data.json` becomes `backtest-data-SampleStrategy.json`",
+        "or via command line. ",
         nargs="+",
     ),
     "backtest_notes": Arg(
