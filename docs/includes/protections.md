@@ -69,7 +69,7 @@ def protections(self):
 
 #### MaxDrawdown
 
-`MaxDrawdown` supports 2 calculation modes within the `lookback_period` in minutes (or in candles when using `lookback_period_candles`):
+The `MaxDrawdown` protection evaluates trades that closed within the current `lookback_period` (or `lookback_period_candles`). It supports 2 calculation modes:
 
 - `calculation_mode: "ratios"` (default): Legacy approximation based on cumulative profit ratios.
 - `calculation_mode: "equity"`: Standard peak-to-trough drawdown on the account equity curve, using starting balance and cumulative absolute profit.
@@ -173,7 +173,8 @@ class AwesomeStrategy(IStrategy)
                 "lookback_period_candles": 48,
                 "trade_limit": 20,
                 "stop_duration_candles": 4,
-                "max_allowed_drawdown": 0.2
+                "max_allowed_drawdown": 0.2,
+                "calculation_mode": "equity"
             },
             {
                 "method": "StoplossGuard",
