@@ -69,7 +69,16 @@ def protections(self):
 
 #### MaxDrawdown
 
-`MaxDrawdown` uses all trades within `lookback_period` in minutes (or in candles when using `lookback_period_candles`) to determine the maximum drawdown. If the drawdown is below `max_allowed_drawdown`, trading will stop for `stop_duration` in minutes (or in candles when using `stop_duration_candles`) after the last trade - assuming that the bot needs some time to let markets recover.
+The `MaxDrawdown` protection evaluates trades that closed within the current `lookback_period` (or `lookback_period_candles`). It supports 2 calculation modes:
+
+- `calculation_mode: "ratios"` (default): Legacy approximation based on cumulative profit ratios.
+- `calculation_mode: "equity"`: Standard peak-to-trough drawdown on the account equity curve, using starting balance and cumulative absolute profit.
+
+With `calculation_mode: "ratios"`, drawdown is derived from cumulative trade profit ratios, not from the account equity curve. This is kept for backward compatibility and can differ from account-level drawdown when position sizing changes over time.
+
+For new setups, `calculation_mode: "equity"` is recommended. Prefer `calculation_mode: "ratios"` only when you intentionally rely on legacy behavior, especially with fixed stake amount configurations where ratio-based behavior is easier to reason about.
+
+If the observed drawdown exceeds `max_allowed_drawdown`, trading will stop for `stop_duration` after the last trade - assuming that the bot needs some time to let markets recover.
 
 The below sample stops trading for 12 candles if max-drawdown is > 20% considering all pairs - with a minimum of `trade_limit` trades - within the last 48 candles. If desired, `lookback_period` and/or `stop_duration` can be used.
 
@@ -79,6 +88,7 @@ def protections(self):
     return  [
         {
             "method": "MaxDrawdown",
+            "calculation_mode": "equity",
             "lookback_period_candles": 48,
             "trade_limit": 20,
             "stop_duration_candles": 12,
@@ -163,7 +173,8 @@ class AwesomeStrategy(IStrategy)
                 "lookback_period_candles": 48,
                 "trade_limit": 20,
                 "stop_duration_candles": 4,
-                "max_allowed_drawdown": 0.2
+                "max_allowed_drawdown": 0.2,
+                "calculation_mode": "equity"
             },
             {
                 "method": "StoplossGuard",
