@@ -1271,8 +1271,9 @@ class Backtesting:
 
     def run_protections(self, pair: str, current_time: datetime, side: LongShort):
         if self.enable_protections:
-            self.protections.stop_per_pair(pair, current_time, side)
-            self.protections.global_stop(current_time, side)
+            starting_balance = self.wallets.get_starting_balance()
+            self.protections.stop_per_pair(pair, current_time, side, starting_balance)
+            self.protections.global_stop(current_time, side, starting_balance)
 
     def manage_open_orders(self, trade: LocalTrade, current_time: datetime, row: tuple) -> bool:
         """
