@@ -20,15 +20,15 @@ All protection end times are rounded up to the next candle to avoid sudden, unex
 
 ### Common settings to all Protections
 
-|  Parameter| Description |
-|------------|-------------|
-| `method` | Protection name to use. <br> **Datatype:** String, selected from [available Protections](#available-protections)
-| `stop_duration_candles` | For how many candles should the lock be set? <br> **Datatype:** Positive integer (in candles)
-| `stop_duration` | how many minutes should protections be locked. <br>Cannot be used together with `stop_duration_candles`. <br> **Datatype:** Float (in minutes)
-| `lookback_period_candles` | Only trades that completed within the last `lookback_period_candles` candles will be considered. This setting may be ignored by some Protections. <br> **Datatype:** Positive integer (in candles).
-| `lookback_period` | Only trades that completed after `current_time - lookback_period` will be considered. <br>Cannot be used together with `lookback_period_candles`. <br>This setting may be ignored by some Protections. <br> **Datatype:**  Float (in minutes)
-| `trade_limit` | Number of trades required at minimum (not used by all Protections). <br> **Datatype:** Positive integer
-| `unlock_at` | Time when trading will be unlocked regularly (not used by all Protections). <br> **Datatype:** string <br>**Input Format:** "HH:MM" (24-hours)
+| Parameter | Description |
+| --------- | ---------- |
+| `method` | Protection name to use. <br> **Datatype:** String, selected from [available Protections](#available-protections) |
+| `stop_duration_candles` | For how many candles should the lock be set? <br> **Datatype:** Positive integer (in candles) |
+| `stop_duration` | how many minutes should protections be locked. <br>Cannot be used together with `stop_duration_candles`. <br> **Datatype:** Float (in minutes) |
+| `lookback_period_candles` | Only trades that completed within the last `lookback_period_candles` candles will be considered. This setting may be ignored by some Protections. <br> **Datatype:** Positive integer (in candles). |
+| `lookback_period` | Only trades that completed after `current_time - lookback_period` will be considered. <br>Cannot be used together with `lookback_period_candles`. <br>This setting may be ignored by some Protections. <br> **Datatype:**  Float (in minutes) |
+| `trade_limit` | Number of trades required at minimum (not used by all Protections). <br> **Datatype:** Positive integer |
+| `unlock_at` | Time when trading will be unlocked regularly (not used by all Protections). <br> **Datatype:** string <br>**Input Format:** "HH:MM" (24-hours) |
 
 !!! Note "Durations"
     Durations (`stop_duration*` and `lookback_period*` can be defined in either minutes or candles).
@@ -69,7 +69,8 @@ def protections(self):
 
 #### MaxDrawdown
 
-The `MaxDrawdown` protection evaluates trades that closed within the current `lookback_period` (or `lookback_period_candles`). It supports 2 calculation modes:
+The `MaxDrawdown` protection evaluates trades that closed within the current `lookback_period` (or `lookback_period_candles`).  
+It supports 2 calculation modes:
 
 - `calculation_mode: "ratios"` (default): Legacy approximation based on cumulative profit ratios.
 - `calculation_mode: "equity"`: Standard peak-to-trough drawdown on the account equity curve, using starting balance and cumulative absolute profit.
@@ -170,11 +171,11 @@ class AwesomeStrategy(IStrategy)
             },
             {
                 "method": "MaxDrawdown",
+                "calculation_mode": "equity",
                 "lookback_period_candles": 48,
                 "trade_limit": 20,
                 "stop_duration_candles": 4,
-                "max_allowed_drawdown": 0.2,
-                "calculation_mode": "equity"
+                "max_allowed_drawdown": 0.2
             },
             {
                 "method": "StoplossGuard",
