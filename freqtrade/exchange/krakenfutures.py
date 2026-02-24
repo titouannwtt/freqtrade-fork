@@ -17,6 +17,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
+from freqtrade.misc import safe_value_fallback
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -162,7 +163,7 @@ class Krakenfutures(Exchange):
         if (
             order.get("average") is None
             and order.get("status") in ("canceled", "closed")
-            and order.get("filled", 0) > 0
+            and safe_value_fallback(order, "filled", default_value=0) > 0
         ):
             trades = self.get_trades_for_order(
                 order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
