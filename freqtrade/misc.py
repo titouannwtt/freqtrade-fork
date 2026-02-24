@@ -144,7 +144,7 @@ def safe_value_nested(obj: DictMap, keys: str, default_value=None):
     """
     nested_obj = obj
     for key in keys.split("."):
-        if key in nested_obj and nested_obj[key] is not None:
+        if isinstance(nested_obj, Mapping) and key in nested_obj and nested_obj[key] is not None:
             nested_obj = nested_obj[key]
         else:
             return default_value
