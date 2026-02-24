@@ -25,8 +25,7 @@ Best start by reading the [documentation](https://www.freqtrade.io/) to get a fe
 
 ### 1. Run unit tests
 
-All unit tests must pass. If a unit test is broken, change your code to 
-make it pass. It means you have introduced a regression.
+All unit tests must pass. If a unit test is broken, change your code to make it pass. It means you have introduced a regression.
 
 #### Test the whole project
 
