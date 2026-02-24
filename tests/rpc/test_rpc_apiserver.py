@@ -2421,6 +2421,31 @@ def test_api_pair_history(botclient, tmp_path, mocker):
     assert "enter_long" not in result["columns"]
     assert result["columns"] == ["date", "open", "high", "low", "close", "volume", "__date_ts"]
 
+    # Disallow base64 strategies
+    base64_dummy = "xx:cHJpbnQoImhlbGxvIHdvcmxkIik="
+    rc = client_post(
+        client,
+        f"{BASE_URI}/pair_history",
+        data={
+            "pair": "UNITTEST/BTC",
+            "timeframe": timeframe,
+            "timerange": "20180111-20180112",
+            "strategy": base64_dummy,
+            "columns": ["rsi", "fastd", "fastk"],
+        },
+    )
+    assert_response(rc, 422)
+    assert rc.json()["detail"] == "base64 encoded strategies are not allowed."
+
+    # Disallow base64 strategies
+    rc = client_get(
+        client,
+        f"{BASE_URI}/pair_history?pair=UNITTEST%2FBTC&timeframe={timeframe}"
+        f"&timerange=20200111-20200112&strategy={base64_dummy}",
+    )
+    assert_response(rc, 422)
+    assert rc.json()["detail"] == "base64 encoded strategies are not allowed."
+
 
 def test_api_pair_history_live_mode(botclient, tmp_path, mocker):
     _ftbot, client = botclient
