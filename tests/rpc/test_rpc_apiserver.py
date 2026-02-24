@@ -3078,7 +3078,7 @@ def test_api_backtesting(botclient, mocker, fee, caplog, tmp_path):
         # Disallow base64 strategies
         data["strategy"] = "xx:cHJpbnQoImhlbGxvIHdvcmxkIik="
         rc = client_post(client, f"{BASE_URI}/backtest", data=data)
-        assert_response(rc, 500)
+        assert_response(rc, 422)
     finally:
         Backtesting.cleanup()
 
