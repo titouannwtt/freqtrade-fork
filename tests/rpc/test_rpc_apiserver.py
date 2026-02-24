@@ -8,7 +8,7 @@ import time
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, PropertyMock
+from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
 import pandas as pd
 import pytest
@@ -180,11 +180,12 @@ def test_api_ui_fallback(botclient, mocker):
     # Allow both fallback or real UI
     assert "`freqtrade install-ui`" in rc.text or "<!DOCTYPE html>" in rc.text
 
-    mocker.patch.object(Path, "is_file", MagicMock(side_effect=[True, False]))
-    rc = client_get(client, "%2F%2F%2Fetc/passwd")
-    assert rc.status_code == 200
+    for test_string in ["%2F%2F%2Fetc/passwd", "assets%2F..%2F..%2F..%2Fdeps.py"]:
+        with patch.object(Path, "is_file", MagicMock(side_effect=[True, False])):
+            rc = client_get(client, test_string)
+            assert rc.status_code == 200
 
-    assert "`freqtrade install-ui`" in rc.text
+            assert "`freqtrade install-ui`" in rc.text
 
 
 def test_api_ui_version(botclient, mocker):
