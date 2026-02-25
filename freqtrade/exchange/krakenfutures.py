@@ -152,12 +152,15 @@ class Krakenfutures(Exchange):
         return order
 
     def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
-        """Fix missing average price on filled orders by fetching trades.
+        """Fix missing average price and aggregate fees for filled orders.
 
         Kraken Futures' /orders/status endpoint does not include execution data,
         so CCXT sets price/average to the limitPrice (the order's limit, not the
         actual fill price). For closed/filled orders we ALWAYS fetch trades and
         compute VWAP because CCXT's average field is unreliable.
+
+        We also aggregate fees here to avoid a redundant get_trades_for_order call
+        from fee_detection_from_trades.
 
         See: https://github.com/ccxt/ccxt/issues/27979
         """
@@ -169,10 +172,23 @@ class Krakenfutures(Exchange):
             if trades:
                 total_amount = sum(t["amount"] for t in trades)
                 if total_amount:
+                    # Compute VWAP
                     order["average"] = sum(t["price"] * t["amount"] for t in trades) / total_amount
                     trade_costs = [t["cost"] for t in trades if t.get("cost") is not None]
                     if trade_costs:
                         order["cost"] = sum(trade_costs)
+                    # Aggregate fees to avoid redundant get_trades_for_order call
+                    total_fee = sum(
+                        t["fee"]["cost"]
+                        for t in trades
+                        if t.get("fee") and t["fee"].get("cost") is not None
+                    )
+                    if total_fee:
+                        order["fee"] = {
+                            "cost": total_fee,
+                            "currency": self.get_pair_quote_currency(order["symbol"]),
+                            "rate": None,
+                        }
         return order
 
     def get_trades_for_order(
