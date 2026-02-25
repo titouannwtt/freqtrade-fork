@@ -153,7 +153,7 @@ class Krakenfutures(Exchange):
         For filled terminal orders, we ALWAYS fetch trades and compute VWAP because
         CCXT's average is unreliable.
 
-        See: https://github.com/ccxt/ccxt/issues/27979
+        See: https://github.com/ccxt/ccxt/issues/27996
         """
         # Fix 1: Extract nested triggerPrice for stoploss orders
         if order.get("triggerPrice") is None and order.get("stopPrice") is None:
