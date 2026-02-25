@@ -17,7 +17,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
-from freqtrade.misc import safe_value_fallback, safe_value_nested
+from freqtrade.misc import safe_value_nested
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -156,14 +156,13 @@ class Krakenfutures(Exchange):
 
         Kraken Futures' /orders/status endpoint does not include execution data,
         so CCXT sets price/average to the limitPrice (the order's limit, not the
-        actual fill price). For closed/filled orders we fetch trades from /fills
-        and compute the VWAP average.
+        actual fill price). For closed/filled orders we ALWAYS fetch trades and
+        compute VWAP because CCXT's average field is unreliable.
+
+        See: https://github.com/ccxt/ccxt/issues/27979
         """
-        if (
-            order.get("average") is None
-            and order.get("status") in ("canceled", "closed")
-            and safe_value_fallback(order, "filled", default_value=0) > 0
-        ):
+        filled = self._safe_float(order.get("filled")) or 0.0
+        if order.get("status") in ("canceled", "closed") and filled > 0:
             trades = self.get_trades_for_order(
                 order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
             )
@@ -171,6 +170,9 @@ class Krakenfutures(Exchange):
                 total_amount = sum(t["amount"] for t in trades)
                 if total_amount:
                     order["average"] = sum(t["price"] * t["amount"] for t in trades) / total_amount
+                    trade_costs = [t["cost"] for t in trades if t.get("cost") is not None]
+                    if trade_costs:
+                        order["cost"] = sum(trade_costs)
         return order
 
     def get_trades_for_order(
