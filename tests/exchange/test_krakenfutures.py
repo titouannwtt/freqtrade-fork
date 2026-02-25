@@ -153,6 +153,7 @@ def test_krakenfutures_adjust_order_computes_average_from_trades(mocker, default
 
     result = ex._adjust_krakenfutures_order(order)
     assert result["average"] == pytest.approx(67850.0)
+    assert result["cost"] == pytest.approx(27.14)
 
 
 def test_krakenfutures_adjust_order_skips_open_orders(mocker, default_conf):
@@ -174,8 +175,27 @@ def test_krakenfutures_adjust_order_skips_open_orders(mocker, default_conf):
     trades_mock.assert_not_called()
 
 
-def test_krakenfutures_adjust_order_preserves_existing_average(mocker, default_conf):
-    """Don't overwrite average when already present."""
+def test_krakenfutures_adjust_order_handles_none_filled(mocker, default_conf):
+    """Don't crash or fetch trades when filled is None."""
+    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
+
+    order = {
+        "id": "abc",
+        "symbol": "BTC/USD:USD",
+        "status": "closed",
+        "filled": None,
+        "average": None,
+        "timestamp": 1771354195241,
+    }
+    trades_mock = mocker.patch.object(ex, "get_trades_for_order")
+
+    result = ex._adjust_krakenfutures_order(order)
+    assert result["average"] is None
+    trades_mock.assert_not_called()
+
+
+def test_krakenfutures_adjust_order_recomputes_existing_average(mocker, default_conf):
+    """Recompute average from fills even when CCXT already provided one."""
     ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
 
     order = {
@@ -186,11 +206,30 @@ def test_krakenfutures_adjust_order_preserves_existing_average(mocker, default_c
         "average": 67843.0,
         "timestamp": 1771354195241,
     }
-    trades_mock = mocker.patch.object(ex, "get_trades_for_order")
+    trades = [
+        {
+            "amount": 0.0002,
+            "price": 67800.0,
+            "cost": 13.56,
+            "takerOrMaker": "taker",
+            "symbol": "BTC/USD:USD",
+            "fee": None,
+        },
+        {
+            "amount": 0.0002,
+            "price": 67900.0,
+            "cost": 13.58,
+            "takerOrMaker": "taker",
+            "symbol": "BTC/USD:USD",
+            "fee": None,
+        },
+    ]
+    trades_mock = mocker.patch.object(ex, "get_trades_for_order", return_value=trades)
 
     result = ex._adjust_krakenfutures_order(order)
-    assert result["average"] == 67843.0
-    trades_mock.assert_not_called()
+    assert result["average"] == pytest.approx(67850.0)
+    assert result["cost"] == pytest.approx(27.14)
+    trades_mock.assert_called_once()
 
 
 def test_krakenfutures_adjust_order_no_trades_found(mocker, default_conf):
