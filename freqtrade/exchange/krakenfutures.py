@@ -151,8 +151,7 @@ class Krakenfutures(Exchange):
         2. average set to limitPrice instead of actual fill price
 
         For filled terminal orders, we ALWAYS fetch trades and compute VWAP because
-        CCXT's average is unreliable. We also aggregate fees to avoid a
-        redundant get_trades_for_order call from fee_detection_from_trades.
+        CCXT's average is unreliable.
 
         See: https://github.com/ccxt/ccxt/issues/27979
         """
@@ -167,7 +166,7 @@ class Krakenfutures(Exchange):
 
         filled = self._safe_float(order.get("filled")) or 0.0
         if order.get("status") in ("canceled", "closed") and filled > 0:
-            # Fix 2: Compute VWAP and aggregate fees for filled orders
+            # Fix 2: Compute VWAP and cost for filled orders
             trades = self.get_trades_for_order(
                 order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
             )
@@ -179,18 +178,6 @@ class Krakenfutures(Exchange):
                     trade_costs = [t["cost"] for t in trades if t.get("cost") is not None]
                     if trade_costs:
                         order["cost"] = sum(trade_costs)
-                    # Aggregate fees to avoid redundant get_trades_for_order call
-                    total_fee = sum(
-                        t["fee"]["cost"]
-                        for t in trades
-                        if t.get("fee") and t["fee"].get("cost") is not None
-                    )
-                    if total_fee:
-                        order["fee"] = {
-                            "cost": total_fee,
-                            "currency": self.get_pair_quote_currency(order["symbol"]),
-                            "rate": None,
-                        }
         return order
 
     def get_trades_for_order(
