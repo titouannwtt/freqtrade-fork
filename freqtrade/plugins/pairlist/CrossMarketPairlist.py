@@ -4,17 +4,15 @@ Price pair list filter
 
 import logging
 
-import ccxt.pro as ccxt_pro
-
-from freqtrade.exceptions import OperationalException
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
+from freqtrade.util import FtTTLCache
 
 
 logger = logging.getLogger(__name__)
 
 
-class CrossMarketFilter(IPairList):
+class CrossMarketPairlist(IPairList):
     supports_backtesting = SupportsBacktesting.BIASED
 
     def __init__(self, *args, **kwargs) -> None:
@@ -24,6 +22,8 @@ class CrossMarketFilter(IPairList):
         self._trading_mode: str = self._config["trading_mode"]
         self._stake_currency: str = self._config["stake_currency"]
         self._target_mode = "futures" if self._trading_mode == "spot" else "spot"
+        self._refresh_period = self._pairlistconfig.get("refresh_period", 1800)
+        self._pair_cache: FtTTLCache = FtTTLCache(maxsize=1, ttl=self._refresh_period)
 
     @property
     def needstickers(self) -> bool:
@@ -57,6 +57,7 @@ class CrossMarketFilter(IPairList):
                 "description": "Mode of operation",
                 "help": "Mode of operation (whitelist/blacklist)",
             },
+            **IPairList.refresh_period_parameter(),
         }
 
     def get_base_list(self):
@@ -77,6 +78,35 @@ class CrossMarketFilter(IPairList):
 
     prefixes = ("1000", "1000000", "1M", "K", "M")
 
+    def gen_pairlist(self, tickers: Tickers) -> list[str]:
+        """
+        Generate the pairlist
+        :param tickers: Tickers (from exchange.get_tickers). May be cached.
+        :return: List of pairs
+        """
+        # Generate dynamic whitelist
+        # Must always run if this pairlist is the first in the list.
+        pairlist = self._pair_cache.get("pairlist")
+        if pairlist:
+            # Item found - no refresh necessary
+            return pairlist.copy()
+        else:
+            # Use fresh pairlist
+            # Check if pair quote currency equals to the stake currency.
+            _pairlist = [
+                k
+                for k in self._exchange.get_markets(
+                    quote_currencies=[self._stake_currency], tradable_only=True, active_only=True
+                ).keys()
+            ]
+
+            _pairlist = self.verify_blacklist(_pairlist, logger.info)
+
+            pairlist = self.filter_pairlist(_pairlist, tickers)
+            self._pair_cache["pairlist"] = pairlist.copy()
+
+        return pairlist
+
     def filter_pairlist(self, pairlist: list[str], tickers: Tickers) -> list[str]:
         bases = self.get_base_list()
         is_whitelist_mode = self._mode == "whitelist"
@@ -88,10 +118,18 @@ class CrossMarketFilter(IPairList):
             found_in_bases = base in bases
             if not found_in_bases:
                 for prefix in self.prefixes:
+                    # Check in case of PEPE needs to be changed to 1000PEPE for example
                     test_prefix = f"{prefix}{base}"
-                    if test_prefix in bases:
-                        found_in_bases = True
+                    found_in_bases = test_prefix in bases
+                    if found_in_bases:
                         break
+
+                    # Check in case of 1000PEPE needs to be changed to PEPE for example
+                    if base.startswith(prefix):
+                        temp_base = base.removeprefix(prefix)
+                        found_in_bases = temp_base in bases
+                        if found_in_bases:
+                            break
             if found_in_bases:
                 whitelisted_pairlist.append(pair)
                 filtered_pairlist.remove(pair)
