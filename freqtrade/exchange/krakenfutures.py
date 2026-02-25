@@ -17,7 +17,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
-from freqtrade.misc import safe_value_fallback
+from freqtrade.misc import safe_value_fallback, safe_value_nested
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -143,13 +143,12 @@ class Krakenfutures(Exchange):
         """
         order = super()._order_contracts_to_amount(order)
         if order.get("triggerPrice") is None and order.get("stopPrice") is None:
-            info = order.get("info", {})
-            inner = info.get("order", {}) if isinstance(info, dict) else {}
-            opts = inner.get("priceTriggerOptions", {}) if isinstance(inner, dict) else {}
-            trigger = self._safe_float(opts.get("triggerPrice")) if isinstance(opts, dict) else None
+            trigger = safe_value_nested(order, "info.order.priceTriggerOptions.triggerPrice")
             if trigger is not None:
-                order["triggerPrice"] = trigger
-                order["stopPrice"] = trigger
+                trigger_float = self._safe_float(trigger)
+                if trigger_float is not None:
+                    order["triggerPrice"] = trigger_float
+                    order["stopPrice"] = trigger_float
         return order
 
     def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
