@@ -134,14 +134,29 @@ class Krakenfutures(Exchange):
             return None
 
     def _order_contracts_to_amount(self, order: CcxtOrder) -> CcxtOrder:
-        """Normalize order and fix missing trigger price from CCXT parsing.
+        """Normalize order and apply Kraken Futures-specific fixes.
 
-        CCXT's krakenfutures parse_order reads triggerPrice from the top level of
-        the order details, but the /orders/status endpoint nests it inside
-        priceTriggerOptions.triggerPrice. This extracts it so stopPrice/triggerPrice
-        are populated correctly for stoploss order handling.
+        This override applies all CCXT workarounds by calling _adjust_krakenfutures_order
+        after the base class normalization. This ensures all orders (including those
+        from create_order that fill immediately) get correct prices and fees.
         """
         order = super()._order_contracts_to_amount(order)
+        return self._adjust_krakenfutures_order(order)
+
+    def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
+        """Apply Kraken Futures-specific order corrections.
+
+        Fixes CCXT parsing issues:
+        1. triggerPrice nested in info.order.priceTriggerOptions (not extracted)
+        2. average set to limitPrice instead of actual fill price
+
+        For filled terminal orders, we ALWAYS fetch trades and compute VWAP because
+        CCXT's average is unreliable. We also aggregate fees to avoid a
+        redundant get_trades_for_order call from fee_detection_from_trades.
+
+        See: https://github.com/ccxt/ccxt/issues/27979
+        """
+        # Fix 1: Extract nested triggerPrice for stoploss orders
         if order.get("triggerPrice") is None and order.get("stopPrice") is None:
             trigger = safe_value_nested(order, "info.order.priceTriggerOptions.triggerPrice")
             if trigger is not None:
@@ -149,23 +164,10 @@ class Krakenfutures(Exchange):
                 if trigger_float is not None:
                     order["triggerPrice"] = trigger_float
                     order["stopPrice"] = trigger_float
-        return order
 
-    def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
-        """Fix missing average price and aggregate fees for filled orders.
-
-        Kraken Futures' /orders/status endpoint does not include execution data,
-        so CCXT sets price/average to the limitPrice (the order's limit, not the
-        actual fill price). For closed/filled orders we ALWAYS fetch trades and
-        compute VWAP because CCXT's average field is unreliable.
-
-        We also aggregate fees here to avoid a redundant get_trades_for_order call
-        from fee_detection_from_trades.
-
-        See: https://github.com/ccxt/ccxt/issues/27979
-        """
         filled = self._safe_float(order.get("filled")) or 0.0
         if order.get("status") in ("canceled", "closed") and filled > 0:
+            # Fix 2: Compute VWAP and aggregate fees for filled orders
             trades = self.get_trades_for_order(
                 order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
             )
@@ -229,8 +231,7 @@ class Krakenfutures(Exchange):
         try:
             order = self._api.fetch_order(order_id, pair, params=status_params)
             self._log_exchange_response("fetch_order", order)
-            order = self._order_contracts_to_amount(order)
-            return self._adjust_krakenfutures_order(order)
+            return self._order_contracts_to_amount(order)
         except ccxt.OrderNotFound:
             # Expected for older Kraken Futures orders not visible in orders/status.
             pass
@@ -247,7 +248,7 @@ class Krakenfutures(Exchange):
 
         order = self._fetch_order_fallback(order_id, pair, params)
         if order is not None:
-            return self._adjust_krakenfutures_order(order)
+            return order
 
         # Order not in status, open, closed, or canceled endpoints - genuinely gone.
         # Raise non-retrying InvalidOrderException (Kraken has limited history retention).
