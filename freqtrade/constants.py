@@ -241,4 +241,4 @@ IntOrInf = float
 EntryExecuteMode = Literal["initial", "pos_adjust", "replace"]
 
 # Prefixes for low-priced coins like 1000PEPE/USDDT:USDT or KPEPE/USDC (hyperliquid)
-PairPrefixes = ["1000", "1000000", "1M", "K", "M"]
+PairPrefixes = ["1000", "1000000", "1M", "K"]
