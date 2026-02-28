@@ -30,13 +30,13 @@ repos:
           - types-filelock==3.2.7
           - types-requests==2.32.4.20260107
           - types-tabulate==0.9.0.20241207
-          - types-python-dateutil==2.9.0.20251115
-          - scipy-stubs==1.17.0.1
-          - SQLAlchemy==2.0.45
+          - types-python-dateutil==2.9.0.20260124
+          - scipy-stubs==1.17.0.2
+          - SQLAlchemy==2.0.46
         # stages: [push]
 
   - repo: https://github.com/pycqa/isort
-    rev: "7.0.0"
+    rev: "8.0.0"
     hooks:
       - id: isort
         name: isort (python)
@@ -44,7 +44,7 @@ repos:
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.14.14'
+    rev: 'v0.15.2'
     hooks:
       - id: ruff
       - id: ruff-format

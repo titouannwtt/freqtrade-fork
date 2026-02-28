@@ -2,8 +2,9 @@
 
 [![Freqtrade CI](https://github.com/freqtrade/freqtrade/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/freqtrade/freqtrade/actions/workflows/ci.yml)
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.04864/status.svg)](https://doi.org/10.21105/joss.04864)
-[![Coverage Status](https://coveralls.io/repos/github/freqtrade/freqtrade/badge.svg?branch=develop&service=github)](https://coveralls.io/github/freqtrade/freqtrade?branch=develop)
+[![codecov](https://codecov.io/gh/freqtrade/freqtrade/branch/develop/graph/badge.svg?token=AD5BG3ATKI)](https://codecov.io/gh/freqtrade/freqtrade)
 [![Documentation](https://readthedocs.org/projects/freqtrade/badge/)](https://www.freqtrade.io)
+[![Discord Server](https://img.shields.io/badge/Freqtrade_Discord-18181B?logo=discord)](https://discord.gg/p7nuUNVfP7)
 
 Freqtrade is a free and open source crypto trading bot written in Python. It is designed to support all major exchanges and be controlled via Telegram or webUI. It contains backtesting, plotting and money management tools as well as strategy optimization by machine learning.
 
@@ -24,7 +25,7 @@ hesitate to read the source code and understand the mechanism of this bot.
 
 ## Supported Exchange marketplaces
 
-Please read the [exchange-specific notes](docs/exchanges.md) to learn about special configurations that maybe needed for each exchange.
+Please read the [exchange-specific notes](https://www.freqtrade.io/en/stable/exchanges/) to learn about special configurations that maybe needed for each exchange.
 
 ### Supported Spot Exchanges
 
@@ -50,7 +51,7 @@ Please read the [exchange-specific notes](docs/exchanges.md) to learn about spec
 - [X] [OKX](https://okx.com/)
 - [X] [Bybit](https://bybit.com/)
 
-Please make sure to read the [exchange specific notes](docs/exchanges.md), as well as the [trading with leverage](docs/leverage.md) documentation before diving in.
+Please make sure to read the [exchange specific notes](https://www.freqtrade.io/en/stable/exchanges/), as well as the [trading with leverage](https://www.freqtrade.io/en/stable/leverage/) documentation before diving in.
 
 ### Community tested
 
@@ -142,7 +143,7 @@ options:
 
 ### Telegram RPC commands
 
-Telegram is not mandatory. However, this is a great way to control your bot. More details and the full command list on the [documentation](https://www.freqtrade.io/en/latest/telegram-usage/)
+Telegram is not mandatory. However, this is a great way to control your bot. More details and the full command list on the [documentation](https://www.freqtrade.io/en/stable/telegram-usage/)
 
 - `/start`: Starts the trader.
 - `/stop`: Stops the trader.

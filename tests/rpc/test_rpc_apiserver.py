@@ -8,7 +8,7 @@ import time
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, PropertyMock
+from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
 import pandas as pd
 import pytest
@@ -50,6 +50,7 @@ BASE_URI = "/api/v1"
 _TEST_USER = "FreqTrader"
 _TEST_PASS = "SuperSecurePassword1!"
 _TEST_WS_TOKEN = "secret_Ws_t0ken"
+_JWT_SECRET_KEY = "99980ff8fcf77f21ef610adb46b788c505b8483897bc26203b5591eefe0d15"
 
 
 @pytest.fixture
@@ -64,6 +65,7 @@ def botclient(default_conf, mocker):
                 "listen_ip_address": "127.0.0.1",
                 "listen_port": 8080,
                 "CORS_origins": ["http://example.com"],
+                "jwt_secret_key": _JWT_SECRET_KEY,
                 "username": _TEST_USER,
                 "password": _TEST_PASS,
                 "ws_token": _TEST_WS_TOKEN,
@@ -178,11 +180,12 @@ def test_api_ui_fallback(botclient, mocker):
     # Allow both fallback or real UI
     assert "`freqtrade install-ui`" in rc.text or "<!DOCTYPE html>" in rc.text
 
-    mocker.patch.object(Path, "is_file", MagicMock(side_effect=[True, False]))
-    rc = client_get(client, "%2F%2F%2Fetc/passwd")
-    assert rc.status_code == 200
+    for test_string in ["%2F%2F%2Fetc/passwd", "assets%2F..%2F..%2F..%2Fdeps.py"]:
+        with patch.object(Path, "is_file", MagicMock(side_effect=[True, False])):
+            rc = client_get(client, test_string)
+            assert rc.status_code == 200
 
-    assert "`freqtrade install-ui`" in rc.text
+            assert "`freqtrade install-ui`" in rc.text
 
 
 def test_api_ui_version(botclient, mocker):
@@ -196,22 +199,22 @@ def test_api_ui_version(botclient, mocker):
 
 def test_api_auth():
     with pytest.raises(ValueError):
-        create_token({"identity": {"u": "Freqtrade"}}, "secret1234", token_type="NotATokenType")
+        create_token({"identity": {"u": "Freqtrade"}}, _JWT_SECRET_KEY, token_type="NotATokenType")
 
-    token = create_token({"identity": {"u": "Freqtrade"}}, "secret1234")
+    token = create_token({"identity": {"u": "Freqtrade"}}, _JWT_SECRET_KEY)
     assert isinstance(token, str)
 
-    u = get_user_from_token(token, "secret1234")
+    u = get_user_from_token(token, _JWT_SECRET_KEY)
     assert u == "Freqtrade"
     with pytest.raises(HTTPException):
-        get_user_from_token(token, "secret1234", token_type="refresh")
+        get_user_from_token(token, _JWT_SECRET_KEY, token_type="refresh")
     # Create invalid token
-    token = create_token({"identity": {"u1": "Freqrade"}}, "secret1234")
+    token = create_token({"identity": {"u1": "Freqrade"}}, _JWT_SECRET_KEY)
     with pytest.raises(HTTPException):
-        get_user_from_token(token, "secret1234")
+        get_user_from_token(token, _JWT_SECRET_KEY)
 
     with pytest.raises(HTTPException):
-        get_user_from_token(b"not_a_token", "secret1234")
+        get_user_from_token(b"not_a_token", _JWT_SECRET_KEY)
 
 
 def test_api_ws_auth(botclient):
@@ -229,7 +232,7 @@ def test_api_ws_auth(botclient):
     with client.websocket_connect(url(good_token)):
         pass
 
-    jwt_secret = ftbot.config["api_server"].get("jwt_secret_key", "super-secret")
+    jwt_secret = ftbot.config["api_server"]["jwt_secret_key"]
     jwt_token = create_token({"identity": {"u": "Freqtrade"}}, jwt_secret)
     with client.websocket_connect(url(jwt_token)):
         pass
@@ -450,6 +453,7 @@ def test_api_run(default_conf, mocker, caplog):
                 "listen_ip_address": "0.0.0.0",
                 "listen_port": 8089,
                 "password": "",
+                "jwt_secret_key": "super-secret",
             }
         }
     )
@@ -2418,6 +2422,31 @@ def test_api_pair_history(botclient, tmp_path, mocker):
     assert "enter_long" not in result["columns"]
     assert result["columns"] == ["date", "open", "high", "low", "close", "volume", "__date_ts"]
 
+    # Disallow base64 strategies
+    base64_dummy = "xx:cHJpbnQoImhlbGxvIHdvcmxkIik="
+    rc = client_post(
+        client,
+        f"{BASE_URI}/pair_history",
+        data={
+            "pair": "UNITTEST/BTC",
+            "timeframe": timeframe,
+            "timerange": "20180111-20180112",
+            "strategy": base64_dummy,
+            "columns": ["rsi", "fastd", "fastk"],
+        },
+    )
+    assert_response(rc, 422)
+    assert rc.json()["detail"] == "base64 encoded strategies are not allowed."
+
+    # Disallow base64 strategies
+    rc = client_get(
+        client,
+        f"{BASE_URI}/pair_history?pair=UNITTEST%2FBTC&timeframe={timeframe}"
+        f"&timerange=20200111-20200112&strategy={base64_dummy}",
+    )
+    assert_response(rc, 422)
+    assert rc.json()["detail"] == "base64 encoded strategies are not allowed."
+
 
 def test_api_pair_history_live_mode(botclient, tmp_path, mocker):
     _ftbot, client = botclient
@@ -2559,19 +2588,50 @@ def test_api_strategy(botclient, tmp_path, mocker):
     rc = client_get(client, f"{BASE_URI}/strategy/{CURRENT_TEST_STRATEGY}")
 
     assert_response(rc)
-    assert rc.json()["strategy"] == CURRENT_TEST_STRATEGY
+    response = rc.json()
+    assert response["strategy"] == CURRENT_TEST_STRATEGY
 
     data = (Path(__file__).parents[1] / "strategy/strats/strategy_test_v3.py").read_text(
         encoding="utf-8"
     )
-    assert rc.json()["code"] == data
+    assert response["code"] == data
+    assert "params" in response
+    assert isinstance(response["params"], list)
+    assert len(response["params"]) >= 6
+    buy_rsi = next(p for p in response["params"] if p["name"] == "buy_rsi")
+    assert buy_rsi == {
+        "param_type": "IntParameter",
+        "name": "buy_rsi",
+        "space": "buy",
+        "load": True,
+        "optimize": True,
+        "value": 35,  # Parameter from buy_params
+        "low": 0,
+        "high": 50,
+    }
+
+    rc = client_get(client, f"{BASE_URI}/strategy/HyperoptableStrategy")
+    assert_response(rc)
+    response2 = rc.json()
+    assert len(response2["params"]) >= 8
+    param_exitaaa = next(p for p in response2["params"] if p["name"] == "exitaaa")
+    assert param_exitaaa == {
+        "param_type": "IntParameter",
+        "name": "exitaaa",
+        "space": "exitaspace",
+        "load": True,
+        "optimize": True,
+        "value": 5,
+        "low": 0,
+        "high": 10,
+    }
 
     rc = client_get(client, f"{BASE_URI}/strategy/NoStrat")
     assert_response(rc, 404)
 
     # Disallow base64 strategies
     rc = client_get(client, f"{BASE_URI}/strategy/xx:cHJpbnQoImhlbGxvIHdvcmxkIik=")
-    assert_response(rc, 500)
+    assert_response(rc, 422)
     mocker.patch(
         "freqtrade.resolvers.strategy_resolver.StrategyResolver._load_strategy",
         side_effect=Exception("Test"),
@@ -2579,6 +2639,40 @@ def test_api_strategy(botclient, tmp_path, mocker):
 
     rc = client_get(client, f"{BASE_URI}/strategy/NoStrat")
     assert_response(rc, 502)
+
+
+def test_api_strategy_trade_mode(botclient, tmp_path, mocker):
+    ftbot, client = botclient
+    ftbot.config["user_data_dir"] = tmp_path
+
+    rc = client_get(client, f"{BASE_URI}/strategy/{CURRENT_TEST_STRATEGY}")
+
+    assert_response(rc)
+    response = rc.json()
+    assert response["strategy"] == CURRENT_TEST_STRATEGY
+
+    data = (Path(__file__).parents[1] / "strategy/strats/strategy_test_v3.py").read_text(
+        encoding="utf-8"
+    )
+    assert response["code"] == data
+    assert "params" in response
+    assert isinstance(response["params"], list)
+    assert len(response["params"]) >= 6
+    buy_rsi = next(p for p in response["params"] if p["name"] == "buy_rsi")
+    assert buy_rsi == {
+        "param_type": "IntParameter",
+        "name": "buy_rsi",
+        "space": "buy",
+        "load": True,
+        "optimize": True,
+        "value": 35,  # Parameter from buy_params
+        "low": 0,
+        "high": 50,
+    }
+
+    rc = client_get(client, f"{BASE_URI}/strategy/HyperoptableStrategy")
+    assert_response(rc, 404)
+    assert rc.json()["detail"] == "Only the currently active strategy is available in trade mode"
 
 
 def test_api_exchanges(botclient):
@@ -3010,7 +3104,7 @@ def test_api_backtesting(botclient, mocker, fee, caplog, tmp_path):
         # Disallow base64 strategies
         data["strategy"] = "xx:cHJpbnQoImhlbGxvIHdvcmxkIik="
         rc = client_post(client, f"{BASE_URI}/backtest", data=data)
-        assert_response(rc, 500)
+        assert_response(rc, 422)
     finally:
         Backtesting.cleanup()
 

@@ -1272,6 +1272,10 @@ def test_check_dry_limit_order_filled_stoploss(
         "ft_order_type": "stoploss",
         "stopLossPrice": 24.5,
     }
+    if immediate and crossed:
+        with pytest.raises(InvalidOrderException, match=r".*Stoploss would trigger immediately.*"):
+            exchange.check_dry_limit_order_filled(order, immediate=immediate)
+        return
 
     result = exchange.check_dry_limit_order_filled(order, immediate=immediate)
 
@@ -1369,6 +1373,59 @@ def test_create_dry_run_order_limit_fill(
     mocker.patch(f"{EXMS}.fetch_l2_order_book", return_value={"asks": [], "bids": []})
     exchange._dry_run_open_orders[order["id"]]["status"] = "open"
     order_closed = exchange.fetch_dry_run_order(order["id"])
+
+
+@pytest.mark.parametrize(
+    "side,price,error",
+    [
+        # order_book_l2_usd spread:
+        # best ask: 25.566
+        # best bid: 25.563
+        ("sell", 22.0, False),
+        ("sell", 25.55, False),
+        ("sell", 26.00, True),
+        ("buy", 30.0, False),
+        ("buy", 25.57, False),
+        ("buy", 22.57, True),
+    ],
+)
+@pytest.mark.parametrize("exchange_name", EXCHANGES)
+def test_create_dry_run_order_stoploss(
+    default_conf_usdt,
+    mocker,
+    exchange_name,
+    order_book_l2_usd,
+    side,
+    price,
+    error,
+):
+    default_conf_usdt["dry_run"] = True
+    exchange = get_patched_exchange(mocker, default_conf_usdt, exchange=exchange_name)
+    if not exchange.get_option("stoploss_on_exchange"):
+        pytest.skip(f"{exchange_name} does not support on exchange stoploss orders")
+
+    mocker.patch.multiple(
+        EXMS,
+        exchange_has=MagicMock(return_value=True),
+        fetch_l2_order_book=order_book_l2_usd,
+    )
+    params = {
+        "pair": "LTC/USDT",
+        "amount": 1,
+        "stop_price": price,
+        "order_types": {"stoploss": "limit"},
+        "side": side,
+        "leverage": 1.0,
+    }
+    if not error:
+        order = exchange.create_stoploss(**params)
+        assert isinstance(order, dict)
+        assert order.get("ft_order_type") == "stoploss"
+        assert order["status"] == "open"
+        # assert order["price"] == price
+    else:
+        with pytest.raises(InvalidOrderException, match=r".*Stoploss would trigger immediately.*"):
+            exchange.create_stoploss(**params)
 
 
 @pytest.mark.parametrize(
@@ -2794,8 +2851,10 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
         ("LTC/BTC", "1h", CandleType.SPOT),
     ]
 
-    ohlcv_data = {p: ohlcv for p in pairs}
-    ohlcv_mock = mocker.patch(f"{EXMS}.refresh_latest_ohlcv", return_value=ohlcv_data)
+    def ohlcv_side_effect(requested_pairs, *args, **kwargs):
+        return {p: ohlcv for p in requested_pairs}
+
+    ohlcv_mock = mocker.patch(f"{EXMS}.refresh_latest_ohlcv", side_effect=ohlcv_side_effect)
     mocker.patch(f"{EXMS}.ohlcv_candle_limit", return_value=100)
     exchange = get_patched_exchange(mocker, default_conf)
 
@@ -2813,6 +2872,14 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     ohlcv_mock.reset_mock()
     res = exchange.refresh_ohlcv_with_cache(pairs, start.timestamp())
     assert ohlcv_mock.call_count == 0
+    assert len(res) == 5
+
+    # # re-run with one additional pair
+    res = exchange.refresh_ohlcv_with_cache(
+        pairs + [("NEW/PAIR", "1d", CandleType.SPOT)], start.timestamp()
+    )
+    assert ohlcv_mock.call_count == 1
+    assert len(res) == 6
 
     # Expire 5m cache
     time_machine.move_to(start + timedelta(minutes=6), tick=False)
@@ -2821,6 +2888,7 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     res = exchange.refresh_ohlcv_with_cache(pairs, start.timestamp())
     assert ohlcv_mock.call_count == 1
     assert len(ohlcv_mock.call_args_list[0][0][0]) == 1
+    assert len(res) == 5
 
     # Expire 5m and 1h cache
     time_machine.move_to(start + timedelta(hours=2), tick=False)
@@ -2829,6 +2897,7 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     res = exchange.refresh_ohlcv_with_cache(pairs, start.timestamp())
     assert ohlcv_mock.call_count == 1
     assert len(ohlcv_mock.call_args_list[0][0][0]) == 2
+    assert len(res) == 5
 
     # Expire all caches
     time_machine.move_to(start + timedelta(days=1, hours=2), tick=False)
@@ -2838,6 +2907,7 @@ def test_refresh_ohlcv_with_cache(mocker, default_conf, time_machine) -> None:
     assert ohlcv_mock.call_count == 1
     assert len(ohlcv_mock.call_args_list[0][0][0]) == 5
     assert ohlcv_mock.call_args_list[0][0][0] == pairs
+    assert len(res) == 5
 
 
 def test_refresh_latest_ohlcv_funding_rate(mocker, default_conf_usdt, caplog) -> None:
@@ -6639,7 +6709,7 @@ def test_verify_candle_type_support(default_conf, mocker):
 
     with pytest.raises(
         OperationalException,
-        match=r"Exchange .* does not support fetching premiumindex candles\.",
+        match=r"Exchange .* does not support fetching premiumIndex candles\.",
     ):
         exchange.verify_candle_type_support(CandleType.PREMIUMINDEX)
 

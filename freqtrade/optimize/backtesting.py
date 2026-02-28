@@ -136,6 +136,7 @@ class Backtesting:
             "exited": {},
         }
         self.rejected_dict: dict[str, list] = {}
+        self.starting_balance: float = 0.0
 
         self._exchange_name = self.config["exchange"]["name"]
         self.__initial_backtest = exchange is None
@@ -277,6 +278,7 @@ class Backtesting:
         self.reset_backtest(False)
 
         self.wallets = Wallets(self.config, self.exchange, is_backtest=True)
+        self.starting_balance = self.wallets.get_starting_balance()
 
         self.progress = BTProgress()
         self.abort = False
@@ -605,8 +607,6 @@ class Backtesting:
         trade_dur: int,
     ) -> float:
         is_short = trade.is_short or False
-        leverage = trade.leverage or 1.0
-        side_1 = -1 if is_short else 1
         roi_entry, roi = self.strategy.min_roi_reached_entry(
             trade,  # type: ignore[arg-type]
             trade_dur,
@@ -619,10 +619,7 @@ class Backtesting:
                 # - we'll use open instead of close
                 return row[OPEN_IDX]
 
-            # - (Expected abs profit - open_rate - open_fee) / (fee_close -1)
-            roi_rate = trade.open_rate * roi / leverage
-            open_fee_rate = side_1 * trade.open_rate * (1 + side_1 * trade.fee_open)
-            close_rate = -(roi_rate + open_fee_rate) / ((trade.fee_close or 0.0) - side_1 * 1)
+            close_rate = trade.calc_close_rate_for_roi(roi)
             if is_short:
                 is_new_roi = row[OPEN_IDX] < close_rate
             else:
@@ -1276,8 +1273,8 @@ class Backtesting:
 
     def run_protections(self, pair: str, current_time: datetime, side: LongShort):
         if self.enable_protections:
-            self.protections.stop_per_pair(pair, current_time, side)
-            self.protections.global_stop(current_time, side)
+            self.protections.stop_per_pair(pair, current_time, side, self.starting_balance)
+            self.protections.global_stop(current_time, side, self.starting_balance)
 
     def manage_open_orders(self, trade: LocalTrade, current_time: datetime, row: tuple) -> bool:
         """
