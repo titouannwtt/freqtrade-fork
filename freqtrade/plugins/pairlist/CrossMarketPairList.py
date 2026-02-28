@@ -4,6 +4,7 @@ Price pair list filter
 
 import logging
 
+from freqtrade.constants import PairPrefixes
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 from freqtrade.util import FtTTLCache
@@ -12,7 +13,7 @@ from freqtrade.util import FtTTLCache
 logger = logging.getLogger(__name__)
 
 
-class CrossMarketPairlist(IPairList):
+class CrossMarketPairList(IPairList):
     supports_backtesting = SupportsBacktesting.BIASED
 
     def __init__(self, *args, **kwargs) -> None:
@@ -76,8 +77,6 @@ class CrossMarketPairlist(IPairList):
         ]
         return bases
 
-    prefixes = ("1000", "1000000", "1M", "K", "M")
-
     def gen_pairlist(self, tickers: Tickers) -> list[str]:
         """
         Generate the pairlist
@@ -115,21 +114,26 @@ class CrossMarketPairlist(IPairList):
 
         for pair in pairlist:
             base = self._exchange.get_pair_base_currency(pair)
+            if not base:
+                filtered_pairlist.remove(pair)
+                continue
             found_in_bases = base in bases
             if not found_in_bases:
-                for prefix in self.prefixes:
-                    # Check in case of PEPE needs to be changed to 1000PEPE for example
+                for prefix in PairPrefixes:
+                    # Check in case of PEPE needs to be changed into 1000PEPE for example
                     test_prefix = f"{prefix}{base}"
                     found_in_bases = test_prefix in bases
                     if found_in_bases:
                         break
 
-                    # Check in case of 1000PEPE needs to be changed to PEPE for example
-                    if base.startswith(prefix):
-                        temp_base = base.removeprefix(prefix)
-                        found_in_bases = temp_base in bases
-                        if found_in_bases:
-                            break
+                    # Avoid false positive since there are KAVA and AVA pairs, which aren't related
+                    if prefix != "K":
+                        # Check in case of 1000PEPE needs to be changed into PEPE for example
+                        if base.startswith(prefix):
+                            temp_base = base.removeprefix(prefix)
+                            found_in_bases = temp_base in bases
+                            if found_in_bases:
+                                break
             if found_in_bases:
                 whitelisted_pairlist.append(pair)
                 filtered_pairlist.remove(pair)

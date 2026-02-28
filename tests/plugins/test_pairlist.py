@@ -2585,6 +2585,107 @@ def test_MarketCapPairList_exceptions(mocker, default_conf_usdt, caplog):
 
 
 @pytest.mark.parametrize(
+    "pairlists,trade_mode,result",
+    [
+        (
+            [
+                # Whitelist mode on spot
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "CrossMarketPairList", "mode": "whitelist"},
+            ],
+            "spot",
+            ["ETH/USDT"],
+        ),
+        (
+            [
+                # Blacklist mode on spot
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "CrossMarketPairList", "mode": "blacklist"},
+            ],
+            "spot",
+            ["LTC/USDT", "XRP/USDT", "NEO/USDT", "TKN/USDT", "BTC/USDT"],
+        ),
+        (
+            [
+                # Whitelist mode on futures
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "CrossMarketPairList", "mode": "whitelist"},
+            ],
+            "futures",
+            ["ETH/USDT:USDT"],
+        ),
+        (
+            [
+                # Blacklist mode on futures
+                {"method": "StaticPairList", "allow_inactive": True},
+                {"method": "CrossMarketPairList", "mode": "blacklist"},
+            ],
+            "futures",
+            ["ADA/USDT:USDT"],
+        ),
+        (
+            [
+                # CrossMarketPairList as generator, whitelist mode, spot market
+                {"method": "CrossMarketPairList", "mode": "whitelist"},
+            ],
+            "spot",
+            ["ETH/USDT"],
+        ),
+        (
+            [
+                # CrossMarketPairList as generator, blacklist mode, spot market
+                {"method": "CrossMarketPairList", "mode": "blacklist"},
+            ],
+            "spot",
+            ["BTC/USDT", "XRP/USDT", "NEO/USDT", "TKN/USDT"],
+        ),
+        (
+            [
+                # CrossMarketPairList as generator, whitelist mode, futures market
+                {"method": "CrossMarketPairList", "mode": "whitelist"},
+            ],
+            "futures",
+            ["ETH/USDT:USDT"],
+        ),
+        (
+            [
+                # CrossMarketPairList as generator, blacklist mode, futures market
+                {"method": "CrossMarketPairList", "mode": "blacklist"},
+            ],
+            "futures",
+            ["ADA/USDT:USDT"],
+        ),
+    ],
+)
+def test_CrossMarketPairlist_filter(
+    mocker, default_conf_usdt, trade_mode, markets, pairlists, result
+):
+    default_conf_usdt["trading_mode"] = trade_mode
+    if trade_mode == "spot":
+        default_conf_usdt["exchange"]["pair_whitelist"].extend(["BTC/USDT", "ETC/USDT", "ADA/USDT"])
+    else:
+        default_conf_usdt["exchange"]["pair_whitelist"] = [
+            "BTC/USDT:USDT",
+            "ETH/USDT:USDT",
+            "ETC/USDT:USDT",
+            "ADA/USDT:USDT",
+        ]
+    default_conf_usdt["pairlists"] = pairlists
+    mocker.patch.multiple(
+        EXMS,
+        markets=PropertyMock(return_value=markets),
+        exchange_has=MagicMock(return_value=True),
+    )
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+
+    pm = PairListManager(exchange, default_conf_usdt)
+    pm.refresh_pairlist()
+
+    assert pm.whitelist == result
+
+
+@pytest.mark.parametrize(
     "pairlists,expected_error,expected_warning",
     [
         (
