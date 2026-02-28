@@ -2,7 +2,7 @@
 
 Pairlist Handlers define the list of pairs (pairlist) that the bot should trade. They are configured in the `pairlists` section of the configuration settings.
 
-In your configuration, you can use Static Pairlist (defined by the [`StaticPairList`](#static-pair-list) Pairlist Handler) and Dynamic Pairlist (defined by the [`VolumePairList`](#volume-pair-list), [`CrossMarketPairList`](#CrossMarketPairList), [`MarketCapPairlist`](#marketcappairlist) and [`PercentChangePairList`](#percent-change-pair-list) Pairlist Handlers).
+In your configuration, you can use Static Pairlist (defined by the [`StaticPairList`](#static-pair-list) Pairlist Handler) and Dynamic Pairlist (defined by the [`VolumePairList`](#volume-pair-list), [`CrossMarketPairList`](#crossmarketpairlist), [`MarketCapPairlist`](#marketcappairlist) and [`PercentChangePairList`](#percent-change-pair-list) Pairlist Handlers).
 
 Additionally, [`AgeFilter`](#agefilter), [`DelistFilter`](#delistfilter), [`PrecisionFilter`](#precisionfilter), [`PriceFilter`](#pricefilter), [`ShuffleFilter`](#shufflefilter), [`SpreadFilter`](#spreadfilter) and [`VolatilityFilter`](#volatilityfilter) act as Pairlist Filters, removing certain pairs and/or moving their positions in the pairlist.
 
@@ -26,7 +26,7 @@ You may also use something like `.*DOWN/BTC` or `.*UP/BTC` to exclude leveraged 
 * [`ProducerPairList`](#producerpairlist)
 * [`RemotePairList`](#remotepairlist)
 * [`MarketCapPairList`](#marketcappairlist)
-* [`CrossMarketPairList`](#CrossMarketPairList)
+* [`CrossMarketPairList`](#crossmarketpairlist)
 * [`AgeFilter`](#agefilter)
 * [`DelistFilter`](#delistfilter)
 * [`FullTradesFilter`](#fulltradesfilter)
