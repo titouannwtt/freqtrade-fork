@@ -61,7 +61,7 @@ class CrossMarketPairList(IPairList):
             **IPairList.refresh_period_parameter(),
         }
 
-    def get_base_list(self):
+    def get_base_list(self) -> list[str]:
         target_mode = self._target_mode
         spot_only = True if target_mode == "spot" else False
         futures_only = True if target_mode == "futures" else False
