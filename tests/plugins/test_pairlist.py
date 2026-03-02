@@ -2685,6 +2685,102 @@ def test_CrossMarketPairlist_filter(
     assert pm.whitelist == result
 
 
+def test_CrossMarketPairlist_gen_pairlist_uses_cache(mocker, default_conf_usdt, markets):
+    default_conf_usdt["trading_mode"] = "spot"
+    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+
+    mocker.patch.multiple(
+        EXMS,
+        markets=PropertyMock(return_value=markets),
+        exchange_has=MagicMock(return_value=True),
+    )
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+    pm = PairListManager(exchange, default_conf_usdt)
+    pl = pm._pairlist_handlers[0]
+
+    pl._pair_cache["pairlist"] = ["ETH/USDT", "ADA/USDT"]
+    pl._exchange.get_markets = MagicMock(
+        side_effect=AssertionError("get_markets should not be called")
+    )
+
+    result = pl.gen_pairlist({})
+
+    assert result == ["ETH/USDT", "ADA/USDT"]
+    # Make sure the returned list is a copy, not the cached one
+    assert result is not pl._pair_cache["pairlist"]
+    result.append("BTC/USDT")
+    # Make sure the cache is not modified
+    assert pl._pair_cache["pairlist"] == ["ETH/USDT", "ADA/USDT"]
+
+
+def test_CrossMarketPairList_breaks_prefix_loop_on_match(mocker, default_conf_usdt, markets):
+    default_conf_usdt["trading_mode"] = "spot"
+    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+
+    mocker.patch.multiple(
+        EXMS,
+        markets=PropertyMock(return_value=markets),
+        exchange_has=MagicMock(return_value=True),
+    )
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+    pm = PairListManager(exchange, default_conf_usdt)
+    pl = pm._pairlist_handlers[0]
+
+    # Force base lookup path
+    mocker.patch.object(pl, "get_base_list", return_value=["1000PEPE"])
+    mocker.patch.object(pl._exchange, "get_pair_base_currency", return_value="PEPE")
+
+    class PrefixesWithGuard:
+        def __iter__(self):
+            yield "1000"  # first prefix => match via "1000PEPE"
+            raise AssertionError("Prefix loop did not break after match")
+
+    mocker.patch(
+        "freqtrade.plugins.pairlist.CrossMarketPairList.PairPrefixes",
+        new=PrefixesWithGuard(),
+    )
+
+    result = pl.filter_pairlist(["PEPE/USDT"], {})
+    assert result == ["PEPE/USDT"]
+
+
+def test_CrossMarketPairList_breaks_prefix_loop_on_delayed_match(
+    mocker, default_conf_usdt, markets
+):
+    default_conf_usdt["trading_mode"] = "spot"
+    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+
+    mocker.patch.multiple(
+        EXMS,
+        markets=PropertyMock(return_value=markets),
+        exchange_has=MagicMock(return_value=True),
+    )
+
+    exchange = get_patched_exchange(mocker, default_conf_usdt)
+    pm = PairListManager(exchange, default_conf_usdt)
+    pl = pm._pairlist_handlers[0]
+
+    # Force second matching path: base startswith prefix and removeprefix() matches bases.
+    mocker.patch.object(pl, "get_base_list", return_value=["PEPE"])
+    mocker.patch.object(pl._exchange, "get_pair_base_currency", return_value="1000PEPE")
+
+    class PrefixesWithGuard:
+        def __iter__(self):
+            yield "X"  # no match, loop should continue
+            yield "1000"  # second path should match via removeprefix -> PEPE and break
+            raise AssertionError("Prefix loop did not break after delayed match")
+
+    mocker.patch(
+        "freqtrade.plugins.pairlist.CrossMarketPairList.PairPrefixes",
+        new=PrefixesWithGuard(),
+    )
+
+    result = pl.filter_pairlist(["1000PEPE/USDT"], {})
+    assert result == ["1000PEPE/USDT"]
+
+
 @pytest.mark.parametrize(
     "pairlists,expected_error,expected_warning",
     [

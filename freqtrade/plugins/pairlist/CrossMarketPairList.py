@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class CrossMarketPairList(IPairList):
+    is_pairlist_generator = True
     supports_backtesting = SupportsBacktesting.BIASED
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self._mode: str = self._pairlistconfig.get("mode", "whitelist")
-        self._trading_mode: str = self._config["trading_mode"]
         self._stake_currency: str = self._config["stake_currency"]
-        self._target_mode = "futures" if self._trading_mode == "spot" else "spot"
+        self._target_mode = "spot" if self._config["trading_mode"] == "futures" else "futures"
         self._refresh_period = self._pairlistconfig.get("refresh_period", 1800)
         self._pair_cache: FtTTLCache = FtTTLCache(maxsize=1, ttl=self._refresh_period)
 
@@ -115,6 +115,9 @@ class CrossMarketPairList(IPairList):
         for pair in pairlist:
             base = self._exchange.get_pair_base_currency(pair)
             if not base:
+                self.log_once(
+                    f"Unable to get base currency for pair {pair}, skipping it.", logger.warning
+                )
                 filtered_pairlist.remove(pair)
                 continue
             found_in_bases = base in bases
