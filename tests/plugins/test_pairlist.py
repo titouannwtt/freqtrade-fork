@@ -2589,68 +2589,68 @@ def test_MarketCapPairList_exceptions(mocker, default_conf_usdt, caplog):
     [
         (
             [
-                # Whitelist mode on spot
+                # Spot pairs that exist on both markets
                 {"method": "StaticPairList", "allow_inactive": True},
-                {"method": "CrossMarketPairList", "mode": "whitelist"},
+                {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"},
             ],
             "spot",
             ["ETH/USDT"],
         ),
         (
             [
-                # Blacklist mode on spot
+                # Spot pairs that exist only on spot market
                 {"method": "StaticPairList", "allow_inactive": True},
-                {"method": "CrossMarketPairList", "mode": "blacklist"},
+                {"method": "CrossMarketPairList", "pairs_exist_on": "current_market_only"},
             ],
             "spot",
             ["LTC/USDT", "XRP/USDT", "NEO/USDT", "TKN/USDT", "BTC/USDT"],
         ),
         (
             [
-                # Whitelist mode on futures
+                # Futures pairs that exist on both markets
                 {"method": "StaticPairList", "allow_inactive": True},
-                {"method": "CrossMarketPairList", "mode": "whitelist"},
+                {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"},
             ],
             "futures",
             ["ETH/USDT:USDT"],
         ),
         (
             [
-                # Blacklist mode on futures
+                # Futures pairs that exist only on futures market
                 {"method": "StaticPairList", "allow_inactive": True},
-                {"method": "CrossMarketPairList", "mode": "blacklist"},
+                {"method": "CrossMarketPairList", "pairs_exist_on": "current_market_only"},
             ],
             "futures",
             ["ADA/USDT:USDT"],
         ),
         (
             [
-                # CrossMarketPairList as generator, whitelist mode, spot market
-                {"method": "CrossMarketPairList", "mode": "whitelist"},
+                # CrossMarketPairList as generator, spot market, pairs that exist on both markets
+                {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"},
             ],
             "spot",
             ["ETH/USDT"],
         ),
         (
             [
-                # CrossMarketPairList as generator, blacklist mode, spot market
-                {"method": "CrossMarketPairList", "mode": "blacklist"},
+                # CrossMarketPairList as generator, spot pairs that exist only on spot market
+                {"method": "CrossMarketPairList", "pairs_exist_on": "current_market_only"},
             ],
             "spot",
             ["BTC/USDT", "XRP/USDT", "NEO/USDT", "TKN/USDT"],
         ),
         (
             [
-                # CrossMarketPairList as generator, whitelist mode, futures market
-                {"method": "CrossMarketPairList", "mode": "whitelist"},
+                # CrossMarketPairList as generator, futures pairs that exist on both markets
+                {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"},
             ],
             "futures",
             ["ETH/USDT:USDT"],
         ),
         (
             [
-                # CrossMarketPairList as generator, blacklist mode, futures market
-                {"method": "CrossMarketPairList", "mode": "blacklist"},
+                # CrossMarketPairList as generator, futures pairs that exist only on futures market
+                {"method": "CrossMarketPairList", "pairs_exist_on": "current_market_only"},
             ],
             "futures",
             ["ADA/USDT:USDT"],
@@ -2687,7 +2687,9 @@ def test_CrossMarketPairlist_filter(
 
 def test_CrossMarketPairlist_gen_pairlist_uses_cache(mocker, default_conf_usdt, markets):
     default_conf_usdt["trading_mode"] = "spot"
-    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+    default_conf_usdt["pairlists"] = [
+        {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"}
+    ]
 
     mocker.patch.multiple(
         EXMS,
@@ -2716,7 +2718,9 @@ def test_CrossMarketPairlist_gen_pairlist_uses_cache(mocker, default_conf_usdt, 
 
 def test_CrossMarketPairList_breaks_prefix_loop_on_match(mocker, default_conf_usdt, markets):
     default_conf_usdt["trading_mode"] = "spot"
-    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+    default_conf_usdt["pairlists"] = [
+        {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"}
+    ]
 
     mocker.patch.multiple(
         EXMS,
@@ -2750,7 +2754,9 @@ def test_CrossMarketPairList_breaks_prefix_loop_on_delayed_match(
     mocker, default_conf_usdt, markets
 ):
     default_conf_usdt["trading_mode"] = "spot"
-    default_conf_usdt["pairlists"] = [{"method": "CrossMarketPairList", "mode": "whitelist"}]
+    default_conf_usdt["pairlists"] = [
+        {"method": "CrossMarketPairList", "pairs_exist_on": "both_markets"}
+    ]
 
     mocker.patch.multiple(
         EXMS,
