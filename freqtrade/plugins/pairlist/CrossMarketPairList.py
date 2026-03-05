@@ -1,6 +1,4 @@
-"""
-Price pair list filter
-"""
+"""Cross Market pair list filter"""
 
 import logging
 
