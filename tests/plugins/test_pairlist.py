@@ -2736,14 +2736,13 @@ def test_CrossMarketPairList_breaks_prefix_loop_on_match(mocker, default_conf_us
     mocker.patch.object(pl, "get_base_list", return_value=["1000PEPE"])
     mocker.patch.object(pl._exchange, "get_pair_base_currency", return_value="PEPE")
 
-    class PrefixesWithGuard:
-        def __iter__(self):
-            yield "1000"  # first prefix => match via "1000PEPE"
-            raise AssertionError("Prefix loop did not break after match")
+    def prefix_generator():
+        yield "1000"  # first prefix => match via "1000PEPE"
+        raise AssertionError("Prefix loop did not break after match")
 
     mocker.patch(
         "freqtrade.plugins.pairlist.CrossMarketPairList.PairPrefixes",
-        new=PrefixesWithGuard(),
+        new=prefix_generator(),
     )
 
     result = pl.filter_pairlist(["PEPE/USDT"], {})
@@ -2772,15 +2771,14 @@ def test_CrossMarketPairList_breaks_prefix_loop_on_delayed_match(
     mocker.patch.object(pl, "get_base_list", return_value=["PEPE"])
     mocker.patch.object(pl._exchange, "get_pair_base_currency", return_value="1000PEPE")
 
-    class PrefixesWithGuard:
-        def __iter__(self):
-            yield "X"  # no match, loop should continue
-            yield "1000"  # second path should match via removeprefix -> PEPE and break
-            raise AssertionError("Prefix loop did not break after delayed match")
+    def prefix_generator():
+        yield "X"  # no match, loop should continue
+        yield "1000"  # second path should match via removeprefix -> PEPE and break
+        raise AssertionError("Prefix loop did not break after delayed match")
 
     mocker.patch(
         "freqtrade.plugins.pairlist.CrossMarketPairList.PairPrefixes",
-        new=PrefixesWithGuard(),
+        new=prefix_generator(),
     )
 
     result = pl.filter_pairlist(["1000PEPE/USDT"], {})
