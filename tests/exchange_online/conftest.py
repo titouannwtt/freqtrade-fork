@@ -574,6 +574,43 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "leverage_tiers_public": True,
         "sample_order_futures": [
             {
+                # Regular market order
+                "exchange_response": {
+                    "uid": "a11a8dc2-0440-4fe1-5212-1bx15c8f1c8e",
+                    "accountUid": "cabdb242-5111-4dac-bac-76f33395d76d",
+                    "tradeable": "PF_XBTUSD",
+                    "direction": "Sell",
+                    "quantity": "0",
+                    "filled": "0.0004",
+                    "timestamp": 1771354195241,
+                    "limitPrice": "67164.00",
+                    "orderType": "IoC",
+                    "clientId": "",
+                    "reduceOnly": False,
+                    "lastUpdateTimestamp": 1771354195241,
+                    "regulatoryExternalUid": "ae198dd6-6be0-4014-8af-ebd472190648",
+                    "status": "closed",
+                },
+                "pair": "BTC/USD:USD",
+                "expected": {
+                    "symbol": "BTC/USD:USD",
+                    "id": "a11a8dc2-0440-4fe1-5212-1bx15c8f1c8e",
+                    "timestamp": 1771354195241,
+                    "datetime": "2026-02-17T18:49:55.241Z",
+                    "price": 67164.0,
+                    # Average should be None (it's not correct for market orders), but we have a
+                    # workaround for this in place.
+                    "average": 67164.0,
+                    "status": "closed",
+                    "type": "market",
+                    "amount": 0.0004,
+                    "side": "sell",
+                    "triggerPrice": None,
+                    "stopPrice": None,
+                    "stopLossPrice": None,
+                },
+            },
+            {
                 # Trigger order
                 "exchange_response": {
                     "order": {
