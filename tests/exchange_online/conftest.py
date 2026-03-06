@@ -572,6 +572,50 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
         "futures_pair": "BTC/USD:USD",
         "hasQuoteVolumeFutures": False,
         "leverage_tiers_public": True,
+        "sample_order_futures": [
+            {
+                # Trigger order
+                "exchange_response": {
+                    "order": {
+                        "type": "TRIGGER_ORDER",
+                        "orderId": "a11a8ff3-17f3-5112-8caa-9cbbacfa1c8e",
+                        "cliOrdId": None,
+                        "symbol": "PF_XBTUSD",
+                        "side": "buy",
+                        "quantity": 0.0004,
+                        "limitPrice": 71712,
+                        "reduceOnly": True,
+                        "timestamp": "2026-02-17T16:26:02.918Z",
+                        "lastUpdateTimestamp": "2026-02-17T16:26:02.918Z",
+                        "priceTriggerOptions": {
+                            "triggerPrice": 71641,
+                            "triggerSignal": "LAST_PRICE",
+                            "triggerSide": "TRIGGER_ABOVE",
+                            "limitPriceOffsetValue": None,
+                            "limitPriceOffsetUnit": None,
+                        },
+                    },
+                    "status": "TRIGGER_PLACED",
+                    "updateReason": None,
+                    "error": None,
+                },
+                "pair": "BTC/USD:USD",
+                "expected": {
+                    "symbol": "BTC/USD:USD",
+                    "id": "a11a8ff3-17f3-5112-8caa-9cbbacfa1c8e",
+                    "timestamp": 1771345562918,
+                    "datetime": "2026-02-17T16:26:02.918Z",
+                    "price": 71712.0,
+                    "status": "open",
+                    "amount": 0.0004,
+                    "side": "buy",
+                    # TODO: this should work if stoploss is supposed to work.
+                    # "triggerPrice": 71641.0,
+                    # "stopPrice": 71641.0,
+                    # "stopLossPrice": 71641.0,
+                },
+            },
+        ],
     },
 }
 
