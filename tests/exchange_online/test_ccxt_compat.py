@@ -117,10 +117,10 @@ class TestCCXTExchange:
                 # Generic comparison which works for all fields
                 for key, value in expected.items():
                     assert key in po, f"Expected key {key} not found in parsed order"
+                    assert po[key] == value, f"Expected {key} to be {value}, got {po[key]}"
                     assert isinstance(po[key], type(value)), (
                         f"Expected {key} to be of type {type(value)}, got {type(po[key])}"
                     )
-                    assert po[key] == value, f"Expected {key} to be {value}, got {po[key]}"
 
         else:
             pytest.skip(f"No sample order available for exchange {exchangename}")
