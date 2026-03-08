@@ -88,6 +88,8 @@ class Hyperliquid(Exchange):
                 }
                 response = self._api.publicPostInfo(request)
                 self.unified_account = response in ('"unifiedAccount"', '"portfolioMargin"')
+                if self.unified_account:
+                    logger.info("Unified Hyperliquid account detected.")
 
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
