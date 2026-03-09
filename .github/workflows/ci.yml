@@ -422,8 +422,6 @@ jobs:
       packages: write # Needed to push package versions
       contents: read
     secrets:
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
 
