@@ -3,6 +3,10 @@ name: Docker Build and Deploy
 on:
   workflow_call:
     secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
       DISCORD_WEBHOOK:
         required: false
   workflow_dispatch:
