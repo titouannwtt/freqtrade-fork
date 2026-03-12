@@ -697,8 +697,17 @@ class MarketResponse(BaseModel):
     exchange_id: str
 
 
+class CpuInfo(BaseModel):
+    cpu: int
+    pct: float
+
+
 class SysInfo(BaseModel):
     cpu_pct: list[float]
+    cpu_load: list[CpuInfo]
+    cpu_load_avg: dict[str, float]
+    cpu_count: int
+    cpu_avg: float
     ram_pct: float
 
 
