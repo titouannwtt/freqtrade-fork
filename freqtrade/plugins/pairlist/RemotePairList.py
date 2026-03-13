@@ -87,7 +87,7 @@ class RemotePairList(IPairList):
             },
             "number_assets": {
                 "type": "number",
-                "default": 30,
+                "default": None,
                 "description": "Number of assets",
                 "help": "Number of assets to use from the pairlist.",
             },
