@@ -300,6 +300,6 @@ class RemotePairList(IPairList):
             if filtered:
                 self.log_once(f"Blacklist - Filtered out pairs: {filtered}", logger.info)
 
-        if self._number_pairs:
+        if self._number_pairs and (self._mode == "whitelist"):
             merged_list = merged_list[: self._number_pairs]
         return merged_list
