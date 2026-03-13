@@ -82,7 +82,7 @@ router = APIRouter()
 def ping():
     """simple ping to check if API is responsive
 
-    Performa no internal checks, just returns poing.
+    Performs no internal checks, just returns pong.
     """
     return {"status": "pong"}
 
