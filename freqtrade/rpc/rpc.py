@@ -1739,7 +1739,7 @@ class RPC:
         cpu_pct = psutil.cpu_percent(interval=0.1, percpu=True)
         load_avg = psutil.getloadavg()
         return {
-            "cpu_pct": cpu_pct,
+            "cpu_pct": cpu_pct,  # Deprecated, use cpu_load instead
             "cpu_load": [
                 {
                     "cpu": idx,
