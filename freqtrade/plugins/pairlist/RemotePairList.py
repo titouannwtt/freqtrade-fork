@@ -70,8 +70,7 @@ class RemotePairList(IPairList):
         """
         Short whitelist method description - used for startup-messages
         """
-        num_assets = self._number_pairs if self._number_pairs else "all"
-        return f"{self.name} - {num_assets} pairs from RemotePairlist."
+        return f"{self.name} - {self._number_pairs or 'all'} pairs from RemotePairList."
 
     @staticmethod
     def description() -> str:
