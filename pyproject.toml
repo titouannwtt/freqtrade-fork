@@ -77,25 +77,25 @@ dependencies = [
 # Requirements used for submodules
 plot = ["plotly>=4.0"]
 hyperopt = [
-  "scipy",
-  "scikit-learn",
-  "optuna > 4.0.0",
   "cmaes",
   "filelock",
+  "optuna > 4.0.0",
+  "scikit-learn",
+  "scipy",
 ]
 freqai = [
-  "scikit-learn",
+  "datasieve>=0.1.5",
   "joblib",
   "lightgbm",
-  "xgboost",
+  "scikit-learn",
   "tensorboard",
-  "datasieve>=0.1.5",
+  "xgboost",
 ]
 freqai_rl = [
-  "torch; sys_platform != 'darwin' or platform_machine != 'x86_64'",
   "gymnasium",
-  "stable-baselines3; sys_platform != 'darwin' or platform_machine != 'x86_64'",
   "sb3-contrib; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+  "stable-baselines3; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+  "torch; sys_platform != 'darwin' or platform_machine != 'x86_64'",
   "tqdm",
 ]
 develop = [
@@ -118,10 +118,10 @@ develop = [
   "types-tabulate",
 ]
 jupyter = [
-  "jupyter",
-  "nbstripout",
   "ipykernel",
+  "jupyter",
   "nbconvert",
+  "nbstripout",
 ]
 all = [
   "freqtrade[plot,hyperopt,freqai,freqai_rl,jupyter]",
