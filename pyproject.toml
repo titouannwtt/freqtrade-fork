@@ -153,27 +153,6 @@ namespaces = true
 [tool.setuptools.dynamic]
 version = {attr = "freqtrade.__version__"}
 
-[tool.black]
-line-length = 100
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-  )/
-  # Exclude vendor directory
-  | vendor
-)
-'''
-
 [tool.isort]
 line_length = 100
 profile = "black"
