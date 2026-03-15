@@ -152,14 +152,13 @@ namespaces = true
 [tool.setuptools.dynamic]
 version = {attr = "freqtrade.__version__"}
 
-[tool.pytest.ini_options]
-# TODO: should be migrated to [tool.pytest] as support for this was added in 9.0
+[tool.pytest]
 log_format = "%(asctime)s %(levelname)s %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
+addopts = ["--dist", "loadscope"]
 
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--dist loadscope"
 
 [tool.mypy]
 ignore_missing_imports = true
