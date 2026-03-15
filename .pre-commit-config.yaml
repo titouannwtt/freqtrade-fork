@@ -29,13 +29,6 @@ repos:
           - SQLAlchemy==2.0.47
         # stages: [push]
 
-  - repo: https://github.com/pycqa/isort
-    rev: "8.0.1"
-    hooks:
-      - id: isort
-        name: isort (python)
-        # stages: [push]
-
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
     rev: 'v0.15.5'

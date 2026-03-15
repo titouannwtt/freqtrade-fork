@@ -99,7 +99,6 @@ freqai_rl = [
   "tqdm",
 ]
 develop = [
-  "isort",
   "mypy",
   "pre-commit",
   "pytest-asyncio",
@@ -152,14 +151,6 @@ namespaces = true
 
 [tool.setuptools.dynamic]
 version = {attr = "freqtrade.__version__"}
-
-[tool.isort]
-line_length = 100
-profile = "black"
-# multi_line_output=3
-lines_after_imports=2
-skip_glob = ["**/.env*", "**/env/*", "**/.venv/*", "**/docs/*", "**/user_data/*"]
-known_first_party = ["freqtrade_client"]
 
 [tool.pytest.ini_options]
 # TODO: should be migrated to [tool.pytest] as support for this was added in 9.0
