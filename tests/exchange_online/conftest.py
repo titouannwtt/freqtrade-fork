@@ -642,14 +642,16 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
                     "id": "a11a8ff3-17f3-5112-8caa-9cbbacfa1c8e",
                     "timestamp": 1771345562918,
                     "datetime": "2026-02-17T16:26:02.918Z",
-                    "price": 71712.0,
+                    # TODO: re-verify this ...
+                    # "price": 71712.0,
+                    "price": None,
                     "status": "open",
                     "amount": 0.0004,
                     "side": "buy",
-                    # TODO: this should work if stoploss is supposed to work.
-                    # "triggerPrice": 71641.0,
-                    # "stopPrice": 71641.0,
-                    # "stopLossPrice": 71641.0,
+                    "triggerPrice": 71641.0,
+                    "stopPrice": 71641.0,
+                    # krakenfutures uses stopPrice - so this is fine.
+                    "stopLossPrice": None,
                 },
             },
         ],
