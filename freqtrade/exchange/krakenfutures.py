@@ -260,7 +260,7 @@ class Krakenfutures(Exchange):
         # to prevent endpoint/filter mismatches.
         open_params = {k: v for k, v in params.items() if k not in ("trigger", "stop")}
         order = self._find_order_in_list(
-            self._api.fetch_open_orders, None, open_params, order_id_str
+            self._api.fetch_open_orders, pair, open_params, order_id_str
         )
         if order is not None:
             return order
