@@ -1,7 +1,5 @@
 """Tests for Kraken Futures exchange class"""
 
-from __future__ import annotations
-
 from copy import deepcopy
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, PropertyMock
@@ -33,6 +31,7 @@ def test_krakenfutures_ft_has_overrides():
     assert ft_has["stoploss_on_exchange"] is True
     assert ft_has["stoploss_order_types"] == {"limit": "limit", "market": "market"}
     assert ft_has["stoploss_query_requires_stop_flag"] is True
+    assert ft_has["stop_price_prop"] == "stopPrice"
     assert ft_has["stop_price_param"] == "triggerPrice"
     assert ft_has["stop_price_type_field"] == "triggerSignal"
 
