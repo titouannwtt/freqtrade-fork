@@ -589,7 +589,7 @@ def test_krakenfutures_fetch_order_fallback_strips_stop_from_open_orders(mocker,
     ex._fetch_order_fallback("abc", "BTC/USD:USD", {"stop": True})
 
     # stop should be stripped from open orders call
-    open_fetch.assert_called_once_with(None, params={})
+    open_fetch.assert_called_once_with("BTC/USD:USD", params={})
 
 
 def test_krakenfutures_fetch_order_propagates_exchange_errors_from_fallback(mocker, default_conf):
