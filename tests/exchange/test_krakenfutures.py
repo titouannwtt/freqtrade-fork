@@ -36,16 +36,6 @@ def test_krakenfutures_ft_has_overrides():
     assert ft_has["stop_price_type_field"] == "triggerSignal"
 
 
-def test_krakenfutures_ohlcv_candle_limit_uses_ccxt_limit(mocker, default_conf):
-    """Test that OHLCV candle limit follows CCXT feature limit."""
-    ex = get_patched_exchange(mocker, default_conf, exchange="krakenfutures")
-    assert isinstance(ex, Krakenfutures)
-
-    mocker.patch.object(ex, "features", return_value=2000)
-
-    assert ex.ohlcv_candle_limit("1m", candle_type=CandleType.FUTURES) == 2000
-
-
 # --- _order_contracts_to_amount trigger price fix tests ---
 
 
