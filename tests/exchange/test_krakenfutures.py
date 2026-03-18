@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, PropertyMock
 import ccxt
 import pytest
 
-from freqtrade.enums import CandleType, MarginMode, TradingMode
+from freqtrade.enums import MarginMode, TradingMode
 from freqtrade.exceptions import (
     DDosProtection,
     ExchangeError,

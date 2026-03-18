@@ -597,10 +597,9 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
                     "id": "a11a8dc2-0440-4fe1-5212-1bx15c8f1c8e",
                     "timestamp": 1771354195241,
                     "datetime": "2026-02-17T18:49:55.241Z",
-                    "price": 67164.0,
-                    # Average should be None (it's not correct for market orders), but we have a
-                    # workaround for this in place.
-                    "average": 67164.0,
+                    "price": None,
+                    # Average should be None (it's not correct for market orders)
+                    "average": None,
                     "status": "closed",
                     "type": "market",
                     "amount": 0.0004,
