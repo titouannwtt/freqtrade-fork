@@ -445,11 +445,11 @@ class FreqaiDataKitchen:
         for extra_col in self.data["extra_returns_per_train"]:
             append_dict[f"{extra_col}"] = self.data["extra_returns_per_train"][extra_col]
 
-        append_df = DataFrame(append_dict)
-
-        append_df["do_predict"] = do_predict
+        append_dict["do_predict"] = do_predict
         if self.freqai_config["feature_parameters"].get("DI_threshold", 0) > 0:
-            append_df["DI_values"] = self.DI_values
+            append_dict["DI_values"] = self.DI_values
+
+        append_df = DataFrame(append_dict)
 
         user_cols = [col for col in dataframe_backtest.columns if col.startswith("%%")]
         cols = ["date"]
