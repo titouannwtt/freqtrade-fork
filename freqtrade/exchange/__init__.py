@@ -30,6 +30,7 @@ from freqtrade.exchange.exchange_utils import (
     validate_exchange,
 )
 from freqtrade.exchange.exchange_utils_timeframe import (
+    timeframe_to_floor_freq,
     timeframe_to_minutes,
     timeframe_to_msecs,
     timeframe_to_next_date,

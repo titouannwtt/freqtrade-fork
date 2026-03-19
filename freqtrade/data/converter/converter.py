@@ -39,7 +39,11 @@ def ohlcv_to_dataframe(
     df = DataFrame(ohlcv, columns=cols)
 
     # Floor date to seconds to account for exchange imprecisions
-    df["date"] = to_datetime(df["date"], unit="ms", utc=True).dt.floor("s")
+    from freqtrade.exchange import timeframe_to_floor_freq
+
+    resample_interval = timeframe_to_floor_freq(timeframe)
+
+    df["date"] = to_datetime(df["date"], unit="ms", utc=True).dt.floor(resample_interval)
 
     # Some exchanges return int values for Volume and even for OHLC.
     # Convert them since TA-LIB indicators used in the strategy assume floats
