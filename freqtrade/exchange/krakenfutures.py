@@ -17,7 +17,6 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
-from freqtrade.misc import safe_value_nested
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -134,39 +133,21 @@ class Krakenfutures(Exchange):
             return None
 
     def _order_contracts_to_amount(self, order: CcxtOrder) -> CcxtOrder:
-        """Normalize order and apply Kraken Futures-specific fixes.
-
-        This override applies all CCXT workarounds by calling _adjust_krakenfutures_order
-        after the base class normalization. This ensures all orders (including those
-        from create_order that fill immediately) get correct prices and fees.
-        """
+        """Normalize order and apply Kraken Futures-specific order corrections."""
         order = super()._order_contracts_to_amount(order)
         return self._adjust_krakenfutures_order(order)
 
     def _adjust_krakenfutures_order(self, order: CcxtOrder) -> CcxtOrder:
         """Apply Kraken Futures-specific order corrections.
 
-        Fixes CCXT parsing issues:
-        1. triggerPrice nested in info.order.priceTriggerOptions (not extracted)
-        2. average set to limitPrice instead of actual fill price
-
-        For filled terminal orders, we ALWAYS fetch trades and compute VWAP because
-        CCXT's average is unreliable.
+        For filled terminal orders, always fetch trades and compute VWAP because
+        CCXT's average is still unreliable.
 
         See: https://github.com/ccxt/ccxt/issues/27996
         """
-        # Fix 1: Extract nested triggerPrice for stoploss orders
-        if order.get("triggerPrice") is None and order.get("stopPrice") is None:
-            trigger = safe_value_nested(order, "info.order.priceTriggerOptions.triggerPrice")
-            if trigger is not None:
-                trigger_float = self._safe_float(trigger)
-                if trigger_float is not None:
-                    order["triggerPrice"] = trigger_float
-                    order["stopPrice"] = trigger_float
-
         filled = self._safe_float(order.get("filled")) or 0.0
         if order.get("status") in ("canceled", "closed") and filled > 0:
-            # Fix 2: Compute VWAP and cost for filled orders
+            # Compute VWAP and cost for filled orders.
             trades = self.get_trades_for_order(
                 order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
             )
