@@ -1968,6 +1968,7 @@ def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
 
     api_mock.fetch_orders = MagicMock(side_effect=return_value)
     api_mock.fetch_open_orders = MagicMock(return_value=[limit_order["buy"]])
+    api_mock.fetch_canceled_orders = MagicMock(return_value=[])
     api_mock.fetch_closed_orders = MagicMock(return_value=[limit_order["buy"]])
 
     mocker.patch(f"{EXMS}.exchange_has", return_value=True)
@@ -2000,6 +2001,8 @@ def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
             return True
         if endpoint == "fetchOpenOrders":
             return True
+        if endpoint == "fetchCanceledOrders":
+            return True
 
     if exchange_name == "okx":
         # Special OKX case is tested separately
@@ -2012,6 +2015,7 @@ def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
     assert api_mock.fetch_orders.call_count == 0
     assert api_mock.fetch_open_orders.call_count == expected
     assert api_mock.fetch_closed_orders.call_count == expected
+    assert api_mock.fetch_canceled_orders.call_count == expected
 
     mocker.patch(f"{EXMS}.exchange_has", return_value=True)
 
@@ -2031,12 +2035,14 @@ def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
     api_mock.fetch_orders = MagicMock(side_effect=ccxt.NotSupported())
     api_mock.fetch_open_orders.reset_mock()
     api_mock.fetch_closed_orders.reset_mock()
+    api_mock.fetch_canceled_orders.reset_mock()
 
     exchange.fetch_orders("mocked", start_time)
 
     assert api_mock.fetch_orders.call_count == expected
     assert api_mock.fetch_open_orders.call_count == expected
     assert api_mock.fetch_closed_orders.call_count == expected
+    assert api_mock.fetch_canceled_orders.call_count == expected
 
 
 def test_fetch_trading_fees(default_conf, mocker):
