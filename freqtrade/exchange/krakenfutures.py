@@ -54,6 +54,7 @@ class Krakenfutures(Exchange):
             PriceType.MARK: "mark",
             PriceType.INDEX: "index",
         },
+        "exchange_has_overrides": {"fetchOrders": False},
     }
 
     @retrier
