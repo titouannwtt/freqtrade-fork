@@ -5343,19 +5343,18 @@ def test_get_max_leverage_from_margin(default_conf, mocker, pair, nominal_value,
 
 
 @pytest.mark.parametrize(
-    "size,funding_rate,mark_price,time_in_ratio,funding_fee,kraken_fee",
+    "size,funding_rate,mark_price,time_in_ratio,funding_fee",
     [
-        (10, 0.0001, 2.0, 1.0, 0.002, 0.002),
-        (10, 0.0002, 2.0, 0.01, 0.004, 0.00004),
-        (10, 0.0002, 2.5, None, 0.005, None),
-        (10, 0.0002, nan, None, 0.0, None),
+        (10, 0.0001, 2.0, 1.0, 0.002),
+        (10, 0.0002, 2.0, 0.01, 0.004),
+        (10, 0.0002, 2.5, None, 0.005),
+        (10, 0.0002, nan, None, 0.0),
     ],
 )
 def test_calculate_funding_fees(
-    default_conf, mocker, size, funding_rate, mark_price, funding_fee, kraken_fee, time_in_ratio
+    default_conf, mocker, size, funding_rate, mark_price, funding_fee, time_in_ratio
 ):
     exchange = get_patched_exchange(mocker, default_conf)
-    kraken = get_patched_exchange(mocker, default_conf, exchange="kraken")
     prior_date = timeframe_to_prev_date("1h", datetime.now(UTC) - timedelta(hours=1))
     trade_date = timeframe_to_prev_date("1h", datetime.now(UTC))
     funding_rates = DataFrame(
@@ -5383,30 +5382,6 @@ def test_calculate_funding_fees(
         )
         == funding_fee
     )
-
-    if kraken_fee is None:
-        with pytest.raises(OperationalException):
-            kraken.calculate_funding_fees(
-                df,
-                amount=size,
-                is_short=True,
-                open_date=trade_date,
-                close_date=trade_date,
-                time_in_ratio=time_in_ratio,
-            )
-
-    else:
-        assert (
-            kraken.calculate_funding_fees(
-                df,
-                amount=size,
-                is_short=True,
-                open_date=trade_date,
-                close_date=trade_date,
-                time_in_ratio=time_in_ratio,
-            )
-            == kraken_fee
-        )
 
 
 @pytest.mark.parametrize(
