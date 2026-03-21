@@ -2045,6 +2045,69 @@ def test_fetch_orders(default_conf, mocker, exchange_name, limit_order):
     assert api_mock.fetch_canceled_orders.call_count == expected
 
 
+@pytest.mark.parametrize("exchange_name", [ex for ex in EXCHANGES if ex != "bybit"])
+@pytest.mark.parametrize(
+    "call_config, expected",
+    [
+        # call_config: (fetch_orders, fetch_open, fetch_closed, fetch_canceled)
+        # expected: (fetch_orders_calls, fetch_open_calls, fetch_closed_calls, fetch_canceled_calls)
+        ((True, False, False, False), (1, 0, 0, 0)),
+        ((False, True, True, False), (0, 1, 1, 0)),
+        ((False, True, False, True), (0, 1, 0, 1)),
+        ((False, True, True, True), (0, 1, 1, 1)),
+    ],
+)
+def test_fetch_orders_multi(
+    default_conf, mocker, exchange_name, limit_order, call_config, expected
+):
+    default_conf["dry_run"] = False
+    api_mock = MagicMock()
+    call_count = 1
+
+    def return_value(*args, **kwargs):
+        nonlocal call_count
+        call_count += 2
+        return [
+            {**limit_order["buy"], "id": call_count},
+            {**limit_order["sell"], "id": call_count + 1},
+        ]
+
+    api_mock.fetch_orders = MagicMock(side_effect=return_value)
+    api_mock.fetch_open_orders = MagicMock(return_value=[limit_order["buy"]])
+    api_mock.fetch_canceled_orders = MagicMock(return_value=[limit_order["sell"]])
+    api_mock.fetch_closed_orders = MagicMock(return_value=[limit_order["buy"]])
+
+    mocker.patch(f"{EXMS}.exchange_has", return_value=True)
+    start_time = datetime.now(UTC) - timedelta(days=20)
+
+    exchange = get_patched_exchange(mocker, default_conf, api_mock, exchange=exchange_name)
+
+    def has_resp(_, endpoint):
+
+        if endpoint == "fetchOrders":
+            return call_config[0]
+        if endpoint == "fetchClosedOrders":
+            return call_config[2]
+        if endpoint == "fetchOpenOrders":
+            return call_config[1]
+        if endpoint == "fetchCanceledOrders":
+            return call_config[3]
+
+    if exchange_name == "okx":
+        # Special OKX case is tested separately
+        return
+
+    mocker.patch(f"{EXMS}.exchange_has", has_resp)
+
+    #
+    resp = exchange.fetch_orders("mocked", start_time)
+    assert api_mock.fetch_orders.call_count == expected[0]
+    assert api_mock.fetch_open_orders.call_count == expected[1]
+    assert api_mock.fetch_closed_orders.call_count == expected[2]
+    assert api_mock.fetch_canceled_orders.call_count == expected[3]
+    assert len(resp) == 2 * expected[0] + expected[1] + expected[2] + expected[3]
+
+
 def test_fetch_trading_fees(default_conf, mocker):
     api_mock = MagicMock()
     tick = {
