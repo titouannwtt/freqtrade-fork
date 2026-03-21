@@ -1896,9 +1896,12 @@ class Exchange:
         orders = []
         if self.exchange_has("fetchClosedOrders"):
             orders = self._api.fetch_closed_orders(pair, since=since_ms)
-            if self.exchange_has("fetchOpenOrders"):
-                orders_open = self._api.fetch_open_orders(pair, since=since_ms)
-                orders.extend(orders_open)
+        if self.exchange_has("fetchCanceledOrders"):
+            orders_canceled = self._api.fetch_canceled_orders(pair, since=since_ms)
+            orders.extend(orders_canceled)
+        if self.exchange_has("fetchOpenOrders"):
+            orders_open = self._api.fetch_open_orders(pair, since=since_ms)
+            orders.extend(orders_open)
         return orders
 
     @retrier(retries=0)
