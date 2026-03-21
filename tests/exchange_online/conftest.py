@@ -653,6 +653,38 @@ EXCHANGES: dict[str, TestExchangeOnlineSetup] = {
                     "stopLossPrice": None,
                 },
             },
+            {
+                # Canceled order
+                "exchange_response": {
+                    "order": {
+                        "type": "ORDER",
+                        "orderId": "a159faef-6a0f-4651-bb78-xxfa4c71ac7e",
+                        "cliOrdId": None,
+                        "symbol": "PF_XBTUSD",
+                        "side": "buy",
+                        "quantity": 0.0022,
+                        "filled": 0,
+                        "limitPrice": 68000,
+                        "reduceOnly": False,
+                        "timestamp": "2026-03-21T07:32:21.555Z",
+                        "lastUpdateTimestamp": "2026-03-21T07:32:21.555Z",
+                    },
+                    "status": "CANCELLED",
+                    "updateReason": "CANCELLED_BY_USER",
+                    "error": None,
+                },
+                "pair": "BTC/USD:USD",
+                "expected": {
+                    "symbol": "BTC/USD:USD",
+                    "id": "a159faef-6a0f-4651-bb78-xxfa4c71ac7e",
+                    "timestamp": 1774078341555,
+                    "datetime": "2026-03-21T07:32:21.555Z",
+                    "price": None,
+                    "status": "canceled",
+                    # TODO: filled should be 0, not None.
+                    "filled": None,
+                },
+            },
         ],
     },
 }
