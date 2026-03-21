@@ -17,6 +17,7 @@ from freqtrade.exceptions import (
 from freqtrade.exchange.common import API_FETCH_ORDER_RETRY_COUNT, retrier
 from freqtrade.exchange.exchange import Exchange
 from freqtrade.exchange.exchange_types import CcxtBalances, CcxtOrder, FtHas
+from freqtrade.misc import safe_value_nested
 from freqtrade.util.datetime_helpers import dt_from_ts
 
 
@@ -145,6 +146,10 @@ class Krakenfutures(Exchange):
 
         See: https://github.com/ccxt/ccxt/issues/27996
         """
+        if order.get("status") == "canceled" and order.get("filled") is None:
+            # Workaround for missing filled parsing - https://github.com/ccxt/ccxt/issues/28210
+            order["filled"] = safe_value_nested(order, "info.order.filled", default_value=None)
+
         filled = self._safe_float(order.get("filled")) or 0.0
         if order.get("status") in ("canceled", "closed") and filled > 0:
             # Compute VWAP and cost for filled orders.
