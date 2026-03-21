@@ -5343,17 +5343,15 @@ def test_get_max_leverage_from_margin(default_conf, mocker, pair, nominal_value,
 
 
 @pytest.mark.parametrize(
-    "size,funding_rate,mark_price,time_in_ratio,funding_fee",
+    "size,funding_rate,mark_price,funding_fee",
     [
-        (10, 0.0001, 2.0, 1.0, 0.002),
-        (10, 0.0002, 2.0, 0.01, 0.004),
-        (10, 0.0002, 2.5, None, 0.005),
-        (10, 0.0002, nan, None, 0.0),
+        (10, 0.0001, 2.0, 0.002),
+        (10, 0.0002, 2.0, 0.004),
+        (10, 0.0002, 2.5, 0.005),
+        (10, 0.0002, nan, 0.0),
     ],
 )
-def test_calculate_funding_fees(
-    default_conf, mocker, size, funding_rate, mark_price, funding_fee, time_in_ratio
-):
+def test_calculate_funding_fees(default_conf, mocker, size, funding_rate, mark_price, funding_fee):
     exchange = get_patched_exchange(mocker, default_conf)
     prior_date = timeframe_to_prev_date("1h", datetime.now(UTC) - timedelta(hours=1))
     trade_date = timeframe_to_prev_date("1h", datetime.now(UTC))
@@ -5378,7 +5376,6 @@ def test_calculate_funding_fees(
             is_short=True,
             open_date=trade_date,
             close_date=trade_date,
-            time_in_ratio=time_in_ratio,
         )
         == funding_fee
     )
