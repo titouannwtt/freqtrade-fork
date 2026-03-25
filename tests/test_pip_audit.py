@@ -23,9 +23,8 @@ def test_pip_audit_no_vulnerabilities():
     Run pip-audit to check for known security vulnerabilities.
 
     This test will fail if any vulnerabilities are detected in the installed packages.
+    Note: Document ignores here if vulnerabilities are acceptable.
 
-    Note: CVE-2025-53000 (nbconvert Windows vulnerability) is ignored as it only affects
-    Windows platforms and is a known acceptable risk for this project.
     """
     # Get the project root directory
     project_root = Path(__file__).parent.parent
@@ -35,8 +34,8 @@ def test_pip_audit_no_vulnerabilities():
         "pip_audit",
         # "--format=json",
         "--progress-spinner=off",
-        "--ignore-vuln",
-        "CVE-2025-53000",
+        # "--ignore-vuln",
+        # "CVE-2025-53000",
         "--skip-editable",
     ]
 

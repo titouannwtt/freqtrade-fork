@@ -336,8 +336,9 @@ jobs:
         python-version: "${{ matrix.python-version }}"
 
     - name: Build distribution
+      # TODO: remove hard-pin on build 1.4.0 once https://github.com/pypa/build/issues/1004 is resolved.
       run: |
-        uv pip install -U build
+        uv pip install -U build==1.4.0
         python -m build --sdist --wheel
 
     - name: Upload artifacts 📦
