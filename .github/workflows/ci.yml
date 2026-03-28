@@ -337,7 +337,7 @@ jobs:
 
     - name: Build distribution
       run: |
-        uv pip install -U build
+        uv pip install $(grep -E "^build==" requirements-dev.txt)
         python -m build --sdist --wheel
 
     - name: Upload artifacts 📦
