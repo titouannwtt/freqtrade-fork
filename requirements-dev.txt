@@ -30,3 +30,4 @@ types-requests==2.32.4.20260107
 types-tabulate==0.10.0.20260308
 types-python-dateutil==2.9.0.20260305
 pip-audit==2.10.0
+build==1.4.2
