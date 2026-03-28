@@ -55,7 +55,6 @@ jobs:
 
     - name: Installation (python)
       run: |
-        uv pip install --upgrade wheel
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -267,7 +266,6 @@ jobs:
 
     - name: Installation - *nix
       run: |
-        uv pip install --upgrade wheel
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
