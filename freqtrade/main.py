@@ -6,7 +6,6 @@ Read the documentation to know what cli arguments you need.
 
 import logging
 import sys
-from typing import Any
 
 
 # check min. python version
@@ -35,7 +34,7 @@ def main(sysargv: list[str] | None = None) -> None:
     :return: None
     """
 
-    return_code: Any = 1
+    return_code: int | None = None
     try:
         setup_logging_pre()
         asyncio_setup()
@@ -62,8 +61,6 @@ def main(sysargv: list[str] | None = None) -> None:
                 "`freqtrade --help` or `freqtrade <command> --help`."
             )
 
-    except SystemExit as e:  # pragma: no cover
-        return_code = e
     except KeyboardInterrupt:
         logger.info("SIGINT received, aborting ...")
         return_code = 0
