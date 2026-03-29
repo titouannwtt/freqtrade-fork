@@ -63,7 +63,7 @@ def main(sysargv: list[str] | None = None) -> None:
 
     except KeyboardInterrupt:
         logger.info("SIGINT received, aborting ...")
-        return_code = 0
+        return_code = 130
     except ConfigurationError as e:
         logger.error(
             f"Configuration error: {e}\n"
@@ -74,6 +74,7 @@ def main(sysargv: list[str] | None = None) -> None:
         return_code = 2
     except Exception:
         logger.exception("Fatal exception!")
+        return_code = 1
     finally:
         sys.exit(return_code)
 
