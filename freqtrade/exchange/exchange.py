@@ -825,7 +825,8 @@ class Exchange:
                 and order_types["stoploss_price_type"] not in price_mapping
             ):
                 raise ConfigurationError(
-                    f"On exchange stoploss price type is not supported for {self.name}."
+                    f"On exchange stoploss price type '{order_types['stoploss_price_type']}' "
+                    f"is not supported for {self.name}."
                 )
 
     def validate_pricing(self, pricing: dict) -> None:
@@ -1896,9 +1897,12 @@ class Exchange:
         orders = []
         if self.exchange_has("fetchClosedOrders"):
             orders = self._api.fetch_closed_orders(pair, since=since_ms)
-            if self.exchange_has("fetchOpenOrders"):
-                orders_open = self._api.fetch_open_orders(pair, since=since_ms)
-                orders.extend(orders_open)
+        if self.exchange_has("fetchCanceledOrders"):
+            orders_canceled = self._api.fetch_canceled_orders(pair, since=since_ms)
+            orders.extend(orders_canceled)
+        if self.exchange_has("fetchOpenOrders"):
+            orders_open = self._api.fetch_open_orders(pair, since=since_ms)
+            orders.extend(orders_open)
         return orders
 
     @retrier(retries=0)
@@ -3931,7 +3935,6 @@ class Exchange:
         is_short: bool,
         open_date: datetime,
         close_date: datetime,
-        time_in_ratio: float | None = None,
     ) -> float:
         """
         calculates the sum of all funding fees that occurred for a pair during a futures trade
@@ -3941,7 +3944,6 @@ class Exchange:
         :param is_short: trade direction
         :param open_date: The date and time that the trade started
         :param close_date: The date and time that the trade ended
-        :param time_in_ratio: Not used by most exchange classes
         """
         fees: float = 0
 

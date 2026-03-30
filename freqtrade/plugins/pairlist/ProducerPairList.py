@@ -42,15 +42,6 @@ class ProducerPairList(IPairList):
                 "ProducerPairList requires external_message_consumer to be enabled."
             )
 
-    @property
-    def needstickers(self) -> bool:
-        """
-        Boolean property defining if tickers are necessary.
-        If no Pairlist requires tickers, an empty Dict is passed
-        as tickers argument to filter_pairlist
-        """
-        return False
-
     def short_desc(self) -> str:
         """
         Short whitelist method description - used for startup-messages

@@ -217,6 +217,32 @@ freqtrade download-data --exchange kraken --dl-trades -p BTC/EUR BCH/EUR
     Please pay attention that rateLimit configuration entry holds delay in milliseconds between requests, NOT requests/sec rate.
     So, in order to mitigate Kraken API "Rate limit exceeded" exception, this configuration should be increased, NOT decreased.
 
+## Kraken Futures
+
+Kraken Futures uses the exchange id `krakenfutures` and supports isolated futures mode.
+
+```jsonc
+"exchange": {
+    "name": "krakenfutures",
+    "key": "your_exchange_key",
+    "secret": "your_exchange_secret"
+},
+"trading_mode": "futures",
+"margin_mode": "isolated",
+"stake_currency": "USD"
+```
+
+!!! Tip "Stoploss on Exchange"
+    Kraken Futures supports `stoploss_on_exchange` with both `limit` and `market` stop orders.
+    Use `order_types.stoploss_price_type` to select the trigger price source (`mark`, `last`, or `index`).
+
+!!! Note "Collateral"
+    Kraken Futures is USD-settled. Use USD as your stake currency.
+
+!!! Note "Flex (Multi-collateral) Accounts"
+    Kraken Futures flex accounts allow collateral in multiple currencies, while trading remains USD-settled.
+    Freqtrade derives the `USD` balance from Kraken margin fields, so keep `stake_currency` set to `USD`.
+
 ## Kucoin
 
 Kucoin requires a passphrase for each api key, you will therefore need to add this key into the configuration so your exchange section looks as follows:
@@ -368,6 +394,11 @@ On startup, freqtrade will set the position mode to "One-way Mode" for the whole
 !!! Tip "Stoploss on Exchange"
     Hyperliquid supports `stoploss_on_exchange` and uses `stop-loss-limit` orders. It provides great advantages, so we recommend to benefit from it.
 
+!!! Warning "Unified accounts"
+    Hyperliquid unified accounts are supported - though this relies freqtrade's assumption of "owning" the account, and being the only one trading on it (in this case, extended to both spot and futures).
+    We hence recommend the usage of subaccounts where possible, and to avoid manual trading on the same account while the bot is running.
+    Freqtrade will attempt to detect the account type on startup - changing the account type mid-trading is not supported and may lead to exceptions and errors.
+
 Hyperliquid is a Decentralized Exchange (DEX). Decentralized exchanges work a bit different compared to normal exchanges. Instead of authenticating private API calls using an API key, private API calls need to be signed with the private key of your wallet (We recommend using an api Wallet for this, generated either on Hyperliquid or in your wallet of choice).
 This needs to be configured like this:
 
@@ -422,6 +453,7 @@ Your balance and trades will now be used from your vault / subaccount - and no l
 
 !!! Note
     You can only use either a vault or a subaccount - not both at the same time.
+
 
 ### Historic Hyperliquid data
 
