@@ -32,13 +32,13 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Set up Python
+    - name: Set up Python 🐍
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
       with:
         activate-environment: true
         enable-cache: true
@@ -55,7 +55,6 @@ jobs:
 
     - name: Installation (python)
       run: |
-        uv pip install --upgrade wheel
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -78,7 +77,7 @@ jobs:
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
       with:
         fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN }}  # zizmor: ignore[secrets-outside-env] Intentionally not using environment variable.
 
     - name: Cleanup codecov dirty state files
       if: (runner.os == 'Linux' && matrix.python-version == '3.12' && matrix.os == 'ubuntu-24.04')
@@ -137,10 +136,6 @@ jobs:
         freqtrade create-userdir --userdir user_data
         freqtrade hyperopt --datadir tests/testdata -e 6 --strategy SampleStrategy --hyperopt-loss SharpeHyperOptLossDaily --print-all
 
-    - name: Sort imports (isort)
-      run: |
-        isort --check .
-
     - name: Run Ruff
       run: |
         ruff check --output-format=github
@@ -167,12 +162,12 @@ jobs:
         if ($Error.Length -gt 0) {exit 1}
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
+      uses: sarisia/actions-status-discord@eb045afee445dc055c18d3d90bd0f244fd062708 # v1.16.0
       if: ${{ failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
       with:
-          severity: error
-          details: Freqtrade CI failed on ${{ matrix.os }} with Python ${{ matrix.python-version }}!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          color: '#FF0000' # red
+          title: Freqtrade CI failed on ${{ matrix.os }} with Python ${{ matrix.python-version }}!
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}  # zizmor: ignore[secrets-outside-env] Intentionally not using environment variable.
 
   mypy-version-check:
     name: "Mypy Version Check"
@@ -182,14 +177,20 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Set up Python
+    - name: Set up Python 🐍
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 #v6.2.0
       with:
-        python-version: "3.12"
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+      with:
+        activate-environment: true
+        python-version: "3.13"
 
     - name: pre-commit dependencies
       run: |
-        pip install pyaml
+        uv pip install $(grep -E "^pyyaml==" requirements-dev.txt)
         python build_helpers/pre_commit_update.py
 
   pre-commit:
@@ -202,7 +203,8 @@ jobs:
 
     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.12"
+        python-version: "3.13"
+
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   docs-check:
@@ -217,51 +219,59 @@ jobs:
       run: |
         ./tests/test_docs.sh
 
-    - name: Set up Python
+    - name: Set up Python 🐍
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.12"
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+      with:
+        activate-environment: true
+        python-version: "3.13"
 
     - name: Documentation build
       run: |
-        pip install -r docs/requirements-docs.txt
+        uv pip install -r docs/requirements-docs.txt
         mkdocs build
 
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
+      uses: sarisia/actions-status-discord@eb045afee445dc055c18d3d90bd0f244fd062708 # v1.16.0
       if: failure() && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
       with:
-          severity: error
-          details: Freqtrade doc test failed!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          color: '#FF0000' # red
+          title: Freqtrade doc test failed!
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}  # zizmor: ignore[secrets-outside-env] Intentionally not using environment variable.
 
 
   build-linux-online:
     # Run pytest with "live" checks
-    name: "Tests and Linting - Online tests"
+    name: "Online / live tests"
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.12"]
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
-    - name: Set up Python
+    - name: Set up Python 🐍
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.12"
+        python-version: "${{ matrix.python-version }}"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
       with:
         activate-environment: true
         enable-cache: true
-        python-version: "3.12"
+        python-version: "${{ matrix.python-version }}"
         cache-dependency-glob: "requirements**.txt"
         cache-suffix: "3.12"
 
     - name: Installation - *nix
       run: |
-        uv pip install --upgrade wheel
         uv pip install -r requirements-dev.txt
         uv pip install -e ft_client/
         uv pip install -e .
@@ -285,22 +295,13 @@ jobs:
     if: github.event_name != 'schedule' && github.repository == 'freqtrade/freqtrade'
     steps:
 
-    - name: Check user permission
-      id: check
-      continue-on-error: true
-      uses: prince-chrismc/check-actor-permissions-action@d504e74ba31658f4cdf4fcfeb509d4c09736d88e # v3.0.2
-      with:
-        permission: "write"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Discord notification
-      uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f #v2.2.1
-      if: steps.check.outputs.permitted == 'true' && ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+      uses: sarisia/actions-status-discord@eb045afee445dc055c18d3d90bd0f244fd062708 # v1.16.0
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
       with:
-          severity: info
-          details: Test Completed!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          color: '#00FF00' # green
+          title: Test Completed!
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}  # zizmor: ignore[secrets-outside-env] Intentionally not using environment variable.
 
   build:
     if: always()
@@ -312,6 +313,9 @@ jobs:
       pre-commit,
     ]
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.13"]
 
     steps:
 
@@ -324,18 +328,24 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Set up Python
+    - name: Set up Python 🐍
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.12"
+        python-version: "${{ matrix.python-version }}"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
+      with:
+        activate-environment: true
+        python-version: "${{ matrix.python-version }}"
 
     - name: Build distribution
       run: |
-        pip install -U build
+        uv pip install $(grep -E "^build==" requirements-dev.txt)
         python -m build --sdist --wheel
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.1.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: freqtrade-build
         path: |
@@ -344,11 +354,10 @@ jobs:
 
     - name: Build Client distribution
       run: |
-        pip install -U build
         python -m build --sdist --wheel ft_client
 
     - name: Upload artifacts 📦
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.1.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: freqtrade-client-build
         path: |
@@ -372,7 +381,7 @@ jobs:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         pattern: freqtrade*-build
         path: dist
@@ -401,7 +410,7 @@ jobs:
         persist-credentials: false
 
     - name: Download artifact  📦
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         pattern: freqtrade*-build
         path: dist
@@ -422,9 +431,9 @@ jobs:
       packages: write # Needed to push package versions
       contents: read
     secrets:
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}  # zizmor: ignore[secrets-outside-env] Intentionally not using environment variable.
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 
   packages-cleanup:

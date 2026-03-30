@@ -4,7 +4,7 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.04864/status.svg)](https://doi.org/10.21105/joss.04864)
 [![codecov](https://codecov.io/gh/freqtrade/freqtrade/branch/develop/graph/badge.svg?token=AD5BG3ATKI)](https://codecov.io/gh/freqtrade/freqtrade)
 [![Documentation](https://readthedocs.org/projects/freqtrade/badge/)](https://www.freqtrade.io)
-[![Discord Server](https://img.shields.io/badge/Freqtrade_Discord-18181B?logo=discord)](https://discord.gg/p7nuUNVfP7)
+[![Discord Server](https://img.shields.io/badge/Freqtrade_Discord-4E4E4E?logo=discord)](https://discord.gg/p7nuUNVfP7)
 
 <!-- GitHub action buttons -->
 [:octicons-star-16: Star](https://github.com/freqtrade/freqtrade){ .md-button .md-button--sm }
@@ -62,6 +62,7 @@ Please read the [exchange specific notes](exchanges.md) to learn about eventual,
 - [X] [Gate.io](https://www.gate.io/ref/6266643)
 - [X] [Hyperliquid](https://hyperliquid.xyz/) (A decentralized exchange, or DEX)
 - [X] [OKX](https://okx.com/)
+- [X] [Kraken](https://www.kraken.com/features/futures)
 
 Please make sure to read the [exchange specific notes](exchanges.md), as well as the [trading with leverage](leverage.md) documentation before diving in.
 
