@@ -222,7 +222,18 @@ class Hyperliquid(Exchange):
             leverage = int(leverage)
             # Hyperliquid needs the parameter leverage.
             # Don't use _set_leverage(), as this sets margin back to cross
-            self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
+            try:
+                self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
+            except Exception as e:
+                # If position already exists with insufficient margin to change leverage,
+                # proceed with the existing leverage setting (DCA into existing position)
+                if "insufficient margin" in str(e).lower() or "decrease leverage" in str(e).lower():
+                    logger.warning(
+                        f"Could not update margin mode for {pair} (position may be in loss). "
+                        f"Proceeding with existing leverage. Error: {e}"
+                    )
+                else:
+                    raise
 
     def dry_run_liquidation_price(
         self,
@@ -320,6 +331,70 @@ class Hyperliquid(Exchange):
             except ExchangeError:
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
+
+    @retrier
+    def fetch_liquidation_fills(
+        self, pair: str, since: datetime
+    ) -> list[dict]:
+        """
+        Fetch user fills for a pair and return only liquidation fills.
+        On Hyperliquid, a liquidation fill has a non-null 'liquidationMarkPx' in the raw data.
+        :param pair: Trading pair (e.g. 'ETH/USDC:USDC')
+        :param since: Datetime to fetch fills from
+        :return: List of liquidation fill dicts with keys: price, amount, timestamp, side
+        """
+        if self._config["dry_run"]:
+            return []
+        try:
+            since_ms = int((since.timestamp() - 5) * 1000)
+            my_trades = self._api.fetch_my_trades(pair, since_ms)
+            self._log_exchange_response("fetch_liquidation_fills", my_trades)
+
+            liquidation_fills = []
+            for trade in my_trades:
+                info = trade.get("info", {})
+                liq_mark_px = info.get("liquidationMarkPx")
+                if liq_mark_px is not None:
+                    try:
+                        liq_price = float(liq_mark_px)
+                        price = float(trade.get("price", liq_mark_px))
+                        amount = float(trade.get("amount", 0))
+                        import math
+                        if (math.isnan(liq_price) or liq_price <= 0
+                                or math.isnan(price) or price <= 0
+                                or math.isnan(amount) or amount <= 0):
+                            logger.warning(
+                                f"Skipping malformed liquidation fill for {pair}: "
+                                f"liq_price={liq_price}, price={price}, amount={amount}"
+                            )
+                            continue
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid liquidation fill data for {pair}: {e}")
+                        continue
+                    liquidation_fills.append({
+                        "price": price,
+                        "amount": amount,
+                        "timestamp": trade.get("timestamp"),
+                        "side": trade.get("side"),
+                        "liq_mark_price": liq_price,
+                        "info": info,
+                    })
+
+            if liquidation_fills:
+                logger.info(
+                    f"Found {len(liquidation_fills)} liquidation fill(s) for {pair}."
+                )
+            return liquidation_fills
+
+        except ccxt.DDoSProtection as e:
+            raise DDosProtection(e) from e
+        except (ccxt.OperationFailed, ccxt.ExchangeError) as e:
+            raise TemporaryError(
+                f"Could not fetch liquidation fills for {pair}: "
+                f"{e.__class__.__name__}. Message: {e}"
+            ) from e
+        except ccxt.BaseError as e:
+            raise OperationalException(e) from e
 
     def _adjust_hyperliquid_order(
         self,

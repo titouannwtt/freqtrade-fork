@@ -1115,6 +1115,15 @@ class Telegram(RPCHandler):
                 f"({fmt_coin(stats['current_drawdown_high'], stake_cur)})`\n"
             )
 
+        withdrawal = stats.get("capital_withdrawal", 0)
+        if withdrawal > 0:
+            profit_net = stats.get("profit_net_coin", profit_closed_coin - withdrawal)
+            markdown_msg += (
+                f"*Withdrawn:* `{fmt_coin(withdrawal, stake_cur)}`\n"
+                f"*Net Profit (after withdrawals):* "
+                f"`{fmt_coin(profit_net, stake_cur)}`\n"
+            )
+
         return markdown_msg
 
     async def _profit_handler(

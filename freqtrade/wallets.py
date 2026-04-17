@@ -5,6 +5,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import Literal, NamedTuple
 
+logger = logging.getLogger(__name__)
+
 from freqtrade.constants import UNLIMITED_STAKE_AMOUNT, Config, IntOrInf
 from freqtrade.enums import RunMode, TradingMode
 from freqtrade.exceptions import DependencyException
@@ -289,6 +291,21 @@ class Wallets:
                 "tradable_balance_ratio"
             ]
 
+    def get_capital_withdrawal(self) -> float:
+        """Total amount withdrawn from the bot's profits."""
+        val = self._config.get("capital_withdrawal", 0)
+        if not isinstance(val, (int, float)):
+            logger.error(f"capital_withdrawal must be a number, got {type(val).__name__}. Using 0.")
+            return 0.0
+        import math
+        if math.isnan(val) or math.isinf(val):
+            logger.error(f"capital_withdrawal is {val}. Using 0.")
+            return 0.0
+        if val < 0:
+            logger.warning(f"capital_withdrawal is negative ({val}). Using 0.")
+            return 0.0
+        return float(val)
+
     def get_total_stake_amount(self):
         """
         Return the total currently available balance in stake currency, including tied up stake and
@@ -300,7 +317,15 @@ class Wallets:
         if "available_capital" in self._config:
             starting_balance = self._config["available_capital"]
             tot_profit = Trade.get_total_closed_profit()
-            available_amount = starting_balance + tot_profit
+            withdrawal = self.get_capital_withdrawal()
+            available_amount = starting_balance - withdrawal + tot_profit
+            if available_amount < 0:
+                logger.warning(
+                    f"capital_withdrawal ({withdrawal}) exceeds "
+                    f"available_capital ({starting_balance}) + profits ({tot_profit:.2f}). "
+                    f"No capital available for trading."
+                )
+                available_amount = 0
 
         else:
             # Ensure <tradable_balance_ratio>% is used from the overall balance

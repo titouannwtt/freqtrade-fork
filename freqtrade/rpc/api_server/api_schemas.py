@@ -89,6 +89,7 @@ class Balances(BaseModel):
     starting_capital_fiat: float
     starting_capital_fiat_ratio: float
     starting_capital_fiat_pct: float
+    capital_withdrawal: float = 0
 
 
 class Count(BaseModel):
@@ -176,6 +177,7 @@ class Profit(BaseModel):
     trading_volume: float | None = None
     bot_start_timestamp: int
     bot_start_date: str
+    capital_withdrawal: float = 0
 
 
 class ProfitAll(BaseModel):

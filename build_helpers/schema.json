@@ -660,7 +660,8 @@
               "RangeStabilityFilter",
               "ShuffleFilter",
               "SpreadFilter",
-              "VolatilityFilter"
+              "VolatilityFilter",
+              "TrendRegularityFilter"
             ]
           }
         },

@@ -67,9 +67,19 @@ CONF_SCHEMA = {
             "default": 0.99,
         },
         "available_capital": {
-            "description": "Total capital available for trading.",
+            "description": "Initial capital deposited. Used as reference for profit % calculations.",
             "type": "number",
             "minimum": 0,
+        },
+        "capital_withdrawal": {
+            "description": (
+                "Total amount withdrawn from the bot's profits. "
+                "Reduces effective trading capital without affecting profit % display. "
+                "Effective capital = available_capital - capital_withdrawal + total_closed_profit."
+            ),
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
         },
         "amend_last_stake_amount": {
             "description": "Whether to amend the last stake amount.",
