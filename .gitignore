@@ -116,3 +116,31 @@ target/
 !config_examples/config_freqai.example.json
 
 docker-compose-*.yml
+
+# === Fork custom: never commit these ===
+
+# Local configs (API keys, trading configs, backtest data, DBs — stay local only)
+live_configs/
+backtest_configs/
+database/
+
+# Local docs and notes (only README.md is shared)
+*.md
+!README.md
+
+# Local dev artifacts
+Python-3.11.5/
+ta-lib/
+tvdatafeed/
+*_cache.csv
+result_backtest*.log
+freqtrade.service
+freqtrade.service.watchdog
+config.json
+
+# Extra safety for secrets
+*access*.json
+*credentials*
+*secret*
+*.key
+*.pem

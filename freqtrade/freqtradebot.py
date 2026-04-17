@@ -569,6 +569,18 @@ class FreqtradeBot(LoggingMixin):
                         )
                         trade.delete()
                         return True
+
+                    # In futures mode, when the position is completely gone,
+                    # check if it was liquidated on the exchange.
+                    if self.trading_mode == TradingMode.FUTURES and total == 0:
+                        with self._exit_lock:
+                            if self._handle_liquidation(trade):
+                                return False
+                            # Position is gone but not a liquidation
+                            # (e.g. Auto-Deleveraging, manual close on exchange)
+                            if self._handle_external_close(trade):
+                                return False
+
                     if total > trade.amount * 0.98:
                         logger.warning(
                             f"{trade} has a total of {trade.amount} {trade.base_currency}, "
@@ -586,15 +598,140 @@ class FreqtradeBot(LoggingMixin):
                         )
                 if prev_trade_amount != trade.amount:
                     # Cancel stoploss on exchange if the amount changed
-                    trade = self.cancel_stoploss_on_exchange(trade)
+                    with self._exit_lock:
+                        trade = self.cancel_stoploss_on_exchange(trade)
             Trade.commit()
 
         except ExchangeError:
             logger.warning("Error finding onexchange order.")
+            Trade.session.rollback()
         except Exception:
             # catching https://github.com/freqtrade/freqtrade/issues/9025
             logger.warning("Error finding onexchange order", exc_info=True)
+            Trade.session.rollback()
         return False
+
+    def _handle_liquidation(self, trade: Trade) -> bool:
+        """
+        Check if a trade was liquidated on the exchange by fetching user fills
+        and looking for liquidation markers.
+        If a liquidation is found, close the trade at the liquidation price.
+        :param trade: Trade to check
+        :return: True if liquidation was detected and handled, False otherwise
+        """
+        try:
+            liq_fills = self.exchange.fetch_liquidation_fills(
+                trade.pair, trade.open_date_utc
+            )
+            if not liq_fills:
+                return False
+
+            # Use the last liquidation fill (most recent)
+            liq_fill = liq_fills[-1]
+            liq_price = liq_fill["liq_mark_price"]
+            liq_timestamp = liq_fill.get("timestamp")
+
+            logger.warning(
+                f"Position for {trade.pair} was LIQUIDATED on exchange "
+                f"at mark price {liq_price}. "
+                f"Trade: {trade}"
+            )
+
+            # Cancel any stoploss orders still on the exchange
+            trade = self.cancel_stoploss_on_exchange(trade)
+
+            # Close the trade at the liquidation price
+            trade.exit_reason = ExitType.LIQUIDATION.value
+            trade.close(liq_price, show_msg=False)
+            if liq_timestamp:
+                trade.close_date = dt_from_ts(liq_timestamp)
+            Trade.commit()
+
+            # Send notification about the liquidation
+            self._notify_exit(trade, "liquidation", fill=True)
+            self.handle_protections(trade.pair, trade.trade_direction)
+
+            logger.info(
+                f"Trade {trade} closed due to liquidation at price {liq_price}."
+            )
+            return True
+
+        except Exception:
+            logger.warning(
+                f"Error checking for liquidation of {trade.pair}.", exc_info=True
+            )
+            # Rollback any partial DB changes to prevent inconsistent state
+            Trade.session.rollback()
+            Trade.session.refresh(trade)
+            return False
+
+    def _handle_external_close(self, trade: Trade) -> bool:
+        """
+        Handle a position that was closed externally on the exchange
+        (e.g. Auto-Deleveraging/ADL, manual close via exchange UI).
+        The position no longer exists on the exchange but the trade is still open in the DB.
+        Close the trade using the last known price.
+        :param trade: Trade to close
+        :return: True if handled, False otherwise
+        """
+        try:
+            # Use the current market price as close price
+            close_price = self.exchange.get_rate(
+                trade.pair, refresh=True, side="exit", is_short=trade.is_short
+            )
+
+            # Validate close price is reasonable
+            import math
+            if not close_price or close_price <= 0 or math.isnan(close_price) or math.isinf(close_price):
+                logger.error(
+                    f"Invalid close price {close_price} for external close of {trade.pair}."
+                )
+                return False
+
+            logger.warning(
+                f"Position for {trade.pair} was CLOSED EXTERNALLY on exchange "
+                f"(Auto-Deleveraging, manual close, or other external event). "
+                f"Closing trade at current price {close_price}. "
+                f"Trade: {trade}"
+            )
+
+            # Cancel any pending orders (stoploss, exit orders) on the exchange
+            trade = self.cancel_stoploss_on_exchange(trade)
+            if trade.has_open_orders:
+                for order in trade.open_orders:
+                    try:
+                        self.exchange.cancel_order_with_result(
+                            order.order_id, trade.pair, trade.amount
+                        )
+                        order.ft_cancel_reason = "external_close"
+                    except Exception:
+                        logger.warning(
+                            f"Could not cancel pending order {order.order_id} for "
+                            f"{trade.pair} during external close.",
+                            exc_info=True,
+                        )
+
+            # Close the trade
+            trade.exit_reason = "external_close"
+            trade.close(close_price, show_msg=False)
+            Trade.commit()
+
+            # Send notification
+            self._notify_exit(trade, "external_close", fill=True)
+            self.handle_protections(trade.pair, trade.trade_direction)
+
+            logger.info(
+                f"Trade {trade} closed due to external position close at price {close_price}."
+            )
+            return True
+
+        except Exception:
+            logger.warning(
+                f"Error handling external close for {trade.pair}.", exc_info=True
+            )
+            Trade.session.rollback()
+            Trade.session.refresh(trade)
+            return False
 
     #
     # enter positions / open trades logic and methods

@@ -783,6 +783,8 @@ class RPC:
             "trading_volume": trading_volume,
             "bot_start_timestamp": dt_ts_def(bot_start, 0),
             "bot_start_date": format_date(bot_start),
+            "capital_withdrawal": self._freqtrade.wallets.get_capital_withdrawal(),
+            "profit_net_coin": profit_closed_coin_sum - self._freqtrade.wallets.get_capital_withdrawal(),
         }
 
     def __balance_get_est_stake(
@@ -930,6 +932,20 @@ class RPC:
         starting_capital_ratio = (total_bot / starting_capital) - 1 if starting_capital else 0.0
         starting_cap_fiat_ratio = (value_bot / starting_cap_fiat) - 1 if starting_cap_fiat else 0.0
 
+        withdrawal = self._freqtrade.wallets.get_capital_withdrawal()
+        if self._freqtrade.config["dry_run"]:
+            note = "Simulated balances"
+        elif withdrawal > 0:
+            tot_profit = Trade.get_total_closed_profit()
+            effective_capital = starting_capital - withdrawal + tot_profit
+            note = (
+                f"Withdrawn: {withdrawal:.2f} {stake_currency} | "
+                f"Profit: {tot_profit:.2f} {stake_currency} | "
+                f"Effective capital: {effective_capital:.2f} {stake_currency}"
+            )
+        else:
+            note = ""
+
         return {
             "currencies": currencies,
             "total": total,
@@ -945,7 +961,8 @@ class RPC:
             "starting_capital_fiat_ratio": starting_cap_fiat_ratio,
             "starting_capital_fiat_pct": round(starting_cap_fiat_ratio * 100, 2),
             "trade_count": trade_count,
-            "note": "Simulated balances" if self._freqtrade.config["dry_run"] else "",
+            "capital_withdrawal": withdrawal,
+            "note": note,
         }
 
     def _rpc_start(self) -> dict[str, str]:
