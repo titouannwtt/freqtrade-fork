@@ -104,6 +104,7 @@ target/
 .venv
 .idea
 .vscode
+.claude/
 
 .pytest_cache/
 .mypy_cache/
