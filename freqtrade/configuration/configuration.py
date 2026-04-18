@@ -373,6 +373,7 @@ class Configuration:
             ("hyperopt_random_state", "Parameter --random-state detected: {}"),
             ("hyperopt_min_trades", "Parameter --min-trades detected: {}"),
             ("hyperopt_loss", "Using Hyperopt loss class name: {}"),
+            ("hyperopt_sampler", "Parameter --sampler detected: {} (overrides strategy default)"),
             ("hyperopt_show_index", "Parameter -n/--index detected: {}"),
             ("hyperopt_list_best", "Parameter --best detected: {}"),
             ("hyperopt_list_profitable", "Parameter --profitable detected: {}"),

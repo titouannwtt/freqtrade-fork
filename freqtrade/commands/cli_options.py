@@ -295,6 +295,27 @@ AVAILABLE_CLI_OPTIONS = {
         metavar="INT",
         default=0,  # 0 to disable by default
     ),
+    "hyperopt_sampler": Arg(
+        "--sampler",
+        help=(
+            "Optuna sampler to use. Overrides the strategy's HyperOpt.generate_estimator(). "
+            "Choices: NSGAIIISampler (default, genetic multi-objective, good diversity), "
+            "NSGAIISampler (genetic multi-objective, older variant), "
+            "TPESampler (Tree-structured Parzen Estimator, Bayesian, fast convergence), "
+            "CmaEsSampler (CMA-ES, gradient-free for continuous spaces), "
+            "GPSampler (Gaussian Process Bayesian), "
+            "QMCSampler (Quasi-Monte Carlo, pure exploration)."
+        ),
+        choices=[
+            "NSGAIIISampler",
+            "NSGAIISampler",
+            "TPESampler",
+            "CmaEsSampler",
+            "GPSampler",
+            "QMCSampler",
+        ],
+        metavar="NAME",
+    ),
     "spaces": Arg(
         "--spaces",
         help=(
