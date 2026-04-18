@@ -121,8 +121,11 @@ docker-compose-*.yml
 # === Fork custom: never commit these ===
 
 # Local configs (API keys, trading configs, backtest data, DBs — stay local only)
-live_configs/
-backtest_configs/
+# Keep the directories (via .gitkeep) but ignore their contents.
+live_configs/*
+backtest_configs/*
+!live_configs/.gitkeep
+!backtest_configs/.gitkeep
 database/
 
 # Local docs and notes (only README.md is shared)
