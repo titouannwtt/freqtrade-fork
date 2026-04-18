@@ -407,7 +407,7 @@ class HyperOptimizer:
         self,
         random_state: int,
     ):
-        o_sampler = self.custom_hyperopt.generate_estimator(
+        o_sampler = self.config.get("hyperopt_sampler") or self.custom_hyperopt.generate_estimator(
             dimensions=self.dimensions, random_state=random_state
         )
 
