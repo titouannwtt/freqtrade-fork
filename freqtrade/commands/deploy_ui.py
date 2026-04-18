@@ -52,7 +52,7 @@ def download_and_install_ui(dest_folder: Path, dl_url: str, version: str):
 
 
 def get_ui_download_url(version: str | None, prerelease: bool) -> tuple[str, str]:
-    base_url = "https://api.github.com/repos/freqtrade/frequi/"
+    base_url = "https://api.github.com/repos/titouannwtt/frequi-fork/"
     # Get base UI Repo path
 
     resp = requests.get(f"{base_url}releases", timeout=req_timeout)
