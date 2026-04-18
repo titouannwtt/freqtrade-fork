@@ -140,7 +140,7 @@ Pairs whose 30-day price regression has an R² above `0.85` and a positive slope
 
 ### Companion repos
 
-- **[titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)** *(currently private — will be made public soon)* — my FreqUI fork. Fleet monitoring, rich popovers, market context (BTC/ETH benchmarks, Fear & Greed), per-bot alerts, drag-and-drop dashboard, full i18n. `freqtrade install-ui` in this fork already points here.
+- **[titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)** — my FreqUI fork. Fleet monitoring, rich popovers, market context (BTC/ETH benchmarks, Fear & Greed), per-bot alerts, drag-and-drop dashboard, full i18n. `freqtrade install-ui` in this fork already points here.
 - **[titouannwtt/freqtrade-france-strategies_simple_vwap](https://github.com/titouannwtt/freqtrade-france-strategies_simple_vwap)** — a simple VWAP-based strategy with all its backtesting / hyperopt scaffolding.
 - **[titouannwtt/freqtrade-france-strategies-kac-index](https://github.com/titouannwtt/freqtrade-france-strategies-kac-index)** — KAC-Index strategies and associated research.
 - **[titouannwtt/freqtrade_basics](https://github.com/titouannwtt/freqtrade_basics)** — basic strategy templates, useful to get started.
@@ -301,7 +301,7 @@ Les paires dont la régression linéaire sur 30 jours a un R² au-dessus de `0.8
 
 ### Autres repos associés
 
-- **[titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)** *(actuellement privé — sera rendu public prochainement)* — mon fork de FreqUI. Monitoring de flotte, popovers riches, contexte de marché (benchmarks BTC/ETH, Fear & Greed), alertes par bot, dashboard drag-and-drop, i18n complète. `freqtrade install-ui` dans ce fork pointe déjà dessus.
+- **[titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)** — mon fork de FreqUI. Monitoring de flotte, popovers riches, contexte de marché (benchmarks BTC/ETH, Fear & Greed), alertes par bot, dashboard drag-and-drop, i18n complète. `freqtrade install-ui` dans ce fork pointe déjà dessus.
 - **[titouannwtt/freqtrade-france-strategies_simple_vwap](https://github.com/titouannwtt/freqtrade-france-strategies_simple_vwap)** — stratégie simple basée sur le VWAP avec tout le scaffolding backtesting / hyperopt.
 - **[titouannwtt/freqtrade-france-strategies-kac-index](https://github.com/titouannwtt/freqtrade-france-strategies-kac-index)** — stratégies KAC-Index et recherche associée.
 - **[titouannwtt/freqtrade_basics](https://github.com/titouannwtt/freqtrade_basics)** — templates de stratégies de base, utile pour démarrer.
