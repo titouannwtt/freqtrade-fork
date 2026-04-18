@@ -9,7 +9,11 @@ I've been running Freqtrade in production for **four years now**. Over that time
 
 Upstream Freqtrade is already excellent as a general-purpose trading framework. This fork adds the handful of things I've needed while running several bots in production: automatic recovery when a position is closed externally (ADL, manual close on the exchange UI), first-class liquidation detection on Hyperliquid, a pairlist filter built for short-only strategies, a custom hyperopt loss, a more ergonomic hyperopt CLI, and a redirect so `freqtrade install-ui` pulls my companion FreqUI fork.
 
-> Screenshots will be added progressively.
+<p align="center">
+  <img src=".readme_illustrations/frequi-dashboard-overview.png" alt="FreqUI fork dashboard — pulled automatically by 'freqtrade install-ui' in this fork" width="900">
+</p>
+
+> Screenshot above: the FreqUI fork that `freqtrade install-ui` pulls in this fork. See [titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork) for the full UI inventory.
 
 ---
 
@@ -89,12 +93,20 @@ freqtrade install-ui
 # Put your bot configs in live_configs/ (it's gitignored — your API keys stay local)
 cp /path/to/my_bot.json live_configs/
 
-# Run a bot with auto-restart
+# Run a bot with auto-restart — its own FreqUI is served on the API port by default
 ./launch_bot.sh my_bot.json
 
-# Or run just the dashboard (webserver mode — no trading)
+# Optional: run a dedicated "master" instance in webserver-only mode, no trading
+# Handy when you have several trading bots and want one central UI to drive them all
 ./launch_dashboard.sh my_bot.json
 ```
+
+About the FreqUI host: by default, **every `freqtrade trade` instance already hosts FreqUI on its own API port** (set by `api_server.listen_ip_address` / `listen_port` in its config). So if you're running a single bot, you don't need anything special — just open its API URL in a browser. If you run several bots, you have two equivalent options:
+
+- **Master-bot approach**: use one of your regular trading bots as the "host". Point FreqUI at all the other bots' API ports via the UI login screen. Nothing extra to deploy.
+- **Dedicated dashboard approach**: run an extra process in [webserver mode](https://www.freqtrade.io/en/stable/utils/#webserver-mode) (no trading, just serving the UI) — that's what `launch_dashboard.sh` does. Useful if you'd rather not have a trading bot be responsible for serving your UI.
+
+Either way, the UI is the same FreqUI fork that `install-ui` pulled.
 
 Everything else (pairlists, strategies, hyperopt, backtesting) works exactly like upstream — check the [official Freqtrade docs](https://www.freqtrade.io/en/stable/). The fork only adds features, it does not change existing behavior.
 
@@ -132,8 +144,6 @@ Pairs whose 30-day price regression has an R² above `0.85` and a positive slope
 - **[titouannwtt/freqtrade-france-strategies_simple_vwap](https://github.com/titouannwtt/freqtrade-france-strategies_simple_vwap)** — a simple VWAP-based strategy with all its backtesting / hyperopt scaffolding.
 - **[titouannwtt/freqtrade-france-strategies-kac-index](https://github.com/titouannwtt/freqtrade-france-strategies-kac-index)** — KAC-Index strategies and associated research.
 - **[titouannwtt/freqtrade_basics](https://github.com/titouannwtt/freqtrade_basics)** — basic strategy templates, useful to get started.
-- **[titouannwtt/Analyseur-PBM](https://github.com/titouannwtt/Analyseur-PBM)** — offline tool to aggregate monthly backtest results and spot over-optimised parameters.
-- **[titouannwtt/DashBot](https://github.com/titouannwtt/DashBot)** — small Python helper that aggregates balance history across several bots.
 
 ### Freqtrade France — tutorials & community (FR)
 
@@ -148,7 +158,7 @@ Free guides covering installation, config files, strategy files, order types, ba
 If you're trading from France:
 
 - **PSAN-registered exchanges** (recommended): Binance, Kraken, Bitget, Bybit, OKX (via MyOKX EEA), Gate.io, Bitvavo.
-- **Hyperliquid** is a DEX with no KYC — not subject to PSAN/DASP registration. It is the primary exchange this fork is tested against. Referral link: <https://app.hyperliquid.xyz/join/FR0X>.
+- **Hyperliquid** is a DEX with no KYC — not subject to PSAN/DASP registration. It is the primary exchange this fork is tested against. Referral link: <https://app.hyperliquid.xyz/join/MOUTON>.
 - **Not recommended for French residents**: HTX (ex-Huobi), Bitmart — not PSAN-registered.
 
 Rules evolve — always check the [AMF PSAN registry](https://www.amf-france.org/fr/espace-professionnels/fintech/mes-relations-avec-lamf/obtenir-un-enregistrement-un-agrement-psan) before committing real money.
@@ -244,12 +254,20 @@ freqtrade install-ui
 # Place tes configs de bot dans live_configs/ (gitignored — tes clés API restent locales)
 cp /chemin/vers/mon_bot.json live_configs/
 
-# Lance un bot avec auto-restart
+# Lance un bot avec auto-restart — son FreqUI est servi sur le port de son API par défaut
 ./launch_bot.sh mon_bot.json
 
-# Ou juste le dashboard (webserver uniquement — pas de trading)
+# Optionnel : une instance "maître" dédiée en mode webserver-only, sans trading
+# Utile quand tu as plusieurs bots et que tu veux une UI centralisée pour tous les piloter
 ./launch_dashboard.sh mon_bot.json
 ```
+
+Qui héberge FreqUI ? Par défaut, **chaque instance `freqtrade trade` sert déjà FreqUI sur son propre port d'API** (défini par `api_server.listen_ip_address` / `listen_port` dans sa config). Donc si tu tournes un seul bot, rien à faire de spécial — il suffit d'ouvrir l'URL de son API dans un navigateur. Si tu tournes plusieurs bots, deux options équivalentes :
+
+- **Approche bot-maître** : utilise un de tes bots de trading habituels comme hôte. Depuis l'écran de login de FreqUI, pointe vers les APIs des autres bots. Rien de plus à déployer.
+- **Approche dashboard dédié** : lance un process supplémentaire en [mode webserver](https://www.freqtrade.io/en/stable/utils/#webserver-mode) (pas de trading, juste l'UI) — c'est ce que fait `launch_dashboard.sh`. Utile si tu préfères ne pas confier la responsabilité de servir ton UI à un bot de trading.
+
+Dans les deux cas, l'UI est le même fork FreqUI que `install-ui` a récupéré.
 
 Tout le reste (pairlists, stratégies, hyperopt, backtesting) fonctionne exactement comme l'upstream — voir la [doc officielle Freqtrade](https://www.freqtrade.io/en/stable/). Le fork n'ajoute que des fonctionnalités, il ne change pas le comportement existant.
 
@@ -287,8 +305,6 @@ Les paires dont la régression linéaire sur 30 jours a un R² au-dessus de `0.8
 - **[titouannwtt/freqtrade-france-strategies_simple_vwap](https://github.com/titouannwtt/freqtrade-france-strategies_simple_vwap)** — stratégie simple basée sur le VWAP avec tout le scaffolding backtesting / hyperopt.
 - **[titouannwtt/freqtrade-france-strategies-kac-index](https://github.com/titouannwtt/freqtrade-france-strategies-kac-index)** — stratégies KAC-Index et recherche associée.
 - **[titouannwtt/freqtrade_basics](https://github.com/titouannwtt/freqtrade_basics)** — templates de stratégies de base, utile pour démarrer.
-- **[titouannwtt/Analyseur-PBM](https://github.com/titouannwtt/Analyseur-PBM)** — outil offline qui agrège les résultats de backtests mensuels et repère les paramètres sur-optimisés.
-- **[titouannwtt/DashBot](https://github.com/titouannwtt/DashBot)** — petit helper Python qui agrège l'historique des soldes de plusieurs bots.
 
 ### Freqtrade France — tutoriels & communauté
 
@@ -303,7 +319,7 @@ Guides gratuits sur l'installation, les fichiers de config, les fichiers de stra
 Si tu trades depuis la France :
 
 - **Exchanges enregistrés PSAN (recommandés)** : Binance, Kraken, Bitget, Bybit, OKX (via MyOKX EEA), Gate.io, Bitvavo.
-- **Hyperliquid** est un DEX sans KYC — non soumis à l'enregistrement PSAN/DASP. C'est l'exchange principal contre lequel ce fork est testé. Lien de parrainage : <https://app.hyperliquid.xyz/join/FR0X>.
+- **Hyperliquid** est un DEX sans KYC — non soumis à l'enregistrement PSAN/DASP. C'est l'exchange principal contre lequel ce fork est testé. Lien de parrainage : <https://app.hyperliquid.xyz/join/MOUTON>.
 - **Non recommandés pour les résidents français** : HTX (ex-Huobi), Bitmart — pas enregistrés PSAN.
 
 La réglementation évolue — vérifie toujours le [registre AMF des PSAN](https://www.amf-france.org/fr/espace-professionnels/fintech/mes-relations-avec-lamf/obtenir-un-enregistrement-un-agrement-psan) avant de mettre de l'argent réel.
