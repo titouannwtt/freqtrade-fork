@@ -112,6 +112,8 @@ Either way, the UI is the same FreqUI fork that `install-ui` pulled.
 
 Everything else (pairlists, strategies, hyperopt, backtesting) works exactly like upstream — check the [official Freqtrade docs](https://www.freqtrade.io/en/stable/). The fork only adds features, it does not change existing behavior.
 
+> **Note:** This fork is primarily built for my own production needs. I add features as I need them, and some may not work perfectly on setups that differ from mine. That said, everything is documented thoroughly enough that you — or an LLM — should be able to understand each component. Feedback, bug reports, feature suggestions, and pull requests are very welcome.
+
 #### Using the `--sampler` option
 
 ```bash
@@ -167,7 +169,12 @@ Rules evolve — always check the [AMF PSAN registry](https://www.amf-france.org
 
 ### Disclaimer
 
-This software is for educational purposes only. Do not risk money you cannot afford to lose. **THE AUTHORS ASSUME NO LIABILITY FOR YOUR TRADING RESULTS.**
+This software is provided for **educational and informational purposes only**. It does not constitute investment advice, financial advice, trading advice, or any other sort of advice. The author is **not a licensed financial advisor** (not a CIF — Conseiller en Investissements Financiers — under French law, nor any equivalent certification in any jurisdiction).
+
+- Do not risk money you cannot afford to lose.
+- Past performance (backtests, hyperopt results, live results) is not indicative of future results.
+- You are solely responsible for your own trading decisions and their consequences.
+- **THE AUTHORS ASSUME NO LIABILITY FOR YOUR TRADING RESULTS.**
 
 ### License
 
@@ -275,6 +282,8 @@ Dans les deux cas, l'UI est le même fork FreqUI que `install-ui` a récupéré.
 
 Tout le reste (pairlists, stratégies, hyperopt, backtesting) fonctionne exactement comme l'upstream — voir la [doc officielle Freqtrade](https://www.freqtrade.io/en/stable/). Le fork n'ajoute que des fonctionnalités, il ne change pas le comportement existant.
 
+> **Note :** Ce fork est avant tout construit pour mes propres besoins de production. J'ajoute des features au fil de mes besoins, et certaines peuvent ne pas fonctionner parfaitement sur des architectures différentes de la mienne. Cela dit, tout est suffisamment documenté pour qu'un humain — ou un LLM — puisse facilement comprendre chaque composant. Les retours, rapports de bugs, suggestions de features et pull requests sont les bienvenus.
+
 #### Utiliser l'option `--sampler`
 
 ```bash
@@ -330,7 +339,12 @@ La réglementation évolue — vérifie toujours le [registre AMF des PSAN](http
 
 ### Disclaimer
 
-Ce logiciel est à usage éducatif uniquement. Ne risquez pas d'argent que vous ne pouvez pas vous permettre de perdre. **LES AUTEURS N'ASSUMENT AUCUNE RESPONSABILITÉ POUR VOS RÉSULTATS DE TRADING.**
+Ce logiciel est fourni à des fins **éducatives et informatives uniquement**. Il ne constitue en aucun cas un conseil en investissement, un conseil financier, un conseil de trading, ni aucun autre type de conseil. L'auteur **n'est pas Conseiller en Investissements Financiers (CIF)** au sens de l'article L. 541-1 du Code monétaire et financier, ni titulaire d'aucune certification équivalente dans quelque juridiction que ce soit.
+
+- Ne risquez pas d'argent que vous ne pouvez pas vous permettre de perdre.
+- Les performances passées (backtests, résultats d'hyperopt, résultats live) ne préjugent pas des performances futures.
+- Vous êtes seul responsable de vos décisions de trading et de leurs conséquences.
+- **LES AUTEURS N'ASSUMENT AUCUNE RESPONSABILITÉ POUR VOS RÉSULTATS DE TRADING.**
 
 ### Licence
 
