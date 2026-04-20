@@ -21,11 +21,13 @@ Upstream Freqtrade is already excellent as a general-purpose trading framework. 
 
 ### Why this fork?
 
-Three concrete motivations on top of the rationale above:
+Five concrete motivations on top of the rationale above:
 
 1. **Hyperliquid-grade resiliency.** On DEXes (and sometimes on CEXes too) a position can disappear from under you — ADL, manual close from the web UI, liquidation. Vanilla Freqtrade loses sync in those cases and keeps looping. This fork detects all three cases and closes the trade cleanly in the DB.
-2. **Short-DCA friendly tools.** A pairlist filter that excludes pairs with a strong linear uptrend (high R² on price regression), a custom hyperopt loss tuned for DCA strategies, and a hyperopt CLI that lets you swap Optuna samplers without touching your strategy file.
-3. **Sensible defaults for a full stack.** Launch scripts with auto-restart, a download script for recent data, and a paired FreqUI fork ([titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)) that `freqtrade install-ui` pulls automatically.
+2. **A complete FreqUI overhaul.** The stock FreqUI is functional but minimal. I wanted fleet-level monitoring, rich popovers with market context (BTC/ETH benchmarks, Fear & Greed index), per-bot alerts, drag-and-drop dashboard layout, and full i18n. So I built [titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork) — a near-complete rewrite of the UI. In this fork, `freqtrade install-ui` pulls it automatically, no extra setup needed.
+3. **Short-DCA friendly tools.** A pairlist filter that excludes pairs with a strong linear uptrend (high R² on price regression), a custom hyperopt loss tuned for DCA strategies, and a hyperopt CLI that lets you swap Optuna samplers without touching your strategy file.
+4. **A more powerful hyperopt CLI.** Vanilla Freqtrade hardcodes the Optuna sampler. This fork adds a `--sampler` flag that lets you pick from six samplers (TPE, NSGA-II, NSGA-III, CMA-ES, GP, QMC) without editing your strategy — useful for A/B testing convergence approaches across different loss functions.
+5. **Sensible defaults for a full stack.** Launch scripts with auto-restart, a download script for recent data, ready-to-use backtest configs for 6 exchanges, and live config templates with API key placeholders.
 
 ### What's added on top of upstream freqtrade/stable
 
@@ -182,11 +184,13 @@ J'utilise Freqtrade en production depuis **quatre ans**. Au fil du temps, j'ai a
 - Je puisse itérer librement sur les parties qui comptent pour ma stack (Hyperliquid, DCA, monitoring multi-bots) sans attendre de review upstream.
 - N'importe qui qui trouve une de ces modifs utile puisse **la reprendre dans son propre setup** — ou utiliser ce fork entier comme remplacement direct. Tout est sous GPL-3.0, comme l'upstream.
 
-Au-delà de ça, trois motivations concrètes :
+Au-delà de ça, cinq motivations concrètes :
 
 1. **Résilience type Hyperliquid.** Sur les DEX (et parfois sur CEX aussi), une position peut disparaître sous tes pieds — ADL, fermeture manuelle depuis l'UI de l'exchange, liquidation. Freqtrade vanilla perd la sync dans ces cas-là et boucle indéfiniment. Ce fork détecte les trois cas et ferme proprement le trade dans la DB.
-2. **Outils pensés pour le DCA short.** Un filtre de pairlist qui exclut les paires en tendance haussière régulière (R² élevé sur régression linéaire du prix), une loss hyperopt custom calibrée pour les stratégies DCA, et une CLI hyperopt qui permet de changer de sampler Optuna sans toucher au fichier de stratégie.
-3. **Stack complet utilisable d'emblée.** Scripts de lancement avec auto-restart, script de téléchargement des données récentes, et un fork de FreqUI ([titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork)) que `freqtrade install-ui` récupère automatiquement.
+2. **Une refonte complète de FreqUI.** L'interface stock de FreqUI est fonctionnelle mais minimaliste. Je voulais du monitoring de flotte, des popovers riches avec contexte de marché (benchmarks BTC/ETH, indice Fear & Greed), des alertes par bot, un dashboard drag-and-drop, et une i18n complète. J'ai donc construit [titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork) — une réécriture quasi-totale de l'UI. Dans ce fork, `freqtrade install-ui` la récupère automatiquement, aucun setup supplémentaire.
+3. **Outils pensés pour le DCA short.** Un filtre de pairlist qui exclut les paires en tendance haussière régulière (R² élevé sur régression linéaire du prix), une loss hyperopt custom calibrée pour les stratégies DCA, et une CLI hyperopt qui permet de changer de sampler Optuna sans toucher au fichier de stratégie.
+4. **Un CLI hyperopt plus puissant.** Freqtrade vanilla hardcode le sampler Optuna. Ce fork ajoute un flag `--sampler` qui permet de choisir parmi six samplers (TPE, NSGA-II, NSGA-III, CMA-ES, GP, QMC) sans éditer la stratégie — utile pour A/B tester les approches de convergence selon la loss function utilisée.
+5. **Stack complet utilisable d'emblée.** Scripts de lancement avec auto-restart, script de téléchargement des données récentes, configs de backtest prêtes à l'emploi pour 6 exchanges, et templates de configs live avec placeholders pour les clés API.
 
 ### Ce que ce fork apporte vs. upstream freqtrade/stable
 
