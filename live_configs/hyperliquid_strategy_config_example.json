@@ -1,0 +1,47 @@
+{
+    "add_config_files": [
+        "_default_spot_usdc.json",
+        "_hyperliquid_freqtrade_access_example.json"
+    ],
+
+    "max_open_trades": 4,
+    "available_capital": 10000,
+    "capital_withdrawal": 0,
+    "tradable_balance_ratio": 0.75,
+    "stake_amount": "unlimited",
+    "dry_run": true,
+    "dry_run_wallet": 10000,
+
+    "trading_mode": "futures",
+    "margin_mode": "isolated",
+    "stake_currency": "USDC",
+
+    "bot_name": "hyperliquid_bot_name",
+    "strategy": "hyperliquid_strategy_name",
+    "db_url": "sqlite:///database/hyperliquid_strategy_name.sqlite",
+
+    "api_server": {
+        "listen_port": 12345
+    },
+
+    "pairlists": [
+        {
+            "method": "VolumePairList",
+            "number_assets": 80,
+            "sort_key": "quoteVolume"
+        },
+        {
+            "method": "PerformanceFilter",
+            "minutes": 4280,
+            "max_profit": 0.1
+        },
+        {
+            "method": "VolumePairList",
+            "number_assets": 40,
+            "sort_key": "quoteVolume",
+            "min_value": 0,
+            "refresh_period": 604800,
+            "lookback_days": 7
+        }
+    ]
+}

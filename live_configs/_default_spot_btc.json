@@ -1,0 +1,75 @@
+{
+    "stake_currency": "BTC",
+    "stake_amount": "unlimited",
+    "tradable_balance_ratio": 0.95,
+    "available_capital": 1,
+    "capital_withdrawal": 0,
+    "dry_run": false,
+    "dry_run_wallet": 0.1001,
+    "cancel_open_orders_on_exit": true,
+    "trading_mode": "spot",
+    "margin_mode": "",
+    "process_only_new_candles": false,
+    "unfilledtimeout": {
+        "entry": 10,
+        "exit": 10,
+        "exit_timeout_count": 0,
+        "unit": "minutes"
+    },
+    "entry_pricing": {
+        "price_side": "other",
+        "use_order_book": true,
+        "order_book_top": 1,
+        "price_last_balance": 0.0,
+        "check_depth_of_market": {
+            "enabled": false,
+            "bids_to_ask_delta": 1
+        }
+    },
+    "exit_pricing":{
+        "price_side": "other",
+        "use_order_book": false,
+        "order_book_top": 1
+    },
+    "exchange": {
+        "ccxt_config": {
+            "enableRateLimit": true
+        },
+        "ccxt_async_config": {
+            "enableRateLimit": true,
+            "rateLimit": 300
+        },
+        "pair_whitelist": [],
+        "pair_blacklist": [
+            "EUR/.*",
+            "USDT/.*",
+            "UST/.*",
+            "USDC/.*",
+            "USDE/.*",
+            "EURI/.*",
+            "PYUSD/.*"
+        ]
+    },
+    "edge": {
+        "enabled": false,
+        "process_throttle_secs": 3600,
+        "calculate_since_number_of_days": 7,
+        "allowed_risk": 0.01,
+        "stoploss_range_min": -0.01,
+        "stoploss_range_max": -0.1,
+        "stoploss_range_step": -0.01,
+        "minimum_winrate": 0.60,
+        "minimum_expectancy": 0.20,
+        "min_trade_number": 10,
+        "max_trade_duration_minute": 1440,
+        "remove_pumps": false
+    },
+    "api_server": {
+        "enabled": true,
+        "listen_ip_address": "0.0.0.0",
+        "verbosity": "error",
+        "enable_openapi": false
+    },
+    "initial_state": "running",
+    "force_entry_enable": false
+}
