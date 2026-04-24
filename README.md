@@ -157,6 +157,8 @@ I publish French-language tutorials on algorithmic trading with Freqtrade here:
 
 Free guides covering installation, config files, strategy files, order types, backtests, hyperopt, compounding, and connecting Freqtrade to Hyperliquid. A paid membership (9 EUR / month) unlocks access to my strategies, a Discord server, and all premium content.
 
+> 📝 **Detailed presentation of this fork (in French):** [Mes forks Freqtrade et FreqUI sont publics — pourquoi les utiliser et comment s'y mettre](https://buymeacoffee.com/freqtrade_france/mes-forks-freqtrade-et-frequi-sont-publics-pourquoi-les-utiliser-et-comment-y)
+
 ### A note on French regulation
 
 If you're trading from France:
@@ -326,6 +328,8 @@ Je publie mes tutoriels francophones sur le trading algorithmique avec Freqtrade
 **<https://buymeacoffee.com/freqtrade_france/posts>**
 
 Guides gratuits sur l'installation, les fichiers de config, les fichiers de stratégies, les types d'ordres, les backtests, l'hyperopt, le compounding, et la connexion Freqtrade → Hyperliquid. Un membership payant (9 EUR / mois) débloque l'accès à mes stratégies, un serveur Discord et tout le contenu premium.
+
+> 📝 **Présentation détaillée de ce fork :** [Mes forks Freqtrade et FreqUI sont publics — pourquoi les utiliser et comment s'y mettre](https://buymeacoffee.com/freqtrade_france/mes-forks-freqtrade-et-frequi-sont-publics-pourquoi-les-utiliser-et-comment-y)
 
 ### Exchanges et réglementation française
 
