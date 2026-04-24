@@ -42,6 +42,7 @@ from freqtrade.exchange.gate import Gate
 from freqtrade.exchange.hitbtc import Hitbtc
 from freqtrade.exchange.htx import Htx
 from freqtrade.exchange.hyperliquid import Hyperliquid
+from freqtrade.exchange.cached_hyperliquid import CachedHyperliquid
 from freqtrade.exchange.idex import Idex
 from freqtrade.exchange.kraken import Kraken
 from freqtrade.exchange.krakenfutures import Krakenfutures
