@@ -48,6 +48,8 @@ GLOBAL_DEFAULTS: dict = {
     # ample headroom without masking real hangs.
     "client_timeout_s": 30,
     "client_spawn_timeout_s": 15,
+    # Feather flush cadence (seconds). Only writes dirty series.
+    "flush_interval_s": 30,
 }
 
 

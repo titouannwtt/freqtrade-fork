@@ -97,9 +97,7 @@ class CachedExchangeMixin:
     ) -> "OHLCVResponse":
         self._ftcache_maybe_init()
 
-        # Phase 0: only route live refresh (since_ms=None) through the cache.
-        # Historic paths go direct to preserve existing behaviour.
-        if since_ms is not None or not self._ftcache_client:
+        if not self._ftcache_client:
             return await super()._async_get_candle_history(  # type: ignore[misc]
                 pair, timeframe, candle_type, since_ms,
             )

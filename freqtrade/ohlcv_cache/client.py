@@ -189,6 +189,8 @@ class OhlcvCacheClient:
             k: v for k, v in cache_cfg.items()
             if k in {
                 "socket_path", "lock_path", "log_path",
+                "persistence_path", "flush_interval_s",
+                "max_candles_per_series",
                 "idle_daemon_shutdown_s", "client_timeout_s",
                 "client_spawn_timeout_s",
             }
@@ -209,6 +211,9 @@ class OhlcvCacheClient:
                 "global": {
                     "idle_daemon_shutdown_s": global_cfg["idle_daemon_shutdown_s"],
                     "log_path": global_cfg["log_path"],
+                    "persistence_path": global_cfg["persistence_path"],
+                    "flush_interval_s": global_cfg["flush_interval_s"],
+                    "max_candles_per_series": global_cfg["max_candles_per_series"],
                 },
                 "exchanges": cache_cfg.get("exchanges") or {},
             },
