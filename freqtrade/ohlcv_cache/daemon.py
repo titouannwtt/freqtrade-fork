@@ -1,21 +1,23 @@
 """
-Shared OHLCV cache daemon (Phase 0 PoC).
+Shared OHLCV cache daemon (Phase 1).
 
-Listens on a Unix socket, accepts fetch/ping requests from freqtrade bots,
-serves OHLCV data from an in-memory cache, and fetches from ccxt when needed.
+Adds over Phase 0:
+  - Partial-range merge: requests that partially overlap with cache only
+    fetch the missing slices
+  - Historic fetch routing: since_ms != None now goes through the cache,
+    dramatically speeding up warmup across restarts / across bots
+  - Range-aligned in-flight coalescing: concurrent bots asking for
+    overlapping ranges dedup to one exchange call
+  - Refresh overlap: live fetches re-request the last N candles to catch
+    retroactive corrections
+  - Feather persistence: series are flushed to disk periodically and
+    restored at daemon startup
+  - Per-exchange knobs (rate budget, max_candles_per_call, refresh
+    overlap, history depth clamp) pulled from defaults + user overrides
 
-Phase 0 scope:
-  * Hyperliquid futures only (OHLCV + MARK + FUNDING_RATE supported as
-    separate series but only lightly tested on FUTURES)
-  * No partial-range merge: a cache entry is either fresh enough to serve
-    (based on timeframe TTL) or we refetch
-  * Token-bucket rate limit per exchange (shared across all bots)
-  * Shutdown-on-idle after idle_daemon_shutdown_s with zero connections
-
-Run directly:
-    python -m freqtrade.ohlcv_cache.daemon --socket /tmp/ftcache-1000.sock
-
-The client (OhlcvCacheClient) normally spawns this for you.
+Listens on a Unix socket and speaks newline-delimited JSON (see
+protocol.py). Spawned on-demand by OhlcvCacheClient; shuts itself down
+after idle_daemon_shutdown_s with no connections.
 """
 
 from __future__ import annotations
@@ -28,30 +30,39 @@ import os
 import signal
 import sys
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from freqtrade.ohlcv_cache.coordinator import RequestCoordinator
 from freqtrade.ohlcv_cache.defaults import (
-    EXCHANGE_DEFAULTS,
     resolve_exchange_config,
     resolve_global_config,
 )
+from freqtrade.ohlcv_cache.gaps import Gap, chunk_gap, compute_gaps
 from freqtrade.ohlcv_cache.logger_setup import setup_daemon_logger
+from freqtrade.ohlcv_cache.persistence import FeatherPersistence
 from freqtrade.ohlcv_cache.protocol import PROTOCOL_VERSION, dumps, loads_request
+from freqtrade.ohlcv_cache.store import CandleSeries, CandleStore
 
 
 logger = logging.getLogger("ftcache.daemon")
+
+
+def tf_to_ms(tf: str) -> int:
+    unit = tf[-1]
+    n = int(tf[:-1])
+    return n * {"s": 1000, "m": 60_000, "h": 3_600_000, "d": 86_400_000,
+                "w": 604_800_000}.get(unit, 60_000)
 
 
 # -------------------------------------------------------------------- token bucket
 
 
 class TokenBucket:
-    """Simple async token-bucket rate limiter shared across all clients."""
+    """Async token-bucket rate limiter with adaptive back-off on 429."""
 
-    def __init__(self, rate_per_s: float, burst: float):
+    def __init__(self, rate_per_s: float, burst: float) -> None:
         self.rate_per_s = rate_per_s
         self.burst = burst
         self.tokens = float(burst)
@@ -95,65 +106,25 @@ class TokenBucket:
             self._backoff_factor = max(1.0, self._backoff_factor / 2.0)
 
 
-# -------------------------------------------------------------------- store
-
-
-@dataclass
-class CandleSeries:
-    """Phase 0: store the full last-fetched OHLCV list + metadata.
-
-    We do NOT do partial-range merging yet. Either the cache is fresh
-    enough (last_fetch within one timeframe) and we reuse it, or we
-    trigger a fetch.
-    """
-    exchange: str
-    trading_mode: str
-    pair: str
-    timeframe: str
-    candle_type: str
-    data: list[list] = field(default_factory=list)
-    drop_incomplete: bool = True
-    last_fetch_monotonic: float = 0.0
-    last_fetch_wall_ms: int = 0
-    hits: int = 0
-    misses: int = 0
-    # Coalesce concurrent fetches for the exact same key+since
-    _inflight: dict[tuple[int | None, int | None], asyncio.Future] = field(
-        default_factory=dict, repr=False
-    )
-
-
-class CandleStore:
-    def __init__(self) -> None:
-        self._series: dict[tuple, CandleSeries] = {}
-
-    def key(self, exchange: str, trading_mode: str, pair: str, timeframe: str, candle_type: str):
-        return (exchange, trading_mode, pair, timeframe, candle_type)
-
-    def get_or_create(
-        self, exchange: str, trading_mode: str, pair: str, timeframe: str, candle_type: str
-    ) -> CandleSeries:
-        k = self.key(exchange, trading_mode, pair, timeframe, candle_type)
-        s = self._series.get(k)
-        if s is None:
-            s = CandleSeries(
-                exchange=exchange, trading_mode=trading_mode, pair=pair,
-                timeframe=timeframe, candle_type=candle_type,
-            )
-            self._series[k] = s
-        return s
-
-    def all_series(self) -> list[CandleSeries]:
-        return list(self._series.values())
-
-
-# -------------------------------------------------------------------- ccxt client wrappers
+# -------------------------------------------------------------------- ccxt fetcher
 
 
 class ExchangeFetcher:
-    """Wraps a ccxt async client for one exchange+trading_mode combo."""
+    """One ccxt async client per (exchange, trading_mode)."""
 
-    def __init__(self, exchange: str, trading_mode: str, budget: TokenBucket):
+    # Exchanges that need `defaultType: swap` for perpetuals. Same logic as
+    # freqtrade's per-exchange `_ccxt_config`.
+    _DEFAULT_TYPE_MAP = {
+        "hyperliquid": "swap",
+        "binance": "future",
+        "binanceusdm": "future",
+        "bybit": "swap",
+        "gate": "swap",
+        "okx": "swap",
+        "kucoin": "swap",
+    }
+
+    def __init__(self, exchange: str, trading_mode: str, budget: TokenBucket) -> None:
         self.exchange = exchange
         self.trading_mode = trading_mode
         self.budget = budget
@@ -166,12 +137,14 @@ class ExchangeFetcher:
         async with self._lock:
             if self._client is not None:
                 return self._client
-            import ccxt.async_support as ccxt_async  # lazy import
+            import ccxt.async_support as ccxt_async  # noqa: PLC0415
             if not hasattr(ccxt_async, self.exchange):
                 raise RuntimeError(f"ccxt has no exchange '{self.exchange}'")
-            config: dict[str, Any] = {"enableRateLimit": False}  # WE manage rate limit
+            config: dict[str, Any] = {"enableRateLimit": False}
             if self.trading_mode == "futures":
-                config["options"] = {"defaultType": "swap"}
+                dt = self._DEFAULT_TYPE_MAP.get(self.exchange)
+                if dt:
+                    config["options"] = {"defaultType": dt}
             self._client = getattr(ccxt_async, self.exchange)(config)
             logger.info(
                 "initialised ccxt async client for %s (trading_mode=%s)",
@@ -190,11 +163,11 @@ class ExchangeFetcher:
         await self.budget.acquire(1.0)
         try:
             data = await client.fetch_ohlcv(
-                pair, timeframe=timeframe, since=since_ms, limit=limit, params=params,
+                pair, timeframe=timeframe, since=since_ms,
+                limit=limit, params=params,
             )
             return data
         except Exception as e:
-            # Very light 429 detection — most ccxt classes raise RateLimitExceeded
             msg = str(e)
             if "429" in msg or "RateLimit" in e.__class__.__name__:
                 self.budget.trigger_backoff(60.0, 2.0)
@@ -208,20 +181,25 @@ class ExchangeFetcher:
                 pass
 
 
-# -------------------------------------------------------------------- session/server
+# -------------------------------------------------------------------- stats
 
 
 @dataclass
 class DaemonStats:
     started_monotonic: float = field(default_factory=time.monotonic)
     requests_total: int = 0
-    cache_hits: int = 0
-    cache_misses: int = 0
+    cache_hits: int = 0          # served fully from cache, no fetch
+    cache_partial: int = 0       # partial-range: some from cache, some fetched
+    cache_misses: int = 0        # nothing in cache, full fetch
+    fetch_errors: int = 0
     active_clients: int = 0
     last_client_disconnect_monotonic: float | None = None
 
     def uptime_s(self) -> float:
         return time.monotonic() - self.started_monotonic
+
+
+# -------------------------------------------------------------------- daemon
 
 
 class Daemon:
@@ -237,17 +215,29 @@ class Daemon:
         self.store = CandleStore()
         self.budgets: dict[str, TokenBucket] = {}
         self.fetchers: dict[tuple[str, str], ExchangeFetcher] = {}
+        self.coordinator = RequestCoordinator()
         self.stats = DaemonStats()
+        self.persistence = FeatherPersistence(
+            root=Path(global_cfg.get("persistence_path", "")),
+            store=self.store,
+        ) if global_cfg.get("persistence_path") else None
         self._server: asyncio.base_events.Server | None = None
         self._shutdown_event = asyncio.Event()
-        self._idle_shutdown_s = float(global_cfg.get("idle_daemon_shutdown_s", 60))
+        self._idle_shutdown_s = float(global_cfg.get("idle_daemon_shutdown_s", 600))
+        self._max_candles_per_series = int(global_cfg.get("max_candles_per_series", 5000))
+        self._flush_interval_s = float(global_cfg.get("flush_interval_s", 30))
 
     # --------- helpers
+
+    def _exchange_cfg(self, exchange: str) -> dict:
+        return resolve_exchange_config(
+            exchange, self.exchange_overrides.get(exchange),
+        )
 
     def _get_budget(self, exchange: str) -> TokenBucket:
         b = self.budgets.get(exchange)
         if b is None:
-            ex_cfg = resolve_exchange_config(exchange, self.exchange_overrides.get(exchange))
+            ex_cfg = self._exchange_cfg(exchange)
             b = TokenBucket(
                 rate_per_s=ex_cfg.get("rate_per_s", 5),
                 burst=ex_cfg.get("burst", 10),
@@ -263,20 +253,56 @@ class Daemon:
             self.fetchers[k] = f
         return f
 
-    def _timeframe_to_seconds(self, tf: str) -> int:
-        unit = tf[-1]
-        n = int(tf[:-1])
-        return n * {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}.get(unit, 60)
+    # --------- fetch handler
 
-    def _is_fresh(self, series: CandleSeries) -> bool:
-        if not series.data:
-            return False
-        tf_s = self._timeframe_to_seconds(series.timeframe)
-        age = time.monotonic() - series.last_fetch_monotonic
-        # Fresh if refreshed within the last timeframe window
-        return age < tf_s
+    async def _fetch_chunk(
+        self, series: CandleSeries, chunk: Gap, exchange_cfg: dict,
+    ) -> None:
+        """Execute one exchange fetch and merge the result into `series`."""
+        fetcher = self._get_fetcher(series.exchange, series.trading_mode)
+        limit = chunk.n_candles(series.tf_ms)
+        # Ccxt generally returns <= limit candles; never go over the
+        # exchange's documented max_candles_per_call.
+        max_per_call = int(exchange_cfg.get("max_candles_per_call", 1000))
+        limit = min(limit, max_per_call) if limit else max_per_call
+        try:
+            data = await fetcher.fetch_ohlcv(
+                pair=series.pair, timeframe=series.timeframe,
+                since_ms=chunk.start_ms, limit=limit,
+                candle_type=series.candle_type,
+            )
+        except Exception as e:
+            self.stats.fetch_errors += 1
+            logger.warning(
+                "chunk fetch failed %s %s [%d..%d): %s: %s",
+                series.pair, series.timeframe,
+                chunk.start_ms, chunk.end_ms,
+                e.__class__.__name__, e,
+            )
+            raise
 
-    # --------- request handling
+        if not data:
+            return
+
+        # Detect historic boundary: first returned ts is well past what we
+        # asked for AND we got fewer than requested → earliest available.
+        first_ts = int(data[0][0])
+        tolerance_ms = series.tf_ms  # allow 1 candle of slack
+        if (
+            series.earliest_available_ts is None
+            and first_ts > chunk.start_ms + tolerance_ms
+            and len(data) < limit
+        ):
+            series.earliest_available_ts = first_ts
+            logger.info(
+                "detected earliest_available_ts=%d for %s %s",
+                first_ts, series.pair, series.timeframe,
+            )
+
+        series.merge(data)
+
+        # Trim if we've grown past the cap
+        series.trim_to(self._max_candles_per_series)
 
     async def _handle_fetch(self, req: dict) -> dict:
         t0 = time.monotonic()
@@ -285,114 +311,125 @@ class Daemon:
         trading_mode = req.get("trading_mode", "spot")
         pair = req["pair"]
         timeframe = req["timeframe"]
-        candle_type = req.get("candle_type", "") or trading_mode
+        candle_type = req.get("candle_type") or trading_mode
         since_ms = req.get("since_ms")
-        limit = req.get("limit")
+        limit = int(req.get("limit") or 500)
+        tf_ms = tf_to_ms(timeframe)
 
-        # Phase 0: bypass cache for historic fetches (since_ms is not None).
-        # Those paths (startup warmup, backtest) will be added in Phase 1
-        # with partial-range merging.
-        series = self.store.get_or_create(exchange, trading_mode, pair, timeframe, candle_type)
+        series = self.store.get_or_create(
+            exchange, trading_mode, pair, timeframe, candle_type, tf_ms,
+        )
+        ex_cfg = self._exchange_cfg(exchange)
+        refresh_overlap = int(ex_cfg.get("refresh_overlap_candles", 3))
 
-        if since_ms is None and self._is_fresh(series):
+        is_live = since_ms is None
+        # Compute requested range (half-open end)
+        if is_live:
+            now_ms = int(time.time() * 1000)
+            end_ms = ((now_ms // tf_ms) + 1) * tf_ms
+            start_ms = end_ms - limit * tf_ms
+        else:
+            start_ms = (int(since_ms) // tf_ms) * tf_ms
+            end_ms = start_ms + limit * tf_ms
+
+        # Fast-path for live: if we refreshed within the current tf window
+        # AND the cache fully covers the requested range, just serve it.
+        now_wall_ms = int(time.time() * 1000)
+        if (
+            is_live
+            and series.last_live_refresh_wall_ms > 0
+            and (now_wall_ms - series.last_live_refresh_wall_ms) < tf_ms
+            and series.range_start_ms is not None
+            and series.range_end_ms is not None
+            and series.range_start_ms <= start_ms
+            and series.range_end_ms >= (end_ms - tf_ms)
+        ):
             series.hits += 1
             self.stats.cache_hits += 1
-            return self._ok_response(req["req_id"], series, t0, served_from="cache")
+            return self._ok(
+                req["req_id"], series, start_ms, end_ms, t0, served_from="cache",
+            )
 
-        inflight_key = (since_ms, limit)
-        fut = series._inflight.get(inflight_key)
-        if fut is not None:
-            await fut
-            if since_ms is None and self._is_fresh(series):
-                series.hits += 1
-                self.stats.cache_hits += 1
-                return self._ok_response(
-                    req["req_id"], series, t0, served_from="coalesced"
-                )
+        gaps = compute_gaps(
+            requested_start_ms=start_ms,
+            requested_end_ms=end_ms,
+            cached_start_ms=series.range_start_ms,
+            cached_end_ms=series.range_end_ms,
+            tf_ms=tf_ms,
+            refresh_overlap_candles=refresh_overlap if is_live else 0,
+            earliest_available_ts=series.earliest_available_ts,
+        )
 
-        if inflight_key not in series._inflight:
-            fut = asyncio.get_running_loop().create_future()
-            # Always acknowledge the future's result to silence asyncio's
-            # "Future exception was never retrieved" warning. Waiters that
-            # await this future don't care about the exception object —
-            # they check cache freshness themselves and re-initiate when needed.
-            fut.add_done_callback(lambda f: f.exception() if not f.cancelled() else None)
-            series._inflight[inflight_key] = fut
+        if not gaps:
+            series.hits += 1
+            self.stats.cache_hits += 1
+            return self._ok(
+                req["req_id"], series, start_ms, end_ms, t0, served_from="cache",
+            )
+
+        max_chunk = int(ex_cfg.get("max_candles_per_call", 1000))
+        chunks: list[Gap] = []
+        for g in gaps:
+            chunks.extend(chunk_gap(g, max_chunk, tf_ms))
+
+        had_any_cache = series.n_candles > 0
+        errors = 0
+        for chunk in chunks:
+            key = (
+                exchange, trading_mode, pair, timeframe, candle_type,
+                chunk.start_ms, chunk.end_ms,
+            )
+            async def _do_fetch(c=chunk):
+                await self._fetch_chunk(series, c, ex_cfg)
             try:
-                fetcher = self._get_fetcher(exchange, trading_mode)
-                data = await fetcher.fetch_ohlcv(
-                    pair=pair, timeframe=timeframe, since_ms=since_ms,
-                    limit=limit, candle_type=candle_type,
-                )
-                # Keep only if this was a live refresh (since_ms=None).
-                # Historic fetches (since_ms!=None) are returned direct without caching
-                # in Phase 0.
-                if since_ms is None:
-                    # Never cache an empty response: it would poison the cache
-                    # and starve the strategy on subsequent "hits" until the
-                    # timeframe TTL expires. Return the empty payload to the
-                    # caller (it'll log "Empty candle") but don't update
-                    # last_fetch_monotonic so the next call retries immediately.
-                    if data:
-                        series.data = data
-                        series.last_fetch_monotonic = time.monotonic()
-                        series.last_fetch_wall_ms = int(time.time() * 1000)
-                        series.drop_incomplete = True
-                    series.misses += 1
-                    self.stats.cache_misses += 1
-                    fut.set_result(None)
-                    if data:
-                        return self._ok_response(
-                            req["req_id"], series, t0, served_from="fetch"
-                        )
-                    else:
-                        logger.warning(
-                            "empty OHLCV response for %s %s %s — not caching",
-                            pair, timeframe, candle_type,
-                        )
-                        return {
-                            "req_id": req["req_id"], "ok": True,
-                            "pair": pair, "timeframe": timeframe,
-                            "candle_type": candle_type,
-                            "data": [], "drop_incomplete": True,
-                            "served_from": "empty_uncached",
-                            "latency_ms": (time.monotonic() - t0) * 1000,
-                        }
-                else:
-                    fut.set_result(None)
-                    return {
-                        "req_id": req["req_id"], "ok": True,
-                        "pair": pair, "timeframe": timeframe,
-                        "candle_type": candle_type,
-                        "data": data, "drop_incomplete": True,
-                        "served_from": "fetch_direct",
-                        "latency_ms": (time.monotonic() - t0) * 1000,
-                    }
-            except Exception as e:
-                # Signal completion to waiters without propagating the
-                # exception via the future. They will re-check cache
-                # freshness and re-initiate the fetch themselves if needed.
-                if not fut.done():
-                    fut.set_result(None)
-                raise
-            finally:
-                series._inflight.pop(inflight_key, None)
+                await self.coordinator.run(key, _do_fetch)
+            except Exception:
+                errors += 1
 
-        # Shouldn't reach here
+        if is_live and errors == 0:
+            series.last_live_refresh_wall_ms = int(time.time() * 1000)
+
+        served_from: str
+        if had_any_cache and errors == 0:
+            series.misses += 1  # partial counts as miss from the series' POV
+            self.stats.cache_partial += 1
+            served_from = "partial"
+        else:
+            series.misses += 1
+            self.stats.cache_misses += 1
+            served_from = "fetch"
+
+        data_rows = series.slice_range(start_ms, end_ms)
+        if not data_rows and errors:
+            return {
+                "req_id": req["req_id"], "ok": False,
+                "pair": pair, "timeframe": timeframe,
+                "candle_type": candle_type,
+                "error_type": "FetchFailed",
+                "error_message": f"{errors} chunk(s) failed, no cached data",
+                "latency_ms": (time.monotonic() - t0) * 1000,
+            }
+
         return {
-            "req_id": req["req_id"], "ok": False,
-            "error_type": "LogicError",
-            "error_message": "Inflight coalescing fallthrough",
+            "req_id": req["req_id"], "ok": True,
+            "pair": pair, "timeframe": timeframe,
+            "candle_type": candle_type,
+            "data": data_rows,
+            "drop_incomplete": True if candle_type != "funding_rate" else False,
+            "served_from": served_from,
+            "latency_ms": (time.monotonic() - t0) * 1000,
         }
 
-    def _ok_response(
-        self, req_id: str, series: CandleSeries, t0: float, served_from: str,
+    def _ok(
+        self, req_id: str, series: CandleSeries,
+        start_ms: int, end_ms: int, t0: float, served_from: str,
     ) -> dict:
         return {
             "req_id": req_id, "ok": True,
             "pair": series.pair, "timeframe": series.timeframe,
             "candle_type": series.candle_type,
-            "data": series.data, "drop_incomplete": series.drop_incomplete,
+            "data": series.slice_range(start_ms, end_ms),
+            "drop_incomplete": True if series.candle_type != "funding_rate" else False,
             "served_from": served_from,
             "latency_ms": (time.monotonic() - t0) * 1000,
         }
@@ -414,8 +451,11 @@ class Daemon:
                 "active_clients": self.stats.active_clients,
                 "requests_total": self.stats.requests_total,
                 "cache_hits": self.stats.cache_hits,
+                "cache_partial": self.stats.cache_partial,
                 "cache_misses": self.stats.cache_misses,
-                "series_count": len(self.store.all_series()),
+                "fetch_errors": self.stats.fetch_errors,
+                "series_count": len(self.store.all()),
+                "inflight_count": self.coordinator.active_count(),
             }
         if op == "fetch":
             try:
@@ -435,14 +475,16 @@ class Daemon:
             "error_message": f"Unknown op: {op}",
         }
 
-    # --------- server
+    # --------- server loop
 
     async def _handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
     ) -> None:
         self.stats.active_clients += 1
         peer = writer.get_extra_info("peername") or "unix"
-        logger.info("client connected (%s) — active=%d", peer, self.stats.active_clients)
+        logger.info(
+            "client connected (%s) — active=%d", peer, self.stats.active_clients,
+        )
         try:
             while True:
                 line = await reader.readline()
@@ -477,7 +519,6 @@ class Daemon:
             if self.stats.active_clients > 0:
                 continue
             if self.stats.last_client_disconnect_monotonic is None:
-                # Never had a client; use startup time as anchor
                 idle_s = self.stats.uptime_s()
             else:
                 idle_s = time.monotonic() - self.stats.last_client_disconnect_monotonic
@@ -489,6 +530,22 @@ class Daemon:
                 self._shutdown_event.set()
                 return
 
+    async def _periodic_flush(self) -> None:
+        if not self.persistence:
+            return
+        while not self._shutdown_event.is_set():
+            try:
+                await asyncio.sleep(self._flush_interval_s)
+                if self._shutdown_event.is_set():
+                    break
+                n = self.persistence.flush_dirty()
+                if n:
+                    logger.debug("flushed %d dirty series", n)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning("periodic flush failed: %s", e)
+
     async def serve(self) -> None:
         if os.path.exists(self.socket_path):
             try:
@@ -496,8 +553,6 @@ class Daemon:
             except OSError:
                 pass
 
-        # Raise the default StreamReader buffer from 64KB so large OHLCV
-        # JSON payloads (500–5000 candles) don't overrun readline().
         self._server = await asyncio.start_unix_server(
             self._handle_client, path=self.socket_path,
             limit=16 * 1024 * 1024,
@@ -508,16 +563,32 @@ class Daemon:
             self.socket_path, os.getpid(), PROTOCOL_VERSION,
         )
 
+        if self.persistence:
+            try:
+                loaded = self.persistence.load_all()
+                if loaded:
+                    logger.info("loaded %d series from persistence", loaded)
+            except Exception as e:
+                logger.warning("persistence load failed: %s", e)
+
         watchdog_task = asyncio.create_task(self._idle_watchdog())
+        flush_task = asyncio.create_task(self._periodic_flush())
 
         try:
             await self._shutdown_event.wait()
         finally:
             watchdog_task.cancel()
+            flush_task.cancel()
             self._server.close()
             await self._server.wait_closed()
             for f in list(self.fetchers.values()):
                 await f.close()
+            if self.persistence:
+                try:
+                    n = self.persistence.flush_dirty()
+                    logger.info("final flush: %d series written", n)
+                except Exception as e:
+                    logger.warning("final flush failed: %s", e)
             try:
                 os.unlink(self.socket_path)
             except OSError:
@@ -553,8 +624,9 @@ def main() -> int:
 
     setup_daemon_logger(global_cfg.get("log_path"), level=args.log_level)
     logger.info(
-        "starting ftcache daemon — socket=%s log=%s",
+        "starting ftcache daemon — socket=%s log=%s persistence=%s",
         global_cfg["socket_path"], global_cfg.get("log_path"),
+        global_cfg.get("persistence_path"),
     )
 
     exchange_overrides = raw_cfg.get("exchanges") if raw_cfg else None

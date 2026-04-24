@@ -43,6 +43,26 @@ from freqtrade.exchange.hitbtc import Hitbtc
 from freqtrade.exchange.htx import Htx
 from freqtrade.exchange.hyperliquid import Hyperliquid
 from freqtrade.exchange.cached_hyperliquid import CachedHyperliquid
+from freqtrade.exchange.cached_subclasses import (  # noqa: F401
+    CachedBinance,
+    CachedBinanceus,
+    CachedBinanceusdm,
+    CachedBingx,
+    CachedBitget,
+    CachedBitmart,
+    CachedBitvavo,
+    CachedBybit,
+    CachedCoinex,
+    CachedCryptocom,
+    CachedGate,
+    CachedHtx,
+    CachedKraken,
+    CachedKrakenfutures,
+    CachedKucoin,
+    CachedMyokx,
+    CachedOkx,
+    CachedOkxus,
+)
 from freqtrade.exchange.idex import Idex
 from freqtrade.exchange.kraken import Kraken
 from freqtrade.exchange.krakenfutures import Krakenfutures
