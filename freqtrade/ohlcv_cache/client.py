@@ -151,6 +151,13 @@ class OhlcvCacheClient:
                 if not line:
                     raise CacheUnavailable("daemon closed connection")
                 return loads_response(line)
+            except asyncio.CancelledError:
+                # Outer wait_for (e.g. _ftcache_acquire_sync timeout)
+                # cancelled us mid-request. The daemon may still send a
+                # response that would poison the next readline(), so we
+                # must tear down this connection.
+                await self.close()
+                raise
             except TimeoutError as e:
                 await self.close()
                 raise CacheTimedOut(
