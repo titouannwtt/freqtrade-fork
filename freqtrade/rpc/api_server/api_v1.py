@@ -11,6 +11,7 @@ from freqtrade.exceptions import OperationalException
 from freqtrade.rpc import RPC
 from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
 from freqtrade.rpc.api_server.api_schemas import (
+    CacheStatus,
     Health,
     Logs,
     MarketRequest,
@@ -82,8 +83,13 @@ router = APIRouter()
 def ping():
     """simple ping to check if API is responsive
 
-    Performs no internal checks, just returns pong.
+    Returns "starting" while the bot is still initializing (exchange,
+    pairlists, etc.) and "pong" once fully ready.
     """
+    from freqtrade.rpc.api_server.webserver import ApiServer
+
+    if not ApiServer._has_rpc:
+        return {"status": "starting"}
     return {"status": "pong"}
 
 
@@ -200,3 +206,80 @@ def sysinfo():
 @router.get("/health", response_model=Health, tags=["Info"])
 def health(rpc: RPC = Depends(get_rpc)):
     return rpc.health()
+
+
+@router.get("/cache_status", response_model=CacheStatus, tags=["Info"])
+def cache_status():
+    return _query_cache_daemons()
+
+
+def _query_cache_daemons() -> dict:
+    from freqtrade.ohlcv_cache.healthcheck import _query_unix
+
+    result: dict = {"ftcache": {}, "pairlist_cache": {}}
+
+    # ftcache daemon
+    try:
+        from freqtrade.ohlcv_cache.defaults import default_socket_path
+
+        sock = default_socket_path()
+        stats = _query_unix(sock, {"op": "stats", "req_id": "api"})
+        if stats.get("ok"):
+            total = stats.get("requests_total", 0)
+            hits = stats.get("cache_hits", 0)
+            t_req = stats.get("tickers_requests", 0)
+            t_hits = stats.get("tickers_cache_hits", 0)
+            p_gets = stats.get("positions_gets", 0)
+            p_hits = stats.get("positions_cache_hits", 0)
+            result["ftcache"] = {
+                "online": True,
+                "uptime_s": stats.get("uptime_s", 0),
+                "active_clients": stats.get("active_clients", 0),
+                "requests_total": total,
+                "cache_hits": hits,
+                "cache_partial": stats.get("cache_partial", 0),
+                "cache_misses": stats.get("cache_misses", 0),
+                "hit_rate_pct": round(hits / total * 100, 1) if total > 0 else 0,
+                "fetch_errors": stats.get("fetch_errors", 0),
+                "series_count": stats.get("series_count", 0),
+                "pending_fetches": stats.get("pending_fetches", 0),
+                "peak_pending": stats.get("peak_pending", 0),
+                "acquire_total": stats.get("acquire_total", 0),
+                "tickers_requests": t_req,
+                "tickers_cache_hits": t_hits,
+                "tickers_hit_rate_pct": round(t_hits / t_req * 100, 1) if t_req > 0 else 0,
+                "tickers_fetches": stats.get("tickers_fetches", 0),
+                "positions_puts": stats.get("positions_puts", 0),
+                "positions_gets": p_gets,
+                "positions_cache_hits": p_hits,
+                "positions_hit_rate_pct": round(p_hits / p_gets * 100, 1) if p_gets > 0 else 0,
+            }
+    except Exception:
+        logger.debug("ftcache status query failed", exc_info=True)
+
+    # pairlist cache daemon
+    try:
+        from freqtrade.pairlist_cache.defaults import (
+            default_socket_path as pl_socket_path,
+        )
+
+        sock = pl_socket_path()
+        ping = _query_unix(sock, {"op": "ping", "req_id": "api"})
+        stats = _query_unix(sock, {"op": "stats", "req_id": "api"})
+        if stats.get("ok"):
+            gets = stats.get("gets", 0)
+            hits_val = stats.get("hits", 0)
+            result["pairlist_cache"] = {
+                "online": True,
+                "uptime_s": ping.get("uptime_s", 0),
+                "active_clients": stats.get("clients", 0),
+                "entries": stats.get("entries", 0),
+                "gets": gets,
+                "hits": hits_val,
+                "hit_rate_pct": round(hits_val / gets * 100, 1) if gets > 0 else 0,
+                "puts": stats.get("puts", 0),
+            }
+    except Exception:
+        logger.debug("pairlist cache status query failed", exc_info=True)
+
+    return result
