@@ -65,6 +65,34 @@ class TestExceptionHierarchy:
             raise CacheTimedOut("timeout")
 
 
+class TestCancelledErrorClosesConnection:
+    """CancelledError during _send_and_receive must close the connection
+    to prevent stale daemon responses from poisoning the next request."""
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_closes_connection(self):
+        client = OhlcvCacheClient(
+            socket_path="/tmp/fake.sock",
+            exchange_id="hyperliquid",
+            trading_mode="futures",
+        )
+        reader = AsyncMock()
+        writer = MagicMock()
+        writer.is_closing.return_value = False
+        writer.write = MagicMock()
+        writer.drain = AsyncMock()
+        reader.readline = AsyncMock(side_effect=asyncio.CancelledError())
+
+        client._reader = reader
+        client._writer = writer
+
+        with pytest.raises(asyncio.CancelledError):
+            await client._send_and_receive({"op": "acquire", "req_id": "x"})
+
+        assert client._reader is None
+        assert client._writer is None
+
+
 # -------------------------------------------------------------------- client response handling
 
 
@@ -1128,7 +1156,7 @@ class TestFallbackRateLimiting:
             priority=OhlcvCacheClient.HIGH,
         )
 
-    def test_fetch_positions_no_client_no_acquire(self):
+    def test_fetch_positions_no_client_no_acquire(self):  # noqa: E301
         """fetch_positions with no client should NOT try to acquire."""
         mixin, _, _ = _make_mixin_exchange(ftcache_enabled=False)
         mixin.id = "hyperliquid"
