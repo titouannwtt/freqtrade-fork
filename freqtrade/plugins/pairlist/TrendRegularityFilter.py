@@ -20,7 +20,7 @@ from freqtrade.constants import ListPairsWithTimeframes
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange.exchange_types import Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
-from freqtrade.util import FtTTLCache, dt_now, dt_ts, format_ms_time
+from freqtrade.util import FtTTLCache, dt_now, dt_ts
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,15 @@ class TrendRegularityFilter(IPairList):
         self._def_candletype = self._config["candle_type_def"]
 
         self._pair_cache: FtTTLCache = FtTTLCache(maxsize=1000, ttl=self._refresh_period)
+
+        self._shared_client = None
+        self._params_hash = ""
+        try:
+            from freqtrade.pairlist_cache.client import PairlistCacheClient
+            self._shared_client = PairlistCacheClient.get_or_spawn()
+            self._params_hash = PairlistCacheClient.compute_params_hash(self._pairlistconfig)
+        except Exception:
+            logger.info("Shared pairlist cache unavailable, using local cache only.")
 
         if self._lookback_period < 2:
             raise OperationalException(
@@ -117,6 +126,16 @@ class TrendRegularityFilter(IPairList):
         """
         Filter pairlist - remove pairs with regular uptrend.
         """
+        if self._shared_client:
+            locally_uncached = [p for p in pairlist if p not in self._pair_cache]
+            if locally_uncached:
+                shared = self._shared_client.mget(
+                    "TrendRegularityFilter", self._params_hash, locally_uncached
+                )
+                for p, val in shared.items():
+                    if val is not None:
+                        self._pair_cache[p] = val["exclude"]
+
         needed_pairs: ListPairsWithTimeframes = [
             (p, self._lookback_timeframe, self._def_candletype)
             for p in pairlist
@@ -128,6 +147,8 @@ class TrendRegularityFilter(IPairList):
         )
         candles = self._exchange.refresh_ohlcv_with_cache(needed_pairs, since_ms=since_ms)
 
+        freshly_needed = {p for p, _, _ in needed_pairs}
+        newly_computed: dict[str, dict] = {}
         resulting_pairlist: list[str] = []
         for p in pairlist:
             pair_candles = candles.get(
@@ -136,15 +157,23 @@ class TrendRegularityFilter(IPairList):
 
             should_exclude = self._check_trend(p, pair_candles)
 
+            if p in freshly_needed and should_exclude is not None:
+                newly_computed[p] = {"exclude": should_exclude}
+
             if should_exclude is None:
                 self.log_once(
                     f"Removed {p} from whitelist, no candles found.", logger.info
                 )
             elif should_exclude:
-                # Pair has regular uptrend - exclude it
                 pass
             else:
                 resulting_pairlist.append(p)
+
+        if newly_computed and self._shared_client:
+            self._shared_client.mput(
+                "TrendRegularityFilter", self._params_hash,
+                newly_computed, ttl=self._refresh_period,
+            )
 
         return resulting_pairlist
 
