@@ -41,7 +41,7 @@ from freqtrade.exchange import (
     timeframe_to_next_date,
     timeframe_to_seconds,
 )
-from freqtrade.exchange.exchange_types import CcxtOrder
+from freqtrade.exchange.exchange_types import CcxtOrder, CcxtPosition
 from freqtrade.leverage.liquidation_price import update_liquidation_prices
 from freqtrade.misc import safe_value_fallback, safe_value_fallback2
 from freqtrade.mixins import LoggingMixin
@@ -89,6 +89,11 @@ class FreqtradeBot(LoggingMixin):
 
         # Init objects
         self.config = config
+
+        # Start API server early so FreqUI is reachable during exchange/pairlist init
+        if config.get("api_server", {}).get("enabled", False):
+            from freqtrade.rpc.api_server import ApiServer
+            ApiServer(config)
         exchange_config: ExchangeConfig = deepcopy(config["exchange"])
         # Remove credentials from original exchange config to avoid accidental credential exposure
         remove_exchange_credentials(config["exchange"], True)
@@ -148,6 +153,8 @@ class FreqtradeBot(LoggingMixin):
         initial_state = self.config.get("initial_state")
         self.state = State[initial_state.upper()] if initial_state else State.STOPPED
 
+        self._position_guard_last_warn: dict[str, float] = {}
+
         # Protect exit-logic from forcesell and vice versa
         self._exit_lock = Lock()
         timeframe_secs = timeframe_to_seconds(self.strategy.timeframe)
@@ -161,6 +168,7 @@ class FreqtradeBot(LoggingMixin):
             def update():
                 self.update_funding_fees()
                 self.update_all_liquidation_prices()
+                self.sync_leverage_from_exchange()
                 self.wallets.update()
 
             # This would be more efficient if scheduled in utc time, and performed at each
@@ -243,6 +251,7 @@ class FreqtradeBot(LoggingMixin):
         self.startup_update_open_orders()
         self.update_all_liquidation_prices()
         self.update_funding_fees()
+        self.sync_leverage_from_exchange()
 
     def process(self) -> None:
         """
@@ -260,6 +269,11 @@ class FreqtradeBot(LoggingMixin):
         trades: list[Trade] = Trade.get_open_trades()
 
         self.active_pair_whitelist = self._refresh_active_whitelist(trades)
+
+        # Inform ftcache which pairs have open positions (CRITICAL priority)
+        if hasattr(self.exchange, 'ftcache_set_open_pairs'):
+            open_pairs = {t.pair for t in trades}
+            self.exchange.ftcache_set_open_pairs(open_pairs)
 
         # Refreshing candles
         self.dataprovider.refresh(
@@ -376,6 +390,128 @@ class FreqtradeBot(LoggingMixin):
                         open_date=trade.date_last_filled_utc,
                     )
                 )
+
+    def _check_position_guard(
+        self, pair: str, is_short: bool, leverage: float
+    ) -> bool:
+        """
+        Check exchange positions before opening a trade.
+        If a position already exists on this pair with a different side or leverage,
+        deny entry. Returns True if entry is allowed, False otherwise.
+        Only active in FUTURES mode on live (non dry-run) exchanges.
+        """
+        if self.trading_mode != TradingMode.FUTURES or self.config["dry_run"]:
+            return True
+
+        try:
+            positions: list[CcxtPosition] = self.exchange.fetch_positions(pair)
+        except Exception as e:
+            logger.warning(
+                "Position guard: could not fetch positions for %s (%s) "
+                "— allowing entry as fallback.",
+                pair, e,
+            )
+            return True
+
+        for pos in positions:
+            if pos.get("side") is None or pos.get("collateral", 0) == 0.0:
+                continue
+            if pos["symbol"] != pair:
+                continue
+
+            pos_side = pos["side"]
+            pos_leverage = pos.get("leverage", 1.0)
+            wanted_side = "short" if is_short else "long"
+
+            if pos_side != wanted_side:
+                self._guard_warn_throttled(
+                    pair,
+                    "Position guard: BLOCKED entry %s %s %.1fx — "
+                    "existing %s position on %s at %.1fx. "
+                    "Cannot open opposite side on same wallet.",
+                    wanted_side.upper(), pair, leverage,
+                    pos_side.upper(), pair, pos_leverage,
+                )
+                return False
+
+            if int(pos_leverage) != int(leverage):
+                self._guard_warn_throttled(
+                    pair,
+                    "Position guard: BLOCKED entry %s %s %.1fx — "
+                    "existing position at %.1fx (leverage mismatch). "
+                    "Align leverage across bots sharing this wallet.",
+                    wanted_side.upper(), pair, leverage,
+                    pos_leverage,
+                )
+                return False
+
+        return True
+
+    def _guard_warn_throttled(self, pair: str, msg: str, *args: object) -> None:
+        import time
+        now = time.monotonic()
+        last = self._position_guard_last_warn.get(pair, 0.0)
+        if now - last >= 900:
+            logger.warning(msg, *args)
+            self._position_guard_last_warn[pair] = now
+
+    def sync_leverage_from_exchange(self) -> None:
+        """
+        Compare DB trade leverage with actual exchange positions.
+        Update DB if exchange shows a different leverage (another bot changed it).
+        """
+        if self.trading_mode != TradingMode.FUTURES or self.config["dry_run"]:
+            return
+
+        try:
+            positions: list[CcxtPosition] = self.exchange.fetch_positions()
+        except Exception as e:
+            logger.warning("Leverage sync: could not fetch positions (%s)", e)
+            return
+
+        pos_by_symbol: dict[str, CcxtPosition] = {}
+        for pos in positions:
+            if pos.get("side") is None or pos.get("collateral", 0) == 0.0:
+                continue
+            pos_by_symbol[pos["symbol"]] = pos
+
+        trades: list[Trade] = Trade.get_open_trades()
+        for trade in trades:
+            if trade.exchange != self.exchange.id:
+                continue
+            pos = pos_by_symbol.get(trade.pair)
+            if pos is None:
+                continue
+
+            ex_leverage = pos.get("leverage")
+            if ex_leverage is None:
+                continue
+
+            if int(ex_leverage) != int(trade.leverage):
+                old_lev = trade.leverage
+                trade.leverage = float(ex_leverage)
+                trade.recalc_trade_from_orders()
+                logger.warning(
+                    "Leverage sync: Trade #%d %s leverage corrected "
+                    "%sx → %sx (aligned with %s). "
+                    "stake_amount recalculated to %.2f. "
+                    "Another bot or manual action changed the leverage.",
+                    trade.id, trade.pair,
+                    int(old_lev), int(ex_leverage),
+                    self.exchange.name, trade.stake_amount,
+                )
+
+            ex_side = pos.get("side")
+            trade_side = "short" if trade.is_short else "long"
+            if ex_side and ex_side != trade_side:
+                logger.error(
+                    "Leverage sync: CRITICAL mismatch Trade #%d %s — "
+                    "DB says %s but %s shows %s. "
+                    "Manual intervention required!",
+                    trade.id, trade.pair,
+                    trade_side.upper(), self.exchange.name, ex_side.upper(),
+                )
+        Trade.commit()
 
     def startup_backpopulate_precision(self) -> None:
         trades = Trade.get_trades([Trade.contract_size.is_(None)])
@@ -682,7 +818,10 @@ class FreqtradeBot(LoggingMixin):
 
             # Validate close price is reasonable
             import math
-            if not close_price or close_price <= 0 or math.isnan(close_price) or math.isinf(close_price):
+            if (
+                not close_price or close_price <= 0
+                or math.isnan(close_price) or math.isinf(close_price)
+            ):
                 logger.error(
                     f"Invalid close price {close_price} for external close of {trade.pair}."
                 )
@@ -1060,6 +1199,9 @@ class FreqtradeBot(LoggingMixin):
             side=trade_side,
         ):
             logger.info(f"User denied entry for {pair}.")
+            return False
+
+        if not self._check_position_guard(pair, is_short, leverage):
             return False
 
         if trade and self.handle_similar_open_order(trade, enter_limit_requested, amount, side):
