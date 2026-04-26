@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import heapq
 import json
 import logging
 import os
@@ -60,7 +61,22 @@ def tf_to_ms(tf: str) -> int:
 
 
 class TokenBucket:
-    """Async token-bucket rate limiter with adaptive back-off on 429."""
+    """Async token-bucket rate limiter with priority queue and adaptive back-off.
+
+    Priority levels (lower = higher priority):
+        0 = CRITICAL  (pairs with open positions)
+        1 = HIGH      (live candle fetches from live bots)
+        2 = NORMAL    (historic warmup fetches)
+        3 = LOW       (dry_run bots)
+
+    Within the same priority level, requests from bots with more capital
+    are served first (via the ``-capital`` trick in the heap tuple).
+    """
+
+    CRITICAL = 0
+    HIGH = 1
+    NORMAL = 2
+    LOW = 3
 
     def __init__(self, rate_per_s: float, burst: float) -> None:
         self.rate_per_s = rate_per_s
@@ -70,6 +86,10 @@ class TokenBucket:
         self._lock = asyncio.Lock()
         self._backoff_until = 0.0
         self._backoff_factor = 1.0
+        # Priority queue: (priority, -capital, counter, cost, future)
+        self._waiters: list[tuple[int, float, int, float, asyncio.Future]] = []
+        self._counter = 0  # monotonic tiebreaker for heap stability
+        self._drain_task: asyncio.Task | None = None
 
     def _refill(self) -> None:
         now = time.monotonic()
@@ -78,20 +98,54 @@ class TokenBucket:
         effective_rate = self.rate_per_s / self._backoff_factor
         self.tokens = min(self.burst, self.tokens + elapsed * effective_rate)
 
-    async def acquire(self, cost: float = 1.0) -> None:
+    async def acquire(
+        self, cost: float = 1.0, priority: int = 2, capital: float = 0.0,
+    ) -> None:
         async with self._lock:
-            while True:
+            self._refill()
+            # Fast path: no waiters queued and enough tokens available
+            if not self._waiters and self.tokens >= cost:
+                self.tokens -= cost
+                return
+        # Slow path: register in the priority queue and wait for the
+        # drain loop to grant us a token.
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future = loop.create_future()
+        entry = (priority, -capital, self._counter, cost, future)
+        self._counter += 1
+        heapq.heappush(self._waiters, entry)
+        self._ensure_drain()
+        await future
+
+    def _ensure_drain(self) -> None:
+        if self._drain_task is None or self._drain_task.done():
+            self._drain_task = asyncio.create_task(self._drain_loop())
+
+    async def _drain_loop(self) -> None:
+        min_spacing = 1.0 / self.rate_per_s
+        while self._waiters:
+            async with self._lock:
                 now = time.monotonic()
                 if now < self._backoff_until:
-                    await asyncio.sleep(self._backoff_until - now)
-                    continue
-                self._refill()
-                if self.tokens >= cost:
-                    self.tokens -= cost
-                    return
-                effective_rate = self.rate_per_s / self._backoff_factor
-                wait_s = (cost - self.tokens) / max(effective_rate, 0.001)
-                await asyncio.sleep(wait_s)
+                    wait = self._backoff_until - now
+                else:
+                    self._refill()
+                    if self._waiters:
+                        entry = self._waiters[0]
+                        cost = entry[3]
+                        if self.tokens >= cost:
+                            heapq.heappop(self._waiters)
+                            self.tokens -= cost
+                            future = entry[4]
+                            if not future.done():
+                                future.set_result(None)
+                            await asyncio.sleep(min_spacing)
+                            continue
+                    # Not enough tokens — compute how long to wait
+                    effective_rate = self.rate_per_s / self._backoff_factor
+                    needed = (self._waiters[0][3] - self.tokens) if self._waiters else 1.0
+                    wait = needed / max(effective_rate, 0.001)
+            await asyncio.sleep(wait)
 
     def trigger_backoff(self, duration_s: float = 60.0, factor: float = 2.0) -> None:
         self._backoff_factor = max(self._backoff_factor, factor)
@@ -155,12 +209,13 @@ class ExchangeFetcher:
     async def fetch_ohlcv(
         self, pair: str, timeframe: str, since_ms: int | None,
         limit: int | None, candle_type: str,
+        priority: int = TokenBucket.NORMAL, capital: float = 0.0,
     ) -> list[list]:
         client = await self._ensure_client()
         params: dict[str, Any] = {}
         if candle_type and candle_type not in ("spot", "futures"):
             params["price"] = candle_type
-        await self.budget.acquire(1.0)
+        await self.budget.acquire(1.0, priority=priority, capital=capital)
         try:
             data = await client.fetch_ohlcv(
                 pair, timeframe=timeframe, since=since_ms,
@@ -194,9 +249,35 @@ class DaemonStats:
     fetch_errors: int = 0
     active_clients: int = 0
     last_client_disconnect_monotonic: float | None = None
+    # Centralized rate limiter stats
+    acquire_total: int = 0
+    tickers_requests: int = 0
+    tickers_cache_hits: int = 0
+    tickers_fetches: int = 0
+    positions_puts: int = 0
+    positions_gets: int = 0
+    positions_cache_hits: int = 0
 
     def uptime_s(self) -> float:
         return time.monotonic() - self.started_monotonic
+
+
+# -------------------------------------------------------------------- shared caches
+
+
+@dataclass
+class _TickersCacheEntry:
+    """Cached tickers result with wall-clock expiry."""
+    data: dict
+    fetched_at: float  # time.monotonic()
+    market_type: str
+
+
+@dataclass
+class _PositionsCacheEntry:
+    """Cached positions result pushed by a bot."""
+    data: list
+    pushed_at: float  # time.monotonic()
 
 
 # -------------------------------------------------------------------- daemon
@@ -226,6 +307,14 @@ class Daemon:
         self._idle_shutdown_s = float(global_cfg.get("idle_daemon_shutdown_s", 600))
         self._max_candles_per_series = int(global_cfg.get("max_candles_per_series", 5000))
         self._flush_interval_s = float(global_cfg.get("flush_interval_s", 30))
+        self._pending_fetches = 0
+        self._peak_pending = 0
+        # Shared caches for centralized rate limiting
+        self._tickers_cache: dict[str, _TickersCacheEntry] = {}
+        self._tickers_ttl_s = float(global_cfg.get("tickers_cache_ttl_s", 5.0))
+        self._tickers_inflight: dict[str, asyncio.Event] = {}
+        self._positions_cache: dict[str, _PositionsCacheEntry] = {}
+        self._positions_ttl_s = float(global_cfg.get("positions_cache_ttl_s", 3.0))
 
     # --------- helpers
 
@@ -255,8 +344,20 @@ class Daemon:
 
     # --------- fetch handler
 
+    @staticmethod
+    def _is_server_error(exc: Exception) -> bool:
+        """Return True if the exception looks like a transient 500/503."""
+        msg = str(exc)
+        return (
+            "500" in msg
+            or "Internal Server Error" in msg
+            or "503" in msg
+            or "Service Unavailable" in msg
+        )
+
     async def _fetch_chunk(
         self, series: CandleSeries, chunk: Gap, exchange_cfg: dict,
+        priority: int = TokenBucket.NORMAL, capital: float = 0.0,
     ) -> None:
         """Execute one exchange fetch and merge the result into `series`."""
         fetcher = self._get_fetcher(series.exchange, series.trading_mode)
@@ -265,21 +366,48 @@ class Daemon:
         # exchange's documented max_candles_per_call.
         max_per_call = int(exchange_cfg.get("max_candles_per_call", 1000))
         limit = min(limit, max_per_call) if limit else max_per_call
-        try:
-            data = await fetcher.fetch_ohlcv(
-                pair=series.pair, timeframe=series.timeframe,
-                since_ms=chunk.start_ms, limit=limit,
-                candle_type=series.candle_type,
-            )
-        except Exception as e:
+
+        max_retries = 3
+        last_exc: Exception | None = None
+        for attempt in range(max_retries + 1):
+            try:
+                data = await fetcher.fetch_ohlcv(
+                    pair=series.pair, timeframe=series.timeframe,
+                    since_ms=chunk.start_ms, limit=limit,
+                    candle_type=series.candle_type,
+                    priority=priority, capital=capital,
+                )
+                break  # success
+            except Exception as e:
+                last_exc = e
+                # Only retry on transient server errors (500/503),
+                # not on rate-limits (handled by TokenBucket) or other errors.
+                if attempt < max_retries and self._is_server_error(e):
+                    delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                    logger.warning(
+                        "chunk fetch attempt %d/%d failed with server error "
+                        "%s %s [%d..%d): %s — retrying in %ds",
+                        attempt + 1, max_retries + 1,
+                        series.pair, series.timeframe,
+                        chunk.start_ms, chunk.end_ms,
+                        e, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                # Non-retryable error or last attempt exhausted
+                self.stats.fetch_errors += 1
+                logger.warning(
+                    "chunk fetch failed %s %s [%d..%d): %s: %s",
+                    series.pair, series.timeframe,
+                    chunk.start_ms, chunk.end_ms,
+                    e.__class__.__name__, e,
+                )
+                raise
+        else:
+            # All retries exhausted (should not normally reach here since
+            # the last iteration raises, but guard defensively)
             self.stats.fetch_errors += 1
-            logger.warning(
-                "chunk fetch failed %s %s [%d..%d): %s: %s",
-                series.pair, series.timeframe,
-                chunk.start_ms, chunk.end_ms,
-                e.__class__.__name__, e,
-            )
-            raise
+            raise last_exc  # type: ignore[misc]
 
         if not data:
             return
@@ -315,6 +443,8 @@ class Daemon:
         since_ms = req.get("since_ms")
         limit = int(req.get("limit") or 500)
         tf_ms = tf_to_ms(timeframe)
+        priority = int(req.get("priority", TokenBucket.NORMAL))
+        capital = float(req.get("capital", 0.0))
 
         series = self.store.get_or_create(
             exchange, trading_mode, pair, timeframe, candle_type, tf_ms,
@@ -380,7 +510,10 @@ class Daemon:
                 chunk.start_ms, chunk.end_ms,
             )
             async def _do_fetch(c=chunk):
-                await self._fetch_chunk(series, c, ex_cfg)
+                await self._fetch_chunk(
+                    series, c, ex_cfg,
+                    priority=priority, capital=capital,
+                )
             try:
                 await self.coordinator.run(key, _do_fetch)
             except Exception:
@@ -434,6 +567,123 @@ class Daemon:
             "latency_ms": (time.monotonic() - t0) * 1000,
         }
 
+    # --------- centralized rate limiter: acquire
+
+    async def _handle_acquire(self, req: dict) -> dict:
+        """Acquire a rate token from the exchange's TokenBucket.
+
+        Bots call this before any non-OHLCV REST call (create_order, etc.)
+        so ALL API traffic shares one rate limit.
+        """
+        exchange = req.get("exchange", "hyperliquid")
+        priority = int(req.get("priority", TokenBucket.NORMAL))
+        capital = float(req.get("capital", 0.0))
+        cost = float(req.get("cost", 1.0))
+        budget = self._get_budget(exchange)
+        self.stats.acquire_total += 1
+        await budget.acquire(cost, priority=priority, capital=capital)
+        return {"req_id": req.get("req_id", ""), "ok": True}
+
+    # --------- centralized rate limiter: shared tickers
+
+    async def _handle_tickers(self, req: dict) -> dict:
+        """Return cached tickers or fetch them (one fetch coalesced for all bots)."""
+        exchange = req.get("exchange", "hyperliquid")
+        trading_mode = req.get("trading_mode", "futures")
+        market_type = req.get("market_type", "")
+        self.stats.tickers_requests += 1
+
+        cache_key = f"{exchange}:{trading_mode}:{market_type}"
+        now = time.monotonic()
+
+        entry = self._tickers_cache.get(cache_key)
+        if entry and (now - entry.fetched_at) < self._tickers_ttl_s:
+            self.stats.tickers_cache_hits += 1
+            return {
+                "req_id": req.get("req_id", ""), "ok": True,
+                "data": entry.data, "served_from": "cache",
+            }
+
+        # Coalesce concurrent requests: if a fetch is already in-flight,
+        # wait for it instead of sending a duplicate.
+        inflight = self._tickers_inflight.get(cache_key)
+        if inflight is not None:
+            await inflight.wait()
+            entry = self._tickers_cache.get(cache_key)
+            if entry:
+                self.stats.tickers_cache_hits += 1
+                return {
+                    "req_id": req.get("req_id", ""), "ok": True,
+                    "data": entry.data, "served_from": "cache",
+                }
+
+        # We do the fetch — set inflight event
+        evt = asyncio.Event()
+        self._tickers_inflight[cache_key] = evt
+        try:
+            budget = self._get_budget(exchange)
+            await budget.acquire(1.0, priority=TokenBucket.NORMAL)
+            fetcher = self._get_fetcher(exchange, trading_mode)
+            client = await fetcher._ensure_client()
+            params: dict[str, Any] = {}
+            if market_type:
+                market_types_map = {"futures": "swap"}
+                params["type"] = market_types_map.get(market_type, market_type)
+            data = await client.fetch_tickers(params=params)
+            self._tickers_cache[cache_key] = _TickersCacheEntry(
+                data=data, fetched_at=time.monotonic(), market_type=market_type,
+            )
+            self.stats.tickers_fetches += 1
+            return {
+                "req_id": req.get("req_id", ""), "ok": True,
+                "data": data, "served_from": "fetch",
+            }
+        except Exception as e:
+            msg = str(e)
+            if "429" in msg or "RateLimit" in e.__class__.__name__:
+                budget.trigger_backoff(60.0, 2.0)
+            return {
+                "req_id": req.get("req_id", ""), "ok": False,
+                "error_type": e.__class__.__name__,
+                "error_message": str(e),
+            }
+        finally:
+            evt.set()
+            self._tickers_inflight.pop(cache_key, None)
+
+    # --------- centralized rate limiter: shared positions cache
+
+    async def _handle_positions_put(self, req: dict) -> dict:
+        """Bot pushes its fetch_positions() result into the shared cache."""
+        exchange = req.get("exchange", "hyperliquid")
+        data = req.get("data", [])
+        cache_key = exchange
+        self.stats.positions_puts += 1
+        self._positions_cache[cache_key] = _PositionsCacheEntry(
+            data=data, pushed_at=time.monotonic(),
+        )
+        return {"req_id": req.get("req_id", ""), "ok": True}
+
+    async def _handle_positions_get(self, req: dict) -> dict:
+        """Bot reads cached positions. Returns miss if stale or absent."""
+        exchange = req.get("exchange", "hyperliquid")
+        cache_key = exchange
+        self.stats.positions_gets += 1
+        entry = self._positions_cache.get(cache_key)
+        if entry and (time.monotonic() - entry.pushed_at) < self._positions_ttl_s:
+            self.stats.positions_cache_hits += 1
+            return {
+                "req_id": req.get("req_id", ""), "ok": True,
+                "hit": True, "data": entry.data,
+                "age_s": time.monotonic() - entry.pushed_at,
+            }
+        return {
+            "req_id": req.get("req_id", ""), "ok": True,
+            "hit": False, "data": [],
+        }
+
+    # --------- dispatch
+
     async def _dispatch(self, req: dict) -> dict:
         op = req.get("op", "fetch")
         if op == "ping":
@@ -456,10 +706,38 @@ class Daemon:
                 "fetch_errors": self.stats.fetch_errors,
                 "series_count": len(self.store.all()),
                 "inflight_count": self.coordinator.active_count(),
+                "pending_fetches": self._pending_fetches,
+                "peak_pending": self._peak_pending,
+                "acquire_total": self.stats.acquire_total,
+                "tickers_requests": self.stats.tickers_requests,
+                "tickers_cache_hits": self.stats.tickers_cache_hits,
+                "tickers_fetches": self.stats.tickers_fetches,
+                "positions_puts": self.stats.positions_puts,
+                "positions_gets": self.stats.positions_gets,
+                "positions_cache_hits": self.stats.positions_cache_hits,
             }
+        if op == "acquire":
+            return await self._handle_acquire(req)
+        if op == "tickers":
+            return await self._handle_tickers(req)
+        if op == "positions_put":
+            return await self._handle_positions_put(req)
+        if op == "positions_get":
+            return await self._handle_positions_get(req)
         if op == "fetch":
+            self._pending_fetches += 1
+            if self._pending_fetches > self._peak_pending:
+                self._peak_pending = self._pending_fetches
+            if self._pending_fetches > 10 and self._pending_fetches % 10 == 0:
+                logger.info(
+                    "fetch queue depth: %d pending (peak=%d, inflight=%d)",
+                    self._pending_fetches, self._peak_pending,
+                    self.coordinator.active_count(),
+                )
             try:
-                return await self._handle_fetch(req)
+                resp = await self._handle_fetch(req)
+                resp["pending_fetches"] = self._pending_fetches
+                return resp
             except Exception as e:
                 logger.exception("fetch failed: %s", e)
                 return {
@@ -467,7 +745,10 @@ class Daemon:
                     "ok": False,
                     "error_type": e.__class__.__name__,
                     "error_message": str(e),
+                    "pending_fetches": self._pending_fetches,
                 }
+            finally:
+                self._pending_fetches -= 1
         return {
             "req_id": req.get("req_id", ""),
             "ok": False,

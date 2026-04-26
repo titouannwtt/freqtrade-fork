@@ -26,6 +26,8 @@ class FetchRequest:
     since_ms: int | None = None
     limit: int | None = None
     op: str = "fetch"
+    priority: int = 2           # 0=CRITICAL, 1=HIGH, 2=NORMAL, 3=LOW
+    capital: float = 0.0        # stake capital for intra-priority ordering
 
 
 @dataclass
