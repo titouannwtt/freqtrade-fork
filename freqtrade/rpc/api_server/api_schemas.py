@@ -729,6 +729,46 @@ class Health(BaseModel):
     bot_startup_ts: int | None = None
 
 
+class CacheDaemonStatus(BaseModel):
+    online: bool = False
+    uptime_s: float = 0.0
+    active_clients: int = 0
+    requests_total: int = 0
+    cache_hits: int = 0
+    cache_partial: int = 0
+    cache_misses: int = 0
+    hit_rate_pct: float = 0.0
+    fetch_errors: int = 0
+    series_count: int = 0
+    pending_fetches: int = 0
+    peak_pending: int = 0
+    acquire_total: int = 0
+    tickers_requests: int = 0
+    tickers_cache_hits: int = 0
+    tickers_hit_rate_pct: float = 0.0
+    tickers_fetches: int = 0
+    positions_puts: int = 0
+    positions_gets: int = 0
+    positions_cache_hits: int = 0
+    positions_hit_rate_pct: float = 0.0
+
+
+class PairlistCacheStatus(BaseModel):
+    online: bool = False
+    uptime_s: float = 0.0
+    active_clients: int = 0
+    entries: int = 0
+    gets: int = 0
+    hits: int = 0
+    hit_rate_pct: float = 0.0
+    puts: int = 0
+
+
+class CacheStatus(BaseModel):
+    ftcache: CacheDaemonStatus = CacheDaemonStatus()
+    pairlist_cache: PairlistCacheStatus = PairlistCacheStatus()
+
+
 class CustomDataEntry(BaseModel):
     key: str
     type: str

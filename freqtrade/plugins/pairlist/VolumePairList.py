@@ -99,6 +99,18 @@ class VolumePairList(IPairList):
                 f"exceed exchange max request size ({candle_limit})"
             )
 
+        self._shared_client = None
+        self._params_hash = ""
+        if self._use_range:
+            try:
+                from freqtrade.pairlist_cache.client import PairlistCacheClient
+                self._shared_client = PairlistCacheClient.get_or_spawn()
+                self._params_hash = PairlistCacheClient.compute_params_hash(
+                    self._pairlistconfig
+                )
+            except Exception:
+                logger.info("Shared pairlist cache unavailable, using local cache only.")
+
     @property
     def needstickers(self) -> bool:
         """
@@ -253,22 +265,37 @@ class VolumePairList(IPairList):
                 f"till {format_ms_time(to_ms)}",
                 logger.info,
             )
+            shared_volumes: dict[str, float] = {}
+            if self._shared_client:
+                all_symbols = [s["symbol"] for s in filtered_tickers]
+                shared = self._shared_client.mget(
+                    "VolumePairList", self._params_hash, all_symbols
+                )
+                for sym, val in shared.items():
+                    if val is not None:
+                        shared_volumes[sym] = val["quoteVolume"]
+
             needed_pairs: ListPairsWithTimeframes = [
                 (p, self._lookback_timeframe, self._def_candletype)
                 for p in [s["symbol"] for s in filtered_tickers]
-                if p not in self._pair_cache
+                if p not in self._pair_cache and p not in shared_volumes
             ]
 
             candles = self._exchange.refresh_ohlcv_with_cache(needed_pairs, since_ms)
 
+            newly_computed: dict[str, dict] = {}
             for i, p in enumerate(filtered_tickers):
-                contract_size = self._exchange.markets[p["symbol"]].get("contractSize", 1.0) or 1.0
+                sym = p["symbol"]
+                if sym in shared_volumes:
+                    filtered_tickers[i]["quoteVolume"] = shared_volumes[sym]
+                    continue
+
+                contract_size = self._exchange.markets[sym].get("contractSize", 1.0) or 1.0
                 pair_candles = (
-                    candles[(p["symbol"], self._lookback_timeframe, self._def_candletype)]
-                    if (p["symbol"], self._lookback_timeframe, self._def_candletype) in candles
+                    candles[(sym, self._lookback_timeframe, self._def_candletype)]
+                    if (sym, self._lookback_timeframe, self._def_candletype) in candles
                     else None
                 )
-                # in case of candle data calculate typical price and quoteVolume for candle
                 if pair_candles is not None and not pair_candles.empty:
                     if self._exchange.get_option("ohlcv_volume_currency") == "base":
                         pair_candles["typical_price"] = (
@@ -279,10 +306,7 @@ class VolumePairList(IPairList):
                             pair_candles["volume"] * pair_candles["typical_price"] * contract_size
                         )
                     else:
-                        # Exchange ohlcv data is in quote volume already.
                         pair_candles["quoteVolume"] = pair_candles["volume"]
-                    # ensure that a rolling sum over the lookback_period is built
-                    # if pair_candles contains more candles than lookback_period
                     quoteVolume = (
                         pair_candles["quoteVolume"]
                         .rolling(self._lookback_period)
@@ -291,10 +315,16 @@ class VolumePairList(IPairList):
                         .iloc[-1]
                     )
 
-                    # replace quoteVolume with range quoteVolume sum calculated above
                     filtered_tickers[i]["quoteVolume"] = quoteVolume
+                    newly_computed[sym] = {"quoteVolume": float(quoteVolume)}
                 else:
                     filtered_tickers[i]["quoteVolume"] = 0
+
+            if newly_computed and self._shared_client:
+                self._shared_client.mput(
+                    "VolumePairList", self._params_hash,
+                    newly_computed, ttl=self._refresh_period,
+                )
         else:
             # Tickers mode - filter based on incoming pairlist.
             filtered_tickers = [v for k, v in tickers.items() if k in pairlist]
