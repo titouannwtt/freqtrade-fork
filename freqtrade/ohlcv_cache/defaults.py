@@ -41,13 +41,18 @@ GLOBAL_DEFAULTS: dict = {
     "idle_daemon_shutdown_s": 600,
     "healthcheck_interval_s": 30,
     "fallback_on_error": True,
-    # Single-request wall-clock budget on the client side. Must comfortably
-    # exceed the worst-case daemon queue + fetch latency under back-off.
-    # With HL's 18 req/s budget halved to 9 req/s during back-off and 40
-    # pairs to fetch, a cold start can take ~5–10s per request; 30s gives
-    # ample headroom without masking real hangs.
-    "client_timeout_s": 30,
+    # Single-request wall-clock budget on the client side. With N bots x
+    # 40 pairs x multiple timeframes, the token bucket queue can be very
+    # deep on cold start. A short timeout causes cascade failure: client
+    # falls back to direct ccxt, adds API pressure, 429, daemon backs
+    # off, more timeouts. 900s (15 min) lets the daemon's centralized
+    # rate limiter drain the queue even under heavy contention (100+ bots).
+    "client_timeout_s": 900,
     "client_spawn_timeout_s": 15,
+    # Maximum random startup delay (seconds) applied once per client
+    # singleton to stagger initial connections and avoid thundering herd
+    # when many bots restart simultaneously.  Set to 0 to disable.
+    "client_stagger_s": 30,
     # Feather flush cadence (seconds). Only writes dirty series.
     "flush_interval_s": 30,
 }
@@ -57,8 +62,8 @@ GLOBAL_DEFAULTS: dict = {
 # OHLCV-fetching endpoint(s) of each exchange.
 EXCHANGE_DEFAULTS: dict[str, dict] = {
     "hyperliquid": {
-        "rate_per_s": 18,
-        "burst": 30,
+        "rate_per_s": 10,
+        "burst": 12,
         "refresh_overlap_candles": 5,
         "max_candles_per_call": 5000,
         "supports_mark": True,
