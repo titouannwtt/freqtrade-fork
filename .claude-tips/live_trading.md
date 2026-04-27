@@ -247,6 +247,48 @@ Le code lit `min_profit`, les configs écrivent `max_profit`. **Le paramètre es
 - **StaticPairList en 2ème position** : il **ajoute** les paires de la whitelist au lieu de filtrer. Si 50 paires du VolumePairList + 20 paires de la whitelist → 70 paires, pas 20.
 - **Filtres trop agressifs en chaîne** : PriceFilter(min=1.0) → AgeFilter(min=365) → VolatilityFilter(min=50) peut donner 0 paire → bot bloqué.
 
+## unfilledtimeout — guide de configuration
+
+### Comment ça fonctionne (strategy/interface.py:1709-1732)
+
+Un ordre est considéré comme "timed out" si :
+```
+order.status == "open" ET order.order_date_utc <= (current_time - timeout)
+```
+
+Le timeout est vérifié à chaque cycle bot dans `manage_open_orders()`.
+
+### Comportement à l'expiration
+
+**Entry timeout (DCA inclus) :**
+1. Ordre annulé sur l'exchange
+2. Si c'est le 1er (et seul) entry : **trade supprimé de la DB**
+3. Si c'est un ordre DCA (position existante) : trade conservé, ordre DCA annulé. Le prochain signal DCA pourra en placer un nouveau
+4. Si remplissage partiel : seule la partie non remplie est annulée
+
+**Exit timeout :**
+1. Ordre annulé sur l'exchange
+2. Si `exit_timeout_count: 0` (défaut) : trade reste ouvert, pas d'escalation
+3. Si `exit_timeout_count: N` (N > 0) : après N timeouts d'exit → **emergency exit en market order**
+
+### ✅ Recommandations par contexte
+
+| Contexte | Entry timeout | Exit timeout | exit_timeout_count | Justification |
+|---|---|---|---|---|
+| DCA mean-reversion 15m (notre cas) | **10 min** | **10 min** | **0** | Les DCA limit orders attendent un dip — 10 min laisse le temps au prix de revenir |
+| DCA agressif (6+ safety orders) | **15-20 min** | **10 min** | **0** | Plus de temps pour que les grilles se remplissent |
+| Scalping 5m | **3-5 min** | **3-5 min** | **2** | Pas de patience, si ça ne fill pas → move on |
+| Stratégie patiente 1h+ | **30-60 min** | **15 min** | **0** | Signaux rares, patience nécessaire |
+
+**Notre config actuelle** (`_default_spot_usdc.json`) : entry=10min, exit=10min, exit_timeout_count=0. C'est raisonnable pour du DCA 15m.
+
+### 💡 Pièges à éviter
+
+- **Timeout trop court pour DCA** : Un safety order placé à -2% attend un dip. Si timeout=3min, l'ordre est annulé avant que le prix n'atteigne le level → le DCA ne se remplit jamais → position sous-dimensionnée → drawdown amplifié.
+- **`exit_timeout_count: 0` = pas d'emergency exit.** Si les exits timeout indéfiniment (prix qui bouge trop vite), le trade reste ouvert sans issue. Mettre à 2-3 pour les stratégies avec stoploss critique.
+- **`unit: "seconds"` vs `"minutes"`** : entry=10 avec `unit: "seconds"` = 10 secondes, pas 10 minutes. Vérifier l'unité.
+- **Hyperliquid n'a pas d'expiry natif** : les ordres restent ouverts jusqu'à annulation par freqtrade. C'est le timeout du bot qui gère la durée de vie des ordres.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts (centraliser volume sur un seul wallet). Si rate-limit persiste: passer à VPN IP-level, jamais wallet-level. (tips.txt #27, CLAUDE.md)
