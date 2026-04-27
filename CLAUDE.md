@@ -2,7 +2,7 @@
 
 ## What is this repo
 
-Fork of [freqtrade/freqtrade](https://github.com/freqtrade/freqtrade) — open-source crypto trading bot. This fork adds **Hyperliquid-specific features** (liquidation/ADL detection, external position close handling) and a **trading co-pilot system** with 199 curated guardrails from Carver, Clenow, Chan, and Lopez de Prado.
+Fork of [freqtrade/freqtrade](https://github.com/freqtrade/freqtrade) focused on **Hyperliquid futures trading** strategies.
 
 If a `CLAUDE.local.md` file exists at the repo root, read it — it contains user-specific config (exchange, strategies, bots, personal constraints).
 

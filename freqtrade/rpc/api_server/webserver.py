@@ -136,7 +136,7 @@ class ApiServer(RPCHandler):
 
     def __init__(self, config: Config, standalone: bool = False) -> None:
         ApiServer._config = config
-        if self.__initialized and (standalone or self._standalone):
+        if self.__initialized:
             return
         self._standalone: bool = standalone
         self._server = None

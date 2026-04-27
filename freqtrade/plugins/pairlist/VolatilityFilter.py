@@ -39,6 +39,15 @@ class VolatilityFilter(IPairList):
 
         self._pair_cache: FtTTLCache = FtTTLCache(maxsize=1000, ttl=self._refresh_period)
 
+        self._shared_client = None
+        self._params_hash = ""
+        try:
+            from freqtrade.pairlist_cache.client import PairlistCacheClient
+            self._shared_client = PairlistCacheClient.get_or_spawn()
+            self._params_hash = PairlistCacheClient.compute_params_hash(self._pairlistconfig)
+        except Exception:
+            logger.info("Shared pairlist cache unavailable, using local cache only.")
+
         candle_limit = self._exchange.ohlcv_candle_limit("1d", self._def_candletype)
         if self._days < 1:
             raise OperationalException("VolatilityFilter requires lookback_days to be >= 1")
@@ -105,6 +114,16 @@ class VolatilityFilter(IPairList):
         :param tickers: Tickers (from exchange.get_tickers). May be cached.
         :return: new allowlist
         """
+        if self._shared_client:
+            locally_uncached = [p for p in pairlist if p not in self._pair_cache]
+            if locally_uncached:
+                shared = self._shared_client.mget(
+                    "VolatilityFilter", self._params_hash, locally_uncached
+                )
+                for p, val in shared.items():
+                    if val is not None:
+                        self._pair_cache[p] = val["volatility_avg"]
+
         needed_pairs: ListPairsWithTimeframes = [
             (p, "1d", self._def_candletype) for p in pairlist if p not in self._pair_cache
         ]
@@ -112,12 +131,17 @@ class VolatilityFilter(IPairList):
         since_ms = dt_ts(dt_floor_day(dt_now()) - timedelta(days=self._days))
         candles = self._exchange.refresh_ohlcv_with_cache(needed_pairs, since_ms=since_ms)
 
+        freshly_needed = {p for p, _, _ in needed_pairs}
+        newly_computed: dict[str, dict] = {}
         resulting_pairlist: list[str] = []
         volatilitys: dict[str, float] = {}
         for p in pairlist:
             daily_candles = candles.get((p, "1d", self._def_candletype), None)
 
             volatility_avg = self._calculate_volatility(p, daily_candles)
+
+            if p in freshly_needed and volatility_avg is not None:
+                newly_computed[p] = {"volatility_avg": float(volatility_avg)}
 
             if volatility_avg is not None:
                 if self._validate_pair_loc(p, volatility_avg):
@@ -127,6 +151,12 @@ class VolatilityFilter(IPairList):
                     )
             else:
                 self.log_once(f"Removed {p} from whitelist, no candles found.", logger.info)
+
+        if newly_computed and self._shared_client:
+            self._shared_client.mput(
+                "VolatilityFilter", self._params_hash,
+                newly_computed, ttl=self._refresh_period,
+            )
 
         if self._sort_direction:
             resulting_pairlist = sorted(

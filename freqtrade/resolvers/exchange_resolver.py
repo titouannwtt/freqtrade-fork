@@ -39,22 +39,41 @@ class ExchangeResolver(IResolver):
         # Map exchange name to avoid duplicate classes for identical exchanges
         exchange_name = MAP_EXCHANGE_CHILDCLASS.get(exchange_name, exchange_name)
         exchange_name = exchange_name.title()
+
+        # Fork-specific: prefer the Cached* subclass when the shared OHLCV
+        # cache is enabled (default on). If no Cached* variant exists for
+        # this exchange yet, fall back to the regular subclass.
+        candidate_names: list[str] = []
+        cache_cfg = config.get("shared_ohlcv_cache") or {}
+        if cache_cfg.get("enabled", True):
+            candidate_names.append(f"Cached{exchange_name}")
+        candidate_names.append(exchange_name)
+
         exchange = None
-        try:
-            exchange = ExchangeResolver._load_exchange(
-                exchange_name,
-                kwargs={
-                    "config": config,
-                    "validate": validate,
-                    "exchange_config": exchange_config,
-                    "load_leverage_tiers": load_leverage_tiers,
-                },
-            )
-        except ImportError:
-            logger.info(
-                f"No {exchange_name} specific subclass found. Using the generic class instead."
-            )
+        last_error: Exception | None = None
+        for candidate in candidate_names:
+            try:
+                exchange = ExchangeResolver._load_exchange(
+                    candidate,
+                    kwargs={
+                        "config": config,
+                        "validate": validate,
+                        "exchange_config": exchange_config,
+                        "load_leverage_tiers": load_leverage_tiers,
+                    },
+                )
+                if exchange:
+                    break
+            except ImportError as e:
+                last_error = e
+                continue
+
         if not exchange:
+            if last_error is not None:
+                logger.info(
+                    f"No specific subclass found (tried {candidate_names}). "
+                    f"Using the generic class instead."
+                )
             exchange = Exchange(
                 config,
                 validate=validate,
