@@ -4,7 +4,7 @@
 
 - 🚫 **Ne jamais faire confiance à un backtest seul**. Sert à vérifier la logique, pas à prédire le live. Toujours valider en walk-forward, puis live avec petit capital. (tips.txt #8, communauté)
 - 🚫 **Trailing stops biaisent massivement les backtests**. Sans `--timeframe-detail`, un trailing peut montrer +1300% en BT et seulement +59% avec 5m detail. Ne jamais utiliser le trailing natif — recoder via custom_exit. (tips.txt #10, communauté)
-- 🚫 **Toujours `--timeframe-detail 1m` pour BT/hyperopt des stratégies DCA**. Sans ça, fills simulés au prix d'ouverture de bougie → "phantom trades" inexistants en live. Si 1m indispo, 5m minimum mais prévenir que les résultats seront optimistes. (tips.txt #20, CLAUDE.md)
+- 🚫 **Toujours `--timeframe-detail 1m` pour BT/hyperopt des stratégies DCA**. Sans ça, fills simulés au prix d'ouverture de bougie → "phantom trades" inexistants en live. Si 1m indispo, 5m minimum mais prévenir que les résultats seront optimistes. (tips.txt #20)
 - 🚫 **"Backtesting is not a research tool. Feature importance is."** (Lopez de Prado, 1ère loi). 2ème loi: "Backtesting while researching is like drink driving." 3ème loi: "Every backtest must be reported with all trials involved in its production." (tips.txt #80, Lopez de Prado)
 - 🚫 **Pas de pertes dans le backtest = skew négatif caché**. Stratégie qui gagne 90% des trades jusqu'au jour où un event wipe out. Red flag absolue — correspond directement au trap DCA high-winrate. (tips.txt #133, Clenow)
 - 🚫 **Transaction cost = bid-ask spread, PAS commissions**. Ta stratégie peut spécifiquement trader les moments où le spread est maximum. Backtester avec un cost fixe en bps rate ce piège. (tips.txt #150, Chan)

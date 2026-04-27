@@ -289,9 +289,15 @@ Le timeout est vérifié à chaque cycle bot dans `manage_open_orders()`.
 - **`unit: "seconds"` vs `"minutes"`** : entry=10 avec `unit: "seconds"` = 10 secondes, pas 10 minutes. Vérifier l'unité.
 - **Hyperliquid n'a pas d'expiry natif** : les ordres restent ouverts jusqu'à annulation par freqtrade. C'est le timeout du bot qui gère la durée de vie des ordres.
 
+## Pairlist philosophy
+
+- **VolumePairList en live, StaticPairList en backtest.** VPL s'adapte au marché (nouveaux coins haute vol, drop des coins morts). StaticPairList = backtests uniquement.
+- **Plus de paires ≠ pire.** Une stratégie DCA qui attend des setups extrêmes bénéficie d'un univers large (40-80 paires) — plus de chances de trouver le setup. Ne pas réduire le pair count juste parce que certaines paires ont eu 0 trades en holdout.
+- **TrendRegularityFilter uniquement pour short-only.** Il exclut les uptrends linéaires (slope>0 ET R²≥seuil). Les stratégies long+short ou avec filtre directionnel intégré (ex: EMA200) n'en ont pas besoin — double-filtering retire des setups valides.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
-- ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts (centraliser volume sur un seul wallet). Si rate-limit persiste: passer à VPN IP-level, jamais wallet-level. (tips.txt #27, CLAUDE.md)
+- ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts. Si rate-limit persiste: VPN IP-level, jamais wallet-level. (tips.txt #27)
 - ✅ **La vraie complexité du trading systématique est dans l'opérationnel, pas dans les règles**. En production il faut redondance, fail-safes, gestion d'erreurs. La différence livre/prod n'est pas "5 jours au lieu de 7", c'est l'infrastructure. (tips.txt #103, Clenow)
 - ✅ **Diagnostiquer une dégradation = comprendre le changement de structure du marché**. Exemple: explosion options 0DTE par retail. Lire Bloomberg/FT pour identifier les structural shifts qui expliquent un drawdown, pas pour trader. (tips.txt #159, Chan)
 - ✅ **Monitor le VaR en live, pas seulement au BT**. Risque théorique BT ≠ risque live. Surveiller VaR quotidien et comparer à l'estimation BT. Si drift > X sigma, stopper et réinvestiguer. (tips.txt #190, Quant 1B)
