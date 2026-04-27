@@ -1,0 +1,41 @@
+# Risk Management — Tips et garde-fous
+
+## Règles strictes (ne jamais enfreindre)
+
+- 🚫 **Stake "unlimited" OK uniquement avec garde-fous**: (a) `tradable_balance_ratio` bas (0.3-0.6), (b) `max_open_trades` élevé pour diluer, (c) retrait régulier des profits vers wallet séparé, (d) cap explicite sur taille max par trade dans `custom_stake_amount`. Sans ces garde-fous, le compounding naïf amplifie les pertes autant que les gains. (tips.txt #15, communauté)
+- 🚫 **Drawdown max acceptable: 30-35%**. Au-delà, couper, repasser stake fixe, recalibrer. Ne pas attendre -50% pour réagir. (tips.txt #16, communauté)
+- 🚫 **Position management > trading rules**. Mythe que les règles entry/exit sont ce qui compte. Bon framework sizing + diversification + quelques règles simples = système décent. (tips.txt #55, Carver)
+- 🚫 **Diversification entre instruments > optimisation des règles**. 5 pairs non-corrélées > 100 epochs d'hyperopt. (tips.txt #58, Carver)
+- 🚫 **Kelly half/quarter, JAMAIS full**. Full Kelly: vol annualisée = SR. SR de 2 → 200% de vol. Beaucoup trop agressif. L'erreur d'estimation du SR rend full Kelly dangereux. (tips.txt #68, Chan)
+- 🚫 **Risk management > buy/sell rules**. Le "vrai secret" du trend-following n'est pas dans les règles d'entrée. (tips.txt #73, Clenow)
+- 🚫 **Diversification = x4 à x5 de la perf risk-adjusted**. Passer de 1 à 100 marchés multiplie la perf par 4-5x. Maximiser le nombre de pairs >> optimiser les params d'une seule. (tips.txt #105, Carver)
+- 🚫 **Ne JAMAIS cherry-picker les pairs par perf passée**. C'est une forme d'overfitting. Construire le pairlist sur critères structurels (volume, vol, filtres régime) plutôt que `PerformanceFilter`. (tips.txt #106, Carver)
+- 🚫 **Sharpe max réaliste = 1.0, sizer comme si c'était 0.5**. Si BT donne SR 2.0, sizer comme si c'était 0.5 → 4x moins de capital déployé. (tips.txt #120, Carver)
+- 🚫 **Floor de volatilité minimum dans le sizing**. Peg/régimes manipulés (ex: SNB CHF/EUR avant débouclage) créent des positions monstrueuses qui explosent. (tips.txt #129, Clenow)
+- 🚫 **"Risk = potential value variation per unit of time"**. Risk-per-trade basé sur distance au SL n'a aucun sens math. Vrai risque = vol forecastée × taille × unité de temps. (tips.txt #143, Clenow)
+- 🚫 **Pyramiding = gambling**. Money management retail (pyramiding, martingale) n'a aucune base mathématique. Ce qui compte est l'état courant de la position, pas l'historique. (tips.txt #144, Clenow)
+- 🚫 **Pas augmenter le leverage tant que la stratégie n'a pas vécu un CHANGEMENT DE RÉGIME** (quiet→volatile, recession→inflation). 6 mois de profits sans DD ≠ preuve. (tips.txt #157, Chan)
+- 🚫 **Taille max 2-5% par trade même avec conviction forte**. Compatible avec sizing par confiance (#84/#57): scaler par confiance À L'INTÉRIEUR du plafond dur, jamais au-dessus. (tips.txt #182, SalsaTekila)
+- 🚫 **Survivre avant gagner**. Params doivent d'abord garantir non-ruine, ensuite optimiser profit. Calmar/MaxDrawDown prioritaires sur profit absolu. Bot 5%/an qui jamais blow up > bot 50%/an qui blow up tous les 3 ans. (tips.txt #187, Quant 1B)
+- 🚫 **Caps stricts par stratégie ET par actif** (ex: 20% max/strat, 5% max/paire). Isole les blow-ups. (tips.txt #191, Quant 1B)
+- 🚫 **Prédéfinir l'invalidation AVANT l'entrée**, non-négociable. Le SL ne s'ajuste jamais à la hausse, uniquement à la baisse (trailing). [Pour mean-rev DCA: l'invalidation = nb max safety orders OU durée max hold, pas un SL fixe — voir mean_reversion.md] (tips.txt #195, Beetcoin)
+- 🚫 **Stratégie qui performe au-dessus des attentes = retirer le capital initial rapidement**. Les meilleures stratégies qui excellent reposent presque toujours sur une anomalie de marché ou un alignement de régime temporaire. Quand le régime change, les pertes sont d'autant plus violentes que la stratégie était performante. Si une stratégie surperforme et que c'est étonnant (high winrate inhabituel, profits au-delà des attentes raisonnables — cf. #4, #133, #188), retirer le principal et laisser tourner sur les gains uniquement. Le jour du retournement, tu n'as pas perdu ton capital, tu as juste restitué des gains. Extension/généralisation de #18 (shorts spécifiquement). (tips.txt #200)
+
+## Bonnes pratiques (toujours suivre sauf justification explicite)
+
+- ✅ **Levier 1x par défaut, 2-4x uniquement après validation walk-forward ET live avec petit capital**. Stratégie qui atteint régulièrement -50% sera liquidée à 2x. (tips.txt #17, communauté)
+- ✅ **Sur les shorts, retirer progressivement les profits**. Stratégie short qui fait +70% en 1 mois = exceptionnel — retirer le capital initial dès que possible. Alternative: baisser `tradable_balance_ratio`. (tips.txt #18, communauté)
+- ✅ **Volatility targeting: ajuster taille selon volatilité, pas selon capital**. Le vol target doit matcher le SR attendu. SR 0.25 → vol target 25%. (tips.txt #56, Carver)
+- ✅ **Bet sizing ∝ confiance DANS plafond dur**. Allouer la même fraction à chaque signal (51% ou 95% confiance) est une erreur. MAIS toujours capper en valeur absolue (cf. #57: cap à 2x moyenne, #182: 2-5% max). (tips.txt #84, Lopez de Prado)
+- ✅ **Seul le portefeuille aggrégé compte**. Un instrument perdant anti-corrélé au reste AUGMENTE le rendement ajusté au risque. (tips.txt #87, Clenow)
+- ✅ **Exclure dynamiquement les pairs en régime low-vol**. Quand vol tombe sous un seuil, couper et attendre. Sinon: leverage implicite trop haut + coûts relatifs explosent. Filtre ATR minimum avant entrée. (tips.txt #121, Carver)
+- ✅ **Diversification 3-couches: position / model / portfolio**. Au level 3, positions individuelles disparaissent dans le bruit. 1 DCA + 1 trend + 1 mean-rev sur 50 pairs > 1 stratégie ultra-optimisée. (tips.txt #145, Clenow)
+- ✅ **Distinguer risques mesurables (vol/DD → sizing) vs Black Swans (liquidation chain, hack, depeg → exposition max absolue)**. Les deux modes de pensée ne se remplacent pas. (tips.txt #192, Quant 1B)
+
+## Conseils avancés (à appliquer selon le contexte)
+
+- 💡 **Gestion institutionnelle: spot zéro levier possible** — Applicable quand: priorité absolue est non-perdre. Bot sans levier + bon filtre régime peut battre bot leveragé sans filtre. À toi de choisir entre bots leveragés bien filtrés ou bots spot. (tips.txt #50, Beetcoin)
+- 💡 **Override extrême OK pour réduire le risque** — Applicable quand: volatilité historique exceptionnelle (type COVID 2020, swings 15-20%/jour). Avoir des circuit breakers manuels ou auto pour les scénarios que le modèle n'a jamais vu. (tips.txt #95, Clenow)
+- 💡 **Ajouter stratégies même si BT neutre/négatif** — Applicable quand: la brique apporte de la diversification (corrélation faible). Distribution des corrélations plus serrée que celle des moyennes. (tips.txt #109, Carver)
+- 💡 **Shorting en trend-following: perd net mais reste vital** — Applicable quand: tu construis un système trend-following multi-side. Corrélation négative avec long-side pendant les crises améliore le risk-adjusted return. Ne jamais juger une brique en isolation. (tips.txt #130, Clenow)
+- 💡 **Markowitz's Curse** — Applicable quand: matrice de corrélation a des off-diagonal élevés (cas crypto). Le déterminant tend vers 0, l'inverse explose, l'optimisation devient instable. Préférer NCO ou HRP. (tips.txt #172, Lopez de Prado)

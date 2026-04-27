@@ -1,0 +1,33 @@
+# Psychology — Tips et garde-fous
+
+## Règles strictes (ne jamais enfreindre)
+
+- 🚫 **Biais d'action**: résister à l'envie de modifier constamment les paramètres du bot en réaction aux fluctuations quotidiennes. Établir un plan, s'y tenir, ne ré-évaluer qu'à intervalles fixes (mensuel). (tips.txt #33, Beetcoin)
+- 🚫 **Scepticisme = qualité n°1 d'un quant**. "Nearly every single error I've seen has ultimately been because people were overconfident, trusted their backtest too much, or assumed their data was clean when it wasn't." Appliquer un facteur de 0.5 à tout backtest par défaut. (tips.txt #118, Carver)
+- 🚫 **Après une grosse perte, JAMAIS redéposer le même jour**. Règle de propshop. La journée est "morte", les réflexes sont pollués. Équivalent bot: après un drawdown intraday > X%, couper les entrées jusqu'au lendemain (circuit breaker). Permet de rompre le cycle émotionnel. (tips.txt #185, SalsaTekila)
+
+## Bonnes pratiques (toujours suivre sauf justification explicite)
+
+- ✅ **Un bot qui ne trade pas peut être un excellent bot**. En marché calme, l'inactivité est un signe de discipline, pas de dysfonctionnement. Ne jamais forcer un bot à trader pour "justifier son existence". Utiliser CalmarHyperOptLoss (pas Sharpe) pour stratégies patientes. (tips.txt #2)
+- ✅ **Considérer le capital investi dans les bots comme "perdu"**. Détacher émotionnellement. Ne jamais investir plus que ce qu'on est prêt à perdre intégralement. Seule façon de ne pas intervenir manuellement sous l'effet du stress. (tips.txt #5)
+- ✅ **Mieux vaut petits profits récurrents (+1% fréquent) que rêver d'un +10% rarissime**. Loi des grands nombres = alliée du trader algo. Beaucoup de trades moyens > quelques trades exceptionnels. Orientation pour fixer ses ATTENTES psychologiques (pas une métrique d'évaluation — voir #188). (tips.txt #6)
+- ✅ **Biais des coûts irrécupérables**: si une stratégie ne marche pas après des mois de travail, l'abandonner. Le temps investi est perdu. Passer à autre chose. (tips.txt #34, Beetcoin)
+- ✅ **Biais de récence**: ne pas juger une stratégie sur les 2 dernières semaines. Analyser sur des périodes longues incluant différents régimes. (tips.txt #35, Beetcoin)
+- ✅ **"Les prix précèdent les nouvelles"**. Le mouvement de prix arrive AVANT que la raison soit connue publiquement. Un bot qui réagit aux prix a un avantage. Ne JAMAIS désactiver un bot à cause d'une news — laisser le prix confirmer d'abord. (tips.txt #44, Beetcoin)
+- ✅ **L'edge en trading est un coinflip 52/48**. Même avec avantage statistique, chaque trade individuel est quasi-aléatoire. C'est la loi des grands nombres qui fait la rentabilité. Ne jamais juger une stratégie sur un trade individuel. (tips.txt #49, Beetcoin)
+- ✅ **Le poker et le trading sont isomorphes**: bankroll management, variance, discipline. "If you focus on the result, you're focusing in the wrong place." Se concentrer sur la qualité du processus, pas sur le P&L d'un trade. Le tilt algorithmique = modifier ses params après une perte. (tips.txt #51, Beetcoin)
+- ✅ **Les marchés se comportent de la même façon depuis toujours**. 850+ probabilités historiques testées par Connors prouvent que les patterns sont stables sur 15+ ans à travers bull, bear, recovery. Ce que le monde du trading tient pour acquis est souvent faux. (tips.txt #65, Connors)
+- ✅ **Aucune stratégie ne fonctionne éternellement**. Les propriétés statistiques des marchés changent. Le but n'est pas de trouver un edge permanent, mais de détecter quand l'edge disparaît et de s'adapter. (tips.txt #69, Chan)
+- ✅ **Ne regarde PAS ta P&L quotidienne**. Carver a désactivé son email P&L. Si tu dois regarder, en pourcentage, jamais en montant absolu. Pour un bot: ne pas checker toutes les heures, ça pousse à l'override émotionnel. (tips.txt #116, Carver)
+- ✅ **Spécialisation > généralisme**. Lopez de Prado critique le "Sisyphean quant" qui fait data + modèle + BT + portfolio + execution. La meilleure chance de succès = solutionner UN problème très bien. Pour un trader solo: focus sur UNE brique par phase. (tips.txt #169, Lopez de Prado)
+- ✅ **Taux de rétraction en finance ≈ 0**, contrairement à la médecine (~20%). Signal fort que le corpus contient des masses de faux positifs non-corrigés. Assumer par défaut que les "stratégies qui marchent" partagées sur Twitter/Reddit sont fausses. (tips.txt #181, Lopez de Prado)
+- ✅ **"Sit on ass" (Livermore/Munger)**: ne pas trader pour le plaisir. Les meilleurs setups sont rares, les saisir quand ils arrivent, ne rien faire sinon. CalmarHyperOptLoss > SharpeHyperOptLossDaily. (tips.txt #197, Beetcoin)
+- ✅ **Humilité face à une stratégie qui cartonne**: plus une stratégie performe, plus il faut se méfier. Les meilleures périodes d'une stratégie sont souvent des anomalies de régime (bull range parfait pour mean-rev, trend directionnel pour momentum). L'euphorie face aux résultats pousse à laisser grossir le capital exposé — exactement quand il faudrait le retirer. Réflexe disciplinaire: sur une stratégie qui surprend positivement, retirer le principal et ne laisser tourner que les gains. Renvoie au scepticisme #118 (Carver). Détail opérationnel en risk_management.md. (tips.txt #200)
+
+## Conseils avancés (à appliquer selon le contexte)
+
+- 💡 **Garder ses véritables recettes pour soi** — Applicable quand: tu communiques sur tes stratégies. Trading = jeu à somme nulle. Partager une stratégie gagnante réduit mécaniquement l'edge. Partager la méthode et la pédagogie, pas les params exacts. (tips.txt #7)
+- 💡 **Classiques de la spéculation > threads Twitter** — Applicable quand: tu cherches à approfondir. La nature humaine ne change pas. Selden, Wyckoff, Livermore. Le prix est la seule réalité — les rapports fondamentaux et modèles macro sont des constructions fragiles. (tips.txt #52, Beetcoin)
+- 💡 **Trader son propre argent pour en vivre = mauvaise idée mathématique** — Applicable quand: tu envisages de trader pro. Upside limité, tout le risque. Meilleurs au monde composent à ~20-22%/an. Bonne approche: gérer l'argent des autres + le sien (management fee + performance fee). (tips.txt #92, Clenow)
+- 💡 **Ne JAMAIS budgéter avec la performance fee / attendre un return cible pour vivre** — Applicable quand: tu vis du trading. Si l'opération ne peut pas survivre avec seulement la management fee, elle n'est pas viable. Sinon chaque drawdown = crise existentielle qui pousse à l'override catastrophique. (tips.txt #139, Clenow)
+- 💡 **News ticker OK, talking heads (Bloomberg TV, CNBC) = perte de temps pure** — Applicable quand: tu construis ta veille. Les flux Twitter "trading" sont du bruit, pas du signal. Filtrer très agressivement les sources. (tips.txt #147, Clenow)
