@@ -70,6 +70,76 @@ Même avec ftcache, un throttle < 5s crée un risque de boucle trop rapide qui s
 
 Le code (`worker.py:168-177`) raccourcit automatiquement le sleep si la prochaine bougie arrive avant le prochain cycle. Avec un throttle de 15s sur du 15m, le bot fera ~60 cycles/bougie. Avec 60s, ~15 cycles/bougie. Les deux sont largement suffisants pour ne rien rater.
 
+## Capital & sizing — available_capital, dry_run_wallet, MOT
+
+Le sizing en mode `stake_amount: "unlimited"` repose sur une formule dynamique qui évolue avec le PnL. Mal configurée, elle crée des surprises silencieuses en live.
+
+### La formule centrale (wallets.py)
+
+**Avec `available_capital` configuré (notre cas) :**
+```
+available_amount = available_capital - capital_withdrawal + total_closed_profit
+proposed_stake  = available_amount / max_open_trades
+```
+
+**Sans `available_capital` :**
+```
+available_amount = (capital_en_trades + solde_libre) × tradable_balance_ratio
+proposed_stake  = available_amount / max_open_trades
+```
+
+`total_closed_profit` = somme des profits/pertes de TOUS les trades fermés en DB. C'est **cumulatif et permanent** — il ne se remet pas à zéro.
+
+### Effet de compounding silencieux
+
+Avec `available_capital: 1000`, `max_open_trades: 2`, `stake_amount: "unlimited"` :
+
+| Événement | total_closed_profit | available_amount | proposed_stake |
+|---|---|---|---|
+| Démarrage | 0 | 1000 | 500 |
+| +200 USDC de gains cumulés | +200 | 1200 | 600 |
+| +500 USDC de gains cumulés | +500 | 1500 | 750 |
+| Puis -300 USDC de perte | +200 | 1200 | 600 |
+| Puis liquidation -1200 USDC | -1000 | 0 | 0 (bot bloqué) |
+
+**Le stake monte avec les gains.** Un bot qui a bien performé pendant 3 mois prend des positions 50% plus grosses qu'au démarrage. Si un flash crash arrive à ce moment, la perte est amplifiée par rapport au capital initial.
+
+**Les pertes réduisent le stake.** Après des pertes, le bot prend des positions plus petites → moins de capacité de recovery. C'est un anti-martingale naturel (bon pour la gestion du risque, mais surprenant si on ne s'y attend pas).
+
+### 🚫 Règles strictes
+
+- 🚫 **`dry_run_wallet` DOIT correspondre à `available_capital`** pour que le dry-run simule correctement le live. Si `available_capital: 1000` et `dry_run_wallet: 5000`, le dry-run montrera des résultats 5x plus optimistes (stakes 5x plus gros). Toujours les garder synchronisés.
+
+- 🚫 **Ne jamais mettre `available_capital` > le solde réel du wallet exchange.** La formule wallets.py utilise `available_capital` comme référence et ne vérifie pas le solde exchange. Si `available_capital: 5000` mais le wallet a 1000 USDC, les ordres seront rejetés par l'exchange en live.
+
+- 🚫 **Après un reset de DB, `total_closed_profit` repart à 0.** Si le bot a accumulé 500 USDC de gains, un reset de DB fait passer `available_amount` de 1500 → 1000. Le sizing change brutalement. Documenter tout reset de DB.
+
+### ✅ Bonnes pratiques
+
+- ✅ **Utiliser `available_capital` plutôt que `dry_run_wallet` seul** pour le sizing. Le mode sans `available_capital` utilise le solde réel exchange, qui fluctue avec les positions ouvertes et peut causer des variations erratiques du stake.
+
+- ✅ **Surveiller le ratio `proposed_stake / available_capital` au fil du temps.** Si ce ratio dépasse 1.5x le ratio initial, le compounding expose au risque de drawdown amplifié. Considérer un `capital_withdrawal` pour "prendre des profits" et stabiliser le sizing.
+
+- ✅ **`capital_withdrawal` sert à simuler un retrait sans toucher à la DB.** Exemple : bot a gagné 500 USDC, on veut les "retirer" → mettre `capital_withdrawal: 500` ramène `available_amount` au niveau du capital initial. Le champ ne peut pas être négatif ; s'il dépasse `available_capital + total_closed_profit`, le capital disponible passe à 0.
+
+- ✅ **MOT change radicalement le sizing DCA.** `proposed_stake = available / MOT`. Passer MOT de 5 → 3 augmente le stake de 67%. Passer de 3 → 2 l'augmente de 50%. Le sizing DCA (`custom_stake_amount`) dépend directement de `proposed_stake`. Toujours re-vérifier le sizing effectif après un changement de MOT.
+
+### 💡 Vérification rapide de cohérence config
+
+Pour une config avec `stake_amount: "unlimited"`, vérifier :
+
+```
+1. available_capital == dry_run_wallet (si dry_run: true)
+2. available_capital <= solde réel du wallet exchange (si dry_run: false)
+3. available_capital / max_open_trades = stake par trade attendu
+4. stake_par_trade × leverage <= limite exchange pour les paires ciblées
+5. Si capital_withdrawal > 0 : (available_capital - capital_withdrawal) / MOT = stake effectif
+```
+
+### 💡 Interaction avec le DCA
+
+Le capital disponible pour les ordres DCA (safety orders) utilise la **même formule** que l'entrée initiale. Si le bot a 3 trades ouverts sur MOT=3, il n'y a plus de capital pour les DCA des trades existants. C'est pourquoi un MOT élevé avec DCA agressif peut bloquer les safety orders — le capital est déjà réparti sur les trades initiaux.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts (centraliser volume sur un seul wallet). Si rate-limit persiste: passer à VPN IP-level, jamais wallet-level. (tips.txt #27, CLAUDE.md)
