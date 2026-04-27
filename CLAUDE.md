@@ -2,7 +2,7 @@
 
 ## What is this repo
 
-Fork of [freqtrade/freqtrade](https://github.com/freqtrade/freqtrade) (v2026.3) focused on **Hyperliquid futures trading** with aggressive DCA short strategies. The fork adds liquidation/ADL detection, external position close handling, and a custom pairlist filter.
+Fork of [freqtrade/freqtrade](https://github.com/freqtrade/freqtrade) focused on **Hyperliquid futures trading** strategies.
 
 **Owner:** titouannwtt (private repo)
 **Upstream:** `upstream` remote → `https://github.com/freqtrade/freqtrade.git`
