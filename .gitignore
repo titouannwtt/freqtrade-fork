@@ -176,9 +176,12 @@ user_data/strategies/*
 !backtest_configs/futures_hyperliquid_30.json
 database/
 
-# Local docs and notes (only README.md is shared)
+# Local docs and notes (share CLAUDE.md, .claude-tips/, and README.md)
 *.md
 !README.md
+!CLAUDE.md
+!.claude-tips/*.md
+tips.txt
 
 # Local dev artifacts
 Python-3.11.5/
