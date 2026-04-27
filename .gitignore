@@ -181,7 +181,7 @@ database/
 !README.md
 !CLAUDE.md
 !.claude-tips/*.md
-tips.txt
+!tips.txt
 
 # Local dev artifacts
 Python-3.11.5/

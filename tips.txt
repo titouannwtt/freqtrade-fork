@@ -1,0 +1,455 @@
+# Tips de trading algorithmique valides
+# Source : posts Freqtrade France, journal de bord, discussions communauté
+# Valides par l'utilisateur le 2026-04-23
+
+## Philosophie generale
+
+1. Reagir plutot que predire. Le bot ne doit jamais essayer de deviner la direction du marche. Il reagit a des conditions techniques presentes (RSI, VWAP, CTI) et gere le risque. Les macro-indicateurs (WALCL, US10Y, VIX) peuvent etre utilises en complement d'une strategie deja rentable et uniquement pour moduler l'allocation de capital, jamais a generer des signaux d'entree/sortie.
+
+2. Un bot qui ne trade pas peut etre un excellent bot. En marche calme, l'inactivite est un signe de discipline, pas de dysfonctionnement. Ne jamais forcer un bot a trader pour "justifier son existence". Dans le cadre d'un hyperopt, utiliser CalmarHyperOptLoss (pas Sharpe) pour les strategies patientes qui sont parfois inactives pour de bonnes raisons.
+
+3. Simplicite avant complexite. 2-3 indicateurs solides sur des timeframes elevees valent mieux que 10 indicateurs en 5m. Chaque indicateur supplementaire augmente le risque de sur-optimisation. Si on ne peut pas expliquer en une phrase pourquoi un indicateur est la, il ne devrait pas y etre.
+
+4. Le winrate n'est PAS la metrique importante. Une strategie a 97% de winrate peut perdre -99% du capital. Privilegier : profit factor, Calmar ratio, max drawdown, SQN. Toujours verifier le profit total ET le drawdown, jamais l'un sans l'autre.
+
+5. Considerer le capital investi dans les bots comme "perdu". Detacher emotionnellement. Ne jamais investir plus que ce qu'on est pret a perdre integralement. C'est la seule facon de ne pas intervenir manuellement sous l'effet du stress.
+
+6. [Contexte : ATTENTES psychologiques et ORIENTATION de strategie a privilegier — mean-reversion/DCA haute frequence dans notre cas] Mieux vaut des petits profits recurrents et maitrises (+1% frequent) que de rever d'un +10% rarissime. La loi des grands nombres est l'alliee du trader algo : beaucoup de trades moyens > quelques trades exceptionnels. Ne contredit PAS #188 : l'asymetrie profit-moyen/perte-moyenne reste une metrique critique d'evaluation. Mais l'orientation du trader algo retail doit viser frequence + discipline, pas le moonshot.
+
+7. Garder ses veritables recettes pour soi. Le trading est un jeu a somme nulle. Partager une strategie gagnante reduit mecaniquement l'edge. Partager la methode et la pedagogie, pas les parametres exacts.
+
+## Backtesting et Hyperopt
+
+8. Ne jamais faire confiance a un backtest seul. Le backtest est necessaire mais insuffisant. Il sert a verifier que la logique fonctionne, pas a predire les performances live. Toujours valider en walk-forward, puis en live avec petit capital.
+
+9. Plus un backtest a de trades, moins il est susceptible d'etre overfitte. Minimum 100 trades pour une validation statistique. 500+ est ideal. Un backtest avec 25 trades sur 3 paires est de la chance, pas une strategie.
+
+10. Les trailing stops biaisent massivement les backtests. Sans --timeframe-detail, un trailing stop peut montrer +1300% en backtest et seulement +59% avec 5m detail. Ne jamais utiliser de trailing stop natif dans une strategie. Si besoin d'un trailing, le recoder via custom_exit pour avoir un controle total.
+
+11. Si une baisse de frequence de trading est observee en walk-forward, verifier la volatilite avant de conclure "overfitting". Comparer ATR, daily range, et volume entre les periodes. Une baisse proportionnelle a la volatilite = le bot fonctionne correctement.
+
+12. Le backtest capture les meches que le live rate. En backtest, le ROI est verifie contre le high/low de chaque bougie (chaque wick qui touche le target = exit). En live, le ROI n'est verifie que toutes les 20s au prix courant. Les breves meches profitables sont capturees en backtest mais ratees en live.
+
+13. L'ordre de traitement differe : backtest fait DCA-puis-exit, live fait exit-puis-DCA. Quand les deux conditions sont reunies simultanement, le backtest laisse le DCA "sauver" le trade, tandis que le live coupe avant.
+
+14. Hyperopt : plafonner entre 200 et 300 epochs (cf. #38). Au-dela, la sur-optimisation est quasi garantie. Alternative robuste : lancer 10-20 hyperopts de 200 epochs avec des seeds differents et moyenner les JSON resultants — le signal converge sur les params stables et gomme les faux optimums locaux.
+
+## Risk management
+
+15. Stake "unlimited" acceptable MAIS uniquement avec garde-fous explicites. Le compounding naif amplifie les pertes autant que les gains — une serie gagnante fait grossir les positions, puis une seule perte peut effacer des mois de gains. Garde-fous obligatoires si unlimited : (a) tradable_balance_ratio bas (0.3-0.6), (b) max_open_trades eleve pour diluer, (c) retrait regulier des profits vers un wallet separe, (d) cap explicite sur la taille max par trade dans custom_stake_amount. Freqtrade utilise "unlimited" par defaut dans les strategies DCA — ce n'est pas un probleme tant que les garde-fous sont en place.
+
+16. Drawdown maximal acceptable : 30-35%. Au-dela, couper, repasser en stake fixe, recalibrer. Ne pas attendre -50% pour reagir.
+
+17. Le levier amplifie tout, y compris les erreurs. Levier 1x par defaut. Monter a 2-4x uniquement apres validation walk-forward ET live avec petit capital. Une strategie qui atteint regulierement -50% sur une position sera liquidee a 2x.
+
+18. Sur les shorts, retirer progressivement les profits. Ne pas etre cupide. Une strategie short qui fait +70% en 1 mois est exceptionnelle — retirer le capital initial des que possible, laisser tourner uniquement sur les gains. Alternative, baisser tradable_balance_ratio.
+
+## Technique Freqtrade
+
+20. Toujours utiliser --timeframe-detail 1m pour hyperopt et backtest des strategies DCA. Sans ca, les fills sont simules au prix d'ouverture de bougie, creant des "phantom trades" profitables qui n'existeraient pas en live. Si 1m indisponible, 5m minimum mais prevenir que les resultats seront optimistes.
+
+21. Supprimer le .json co-localise avant chaque hyperopt. Il override silencieusement buy_params et DecimalParameter defaults. Si oublie, l'hyperopt peut varier des params qui n'ont aucun effet reel.
+
+22. Le backtester interdit VolumePairList — il utilise une StaticPairList figee. C'est une source majeure de divergence backtest/live. En live, les paires tournent selon le volume reel et les filtres (PerformanceFilter, TrendRegularityFilter) excluent les mauvaises paires. En backtest, toutes les paires sont presentes des le debut, creant un biais de look-ahead.
+
+23. custom_exit ne voit pas les meches en backtest (current_rate = candle open). custom_stoploss voit les extremes (low pour longs, high pour shorts). Pour un stoploss fiable en backtest, preferer custom_stoploss a custom_exit.
+
+24. max_open_trades change tout pour le DCA : proposed_stake = wallet / MOT. Passer de MOT 5 a 3 double quasiment l'allocation par trade. Toujours fixer MOT deliberement, ne jamais le laisser en afterthought.
+
+25. Ne jamais utiliser tee pour piper un hyperopt. Le user regarde la progress bar en live dans screen — tee bufferise les retours chariot et la cache. Le .fthypt persiste deja toutes les epochs.
+
+26. Toujours entrainer sur l'exchange cible. Les params entraines sur Binance USDT ne transferent PAS a Hyperliquid USDC. Liquidite, spreads, funding rates et price action different. Une strategie profitable sur Binance peut produire -99% de drawdown sur Hyperliquid avec les memes params.
+
+## Exchanges et infrastructure
+
+27. Hyperliquid : preferer les ordres makers (0.02% vs 0.05% taker). Les frais s'accumulent sur des milliers de trades. Rate limit = 1200 req/min par wallet. Solution si probleme : Producer-Consumer mode, pas de sub-accounts (centraliser le volume sur un seul wallet).
+
+28. Dry-run obligatoire avant tout passage en live. Duree minimale fonction de la frequence : 2-4 semaines pour strategies haute frequence (10+ trades/semaine, type DCA 15m), 3 mois minimum pour strategies basse frequence (cf. #154 : c'est le NOMBRE DE TRADES qui donne la significance statistique, pas la duree calendrier). Idealement avec le meme capital que prevu en live. Comparer systematiquement les metriques dry-run vs backtest sur la meme periode.
+
+## Timeframes et marche
+
+29. Timeframes hautes = adversaires plus faibles. Metaphore de l'arene : en 5m on affronte des HFT et des market makers avec du hardware superieur. En 1d, les adversaires sont moins sophistiques et les strategies simples suffisent. Plus la timeframe est haute, plus les resultats live sont fideles au backtest mais plus il faudra de temps pour s'en rendre compte (parfois sur plusieurs annees).
+
+30. Les phases de marche (S1-S4 de Beetcoin) sont plus utiles que le simple bull/bear/range. Mais les utiliser uniquement pour le sizing et le risk management, JAMAIS pour les conditions d'entree/sortie (overfitting garanti).
+
+31. En periode de congestion/faible volatilite, seules les strategies en petites timeframes performent. Mais attention : la volatilite peut revenir brutalement et effacer des mois de gains en quelques heures. Ne jamais mettre tout son capital sur une strategie 5m "parce qu'elle performe bien depuis 2 semaines".
+
+32. Comparer systematiquement les performances de la strategie au TOTAL2 sur la meme periode. Si la strategie sous-performe le TOTAL2 en bull mais a un meilleur drawdown, c'est acceptable — les bots brillent dans la gestion du risque, pas dans la capture de rallyes.
+
+## Biais cognitifs
+
+33. Biais d'action : resister a l'envie de modifier constamment les parametres du bot en reaction aux fluctuations quotidiennes. Etablir un plan, s'y tenir, ne re-evaluer qu'a intervalles fixes (mensuel).
+
+34. Biais des couts irrecuperables : si une strategie ne marche pas apres des mois de travail, l'abandonner. Le temps investi est perdu. Passer a autre chose.
+
+35. Biais de recence : ne pas juger une strategie sur les 2 dernieres semaines. Analyser sur des periodes longues incluant differents regimes de marche.
+
+## ML et approches avancees
+
+36. Le ML pour les signaux d'entree/sortie n'a pas produit de resultats convaincants (FreqAI, QuickAdapter, copy trading). En revanche, le ML pour l'allocation de capital et le risk management (orchestrateur de bots, sizing dynamique) est une piste prometteuse.
+
+37. L'orderbook comme source de donnees est fondamentalement different des indicateurs techniques classiques. Les indicateurs arrivent "en retard" — l'orderbook montre l'intention avant l'execution. Piste a explorer mais necessite des outils specifiques (NautilusTrader, pas Freqtrade).
+
+## Construction de strategies (source : communauté)
+
+38. L'hyperopt est un piege d'overfitting — la vraie edge vient de l'intuition et de l'observation. Certains traders professionnels n'utilisent aucun hyperopt et affirment que 90% des strategies rentables se construisent avec 2 indicateurs d'entree et 1 indicateur de sortie. L'hyperopt optimise sur le passe, pas sur l'avenir. Alternative : construire sa logique d'abord, puis ajuster manuellement en observant les trades. Si on doit utiliser l'hyperopt, s'arranger pour qu'il trouve des signaux, pas pour qu'il les sur-optimise. Pour faire ca on peut notamment utiliser des parametres larges, avec des CategoricalParameter larges et fixes plutot que des IntParameter ou des DecimalParameter. Et on peut egalement utiliser un max-open-trades a 2 ou 3 maximum. Et on peut egalement utiliser un nombre d'epochs maximum entre 200 et 300 pour eviter la sur-optimisation.
+
+39. L'originalite est proportionnelle aux gains. Tout le monde peut acheter quand RSI < 30 — c'est pour ca que ca ne marche pas. Creer ses propres indicateurs ou combiner des indicateurs existants de maniere non-standard est la seule facon d'avoir un edge durable. Modifier la periode d'un RSI ne suffit pas : il faut inventer quelque chose que les autres n'utilisent pas.
+
+40. [Contexte : mean-reversion / DCA — notre cas principal] Le stop-loss destructif detruit le mean-reversion. Sur une strategie de retour a la moyenne (type DCA oversold), couper une position en perte est comme couper un elastique : on retire precisement le mecanisme qui devait ramener le prix. En crypto, un SL a ~30% (qui ne sera touche que 1-3% du temps) protege contre les catastrophes sans detruire l'edge. Le SL doit etre une assurance rare, pas un outil d'optimisation. Note : couper les pertes "rapidement" (cf. #124) reste applicable mais via des exits TEMPORELS (max hold duration) ou INDICATEURS (retournement du signal), PAS via un SL fixe serré.
+
+41. ROCP (Rate of Change Percentage) est l'indicateur le plus polyvalent pour le mean-reversion. Il mesure le retracement en pourcentage depuis un point de reference. ROCP peut etre utilise comme entree (retracement > X% = oversold), comme sortie (rebond > Y% depuis le creux), et meme comme filtre de tendance. Un seul indicateur, trois usages.
+
+42. Ne pas modifier les periodes par defaut des indicateurs classiques — creer les siens. Passer un RSI de 14 a 21 periodes n'apporte aucun edge car tout le monde teste ça. La vraie alpha vient d'indicateurs custom que personne d'autre n'utilise : combiner ROCP avec un ratio de volume, creer un oscillateur maison, etc. Les indicateurs classiques type RSI n'apportent de vrais signaux que sur timeframes tres elevees (3d, 1w+), mais les strategies retail operent sur des timeframes beaucoup plus basses ou ces indicateurs n'ont aucun edge. Raison de fond (Clenow) : les indicateurs classiques ont ete conçus a l'epoque papier-crayon — leurs periodes et formules sont des simplifications historiques, pas des optimums mathematiques. "100 techniciens, 3 formules RSI differentes, tous d'accord sur le signal." Construis tes indicateurs toi-meme depuis zero plutot que d'importer une bibliotheque : tu sais exactement ce que fait ton code, pas ce que le livre pretend qu'il fait. (Fusion de #42 + #86 + #146 Clenow.)
+
+## Analyse technique et marche (source : Beetcoin)
+
+43. Stage Analysis (S1-S4) : le framework le plus robuste pour classifier les phases de marche. S1 = accumulation (range apres baisse), S2 = markup (tendance haussiere), S3 = distribution (range apres hausse), S4 = markdown (tendance baissiere). "Your only job is to find the alts leaving S1 and not sell in the middle of S2." Pour le bot : en S2, le bot long performe ; en S4, le bot short performe. En S1/S3, reduire l'exposition.
+
+44. "Les prix precedent les nouvelles" — manifeste de l'analyse technique. Le mouvement de prix arrive AVANT que la raison soit connue publiquement. Un bot qui reagit aux prix (indicateurs techniques) a donc un avantage sur un bot qui reagirait aux news. Corollaire : ne jamais desactiver un bot a cause d'une news — laisser le prix confirmer d'abord.
+
+45. Analyse intermarche : DXY, ALT/BTC, TOTAL3/BTC comme filtres macro. DXY bearish = bullish pour BTC et les actifs risques. ALT/BTC est le thermometre du risk appetite crypto. TOTAL3/BTC qui ne break pas = pas de vrai altseason. Utiliser ces ratios comme filtres macro pour moduler l'exposition, pas pour les signaux d'entree.
+
+46. Les bars sont superieures aux bougies pour l'analyse technique. La couleur d'une bougie (rouge/verte) n'apporte aucune information car elle depend uniquement de l'open vs close. Les bars (OHLC sans couleur) forcent a lire la structure de prix reelle : longueur des meches, range, position du close dans le range. Beetcoin : "Color = no information."
+
+47. [Contexte : timeframes elevees 3d/1w — echelle a laquelle Beetcoin opere. Coherent avec #42 qui note que les indicateurs classiques type RSI ne donnent d'edge qu'en TF tres elevees. Sur timeframes basses 15m-4h (notre cas Freqtrade), cet ajustement de periode n'apporte pas d'edge — preferer des indicateurs custom cf. #39, #42.] RSI 30 periodes, pas 14. La periode par defaut (14) est trop bruitee et genere trop de faux signaux. RSI(30) lisse le signal et ne donne que les mouvements significatifs. Le niveau 50 de RSI(30) est un filtre de tendance fiable : au-dessus = bullish, en dessous = bearish.
+
+48. "Une tendance relance plusieurs fois mais ne se retourne qu'une seule fois." Ne pas essayer d'attraper les RETOURNEMENTS MAJEURS (fin de cycle, top/bottom de trend) — la probabilite est contre vous. En revanche, les PULLBACKS DANS UNE TENDANCE (rebonds en S2, relances en S4) sont frequents et fiables. Un bot qui chasse les retournements de cycle a un mauvais ratio risque/recompense ; un bot qui DCA oversold dans une tendance confirmee (= buying the dip) est un pullback-buyer, pas un reversal-hunter. Compatible avec #70/#138 qui endossent le mean-reversion court-terme et le counter-trend "dans le sens de la tendance dominante".
+
+49. L'edge en trading est un coinflip 52/48 — on ne peut pas predire la sequence. Meme avec un avantage statistique, chaque trade individuel est quasi-aleatoire. Cela renforce le tip #6 : c'est la loi des grands nombres qui fait la rentabilite. Beaucoup de trades mediocres > quelques trades parfaits. Ne jamais juger une strategie sur un trade individuel.
+
+50. Gestion institutionnelle : spot uniquement, zero levier, protection du capital avant tout. D'enormes gestionnaires de fonds en algo trading gerent des dizaines de millions en spot sans levier ni derives et ont esquive 7/7 crises majeures. La priorite absolue est de ne pas perdre — les gains viennent de la patience. Un bot sans levier avec un bon filtre de regime de marche bat un bot leverage sans filtre. Tout depend de vous si vous preferez avoir des bots leverages avec filtres (et il faut alors bien etudier les filtres) ou des bots en spots.
+
+## Psychologie et culture trading (source : Beetcoin)
+
+51. Le poker et le trading sont isomorphes : bankroll management, variance, et discipline. "If you focus on the result, you're focusing in the wrong place" (Negreanu). En trading algo : se concentrer sur la qualite du processus (setup, risk, exit rules) pas sur le P&L d'un trade. Le tilt algorithmique = modifier ses parametres apres une perte.
+
+52. "Speculation has already been written about centuries ago — Selden, Wyckoff, Livermore." La nature humaine ne change pas. Les patterns de marche d'aujourd'hui sont les memes qu'en 1900. Lire les classiques de la speculation plutot que les threads Twitter. Le prix est la seule realite — les rapports fondamentaux et les modeles macro sont des constructions fragiles.
+
+53. Wolfe Waves comme pattern de retournement fiable. Beetcoin utilise regulierement les Wolfe Waves et affirme "Wolfe Waves never deceive." Pattern peu connu, peu utilise par les algos, ce qui peut constituer un edge (lie au tip #39 sur l'originalite).
+
+## Position management et sizing (source : Rob Carver, ex-AHL)
+
+54. "A very easy way to avoid over-fitting is to do no fitting at all." Ne pas optimiser du tout est la methode la plus fiable contre l'overfitting. Utiliser des valeurs par defaut raisonnables plutot que des parametres optimises. Les 3 erreurs fatales du trading systematique : overbetting, overtrading, overfitting. (Renforce #38)
+
+55. Le position management est plus important que les trading rules. C'est un mythe de croire que les regles d'entree/sortie sont ce qui compte le plus. Un bon framework de sizing + diversification + quelques regles simples = un systeme decent. Ajouter des regles a des rendements decroissants rapides.
+
+56. Volatility targeting : ajuster la taille selon la volatilite, pas selon le capital. Le vol target doit matcher le Sharpe Ratio attendu. SR de 0.25 → vol target de 25%. La plupart des retail traders perdent parce que leurs positions sont trop grosses. Ajuster dynamiquement les positions quand la volatilite change pendant le trade.
+
+57. Utiliser des forecasts continus (-20 a +20) plutot que des regles binaires (buy/sell). Les signaux proches de zero sont moins profitables que ceux loin de zero. Les systemes binaires coutent plus cher en trading costs (passage de full long a full short = 2x la taille). Un forecast gradue permet un sizing proportionnel a la conviction. IMPORTANT : capper le forecast a une valeur max (Carver cap a 20 = 2x la position moyenne de 10). "Anything bigger than 20 I don't actually go any higher." Un signal extreme n'autorise JAMAIS une position illimitee — meme si le RSI/funding dit "plus extreme que jamais", la taille a un plafond absolu. (Fusion de #57 et #115.)
+
+58. La diversification entre instruments apporte plus que l'optimisation des regles. Ajouter 5 pairs non-correles vaut mieux que 100 epochs d'hyperopt supplementaires. (Pour l'interdiction de cherry-picker les pairs par perf passee, voir #106.)
+
+59. Pour les petits comptes, commencer avec un "Starter System" : 1 instrument, 1 regle, focus sur le risk management. La "magie" est dans le risk management, pas dans les regles. Si le risk management est bon, le reste suit.
+
+## Mean-reversion et stop-loss (source : Larry Connors, 40+ ans de marches)
+
+60. [Contexte : actions US — transferabilite crypto a verifier] Acheter les pullbacks, jamais les breakouts. Sur 20+ ans de donnees quantifiees (actions US), les pullbacks dans une tendance haussiere surperforment systematiquement les breakouts. Corollaire : acheter APRES que le marche ait baisse, pas apres qu'il ait monte. En crypto, principe probablement transferable (DCA oversold = pullback deguise) mais a valider en live.
+
+61. [Contexte : actions US quotidiennes — stat backtestee sur equities, pas valide sur crypto 15m] RSI(2) : l'oscillateur le plus proche du "saint graal" pour le mean-reversion sur actions daily. RSI 2 periodes capte les extremes court-terme bien mieux que RSI 14. Achat quand RSI(2) < 10 (deeply oversold), vente quand RSI(2) > 90. Combine avec MA(200) comme filtre de tendance = 75% de win rate backteste sur des decennies d'actions US. Transferabilite crypto : le principe reste (RSI court-periode + filtre tendance long-periode), mais les seuils et periodes doivent etre recalibres sur 15m crypto.
+
+62. [Contexte : mean-reversion court-terme, type RSI(2) actions US ou DCA oversold crypto] Les stop-losses reduisent la performance des strategies court-terme mean-reversion. Teste sur des centaines de milliers de transactions : ajouter un SL "endommage" systematiquement la performance. Si SL necessaire, utiliser un SL base sur la volatilite (2x ATR), jamais un SL fixe en pourcentage. (Renforce #40)
+
+63. [Contexte : actions US — pas d'equivalent direct en crypto] Le VIX comme signal contrarian sur actions. Acheter quand le VIX est 5%+ au-dessus de sa MA(10) (peur = opportunite), vendre quand le VIX est 5%+ en dessous (complaisance = danger). En crypto, le DVOL de Deribit ou l'implied vol BTC peut jouer un role similaire, mais donnees moins propres et moins liquides.
+
+64. Le volume seul n'a pas d'edge — mais volume + prix extreme, oui. En tant qu'indicateur standalone, le volume ne donne pas d'avantage. L'edge apparait uniquement quand le plus gros jour de hausse des 10 derniers jours coincide avec le plus gros volume des 10 derniers jours.
+
+65. Les marches se comportent de la meme facon depuis toujours. 850+ probabilites historiques testees par Connors prouvent que les patterns de comportement sont stables sur 15+ ans a travers bull, bear et recovery. Ce que le monde du trading tient pour acquis est souvent faux. (Renforce #52)
+
+66. Sortir sur le close au-dessus de la MA(5) ou sur un signal RSI — pas sur un TP fixe. Les meilleures exits pour le mean-reversion sont dynamiques, pas statiques. Un exit base sur un indicateur s'adapte au regime de marche, un TP fixe ne le fait pas.
+
+## Trading quantitatif et sizing (source : Ernest Chan, ex-Morgan Stanley / Credit Suisse)
+
+67. [Contexte : mean-reversion — notre DCA] Pas de stop-loss pour le mean-reversion, sauf s'il n'est jamais cense etre declenche (catastrophe). Les jours de forte volatilite intraday sont ceux ou le mean-reversion gagne le plus — et ce sont aussi les jours ou le SL se declenche. Le SL coupe precisement les meilleurs trades. Preferer un exit temporel (max hold) ou sur indicateur (RSI qui remonte au-dessus de X) plutot qu'un SL fixe. (Renforce #40, compatible avec #124 sur le trend-following)
+
+68. Kelly Criterion pour le sizing, mais utiliser half-Kelly ou quarter-Kelly en pratique. Full Kelly : volatilite annualisee = Sharpe ratio (SR de 2 → 200% de vol). Beaucoup trop agressif. Half-Kelly reduit le drawdown considerablement avec un sacrifice modeste de rendement. L'erreur d'estimation du SR rend le full Kelly dangereux.
+
+69. Aucune strategie ne fonctionne eternellement. Les proprietes statistiques des marches changent. Le but n'est pas de trouver un edge permanent, mais de detecter quand l'edge disparait et de s'adapter. Tester sur differents regimes de marche est obligatoire.
+
+70. [Contexte : petit capital + timeframes courts — notre cas exact] Le short-term mean-reversion offre des opportunites plus consistantes que le trend-following, surtout pour les petits traders. Le mean-reversion court-terme a un Sharpe ratio plus eleve et est plus accessible aux comptes modestes. Le trend-following necessite beaucoup de diversification (= capital) pour lisser les drawdowns. Justifie directement notre focus Freqtrade sur DCA oversold/short en 15m plutot que du trend-following sur une poignee de pairs.
+
+71. Commencer par la recherche academique, pas par les donnees. "Start with ideas, not with data." Chercher des papiers academiques qui documentent des anomalies, puis tester si elles tiennent toujours. L'inverse (data mining) mene a l'overfitting.
+
+## Simplicite et anti-optimisation (source : Andreas Clenow, CIO ACIES Asset Management)
+
+72. Zero optimisation dans les backtests — par choix delibere. Clenow replique les performances de grands fonds trend-following avec des regles simples, non-optimisees. La volatilite (= le risk management) est la variable principale, pas les parametres des indicateurs. (Renforce #38)
+
+73. Les traders echouent parce qu'ils se focalisent sur les buy/sell rules au lieu du risk management. Le "vrai secret" du trend-following n'est pas dans les regles d'entree. C'est dans le sizing, la diversification, et la gestion de la volatilite. (Renforce #55)
+
+74. Momentum : classer les actions par pente de regression exponentielle x R-carre. Formule simple et non-optimisable : annualized exponential regression slope x R-carre sur 90 jours. Filtre : MA(200) sur l'index pour ne pas acheter en bear. Disqualifier les actions sous leur MA(100) ou avec un gap > 15%.
+
+75. Le momentum fonctionne parce que les investisseurs chassent les gagnants et abandonnent les perdants — un biais comportemental persistant. Ce n'est pas un artefact statistique, c'est de la psychologie humaine. Tant que la nature humaine ne change pas, le momentum continuera de fonctionner. (Renforce #52)
+
+## Overfitting et ML applique a la finance (source : Marcos Lopez de Prado, Cornell, "Quant of the Year" 2019/2021)
+
+76. Le nombre d'essais tentes est l'info la plus importante et la plus absente des backtests. Sans savoir combien de combinaisons ont ete testees, impossible d'evaluer si un resultat est significatif ou juste du hasard. L'hyperopt avec 1000 epochs teste 1000 combinaisons — la probabilite qu'au moins une soit "bonne" par hasard est tres elevee.
+
+77. Triple Barrier Method : labeler les trades par {profit-taking, stop-loss, time-out} plutot que par direction. Au lieu de predire "le prix monte" (classification binaire fragile), predire "ce trade va toucher son TP avant son SL avant le timeout". Plus realiste et plus robuste pour l'entrainement ML. [Contexte : methode de LABELING pour entrainement d'un modele ML, pas regle d'exit du bot en production. N'implique pas d'utiliser un TP fixe en live — compatible avec #66 qui privilegie les exits dynamiques via indicateur pour le mean-reversion.]
+
+78. Meta-labeling : un second modele decide s'il faut agir sur le signal du premier. Ne pas demander au ML de predire la direction ET le timing. Separer : modele 1 = direction (peut etre un indicateur classique), modele 2 = "est-ce que le signal du modele 1 va etre profitable cette fois ?". Le modele 2 filtre les faux signaux.
+
+79. Feature importance > backtesting. La methode dominante dans l'industrie ("rechercher par backtest") revient a du data mining brut. L'analyse de feature importance identifie QUELS facteurs expliquent vraiment la performance, pas juste quelle combinaison a marche historiquement.
+
+80. "Backtesting is not a research tool. Feature importance is." (Premiere loi de Lopez de Prado). Deuxieme loi : "Backtesting while researching is like drink driving." Troisieme loi : "Every backtest must be reported with all trials involved in its production." Ces trois lois resument pourquoi la majorite des strategies backtestees echouent en live.
+
+81. Une strategie vraiment robuste doit montrer une stabilite de performance autour de ses parametres optimaux. Si changer legerement un parametre fait chuter la performance, c'est de l'overfitting. La recherche de parametres optimaux n'est pas une maximisation — c'est une recherche de preuve que le modele n'est pas un accident.
+
+82. Differentiation fractionnaire : rendre une serie stationnaire SANS detruire sa memoire. La differentiation entiere (returns classiques) supprime toute la memoire des prix. La differentiation fractionnaire trouve le minimum de differentiation necessaire pour la stationnarite, preservant le pouvoir predictif. Applicable aux features d'un modele ML.
+
+83. Les structural breaks offrent les meilleurs ratios risque/recompense parce que les autres participants ne sont pas prepares. Les tests CUSUM detectent ces cassures en echantillonnant quand une variable cumulative depasse un seuil predefini. Exploiter les ruptures structurelles = capturer l'edge AVANT que le marche ne s'ajuste.
+
+84. Bet sizing : la taille de la position doit etre proportionnelle a la confiance de la prediction, A L'INTERIEUR d'un plafond dur. Allouer la meme fraction de capital a chaque signal, qu'il soit a 51% ou 95% de confiance, est une erreur fondamentale. La valeur attendue d'un pari croit avec la confiance — le sizing doit suivre. MAIS toujours capper en valeur absolue (cf. #57 : cap a 2x la taille moyenne ; #182 : 2-5% max par trade) — un signal extreme ne justifie jamais une position illimitee. (Renforce #68)
+
+85. Le meta-overfitting : meme avec une validation rigoureuse (CPCV), tester des dizaines d'idees sur le meme dataset finira par trouver un faux positif par pur hasard. La seule defense : un processus de recherche discipline, une justification economique forte pour chaque strategie, et un dataset holdout final jamais touche.
+
+## Insights approfondis (source : interview Clenow, Zerodha "In The Money" podcast)
+
+86. [Tip fusionne dans #42 — indicateurs custom depuis zero.]
+
+87. La performance d'un trade individuel n'a aucune importance — seul le portefeuille aggregate compte. "All that matters is what the portfolio does as an aggregate." On peut meme inclure des instruments qui perdent de l'argent si leur pattern de gains/pertes ameliore le profil risque/rendement global. Un instrument perdant qui est anti-correle au reste du portefeuille AUGMENTE le rendement ajuste au risque.
+
+88. Strategie counter-trend systematique : predire ou les gros players trend-following placent leurs stop-loss, et entrer juste en dessous. Quand beaucoup de fonds trend-following sont stoppes simultanement, ils creent un mouvement exagere a la baisse. Placer une entree un peu plus bas que le stop presume, puis profiter du rebond sur un trade court-terme. Clenow a deploye cette strategie avec succes sur les futures pendant des annees.
+
+89. Ne jamais utiliser un filtre de regime binaire (risk on / risk off). Preferer un scale-in/scale-out progressif. Un switch binaire "vend tout / rachete tout" est dangereux — il genere des faux signaux couteux et des re-entries trop tardives. Mieux : scale out progressivement quand la volatilite monte, et quand tout semble vraiment catastrophique, commencer a scale in legerement (contrarien a l'extreme). (Renforce #50 sur les filtres de regime)
+
+90. Momentum ≠ trend following — concepts proches mais pas identiques. Le trend following fonctionne sur futures avec fort levier + grande diversification (50-100 instruments non-correles). Le momentum fonctionne sur actions sans levier, base sur le classement relatif des instruments (qui monte le plus). Ne pas confondre les deux approches car elles ont des profils de risque tres differents.
+
+91. Le crypto n'a aucune valeur fondamentale — c'est de la pure psychologie. "Fundamental value is zero. So it's all a matter of psychology." Mais c'est precisement pour ca que c'est tradeable : les trends sont amplifiees par le herding behavior, et nulle part ailleurs on ne trouve autant de "stupid money". Trader le crypto comme un instrument de pure psychologie/momentum, jamais comme un investissement fondamental. Ne pas croire la propagande.
+
+92. Trader son propre argent pour en vivre est une mauvaise idee mathematique. Upside limite, tout le risque. Meme les meilleurs au monde composent a ~20-22% par an. Si on doit retirer de l'argent pour vivre, on reduit sa puissance de feu en permanence. La bonne approche : gerer l'argent des autres + le sien, ce qui donne un revenu fixe (management fee) + un upside (performance fee) + moins de pression pour viser des rendements absurdes. (Clenow : "Trading your own money for a living is a bad idea for all kinds of reasons.")
+
+93. "Qu'est-ce que tu cherches ? 'Gagner de l'argent' n'est pas une reponse." Construire une strategie de trading, c'est construire un produit pour un public. Il faut definir : quel type de rendement, quelle frequence de trading, quel drawdown acceptable, quel horizon. Maximiser le rendement brut revient a jouer a la roulette a Las Vegas. La metaphore automobile : vouloir la voiture la plus rapide au monde n'est pas un business plan — Toyota et Kia font plus d'argent que Koenigsegg.
+
+94. Le crowding ne tue pas le momentum/trend following — il l'alimente. "People say strategies only work because everybody follows it, or they say it only works because nobody knows about it. Both can't be true." Le momentum est un biais comportemental humain persistant. Le S&P 500 lui-meme est un index momentum : les actions y entrent parce que leur prix a monte, et une fois dans l'index, leur prix monte encore. Tant que la nature humaine ne change pas, le momentum fonctionnera.
+
+95. En 2008, meme les meilleurs fonds trend-following (annee la plus profitable de l'histoire du secteur) ont du overrider leurs modeles pour reduire le risque. "Once you start seeing 15-20% swings per day on the entire fund, you decrease risk fast." Les modeles n'etaient pas conçus pour cette volatilite. Leçon : avoir des circuit breakers manuels ou automatiques pour les scenarios que le modele n'a jamais vu. Toujours pouvoir overrider le systeme en cas de volatilite extreme.
+
+96. Elliot Waves et Fibonacci = "pseudo-religious nonsense." Aucun professionnel serieux de la finance ne les utilise. "If you try to define them as math, you can't." C'est precisement parce qu'ils ne sont pas formalisables mathematiquement que leurs adeptes peuvent toujours pretendre "votre decompte etait faux." Non-falsifiable = non-scientifique = inutile pour le trading systematique.
+
+## Insights supplementaires (source : tweets Clenow, Carver, Lopez de Prado)
+
+97. [Tip fusionne dans #87 — seul le portefeuille aggregate compte.]
+
+98. Se mefier de la focalisation sur la volatilite "downside only" (Sortino ratio). Clenow : "I'm very skeptical about the whole 'only downside vola matters'. Those guys usually blow up." Le Sortino ratio masque le risque reel en ignorant la volatilite a la hausse, ce qui peut donner un faux sentiment de securite. Preferer le Sharpe ratio ou le Calmar ratio qui prennent en compte la volatilite totale.
+
+99. La crise de replication en finance : p-hacking, backtest overfitting, et "causal denial." (Lopez de Prado) La grande majorite des facteurs publies dans la recherche academique ne repliquent pas. Les modeles factoriels "misspecifies" (qui confondent correlation et causalite) sont PLUS dangereux que les modeles p-hackes, car seuls les premiers sont une cause suffisante de pertes systematiques. Si un facteur n'a pas de justification causale, il ne devrait pas etre dans votre modele.
+
+100. [Tip retire — hedge options / tail risk funds non pertinent pour notre contexte Freqtrade perso.]
+
+101. Apprendre a programmer reste indispensable, meme avec les LLM. (Clenow, 2025) "You still need to understand programming to use these tools, otherwise garbage in garbage out." Un LLM ne peut pas valider ce qu'il genere si l'utilisateur ne comprend pas le code. Les outils de backtesting disponibles pour le retail sont generalement mauvais — mieux vaut construire les siens.
+
+102. "Using an LLM for trading is just begging to lose your money." (Clenow, tweet) Un LLM n'a aucune connaissance du marche reel — il n'a que des patterns statistiques de texte. Utiliser un LLM pour CODER des strategies = excellent. Utiliser un LLM pour DECIDER des trades = catastrophique. La distinction est cruciale.
+
+103. La vraie complexite du trading systematique est dans l'operationnel, pas dans les regles. Clenow : les livres montrent des regles simplifiees pour enseigner un concept, pas un systeme de production. En production, il faut "so much redundancy, so many fail-safes and details — it would be incredibly boring to write a book about." La difference entre le systeme du livre et celui deploye n'est pas "j'utilise 5 jours au lieu de 7" — c'est de l'infrastructure, des failsafes, et de la gestion d'erreurs.
+
+104. [Contexte : actions equities — NON applicable au crypto, ou tout est correle a BTC] Momentum sur les actions : il faut un univers suffisamment large (min. 200-500 actions liquides). Un modele de momentum deploye sur un marche trop petit manque de diversification et ne fonctionne pas. En crypto, meme avec 100 pairs, l'univers est dominé par la correlation a BTC — une strategie momentum crypto-pure ne reproduit pas les conditions de Clenow. Si momentum crypto, alors uniquement en mode "ranking relatif vs BTC" (pairs qui surperforment BTC sur N jours).
+
+## Insights approfondis Carver (5 interviews : Diversified Futures, Smart Portfolios, Multi-Billion, Profitable Systematic, Simplicity)
+
+105. Diversification = x4 a x5 de la performance risk-adjusted. Passer de 1 a 100 marches multiplie la performance par 4-5x. "There aren't many ways in finance you can get a fivefold improvement." Corollaire crypto/Freqtrade : maximiser le nombre de pairs tradees >> optimiser les parametres d'une seule pair. (Renforce #58)
+
+106. Ne jamais cherry-picker les pairs par performance passee. "I do not cherry pick markets on the basis of performance, that is a form of overfitting." (Carver) Une fois les error bars dessinees, les differences de perf entre pairs disparaissent dans le bruit — les "bonnes" et "mauvaises" pairs sont une illusion statistique. Inclure une pair "moyenne" diversifie mieux qu'en selectionner 5 "top". Pour Freqtrade : construire le pairlist sur des criteres structurels (volume, vol, filtres regime) plutot que sur les PerformanceFilter qui encouragent le cherry-pick. (Fusionne et remplace la partie overfitting-cherry-pick de #58.)
+
+107. Permutations d'un meme modele = pas de capital supplementaire. Trader 6 variantes d'un MA crossover ne demande PAS 6x le capital. Calculer d'abord un forecast pondere (weighted average) des 80-100 permutations par instrument, puis traduire ce SEUL nombre en position. Eviter l'erreur de trader chaque permutation separement.
+
+108. Re-fit uniquement si tu trades en haute frequence. "The only people it makes sense for to fit their systems on a really regular basis are high frequency traders." Pour un systeme slow (DCA mean-reversion sur 15m), reagir a 2 mois de donnees recentes sur 5 ans d'historique est une erreur. Carver n'a pas change ses params fondamentaux en 8 ans.
+
+109. Ajouter des strategies meme si leur backtest est neutre/negatif. Carver ajoute des briques qui "don't detract from it either, and because they're a source of diversified returns I'm happy to put them in." La distribution des correlations est plus serree que celle des moyennes/Sharpe : une perf marginale peut etre du bruit, mais la diversification est reelle.
+
+110. Minimum 4 contrats/positions par instrument pour garder le benefice "continuous". "If I can only trade one contract then I'm basically back to being a discrete trader." Si ton sizing te force a 1 seul trade par pair, tu perds les benefices de l'echelonnement — le DCA sans safety orders multiples devient un all-in deguise.
+
+111. "The uncertainty of the past" : les backtests mesurent avec enormement de bruit. Un signal qui devrait "logiquement" pousser a 100% equity n'a statistiquement de quoi pousser qu'a 60/40 ou 80/20. Monte Carlo les params pour voir la vraie dispersion des outcomes possibles. Le backtest point-estimate est une illusion de precision.
+
+112. Systematiser CHAQUE decision discretionnaire recurrente. Anytime tu overrides manuellement le bot, transforme l'override en regle codee. Exemple Carver : taux suisses approchant 0, au lieu de debattre il a code un modele qui reduit la position quand le taux approche le zero bound. Les overrides repetes sont un feature request deguise.
+
+113. Tenir le modele LOIN des donnees le plus longtemps possible. "The most tempting thing in the world is to say 'I've got a new idea, I've got some data, I'm going to test it'. That is literally the last thing you should do." Des que tu regardes l'equity curve, tu fais de l'implicit fitting. Valider d'abord le comportement theorique (holding period, couts, capture de l'effet) AVANT de regarder la P&L.
+
+114. Override OK pour ajuster la VITESSE, JAMAIS pour inverser le SIGNE. Seule bonne decision discretionnaire de Carver (COVID mars 2020) : accelerer ce que le modele faisait deja, sans changer la direction. Regle : si tu veux override le bot, tu peux changer la taille, mais jamais le sens du trade.
+
+115. [Tip fusionne dans #57 — forecasts continus cappes.]
+
+116. Ne regarde PAS ta P&L quotidienne. Carver a desactive son email P&L. Si tu dois regarder, en pourcentage, jamais en montant absolu. "Depending on the size of your account you could be thinking 'blimey, today I lost a car'. It's a lot easier to stomach that loss if you abstract it." Impact trading : ne pas checker le bot toutes les heures, ca pousse a l'override emotionnel.
+
+117. Le SR Sharpe masque les blow-ups type LTCM. LTCM avait SR > 3 avant l'explosion. Le Sharpe suppose une distribution normale et traite downside/upside symetriquement. Pour toute strategie "option-selling" (petits gains frequents + rare desastre), preferer geometric return ou bootstrap distribution. DCA short sans cap du pire trade = option-selling classique. (Renforce #98)
+
+118. Scepticisme = qualite n1 d'un quant. "Nearly every single error I've seen has ultimately been because people were overconfident, trusted their backtest too much, or assumed their data was clean when it wasn't." Le trait le plus important n'est ni math ni code. Appliquer un facteur de 0.5 a tout backtest par defaut.
+
+119. Strike rate des idees d'indicateurs = 1 sur 5, max 1/an. Pour un trader slow, l'innovation signal est marginale. Le vrai gain vient du sizing et de la gestion de portefeuille, pas de nouveaux signaux. Arreter de chasser le "nouvel indicateur qui va tout changer".
+
+120. Sharpe max realiste = 1.0, size comme si c'etait 0.5. "The absolute maximum you should expect is 1. And actually you should do your position sizing as if your Sharpe ratio was half what you expected." Regle anti-overconfidence : si ton backtest donne SR 2.0, size comme si c'etait 0.5 → 4x moins de capital deploye.
+
+121. Exclure dynamiquement les pairs en regime low-vol. Quand la vol d'un instrument tombe en dessous d'un seuil, couper les positions et attendre qu'elle remonte avant de reentrer. Sinon : leverage implicite trop haut + couts relatifs qui explosent (tick size fixe, spread relatif en hausse). Applicable crypto : filtre ATR minimum avant entree.
+
+122. Qui est de l'autre cote de ton trade ? Test obligatoire pour toute nouvelle strategie. "If you're making money, who's on the other side of that trade? Do they know they're losing money, and are they prepared to carry on losing money?" Si la reponse = "biais comportemental humain persistant" → strategie robuste. Si "je ne sais pas" → probablement overfit.
+
+123. Overtrading = le plus oublie des 3 peches capitaux (apres overfitting et over-betting). "Overtrading is the Cinderella of these three problems." Day-trading sur instruments chers (spread bets, retail FX, crypto spot a forts frais) est mathematiquement perdant. Pour un bot : minimiser la frequence de trades en ajoutant des filtres, meme si le backtest est legerement degrade.
+
+124. [Contexte : trend-following / momentum — PAS applicable au mean-reversion de #40/#62/#67] "Cut losses early, let profits run" = inverse exact du biais humain. Le cerveau veut prouver qu'il a raison → take profit vite + hold losses. Si les marches trendent, c'est l'inverse qu'il faut faire. Carver a teste sur 31 futures : surperforme sur 27/31. Important : "couper les pertes rapidement" ne signifie pas forcement un stop-loss fixe — ça peut etre un exit temporel (max hold duration) ou sur retournement d'indicateur (MA crossover inverse). L'idee est de ne pas s'accrocher a un trade qui s'invalide, pas de placer un SL serre. Compatible avec #40/#62/#67 a condition de choisir le bon type d'exit selon la strategie.
+
+## Insights approfondis Clenow (6 interviews : Advanced Momentum, Faber, QuantCon 2017, Simplicity, Term Structure, Five Reasons Fail)
+
+125. [Contexte : actions equities long-only — adaptation crypto necessaire] Momentum = slope annualisee x R-carre, moyennee sur 125j ET 250j. Au lieu d'une seule fenetre de lookback, calculer momentum sur 2 periodes et moyenner. Lisse les artefacts d'une seule window et capture les tendances court ET long terme. En crypto : adapter en 25j+50j ou 50j+100j (timescales plus courts car la vol crypto est ~5x celle des actions). (Extension #74)
+
+126. Filtre min-momentum plutot que filtre regime binaire. Ne jamais etre "full in" ou "full out". Appliquer un seuil de momentum minimum (ex: 25), et si peu de stocks/pairs passent, basculer partiellement en bonds/cash. Un portefeuille peut etre 67% stocks / 33% bonds selon le nombre de signaux qualifiants. (Renforce #89)
+
+127. Filtrer les mouvements extremes recents (>30% sur 90 jours). Meme si un instrument a la meilleure momentum, s'il a bouge de plus de 30% sur 90 jours il est exclu. Evite d'acheter des "blow-off tops" qui vont mean-reverter. Applicable crypto : meme en DCA long, eviter les pairs deja +X% sur le mois recent.
+
+128. "Trend following trades fail most of the time — that's ok." 70% de trades perdants est normal en trend-following. Un win rate eleve en trend-following est SUSPECT — la strategie est mathematiquement construite autour de peu de gros gagnants payant beaucoup de petits perdants. L'inverse est vrai pour mean-reversion (high win rate attendu).
+
+129. Imposer un FLOOR de volatilite minimum dans le position sizing. Avant le debouclage du peg CHF/EUR (SNB), les modeles vol-parity voyaient une vol ultra-basse et prenaient des positions enormes. Peg/regimes manipules creent des positions monstrueuses qui explosent. Toujours un minimum de vol simulee pour le sizing, meme si la vol historique est ecrasee.
+
+130. Shorting en trend-following : perd de l'argent net mais RESTE vital. Sur 10 ans, la side short peut etre globalement negative. Mais la correlation negative avec la side long pendant les crises ameliore le risk-adjusted return. "Un composant peut avoir un rendement negatif tant qu'il a une correlation negative suffisante avec le reste." Ne jamais juger une brique de strategie en isolation.
+
+131. "Trend following doesn't work on stocks. Momentum does." Sur futures, la diversification fait tout (gold/soybeans/bonds/equities decorreles). Sur stocks, 500 signaux long = portefeuille beta pur deguise. Tu empiles des positions ultra-correlees. Sur crypto c'est pire encore (tout correlé a BTC) — necessite ranking relatif + filtre regime marche. (Renforce #90)
+
+132. Sharpe ratio > 2 improbable, > 5 = fraud/bug/curve-fit. "Si tu me montres un Sharpe double-digit, ça ne vaut pas la peine de continuer la conversation." Les backtests a Sharpe extreme sont TOUJOURS une red flag : soit short bias mal calcule, soit data mal annualisee, soit overfitting.
+
+133. Pas de pertes dans le backtest = skew negatif cache. "Si ton backtest ne montre pas assez de pertes, tu as probablement une strategie a skew negatif cache. Tu ramasses des centimes devant un rouleau compresseur." La strategie gagne 90% des trades jusqu'au jour ou un event wipe out. Red flag absolue — correspond directement au trap DCA high-winrate du CLAUDE.md.
+
+134. Explique quel phenomene de marche tu exploites, sinon c'est du curve fitting. "Si tu ne peux pas expliquer quel phenomene ton modele exploite, tout ce que tu as c'est un paquet d'indicateurs avec de bonnes valeurs sur un dataset particulier." Commencer par "je fais comme X, mais mieux sur Y" est beaucoup plus credible que "j'ai invente un nouveau type de trading".
+
+135. Shorting en backtest est gratuit et illimite, en realite non. "Sur la plupart des backtest engines tu peux shorter n'importe quoi a n'importe quelle taille sans cout. Dans la realite quelqu'un doit te preter, il y a un cout, et on peut te rappeler au pire moment." Pour Hyperliquid : modeliser les couts de funding et les limites de liquidite meme sur les perps.
+
+136. [Contexte : futures/actions long-terme — equivalent crypto a calibrer plus court] Modele benchmark minimal : prix aujourd'hui > prix il y a 1 an → long, sinon short. "Mon plus grand regret dans mon premier livre est de ne pas avoir rendu le modele encore plus simple. Juste 12-month momentum rule, deux data points." Cette baseline surperforme souvent les modeles complexes. Si ton modele ne bat pas ça, tu as un probleme. Equivalent crypto : prix aujourd'hui > prix il y a 90 jours (les cycles crypto etant ~4x plus courts que les futures traditionnels). Sert de baseline minimale a battre.
+
+137. [Tip fusionne dans #3 et #194 — la complexite doit etre justifiee sinon elle est retiree.]
+
+138. Counter-trend "avec le trend dominant" > counter-trend pur. Deux types : (A) short un uptrend qui crash = dangereux, (B) entrer long apres un pullback dans un uptrend confirme = bien meilleur. Mesurer "combien d'ATR units depuis l'extreme recent" — a ~3 ATR (la ou les trend-followers stoppent out), prendre la contre-position. (Renforce #88)
+
+139. Ne JAMAIS budgeter avec la performance fee / attendre un return cible pour vivre. "Si ton operation ne peut pas survivre avec seulement la management fee, elle n'est pas viable." Applicable a un trader individuel : son income ne doit pas dependre de realiser le return cible chaque annee. Sinon chaque drawdown devient une crise existentielle qui pousse a l'override catastrophique.
+
+140. ~15% annualise, drawdown ~25%, Sharpe ~0.85 = realiste voire tres bon. "If you show me a Sharpe of 3, probably not. Maybe in a shorter time period." Calibrer ses attentes sur ces ordres de grandeur, pas sur les promesses internet de 300% annualises sans drawdown.
+
+141. [Contexte original : futures traditionnels term structure — principe transferable] Regles asymetriques pour phenomenes asymetriques. Modele term structure de Clenow initialement symetrique (±15%) sur futures. Mais 15% contango = commun, 15% backwardation = rare. Relaxer le long a 0% tout en gardant short a 15% → vol divisee par 2, Sharpe de 0.98 → 1.2. Si le phenomene est asymetrique (bull/bear crypto, funding positif/negatif sur Hyperliquid), les seuils doivent l'etre aussi. Pour DCA short crypto : seuils RSI overbought peuvent etre plus stricts que les seuils oversold pour DCA long, car les rallyes haussiers crypto sont souvent plus violents que les baisses.
+
+142. [Contexte adapte au crypto] Toujours benchmarker la strategie contre le bon comparable. En equities : S&P 500 Total Return, jamais Price Index ("c'est de la triche, mais toutes les banques le font"). En crypto : benchmark buy-and-hold BTC INCLUANT le funding paye/recu sur Hyperliquid si applicable, pas le BTC spot nu. Pour DCA short : benchmarker aussi contre un short-and-hold BTC sur la meme periode pour mesurer la valeur ajoutee de la logique d'entree.
+
+143. "Risk = potential value variation per unit of time." La phrase a retenir. Risk-per-trade base sur distance au stop-loss n'a aucun sens mathematique. Le vrai risque = volatilite forecastee x taille x unite de temps. Si tu ne mesures pas la variation possible par unite de temps, tu ne mesures pas du risque.
+
+144. Pyramiding est du gambling, pas de la finance. "Pourquoi ta position devrait avoir 2x le risque juste parce que l'entree precedente a ete chanceuse? Le marche s'en fout de ton entree." Ce qui compte est l'etat courant de la position, pas l'historique. Money management retail (pyramiding, martingale) n'a aucune base mathematique.
+
+145. Diversification 3-couches : position / model / portfolio. Un vrai quant pense : (1) une position dans un modele sur un marche, (2) un modele applique a plusieurs marches, (3) plusieurs modeles sur plusieurs marches. Au level 3, les positions individuelles disparaissent dans le bruit — seule la courbe globale compte. Applicable : 1 strategie DCA + 1 trend + 1 mean-reversion sur 50 pairs > 1 strategie ultra-optimisee.
+
+146. [Tip fusionne dans #42 — indicateurs custom depuis zero.]
+
+147. News ticker OK, talking heads (Bloomberg TV, CNBC) = perte de temps pure. "I don't know a better way of wasting time than having somebody tell me the news in person." Applicable a l'algo : les flux Twitter "trading" sont du bruit, pas du signal. Filtrer tres agressivement les sources.
+
+## Insights approfondis Chan (5 interviews : Trading Bot Sessions, Successful Quant, Global Prime, ML Webinar, Retail Winning)
+
+148. Predire le RISQUE est plus facile que predire la DIRECTION. "Machine learning can do a good job of predicting whether your strategy will be profitable or not. It's less good at telling you which direction the market is going to go." Utiliser ML comme COUCHE de risk management (filtrer les trades du bot) plutot que comme generateur d'alpha. Faux positifs = no profit (pas de perte), alors que mauvaise direction = perte seche.
+
+149. Les regime shifts macro ne sont PAS arbitrageables. "Interest rate is something that will affect trading but trading doesn't affect it." ML peut apprendre a predire les regime shifts macro sans que sa propre reussite detruise le signal — contrairement aux signaux de prix. Ajouter taux/inflation/credit comme features externes ne se "brule" pas avec l'adoption.
+
+150. Transaction cost = bid-ask spread, PAS les commissions. "Ta strategie peut specifiquement trader les moments ou le spread est maximum." Utiliser les quote data (bid-ask) pour backtest realiste, pas le prix mid. Si tu simules avec un cost fixe en bps, tu rates que ton algo peut entrer precisement aux pires moments.
+
+151. Level 1 data suffit pour REJETER une strategie, pas pour la valider. "If it doesn't work even with level one data you forget about it. But it's necessary but not sufficient." Pour prouver qu'une strategie MARCHE il faut du level 2 (depth of book) car les quotes Level 1 ne sont valables que pour 100 shares.
+
+152. [Contexte original : HFT/order flow — principe transferable] Indicateurs isoles (ex: order flow, RSI, MACD) ne suffisent jamais — c'est connu de tous. Un seul indicateur populaire est deja arbitrage. Les combiner comme features (manuellement ou via ML) pour qu'aucun seul ne soit predictif. Pour Freqtrade : ne jamais baser une entree sur UN seul indicateur classique, toujours combiner 2-3 conditions decorrelees (oscillator + filtre tendance + filtre volume par exemple).
+
+153. Retraining ML : une fois par trimestre suffit. "Adding a few months of data is not going to make a big difference to the model. If it does, something's wrong with the model." Retrainer seulement si (a) regime change detecte, (b) nouveaux predicteurs ajoutes, ou (c) amelioration methodologique. Retrainer trop souvent = red flag d'instabilite.
+
+154. Duree paper trading = fonction de la frequence. HFT : 2 semaines. Multi-jours : 3 MOIS minimum pour significance statistique. Nombre de trades > duree de calendrier. Applicable bot : un dry-run de 2 semaines sur une strategie DCA qui fait 10 trades/semaine n'est pas probant.
+
+155. [Contexte : HFT vs swing — informe le choix de timeframe Freqtrade] Higher frequency = plus facile a predire (direction), mais couts tuent l'edge. "It's easier to predict what the mid-price will be next second than next day." Tradeoff fondamental : plus de signal en HF mais plus de couts en frais+slippage. Pour Freqtrade : ne pas descendre sous 5m sauf besoin specifique — en dessous, les frais Hyperliquid (0.02% maker / 0.05% taker) deviennent prohibitifs sur les signaux faibles. 15m est un bon compromis signal/couts.
+
+156. Chercher les strategies a CAPACITE LIMITEE. "Strategies that has very limited capacity are unattractive for hedge funds — c'est exactement la ou le retail gagne." 100k-1M de capital max = zone retail. Ex : pairs OTC, trades saisonniers, petites paires crypto. Le fait qu'une grosse institution ne puisse pas deployer la strategie est PROTECTEUR.
+
+157. N'augmente PAS le leverage tant que ta strategie n'a pas vecu un CHANGEMENT DE REGIME. "Do not increase the leverage too much until your strategy has experienced some change of regime — from quiet to volatile, from recessionary to inflation." 6 mois de profits sans drawdown n'est PAS la preuve — il faut avoir vecu une transition. Chan raconte un 35% drawdown apres 6 mois de quasi-no-loss. (Applicable direct : ne pas augmenter le stake avant d'avoir vu le bot passer bull→bear→bull)
+
+158. Combiner mean-reversion + momentum pour lisser la courbe. "Balance mean reversion and momentum, short volatility and long volatility strategies. The momentum strategy will keep your sanity intact when mean reversion falls off the cliff." Les deux ont des profils de risque orthogonaux. Bot Freqtrade : 1 instance DCA short + 1 instance trend long = equity curve lissee.
+
+159. Diagnostiquer une degradation = comprendre le CHANGEMENT DE STRUCTURE du marche. "A strategy dying is often due to a fundamental market structure change." Exemple : explosion des options 0DTE par retail change fondamentalement certains marches. Lire Bloomberg/FT pour identifier les structural shifts qui expliquent ton drawdown, pas pour trader.
+
+160. Momentum crashes apres chaque crise = pattern historique. "Momentum strategies have a drawdown in the aftermath of a crisis. It's been that way for the last hundred years." Pas un bug, c'est le pattern. Anticiper un drawdown momentum post-crise meme si la strategie a cartonne PENDANT la crise.
+
+161. "The best system in backtest = often the luckiest." Quand tu screens 1000 strategies et tu gardes la meilleure, tu maximises le data snooping. Selectionner sur ROBUSTESSE (perf stable sur petites variations de params), pas sur PEAK performance. (Renforce #81)
+
+162. [Validation directe de notre choix Freqtrade : PAS de ML sur 15m] ML marche sur tick data + order book + stocks individuels en cross-section. PAS sur daily/15m bars, futures ou indices. "Applying to futures and indices — the data are simply insufficient and machine learning will suffer severe data snooping bias." Confirme notre approche : ne PAS utiliser FreqAI ou tout ML sur signaux d'entree avec des candles 15m. Si on voulait du ML serieux, il faudrait collecter du tick data sur 100+ pairs et infrastructure dediee — hors scope Freqtrade.
+
+163. More data = bien. More features = MAL. "Feature-rich dataset is a curse in trading. The more features you have, the more likely you will find spurious correlations." Feature SELECTION est critique. Ajouter 50 indicateurs au dataset est l'inverse de ce qu'il faut faire.
+
+164. Neural networks ne font PAS de feature selection. "NN basically takes everything you got and squeezes them into a sausage." C'est pourquoi NN marche en computer vision (stationnaire) mais echoue en finance (non-stationnaire). Preferer stepwise regression, CART, random forest qui selectionnent explicitement.
+
+165. Random Forest = oversample rows + UNDERsample features. Combine bagging et random subspace. C'est exactement la combinaison anti-overfit : plus de data + moins de features par arbre. "You want to have a lot of data but very few predictors. Random Forest achieves that."
+
+166. Target function et predictor time scale DOIVENT matcher. "If you want to predict one month return, most likely we are stuck with daily data — minute data will have no signal for one month return." Si tu veux predire le direction H+1, features sur 15m. Pour predire direction J+1, features daily. Mismatch = garbage.
+
+167. Le programme de BACKTEST et d'EXECUTION DOIT etre le MEME. "Otherwise who knows what bugs are introduced in the execution program. The program should not be able to tell whether the data is live or historical." Freqtrade respecte deja ce principe — ne jamais implementer des "optimisations" qui divergent live vs backtest.
+
+168. ML comme couche probabiliste au-dessus de regles simples. "Simple models have a quick half-life. ML applies a filter to the trades that the simple model suggests — it assigns a probability to the success of the trade." Plutot que remplacer les regles par du ML, ajouter un filtre ML sur les signaux pour prolonger leur duree de vie. (Extension #78)
+
+## Insights approfondis Lopez de Prado (5 lectures : Quantopian, Asset Managers, New Frontiers, Ten Applications, 7 Reasons)
+
+169. Specialisation > generalisme. Lopez de Prado critique le "Sisyphean quant" : un quant solo qui doit faire data + modele + backtest + portfolio + execution. "Break down the problem and let people specialize." La meilleure chance de succes = solutionner UN probleme tres bien, pas tout a moitie. Pour un trader solo : focus sur UNE brique par phase (ex : d'abord le sizing, puis les signaux, jamais tout ensemble).
+
+170. [Contexte : ML/data engineering — implique infra custom hors Freqtrade standard] Sampling base sur l'arrivee d'INFORMATION, pas sur le temps. "Information does not arrive to the market at a constant rate." Les time bars (H1, M15) echantillonnent quand il n'y a rien a apprendre. Preferer dollar bars, volume bars, ou dollar imbalance bars. Pour Freqtrade : non implementable nativement (le framework est base sur des candles temporelles). Adaptation possible : ponderer les indicateurs calcules sur 15m par le volume relatif (signal RSI ignore si volume < 30% de la moyenne).
+
+171. Ensemble methods > algorithme unique. "One of the few free lunches in ML." Combiner plusieurs modeles diversifies reduit la variance et contre le test-set overfitting. Applicable : n'utiliser qu'un seul signal d'entree est sous-optimal — combiner 3-5 signaux decorrelés donne un forecast plus stable.
+
+172. Markowitz's Curse : plus on en a besoin, plus ça rate. "The very reason we need Markowitz is the same reason Markowitz will fail." Quand la matrice de correlation a des off-diagonal eleves (cas frequent : secteurs, crypto), le determinant tend vers 0, l'inverse explose, l'optimisation devient instable. Multi-collinearite = piege.
+
+173. Denoising via Marchenko-Pastur. Les eigenvalues qui tombent sous la distribution MP sont du bruit pur. Les remplacer par leur moyenne ameliore massivement l'estimation de covariance : -60% MSE sur min-variance, -94% MSE sur max-Sharpe. Superieur au shrinkage Ledoit-Wolf qui detruit aussi du signal.
+
+174. Nested Clustered Optimization (NCO). Quand l'instabilite frappe : cluster les assets, optimiser INDEPENDAMMENT dans chaque cluster, puis entre clusters (ou la matrice est quasi-diagonale). Transforme un probleme mal-pose en bien-pose. -47% MSE vs Markowitz direct. Applicable crypto : cluster les pairs par similarite de comportement, allouer a l'interieur, puis entre.
+
+175. Monte Carlo > backtest historique pour valider une METHODE. "Historical practice is not powerful enough to reach a conclusion." Un backtest unique = anecdote. Pour evaluer un estimator/methode, generer des milliers de scenarios, tester, calculer RMSE. Le backtest sert a valider UNE strategie, pas LA methodologie.
+
+176. Le modele le plus explicatif n'est PAS forcement le meilleur predicteur. Tension entre econometrics et ML. "It is not necessarily true that the most explanatory model happens to be the best predictor." ML accepte un biais dans le predicteur pour ameliorer la prediction (bias-variance tradeoff). Ne pas choisir un modele parce qu'il "explique bien" ce qui s'est passe.
+
+177. Finance = probleme BEAUCOUP plus dur que face recognition. "My dog can recognize faces but cannot manage my investment portfolio." Telecharger une lib Silicon Valley (PyTorch, sklearn defaults) et l'appliquer aux prix = erreur garantie. Les datasets finance sont non-stationnaires, multi-colinéaires, non-IID, avec regime switches.
+
+178. ML +31% vs Markowitz en moyenne, avant transaction costs. Tree-based portfolios (hierarchical risk parity, etc.) surpassent Markowitz ~31% EN MOYENNE out-of-sample. Apres couts Markowitz devient prohibitif a cause du turnover extreme. Applicable : HRP/NCO pour allouer entre strategies/pairs, pas du Markowitz naif.
+
+179. Weighting observations par UNIQUENESS. Deux labels qui se chevauchent dans le temps partagent de l'info → pas independants. Si tu ne ponderes pas, l'algo sur-apprend les exemples redondants. Donner moins de poids aux observations moins uniques augmente l'accuracy out-of-sample "dramatiquement".
+
+180. Log systematique de TOUS les backtests avec penalite. L'equipe de Lopez de Prado logge chaque backtest. Quand un chercheur arrive avec Sharpe 2, il check : "tu as access ce dataset 500 fois, je m'attends a Sharpe 5 minimum, reviens quand tu l'as." Patience + trials = n'importe quel Sharpe. Applicable : tenir un journal de tous tes hyperopts, et si tu cherches depuis 6 mois, ajuster le seuil de significance vers le haut.
+
+181. Taux de retraction en finance ≈ 0, contrairement a la medecine (~20%). "Probably finance and theology are the last two fields where papers are never recalled." Signal fort que le corpus contient des masses de faux positifs non-corriges. Applicable aux "strategies qui marchent" partagees sur Twitter/Reddit : assumer par defaut qu'elles sont fausses.
+
+## Insights traders francophones (SalsaTekila, Beetcoin, Quant expert crypto)
+
+182. Taille max 2-5% par trade meme avec conviction forte. Les comptes qui explosent sont ceux qui "one-shot" a 20-30%. Pour un bot : stake_amount cape strictement, pas d'override manuel en cas de signal "fort". Compatible avec #84/#57 (sizing proportionnel a la confiance) : on peut scaler la taille par la confiance du signal a l'interieur du plafond dur, mais JAMAIS au-dessus — un signal extreme ne justifie pas de depasser 2-5% max par trade. (SalsaTekila)
+
+183. Entree "chanceuse" → sortie "chanceuse". Quand le trade part dans ton sens immediatement sans retest, il va souvent se retourner violemment. Mefiance sur les trades qui partent en fleche sans DCA declenche — ce sont souvent les premiers a se retourner. Applicable : reduire la taille sur les entrees "sans pullback immediat". (SalsaTekila)
+
+184. Bull market = contreparties faibles, bear market = contreparties pro. En bull tu gagnes facilement contre les newbies. En bear tu te bats contre d'autres pros et l'edge se dilue. Consequence : attendre peu en bull, etre BEAUCOUP plus selectif en bear. Filtrer le regime BTC et moduler l'agressivite en consequence. (SalsaTekila)
+
+185. Apres une grosse perte, JAMAIS redeposer le meme jour. Regle de propshop. La journee est "morte", les reflexes sont pollues. Equivalent bot : apres un drawdown intraday > X%, couper les entrees jusqu'au lendemain (circuit breaker). Permet de rompre le cycle emotionnel. (SalsaTekila)
+
+186. [Contexte : spot BTC/ETH (CEX classiques) — impact partiel sur perps Hyperliquid] Les ETF spot Bitcoin/Ethereum ont change la microstructure post-2024 sur les exchanges traditionnels (Coinbase, Binance spot). Les gros blocs institutionnels ecrasent les setups scalping classiques sur ces venues. Sur Hyperliquid (DEX perps), l'impact est moins direct mais existe via l'arbitrage spot/perp. Recommandation : pour les strategies sur BTC/ETH spot, recalibrer sur donnees post-Jan 2024 uniquement. Pour les altcoins perps Hyperliquid, l'effet est negligeable. (SalsaTekila)
+
+187. Survivre avant de gagner. Les params doivent d'abord garantir la non-ruine, ENSUITE optimiser le profit. Prioriser MaxDrawDown/Calmar sur le profit absolu dans les loss functions d'hyperopt. Un bot qui fait 5%/an mais ne blow up jamais > un bot qui fait 50%/an mais blow up une fois tous les 3 ans. (Quant 1B)
+
+188. [Contexte : METRIQUE D'EVALUATION d'une strategie, complementaire a #6 qui fixe les attentes psychologiques et l'orientation type] Probabilites asymetriques > probabilites hautes. "On prefere etre paye 10 fois quand on a raison 20% du temps que 1.2x quand on a raison 80%." Attention aux strategies high-winrate : elles cachent souvent une asymetrie catastrophique. Verifier systematiquement le profit moyen / perte moyenne, pas juste le win rate. Un bot DCA haute frequence (esprit de #6) reste valide SI son payoff ratio tient — le vrai danger est un DCA high-winrate avec payoff ratio catastrophique (cf. #4, #133). (Quant 1B)
+
+189. Calibration periode A, validation periode B DISJOINTES. Walk-forward strict : train 2024, valide 2025, rien de chevauche. "Si ça marche pas en holdout, c'est de l'overfitting, point final." Le CLAUDE.md le mentionne deja — renforce le principe : 70-80% training, 20-30% holdout strictement separe. (Quant 1B)
+
+190. Monitor le VaR en LIVE, pas seulement au backtest. Le risque theorique backtest ≠ risque live. Surveiller le Value-at-Risk quotidien et comparer a l'estimation backtest. Si drift > X sigma, stopper le bot et reinvestiguer avant de continuer. (Quant 1B)
+
+191. Caps stricts par strategie et par actif. Pas de "la strategie marche bien donc on double". Cap dur par strategie (ex : 20% du capital max), cap par actif (ex : 5% max sur une paire). Isole les blow-ups — un seul composant qui explose ne detruit pas tout. (Quant 1B)
+
+192. Distinguer risques MESURABLES vs Black Swans. Ce que tu peux mesurer historiquement (vol, drawdown) → a gerer par sizing. Ce que tu ne peux pas (liquidation chain, exchange hack, depeg) → a gerer par exposition maximale absolue. Les deux modes de pensee ne se remplacent pas. (Quant 1B)
+
+193. Cash-and-carry et delta-neutral restent de l'edge meme a petite taille. Spot + short perp a funding positif = yield quasi sans risque de direction. "Les gros le font a scale, rien n'empeche un petit de capturer la meme prime." Pour Hyperliquid USDC : regarder les funding +15-30% annualises sur certaines paires comme couche rendement passive complementaire au DCA. (Quant 1B)
+
+194. Les vieux traders profitables ont MOINS de regles que les debutants. Chaque ajout d'indicateur doit justifier son apport en backtest propre, sinon on le supprime. Phase finale d'hyperopt : figer les params non-contributifs a leurs defaults. Si un param n'ameliore pas significativement la loss function, il ne sert a rien. (Beetcoin)
+
+195. Predefinir l'invalidation AVANT l'entree. Niveau exact de sortie calcule AVANT le trade, non-negociable. Pour un bot : le stoploss ne doit jamais etre "ajuste" dynamiquement a la hausse, uniquement a la baisse (trailing). La regle d'invalidation est gravee au moment de l'entree. [Contexte : trades a invalidation claire — trend-following, breakout. Pour mean-reversion DCA (notre cas principal, cf. #40/#62/#67), l'invalidation n'est PAS un SL fixe mais le nombre maximum de safety orders OU la duree max de hold. L'idee "non-negociable" reste entiere : ces limites sont fixees AVANT l'entree et jamais etendues dynamiquement quand le trade va mal.] (Beetcoin)
+
+196. "Losers average losers" SAUF si c'est PLANIFIE. Moyenner a la baisse sans plan = destruction. Moyenner avec DCA pre-calibre (niveaux + taille fixes) = strategie. La difference est la pre-definition des safety orders, pas l'acte lui-meme. Justifie directement le DCA algorithmique avec safety_order_volume_scale fixe. (Beetcoin)
+
+197. "Sit on ass" (Livermore/Munger) : ne pas trader pour le plaisir. Les meilleurs setups sont rares, les saisir quand ils arrivent, ne rien faire sinon. Traduit en algo : CalmarHyperOptLoss > SharpeHyperOptLossDaily, favoriser la patience sur la frequence (deja dans CLAUDE.md mais renforce). (Beetcoin)
+
+198. Reagir au marche, pas le predire. "Je ne sais pas ce qui va se passer, je sais ce que je fais SI X se passe." Toute la logique d'un bot doit etre if/then sur des evenements mesurables, pas sur des anticipations. Pas de "je pense que BTC va baisser donc je short plus agressif" — seulement "SI RSI < 20 ALORS enter_long". (Beetcoin)
+
+## Filtre macro externe (MacroAlf)
+
+199. Credit spreads investment-grade > 400bps = canari du regime risk-off global. MacroAlf utilise ce seuil comme signal de changement de regime macro. Pour un bot DCA crypto : si credit spreads IG > 400bps, reduire l'exposition ou basculer en mode conservateur ; si < 200bps, environnement risk-on favorable. Feature externe non-arbitrageable par le trading crypto (cf. #149).
+
+## Meta-regle sur les strategies qui marchent (communauté)
+
+200. Tant qu'une strategie performe, c'est une bonne strategie — mais la plupart des strategies qui excellent pendant un temps reposent sur une anomalie de marche ou un alignement favorable des planetes (regime specifique, flow institutionnel, correlations temporaires, inefficience technique appelee a etre arbitragee). Quand le regime change, ca peut faire TRES mal, d'autant plus vite que la strategie etait plus performante (mean-reversion agressive dans un bull range = genial jusqu'au trend break ; momentum dans un marche directionnel = genial jusqu'au crash post-crise, cf. #160). Regle pratique : si une strategie performe bien ET que c'est etonnant (resultats au-dessus des attentes raisonnables, surtout avec high winrate — cf. #4, #133, #188), retirer rapidement son capital initial et la laisser tourner uniquement sur les gains. Le jour ou le regime change, tu n'as pas perdu ton principal — tu as juste restitue des gains deja pris. Cross-ref #69 (Chan : aucune strategie ne fonctionne eternellement), #118 (Carver : scepticisme = qualite n°1), #5 (capital investi = psychologiquement "perdu"). (communauté)
+
+## Performance hyperopt — silence des loggers (Experience perso, Avril 2026)
+
+201. Pendant un hyperopt, AUCUN logger.info / logger.debug / logger.warning ne doit emettre depuis le code strategie. Chaque message emis × 28 workers × 40 paires × milliers de candles = log queue multiprocessing saturee → main thread bloque sur le rendu rich (rich/text.py __rich_measure__ visible en py-spy) → hyperopt 3x plus lent ou stalls apparents (epoch counter fige, fthypt non mis a jour). Symptomes typiques : "epoch 28/300" pendant 9 min sans avancer, mais process actif et workers tournent. Pour BACKTEST et LIVE : tous les niveaux OK, garder les logs informatifs. Pour HYPEROPT : seul logger.error doit subsister (rare, vraies erreurs critiques). Pattern quand un debug est genuinement utile : if logger.isEnabledFor(logging.DEBUG): logger.debug(...) — le format string n'est jamais construit. Hot paths a auditer SYSTEMATIQUEMENT avant de lancer un hyperopt : custom_stake_amount, confirm_trade_entry, adjust_trade_position, custom_exit, confirm_trade_exit. (Experience HippoDCA short_reco r1 et short_casino r1, Avril 2026)
