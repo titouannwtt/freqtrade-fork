@@ -187,6 +187,66 @@ Mélange le prix bid/ask avec le dernier prix échangé :
 
 **Le backtest IGNORE entry_pricing.** Les entrées se font toujours au prix d'ouverture de la bougie. Même `--timeframe-detail 1m` ne change pas ça — il affine les exits (stoploss, ROI) mais pas les prix d'entrée. La divergence pricing backtest ↔ live est structurelle et ne peut pas être corrigée par la config.
 
+## Chaînage pairlist — guide de configuration
+
+### Comment fonctionne le chaînage (pairlistmanager.py)
+
+```
+Générateur (1er handler) → Filtre 1 → Filtre 2 → ... → Blacklist
+```
+
+- **Le 1er handler est un générateur** : produit la liste initiale (VolumePairList, StaticPairList, MarketCapPairList)
+- **Les handlers suivants sont des filtres** : chacun reçoit la sortie du précédent et peut la réduire
+- **La blacklist est appliquée en dernier**, après tous les filtres
+- L'ordre des filtres compte : un filtre ne peut agir que sur les paires qui lui sont passées
+
+### Notre chaîne standard : VolumePairList(80) → PerformanceFilter → VolumePairList(40)
+
+| Étage | Rôle | Détail |
+|---|---|---|
+| **VolumePairList(80)** | Générateur | Top 80 paires par volume 24h (ticker). Élimine les paires mortes |
+| **PerformanceFilter** | Filtre | Trie par performance historique en DB. Sort les paires les moins rentables en bas |
+| **VolumePairList(40)** | Filtre | Re-classe les ~80 paires par volume 7 jours (`lookback_days: 7`), garde le top 40. Lisse les spikes de volume |
+
+**Pourquoi 80→40 ?** Le 1er VolumePairList est un filtre grossier (volume 24h, sensible aux spikes). Le 2ème re-classe par volume 7 jours (métrique plus stable) et coupe à 40. C'est un double-filtrage : d'abord par activité récente, puis par volume moyen.
+
+### 🚫 Bug connu : `max_profit` dans PerformanceFilter
+
+Le code lit `min_profit`, les configs écrivent `max_profit`. **Le paramètre est silencieusement ignoré** — le filtre trie par performance mais ne supprime aucune paire sur seuil. Pour que le seuil fonctionne, utiliser `"min_profit"` dans la config (pas `"max_profit"`).
+
+```json
+// ❌ IGNORÉ (le code ne lit pas "max_profit")
+{"method": "PerformanceFilter", "minutes": 4280, "max_profit": 0.1}
+
+// ✅ FONCTIONNE (filtre les paires sous 10% de profit)
+{"method": "PerformanceFilter", "minutes": 4280, "min_profit": 0.1}
+```
+
+### ✅ Quand utiliser chaque handler
+
+| Handler | Rôle | Appels API | Caché ftcache | Quand l'utiliser |
+|---|---|---|---|---|
+| **StaticPairList** | Liste fixe | Aucun | N/A | Backtests uniquement |
+| **VolumePairList** | Volume dynamique | Tickers ou OHLCV | ✅ Oui | Live — s'adapte au marché |
+| **MarketCapPairList** | Market cap | CoinGecko (externe) | Non | Stratégies large-cap uniquement |
+| **PerformanceFilter** | Tri par perf DB | Aucun (DB locale) | N/A | Éviter les paires historiquement perdantes |
+| **TrendRegularityFilter** | Filtre uptrend | OHLCV | ✅ Oui | **Short-only** (exclut les uptrends linéaires) |
+| **PriceFilter** | Prix min/max | Aucun (ticker) | N/A | Éviter les micro-caps ou les coins > $X |
+| **AgeFilter** | Ancienneté min | OHLCV | Non | Éviter les listings récents volatils |
+
+### ✅ Bonnes pratiques
+
+- ✅ **VolumePairList en live, StaticPairList en backtest.** VolumePairList n'est pas supporté en backtest (`SupportsBacktesting.NO`).
+- ✅ **`refresh_period` est par handler, pas global.** Le `refresh_period: 604800` du 2ème VolumePairList signifie que le volume 7j n'est recalculé qu'une fois par semaine. C'est cohérent avec `lookback_days: 7`. Ne pas mettre un `refresh_period` plus court que la période de lookback.
+- ✅ **TrendRegularityFilter uniquement sur les stratégies short-only.** Il exclut les paires avec `slope > 0 ET R² >= min_r2`. Les stratégies long+short ou long-only perdent des opportunités long si ce filtre est actif.
+- ✅ **Plus de paires = plus de chances de trouver un setup.** Pour les stratégies DCA qui attendent des conditions extrêmes, un univers large (40-80 paires) est préférable à un univers restreint.
+
+### 💡 Erreurs courantes
+
+- **Filtre en 1ère position** : PerformanceFilter, PriceFilter, etc. en premier → crash. Le 1er handler doit être un générateur.
+- **StaticPairList en 2ème position** : il **ajoute** les paires de la whitelist au lieu de filtrer. Si 50 paires du VolumePairList + 20 paires de la whitelist → 70 paires, pas 20.
+- **Filtres trop agressifs en chaîne** : PriceFilter(min=1.0) → AgeFilter(min=365) → VolatilityFilter(min=50) peut donner 0 paire → bot bloqué.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts (centraliser volume sur un seul wallet). Si rate-limit persiste: passer à VPN IP-level, jamais wallet-level. (tips.txt #27, CLAUDE.md)
