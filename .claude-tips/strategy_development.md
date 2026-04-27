@@ -15,7 +15,7 @@
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Simplicité avant complexité**. 2-3 indicateurs solides sur TF élevées > 10 indicateurs en 5m. Si on ne peut pas expliquer en une phrase pourquoi un indicateur est là, il ne devrait pas y être. (tips.txt #3)
-- ✅ **`max_open_trades` change tout pour DCA**. `proposed_stake = wallet / MOT`. Toujours fixer MOT délibérément. (tips.txt #24, CLAUDE.md)
+- ✅ **`max_open_trades` change tout pour DCA**. `proposed_stake = wallet / MOT`. Toujours fixer MOT délibérément. Voir `live_trading.md` § "Capital & sizing". (tips.txt #24)
 - ✅ **TF hautes = adversaires plus faibles**. En 5m on affronte HFT et market makers ; en 1d les adversaires sont moins sophistiqués. Plus la TF est haute, plus le live est fidèle au backtest. (tips.txt #29, Beetcoin)
 - ✅ **Originalité ∝ gains**. Tout le monde achète RSI < 30 — c'est pour ça que ça ne marche pas. Créer ses propres indicateurs ou combiner de façon non-standard est la seule façon d'avoir un edge durable. (tips.txt #39, communauté)
 - ✅ **Ne pas modifier les périodes par défaut, créer ses propres indicateurs**. Sur TF basses (15m-4h), les indicateurs classiques type RSI n'ont pas d'edge même avec période modifiée. Construire depuis zéro plutôt qu'importer une lib. (tips.txt #42, Clenow)

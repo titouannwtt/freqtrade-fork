@@ -23,6 +23,5 @@
 
 - 🚫 **DCA = "losers average losers" planifié** — niveaux de safety orders et `safety_order_volume_scale` doivent être fixés AVANT l'entrée, jamais ajustés dynamiquement quand le trade va mal. (tips.txt #196)
 - 🚫 **Min 4 safety orders effectifs par trade** sinon DCA = all-in déguisé. (tips.txt #110, Carver)
-- ✅ **Position sizing DCA**: `available_amount = available_capital + total_closed_profit`, `proposed_stake = available_amount / max_open_trades`, `custom_stake = (proposed_stake / max_so_multiplier * overbuy_factor) * tradable_balance_ratio`, DCA orders = `custom_stake * safety_order_volume_scale^(n-1)`. (CLAUDE.md)
-- 🚫 **`max_open_trades` change tout pour DCA**: passer de MOT 5 à 3 double quasiment l'allocation par trade. Toujours fixer délibérément. (tips.txt #24)
-- 🚫 **Toujours `--timeframe-detail 1m` pour BT/hyperopt DCA** sinon phantom trades. (tips.txt #20)
+- 🚫 **`max_open_trades` change tout pour DCA**: passer de MOT 5 à 3 double quasiment l'allocation par trade. Toujours fixer délibérément. Voir `live_trading.md` § "Capital & sizing" pour la formule complète et l'effet de compounding. (tips.txt #24)
+- 🚫 **Toujours `--timeframe-detail 1m` pour BT/hyperopt DCA** sinon phantom trades. Voir `hyperopt.md` pour le détail. (tips.txt #20)
