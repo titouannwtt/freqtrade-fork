@@ -83,13 +83,8 @@ router = APIRouter()
 def ping():
     """simple ping to check if API is responsive
 
-    Returns "starting" while the bot is still initializing (exchange,
-    pairlists, etc.) and "pong" once fully ready.
+    Performs no internal checks, just returns pong.
     """
-    from freqtrade.rpc.api_server.webserver import ApiServer
-
-    if not ApiServer._has_rpc:
-        return {"status": "starting"}
     return {"status": "pong"}
 
 

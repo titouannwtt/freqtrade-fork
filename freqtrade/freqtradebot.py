@@ -89,11 +89,6 @@ class FreqtradeBot(LoggingMixin):
 
         # Init objects
         self.config = config
-
-        # Start API server early so FreqUI is reachable during exchange/pairlist init
-        if config.get("api_server", {}).get("enabled", False):
-            from freqtrade.rpc.api_server import ApiServer
-            ApiServer(config)
         exchange_config: ExchangeConfig = deepcopy(config["exchange"])
         # Remove credentials from original exchange config to avoid accidental credential exposure
         remove_exchange_credentials(config["exchange"], True)
