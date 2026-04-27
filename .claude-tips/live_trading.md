@@ -140,6 +140,53 @@ Pour une config avec `stake_amount: "unlimited"`, vérifier :
 
 Le capital disponible pour les ordres DCA (safety orders) utilise la **même formule** que l'entrée initiale. Si le bot a 3 trades ouverts sur MOT=3, il n'y a plus de capital pour les DCA des trades existants. C'est pourquoi un MOT élevé avec DCA agressif peut bloquer les safety orders — le capital est déjà réparti sur les trades initiaux.
 
+## entry_pricing / exit_pricing — guide de choix
+
+### Mapping price_side (exchange.py:2217-2232)
+
+`price_side` se résout différemment selon le type d'ordre :
+
+| Opération | `"same"` | `"other"` |
+|---|---|---|
+| Entry long (achat) | bid (moins cher) | ask (plus cher) |
+| Entry short (vente) | ask (plus cher) | bid (moins cher) |
+| Exit long (vente) | ask (meilleur prix) | bid (moins bon) |
+| Exit short (rachat) | bid (moins cher) | ask (plus cher) |
+
+**`"same"` = le côté favorable au remplissage** (on place l'ordre du côté du spread qui a le plus de chances d'être exécuté en tant que maker). `"other"` = côté opposé, plus agressif.
+
+### price_last_balance
+
+Mélange le prix bid/ask avec le dernier prix échangé :
+- **0.0** (agressif) : utilise le bid/ask pur → meilleur prix maker mais risque de non-remplissage
+- **1.0** (conservateur) : utilise le dernier prix échangé → remplissage quasi-garanti mais potentiellement taker
+- **0.5** : compromis entre les deux
+
+### use_order_book
+
+- **true** : fetch le carnet d'ordres L2 pour obtenir le prix bid/ask au niveau `order_book_top`
+- **false** : utilise le ticker (bid/ask du ticker)
+- Avec `order_book_top: 1` : même résultat que le ticker dans la plupart des cas
+- Appels API : cachés 300s dans `FtTTLCache`, pas de surcharge significative
+
+### 🚫 Règle critique
+
+- 🚫 **`price_side` ne détermine PAS si l'ordre est maker ou taker.** C'est `order_types["entry"]` et `order_types["exit"]` dans la stratégie (limit vs market) qui déterminent ça. Un `price_side: "same"` avec `order_types: {"entry": "market"}` reste un market order (taker).
+
+### ✅ Recommandations par contexte
+
+| Contexte | `price_side` | `price_last_balance` | `use_order_book` | Justification |
+|---|---|---|---|---|
+| DCA mean-reversion (notre cas) | `"same"` | `0.0` | `true` | Maximise maker fills (0.02% vs 0.05%) |
+| Scalping (remplissage prioritaire) | `"same"` | `1.0` | `true` | Remplissage garanti, accepte taker |
+| Entrée agressive (signal fort) | `"other"` | `0.0` | `true` | Traverse le spread, remplissage immédiat |
+
+**Notre config actuelle** (`_default_spot_usdc.json`) : `price_side: "same"`, `price_last_balance: 1.0`, `use_order_book: true`. C'est très conservateur — le blend total vers le last price fait que les ordres sont quasi-taker. Pour des DCA avec ordres limit, baisser `price_last_balance` à 0.0 serait plus cohérent.
+
+### 💡 Impact sur le backtest
+
+**Le backtest IGNORE entry_pricing.** Les entrées se font toujours au prix d'ouverture de la bougie. Même `--timeframe-detail 1m` ne change pas ça — il affine les exits (stoploss, ROI) mais pas les prix d'entrée. La divergence pricing backtest ↔ live est structurelle et ne peut pas être corrigée par la config.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Hyperliquid: préférer les ordres makers** (0.02% vs 0.05% taker). Rate limit = 1200 req/min par wallet. Solution si problème: Producer-Consumer mode, JAMAIS de sub-accounts (centraliser volume sur un seul wallet). Si rate-limit persiste: passer à VPN IP-level, jamais wallet-level. (tips.txt #27, CLAUDE.md)
