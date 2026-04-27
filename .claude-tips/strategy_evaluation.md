@@ -7,6 +7,25 @@
 - 🚫 **Sharpe > 5 = fraud/bug/curve-fit**. "Si tu me montres un Sharpe double-digit, ça ne vaut pas la peine de continuer la conversation." Les BT à Sharpe extrême sont TOUJOURS red flag. (tips.txt #132, Clenow)
 - 🚫 **Probabilités asymétriques > probabilités hautes (métrique d'évaluation)**. "Payé 10x quand raison 20% > 1.2x quand raison 80%." Vérifier systématiquement le profit moyen / perte moyenne (payoff ratio), pas juste le win rate. Un bot DCA haute fréquence (#6) reste valide SI son payoff ratio tient — danger = high-winrate avec payoff ratio catastrophique (cf. #4, #133). (tips.txt #188, Quant 1B)
 
+## Checklist d'analyse de stratégie
+
+Lors de l'analyse ou du review d'une stratégie, vérifier systématiquement l'utilisation (ou l'absence) de ces fonctions freqtrade. Signaler si une fonction pertinente au contexte n'est pas implémentée :
+
+| Fonction | Quand elle devrait être présente |
+|---|---|
+| `custom_stake_amount` | Toute stratégie DCA ou avec sizing dynamique |
+| `custom_stoploss` | Si le SL doit s'adapter au trade (trailing custom, SL par DCA level) |
+| `custom_exit` | Logique de sortie complexe (conditions multiples, temporelle, indicateurs) |
+| `adjust_trade_position` | DCA / safety orders / pyramidage |
+| `confirm_trade_entry` | Garde-fou pré-entrée (vérifier conditions supplémentaires, position guard) |
+| `confirm_trade_exit` | Garde-fou pré-sortie (empêcher sorties prématurées) |
+| `custom_entry_price` / `custom_exit_price` | Pricing spécifique (ex: mid-spread, offset) |
+| `leverage` | Levier dynamique par paire ou par condition de marché |
+| `informative_pairs` | Multi-timeframe, cross-pair (ex: BTC comme filtre macro) |
+| `bot_loop_start` | Logique exécutée à chaque cycle (ex: mise à jour d'état global) |
+
+Ne pas ajouter ces fonctions par défaut — signaler uniquement quand leur absence est un manque pour le cas d'usage.
+
 ## Bonnes pratiques (toujours suivre sauf justification explicite)
 
 - ✅ **Comparer systématiquement la stratégie au TOTAL2 sur la même période**. Si sous-performe TOTAL2 en bull mais meilleur DD, c'est acceptable — les bots brillent dans la gestion du risque, pas dans la capture de rallyes. (tips.txt #32, Beetcoin)
