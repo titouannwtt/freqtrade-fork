@@ -15,6 +15,13 @@ Upstream Freqtrade is already excellent as a general-purpose trading framework. 
 
 > Screenshot above: the FreqUI fork that `freqtrade install-ui` pulls in this fork. See [titouannwtt/frequi-fork](https://github.com/titouannwtt/frequi-fork) for the full UI inventory.
 
+<p align="center">
+  <img src=".readme_illustrations/frequi-market-pulse.png" alt="FreqUI fork — Market Pulse view with BTC/ETH benchmarks and Fear & Greed index" width="450">
+  <img src=".readme_illustrations/frequi-risk-overview.png" alt="FreqUI fork — Risk Overview with per-bot exposure and drawdown tracking" width="450">
+</p>
+
+> Left: Market Pulse — live BTC/ETH benchmarks, Fear & Greed index, and market context at a glance. Right: Risk Overview — per-bot exposure, drawdown tracking, and portfolio-level risk metrics.
+
 ---
 
 ## English
@@ -31,7 +38,7 @@ Five concrete motivations on top of the rationale above:
 
 ### What's added on top of upstream freqtrade/stable
 
-Concrete list of fork-only changes (27 files, +832 / -213 lines vs. `upstream/stable`):
+Concrete list of fork-only changes (17 code files, +600 / -8 lines vs. `upstream/stable`, plus documentation and config templates):
 
 #### Trading engine
 
@@ -81,6 +88,35 @@ Concrete list of fork-only changes (27 files, +832 / -213 lines vs. `upstream/st
 | `launch_dashboard.sh` | new file | Same, but for `freqtrade webserver` (UI-only mode — no trading). |
 | `download.sh` | new file | Downloads the last 10 days of candles for all configs in `backtest_configs/`. |
 | `.gitignore` | +32 lines | Keeps your `live_configs/`, `backtest_configs/`, `database/`, `.claude/` and any `*access*.json` / `*credentials*` / `*secret*` / `*.key` / `*.pem` strictly local. |
+
+#### Documentation & AI copilot
+
+| File | Added | Purpose |
+|------|-------|---------|
+| `CLAUDE.md` | new file | Project instructions for [Claude Code](https://claude.ai/code) — architecture overview, common commands, co-pilot trading guardrails, hard constraints. Loaded automatically on every AI conversation. Useful for anyone working on this codebase with an LLM assistant. |
+| `.claude-tips/` | 14 files | Indexed knowledge base of 199 trading rules distilled from Carver, Clenow, Chan, Lopez de Prado, and the French Freqtrade community. Organized by topic: hyperopt methodology, live trading config, risk management, mean reversion / DCA, strategy evaluation, psychology, market analysis, etc. Loaded on-demand based on the type of request. Includes a routing table (`README.md`) that maps user requests to the relevant files. |
+
+<details>
+<summary>Full list of .claude-tips/ files</summary>
+
+| File | Covers |
+|------|--------|
+| `README.md` | Routing table — maps request types to relevant tip files |
+| `hyperopt.md` | Hyperopt launch, loss functions, walk-forward, common traps |
+| `live_trading.md` | Config tuning: throttle, pricing, pairlist chaining, timeout, sizing |
+| `portfolio.md` | Multi-bot setup: ftcache, tournament selection, correlation risk |
+| `mean_reversion.md` | DCA strategies, stoploss philosophy, safety orders |
+| `risk_management.md` | Position sizing, drawdown limits, leverage, diversification |
+| `strategy_evaluation.md` | Metrics review (Sharpe/Calmar/payoff), freqtrade function checklist |
+| `strategy_development.md` | Building strategies, indicator selection, simplicity principles |
+| `backtesting.md` | Backtest methodology, holdout validation, timeframe-detail |
+| `psychology.md` | Behavioral biases, emotional discipline, action bias |
+| `market_analysis.md` | Regime detection, S1-S4 stages, macro filters |
+| `data_quality.md` | Feature selection, causal inference vs p-hacking |
+| `machine_learning.md` | ML reference (Lopez de Prado methods, kept for future use) |
+| `trend_following.md` | Momentum/trend reference (Clenow methodology) |
+
+</details>
 
 ### How to use this fork
 
@@ -203,7 +239,7 @@ Au-delà de ça, cinq motivations concrètes :
 
 ### Ce que ce fork apporte vs. upstream freqtrade/stable
 
-Liste concrète des changements (27 fichiers, +832 / -213 lignes vs. `upstream/stable`) :
+Liste concrète des changements (17 fichiers de code, +600 / -8 lignes vs. `upstream/stable`, plus documentation et templates de config) :
 
 #### Moteur de trading
 
@@ -253,6 +289,13 @@ Liste concrète des changements (27 fichiers, +832 / -213 lignes vs. `upstream/s
 | `launch_dashboard.sh` | nouveau | Pareil, mais pour `freqtrade webserver` (mode UI seule — pas de trading). |
 | `download.sh` | nouveau | Télécharge les 10 derniers jours de bougies pour toutes les configs de `backtest_configs/`. |
 | `.gitignore` | +32 lignes | Garde `live_configs/`, `backtest_configs/`, `database/`, `.claude/` et tout `*access*.json` / `*credentials*` / `*secret*` / `*.key` / `*.pem` strictement local. |
+
+#### Documentation & copilote IA
+
+| Fichier | Ajouté | Rôle |
+|---------|--------|------|
+| `CLAUDE.md` | nouveau | Instructions projet pour [Claude Code](https://claude.ai/code) — vue d'ensemble de l'architecture, commandes courantes, garde-fous trading en mode copilote, contraintes dures. Chargé automatiquement à chaque conversation IA. Utile pour quiconque travaille sur ce codebase avec un assistant LLM. |
+| `.claude-tips/` | 14 fichiers | Base de connaissances indexée de 199 règles de trading distillées de Carver, Clenow, Chan, Lopez de Prado, et la communauté Freqtrade France. Organisé par sujet : méthodologie hyperopt, config live, risk management, mean reversion / DCA, évaluation de stratégie, psychologie, analyse de marché, etc. Chargé à la demande selon le type de requête. Inclut une table de routage (`README.md`) qui mappe les requêtes utilisateur aux fichiers pertinents. |
 
 ### Comment utiliser ce fork
 
