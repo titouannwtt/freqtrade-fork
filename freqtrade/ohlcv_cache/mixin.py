@@ -243,6 +243,11 @@ class CachedExchangeMixin:
     _OFFLINE_ACQUIRE_MAX_S: float = 600.0  # 10 min max wait for offline modes
     _OFFLINE_RETRY_INTERVAL_S: float = 5.0  # retry every 5s
 
+    _DAEMON_INIT_COOLDOWN_S: float = 10.0  # throttle init retries
+    _DAEMON_RETRY_S: float = 5.0  # sleep between daemon wait retries
+    _DAEMON_OHLCV_MAX_WAIT_S: float = 900.0  # 15 min max wait for daemon
+    _ftcache_init_failed_ts: float = 0.0
+
     def _ftcache_enabled(self) -> bool:
         from freqtrade.enums import RunMode
 
@@ -274,6 +279,11 @@ class CachedExchangeMixin:
             }
         if self._ftcache_client is not None:
             return
+        if self._ftcache_init_failed_ts > 0:
+            if time.monotonic() - self._ftcache_init_failed_ts < self._DAEMON_INIT_COOLDOWN_S:
+                return
+            self._ftcache_init_failed_ts = 0
+            self._ftcache_warned = False
         if not self._ftcache_enabled():
             self._ftcache_client = False
             return
@@ -300,12 +310,13 @@ class CachedExchangeMixin:
         except Exception as e:
             if not self._ftcache_warned:
                 logger.warning(
-                    "could not initialise cache client (%s) — falling back to "
-                    "direct ccxt for this bot",
+                    "could not initialise cache client (%s) — will retry in %.0fs"
+                    " (NOT falling back to direct ccxt)",
                     e,
+                    self._DAEMON_INIT_COOLDOWN_S,
                 )
                 self._ftcache_warned = True
-            self._ftcache_client = False
+            self._ftcache_init_failed_ts = time.monotonic()
 
     def _ftcache_disable_ccxt_ratelimit(self) -> None:
         """Reduce ccxt's built-in rate limiter when daemon is active.
@@ -556,8 +567,29 @@ class CachedExchangeMixin:
 
         client = self._ftcache_get_client()
         if client is None:
-            self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
-            return True
+            if self._ftcache_client is False:
+                return True
+            effective_prio = priority if priority is not None else OhlcvCacheClient.NORMAL
+            if effective_prio <= OhlcvCacheClient.CRITICAL:
+                self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
+                return True
+            deadline = time.monotonic() + self._DAEMON_OHLCV_MAX_WAIT_S
+            while client is None and time.monotonic() < deadline:
+                now = time.monotonic()
+                if now - self._ftcache_last_wait_log_ts > self._WAIT_LOG_INTERVAL_S:
+                    logger.info(
+                        "waiting for daemon before acquire (%.0fs remaining)",
+                        deadline - now,
+                    )
+                    self._ftcache_last_wait_log_ts = now
+                time.sleep(self._DAEMON_RETRY_S)
+                self._ftcache_maybe_init()
+                client = self._ftcache_get_client()
+            if client is None:
+                raise TemporaryError(
+                    f"daemon unavailable after {self._DAEMON_OHLCV_MAX_WAIT_S:.0f}s"
+                    " — cannot acquire rate token"
+                )
 
         deadline = time.monotonic() + self._OFFLINE_ACQUIRE_MAX_S if is_offline else 0.0
         attempt = 0
@@ -638,16 +670,15 @@ class CachedExchangeMixin:
                         deadline - time.monotonic(),
                     )
                     continue
-                # Live mode: timeout → local limiter fallback
+                effective_prio = priority if priority is not None else OhlcvCacheClient.NORMAL
+                if effective_prio <= OhlcvCacheClient.CRITICAL:
+                    self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
+                    return True
                 logger.info(
-                    "rate token acquire timed out after %.0fs — using local limiter "
-                    "(priority=%s, cost=%.0f)",
-                    self._ACQUIRE_TIMEOUT_S,
-                    priority,
-                    cost,
+                    "rate token acquire timed out — retrying (waiting for daemon)",
                 )
-                self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
-                return True
+                time.sleep(self._DAEMON_RETRY_S)
+                continue
 
             except CacheUnavailable:
                 self._ftcache_bump("acquire_timeout")
@@ -659,8 +690,17 @@ class CachedExchangeMixin:
                         )
                     time.sleep(self._OFFLINE_RETRY_INTERVAL_S)
                     continue
-                self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
-                return True
+                effective_prio = priority if priority is not None else OhlcvCacheClient.NORMAL
+                if effective_prio <= OhlcvCacheClient.CRITICAL:
+                    self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
+                    return True
+                logger.info("daemon unavailable — retrying (waiting for daemon)")
+                time.sleep(self._DAEMON_RETRY_S)
+                self._ftcache_maybe_init()
+                client = self._ftcache_get_client()
+                if client is None and self._ftcache_client is not False:
+                    continue
+                continue
 
             except TemporaryError:
                 raise  # don't catch our own TemporaryError
@@ -675,9 +715,13 @@ class CachedExchangeMixin:
                         )
                     time.sleep(self._OFFLINE_RETRY_INTERVAL_S)
                     continue
-                logger.debug("rate token acquire failed (%s), using local limiter", e)
-                self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
-                return True
+                effective_prio = priority if priority is not None else OhlcvCacheClient.NORMAL
+                if effective_prio <= OhlcvCacheClient.CRITICAL:
+                    self._ftcache_get_local_limiter().acquire(cost=cost, priority=priority)
+                    return True
+                logger.debug("rate token acquire failed (%s) — retrying", e)
+                time.sleep(self._DAEMON_RETRY_S)
+                continue
 
     # -------------------------------------------------------------------- OHLCV
 
@@ -752,16 +796,28 @@ class CachedExchangeMixin:
                 since_ms,
             )
 
-        if not self._ftcache_client:
-            # Daemon unavailable in live mode — use local limiter
-            limiter = self._ftcache_get_local_limiter()
-            await asyncio.to_thread(limiter.acquire, 4.0, None)
+        if self._ftcache_client is False:
             return await super()._async_get_candle_history(  # type: ignore[misc]
-                pair,
-                timeframe,
-                candle_type,
-                since_ms,
+                pair, timeframe, candle_type, since_ms,
             )
+
+        if self._ftcache_client is None:
+            deadline = time.monotonic() + self._DAEMON_OHLCV_MAX_WAIT_S
+            while self._ftcache_client is None and time.monotonic() < deadline:
+                now = time.monotonic()
+                if now - self._ftcache_last_wait_log_ts > self._WAIT_LOG_INTERVAL_S:
+                    logger.info(
+                        "waiting for daemon before fetching %s %s (%.0fs remaining)",
+                        pair, timeframe, deadline - now,
+                    )
+                    self._ftcache_last_wait_log_ts = now
+                await asyncio.sleep(self._DAEMON_RETRY_S)
+                self._ftcache_maybe_init()
+            if self._ftcache_client is None:
+                raise TemporaryError(
+                    f"daemon unavailable after {self._DAEMON_OHLCV_MAX_WAIT_S:.0f}s"
+                    f" — cannot fetch {pair} {timeframe} without rate limiting"
+                )
 
         client: OhlcvCacheClient = self._ftcache_client  # type: ignore[assignment]
         try:
@@ -799,19 +855,14 @@ class CachedExchangeMixin:
             )
             raise
         except CacheUnavailable as e:
-            self._ftcache_bump("fallback_ccxt")
             logger.warning(
-                "cache unavailable for %s %s (%s) — falling back to ccxt",
+                "cache unavailable for %s %s (%s) — will retry next cycle"
+                " (NOT falling back to ccxt)",
                 pair,
                 timeframe,
                 e,
             )
-            return await super()._async_get_candle_history(  # type: ignore[misc]
-                pair,
-                timeframe,
-                candle_type,
-                since_ms,
-            )
+            raise
 
     # -------------------------------------------------------------------- tickers
 
@@ -868,21 +919,14 @@ class CachedExchangeMixin:
                 client.get_tickers(market_type=mt_str, priority=tickers_prio),
             )
             if not ok:
-                if self._ftcache_should_block_ccxt():
-                    cache_key = f"fetch_tickers_{market_type}" if market_type else "fetch_tickers"
-                    with self._cache_lock:  # type: ignore[attr-defined]
-                        stale = self._fetch_tickers_cache.get(cache_key)  # type: ignore[attr-defined]
-                    if stale:
-                        return stale
-                    return {}
-                base_prio = OhlcvCacheClient.HIGH if has_open else OhlcvCacheClient.NORMAL
-                prio_gt = self._ftcache_init_priority(base_prio)
-                self._ftcache_acquire_sync(priority=prio_gt)
-                return super().get_tickers(  # type: ignore[misc]
-                    symbols=symbols,
-                    cached=cached,
-                    market_type=market_type,
-                )
+                cache_key = f"fetch_tickers_{market_type}" if market_type else "fetch_tickers"
+                with self._cache_lock:  # type: ignore[attr-defined]
+                    stale = self._fetch_tickers_cache.get(cache_key)  # type: ignore[attr-defined]
+                if stale:
+                    logger.info("tickers loop_lock unavailable — using stale cache")
+                    return stale
+                logger.info("tickers loop_lock unavailable, no stale — returning empty")
+                return {}
             if not isinstance(tickers, dict):
                 logger.warning(
                     "daemon returned tickers as %s — falling back to ccxt",
@@ -931,22 +975,19 @@ class CachedExchangeMixin:
             logger.info("shared tickers rate-limited, no local cache — returning empty")
             return {}
         except CacheUnavailable as e:
-            if self._ftcache_should_block_ccxt():
-                cache_key = f"fetch_tickers_{market_type}" if market_type else "fetch_tickers"
-                with self._cache_lock:  # type: ignore[attr-defined]
-                    stale = self._fetch_tickers_cache.get(cache_key)  # type: ignore[attr-defined]
-                if stale:
-                    logger.info("tickers unavailable during backoff — using stale cache")
-                    return stale
-                logger.info("tickers unavailable during backoff, no stale — returning empty")
-                return {}
-            self._ftcache_bump("fallback_ccxt")
-            logger.warning("shared tickers failed (%s) — falling back to ccxt", e)
-            return super().get_tickers(  # type: ignore[misc]
-                symbols=symbols,
-                cached=cached,
-                market_type=market_type,
+            cache_key = f"fetch_tickers_{market_type}" if market_type else "fetch_tickers"
+            with self._cache_lock:  # type: ignore[attr-defined]
+                stale = self._fetch_tickers_cache.get(cache_key)  # type: ignore[attr-defined]
+            if stale:
+                logger.info(
+                    "tickers unavailable (%s) — using stale cache (NOT falling back to ccxt)", e,
+                )
+                return stale
+            logger.warning(
+                "tickers unavailable (%s), no stale cache — returning empty"
+                " (NOT falling back to ccxt)", e,
             )
+            return {}
 
     # -------------------------------------------------------------------- positions
 
