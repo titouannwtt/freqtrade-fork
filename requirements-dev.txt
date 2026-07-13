@@ -7,7 +7,7 @@
 -r docs/requirements-docs.txt
 
 ruff==0.15.18
-mypy==2.1.0
+mypy==2.3.0
 pre-commit==4.6.0
 pytest==9.1.0
 pytest-asyncio==1.4.0
